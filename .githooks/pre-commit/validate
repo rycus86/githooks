@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "* Git hooks are set up properly"
