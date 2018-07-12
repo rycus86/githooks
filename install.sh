@@ -1,5 +1,16 @@
 #!/bin/sh
+#
+# Installs the base Git hook templates from https://github.com/rycus86/githooks
+#   and performs some optional setup for existing repositories.
+#   See the documentation in the project README for more information.
 
+############################################################
+# Check if the install script is
+#   running in 'dry-run' mode.
+#
+# Returns:
+#   'yes' or 'no' as string
+############################################################
 is_dry_run() {
 	for p in $@; do
 		if [ "$p" = "--dry-run" ]; then
@@ -11,7 +22,14 @@ is_dry_run() {
 	echo "no"
 }
 
-find_git_templates() {
+############################################################
+# Try to find the directory where the Git
+#   hook templates are currently.
+#
+# Returns:
+#   the path to the directory, or None if not found
+############################################################
+find_git_hook_templates() {
 	if [ -d "$GIT_TEMPLATE_DIR" ]; then
 		TARGET_TEMPLATE_DIR="${GIT_TEMPLATE_DIR}/hooks"
 		return
@@ -69,6 +87,14 @@ find_git_templates() {
 	fi
 }
 
+############################################################
+# Install the new Git hook templates into the
+#   ${TARGET_TEMPLATE_DIR} directory that we
+#   have found previously.
+#
+# Returns:
+#   None
+############################################################
 setup_hook_templates() {
 	CONTENT='#!/bin/sh
 # Base githooks template from https://github.com/rycus86/githooks
@@ -133,7 +159,7 @@ fi
 DRY_RUN=$(is_dry_run $@)
 TARGET_TEMPLATE_DIR=""
 
-find_git_templates
+find_git_hook_templates
 
 if [ "$TARGET_TEMPLATE_DIR" = "" ] || [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
 	echo "Git hook templates directory not found"
