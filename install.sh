@@ -1,6 +1,15 @@
 #!/bin/sh
 
-TARGET_TEMPLATE_DIR=""
+is_dry_run() {
+	for p in $@; do
+		if [ "$p" = "--dry-run" ]; then
+			echo "yes"
+			return
+		fi
+	done
+
+	echo "no"
+}
 
 find_git_templates() {
 	if [ -d "$GIT_TEMPLATE_DIR" ]; then
@@ -19,15 +28,37 @@ find_git_templates() {
 		return
 	fi
 
-	echo -n 'Could not find the Git templates directory, do you want to search for it? [yN] '
+	printf 'Could not find the Git hook template directory, do you want to search for it? [yN] '
 	read -r DO_SEARCH
 
 	if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
-		echo "Searching for potential locations..."
+		if [ -d "/usr" ]; then
+			echo "Searching for potential locations in /usr ..."
+			for HIT in $(find /usr 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
+				HIT=$(dirname "$HIT")
+
+				printf -- "- Is it $HIT ? [yN] "
+				read -r ACCEPT
+
+				if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
+					TARGET_TEMPLATE_DIR="$HIT"
+					return
+				fi
+			done
+
+			printf "Git hook template directory not found in /usr. Do you want to keep searching? [yN] "
+			read -r DO_SEARCH
+
+			if [ "${DO_SEARCH}" != "y" ] && [ "${DO_SEARCH}" != "Y" ]; then
+				return
+			fi
+		fi
+
+		echo "Searching for potential locations ..."
 		for HIT in $(find / 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
 			HIT=$(dirname "$HIT")
 
-			echo -n "- Is it $HIT ? [yN] "
+			printf "- Is it $HIT ? [yN] "
 			read -r ACCEPT
 
 			if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
@@ -50,7 +81,8 @@ HOOK_FOLDER=$(dirname "$0")
 
 # Execute the old hook if we moved it when installing our hooks.
 if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
-    eval "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook"
+	ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
+    eval "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" $@
 fi
 
 if [ -d ".githooks/${HOOK_NAME}" ]; then
@@ -59,17 +91,17 @@ if [ -d ".githooks/${HOOK_NAME}" ]; then
     for HOOK_FILE in .githooks/${HOOK_NAME}/*; do
         # Either execute directly or as a Shell script
         if [ -x "$HOOK_FILE" ]; then
-            eval "$HOOK_FILE"
+            eval "$(pwd)/$HOOK_FILE" $@
         elif [ -f "$HOOK_FILE" ]; then
-            sh "$HOOK_FILE"
+            sh "$HOOK_FILE" $@
         fi
     done
 elif [ -x ".githooks/${HOOK_NAME}" ]; then
     # Execute the file directly
-    eval ".githooks/${HOOK_NAME}"
+    eval "$(pwd)/.githooks/${HOOK_NAME}" $@
 elif [ -f ".githooks/${HOOK_NAME}" ]; then
     # Execute as a Shell script
-    sh ".githooks/${HOOK_NAME}"
+    sh ".githooks/${HOOK_NAME}" $@
 fi
 '
 
@@ -86,7 +118,7 @@ fi
             grep 'https://github.com/rycus86/githooks' "${HOOK_TEMPLATE}" > /dev/null 2>&1
 
 			if [ $? -ne 0 ]; then
-				echo "Saving existing hook: $HOOK"
+				echo "Saving existing Git hook: $HOOK"
                 mv "$HOOK_TEMPLATE" "$HOOK_TEMPLATE.replaced.githook"
 			fi
 		fi
@@ -94,15 +126,23 @@ fi
         echo "$CONTENT" > "$HOOK_TEMPLATE"
         chmod +x "$HOOK_TEMPLATE"
 
-        echo "Hook template ready: $HOOK_TEMPLATE"
+        echo "Git hook template ready: $HOOK_TEMPLATE"
 	done
 }
+
+DRY_RUN=$(is_dry_run $@)
+TARGET_TEMPLATE_DIR=""
 
 find_git_templates
 
 if [ "$TARGET_TEMPLATE_DIR" = "" ] || [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-	echo "Git templates directory not found"
+	echo "Git hook templates directory not found"
 	exit 1
+fi
+
+if [ "$DRY_RUN" = "yes" ]; then
+	echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
+	exit 0
 fi
 
 setup_hook_templates
