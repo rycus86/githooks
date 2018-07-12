@@ -12,7 +12,7 @@
 #   'yes' or 'no' as string
 ############################################################
 is_dry_run() {
-	for p in $@; do
+	for p in "$@"; do
 		if [ "$p" = "--dry-run" ]; then
 			echo "yes"
 			return
@@ -55,7 +55,7 @@ find_git_hook_templates() {
 			for HIT in $(find /usr 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
 				HIT=$(dirname "$HIT")
 
-				printf -- "- Is it $HIT ? [yN] "
+				printf -- "- Is it %s ? [yN] " "$HIT"
 				read -r ACCEPT
 
 				if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
@@ -76,7 +76,7 @@ find_git_hook_templates() {
 		for HIT in $(find / 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
 			HIT=$(dirname "$HIT")
 
-			printf "- Is it $HIT ? [yN] "
+			printf -- "- Is it %s ? [yN] " "$HIT"
 			read -r ACCEPT
 
 			if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
@@ -96,6 +96,7 @@ find_git_hook_templates() {
 #   None
 ############################################################
 setup_hook_templates() {
+	# shellcheck disable=SC2016
 	CONTENT='#!/bin/sh
 # Base githooks template from https://github.com/rycus86/githooks
 #
@@ -108,26 +109,29 @@ HOOK_FOLDER=$(dirname "$0")
 # Execute the old hook if we moved it when installing our hooks.
 if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
 	ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
-    eval "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" $@
+    "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@"
 fi
 
 if [ -d ".githooks/${HOOK_NAME}" ]; then
     # If there is a directory like .githooks/pre-commit,
-	# then for files like .githooks/pre-commit/lint
-    for HOOK_FILE in .githooks/${HOOK_NAME}/*; do
+	#   then for files like .githooks/pre-commit/lint
+    for HOOK_FILE in .githooks/"${HOOK_NAME}"/*; do
         # Either execute directly or as a Shell script
         if [ -x "$HOOK_FILE" ]; then
-            eval "$(pwd)/$HOOK_FILE" $@
+            "$(pwd)/$HOOK_FILE" "$@"
         elif [ -f "$HOOK_FILE" ]; then
-            sh "$HOOK_FILE" $@
+            sh "$HOOK_FILE" "$@"
         fi
     done
+
 elif [ -x ".githooks/${HOOK_NAME}" ]; then
     # Execute the file directly
-    eval "$(pwd)/.githooks/${HOOK_NAME}" $@
+    eval "$(pwd)/.githooks/${HOOK_NAME}" "$@"
+
 elif [ -f ".githooks/${HOOK_NAME}" ]; then
     # Execute as a Shell script
-    sh ".githooks/${HOOK_NAME}" $@
+    sh ".githooks/${HOOK_NAME}" "$@"
+
 fi
 '
 
@@ -143,6 +147,7 @@ fi
 		if [ -x "$HOOK_TEMPLATE" ]; then
             grep 'https://github.com/rycus86/githooks' "${HOOK_TEMPLATE}" > /dev/null 2>&1
 
+			# shellcheck disable=SC2181
 			if [ $? -ne 0 ]; then
 				echo "Saving existing Git hook: $HOOK"
                 mv "$HOOK_TEMPLATE" "$HOOK_TEMPLATE.replaced.githook"
@@ -156,7 +161,7 @@ fi
 	done
 }
 
-DRY_RUN=$(is_dry_run $@)
+DRY_RUN=$(is_dry_run "$@")
 TARGET_TEMPLATE_DIR=""
 
 find_git_hook_templates
@@ -171,7 +176,7 @@ if [ "$DRY_RUN" = "yes" ]; then
 	exit 0
 fi
 
-setup_hook_templates
+#setup_hook_templates
 
 # TODO ask to find and install the hooks into the existing repos
 # TODO maybe change the Git template directory config if that doesn't need root

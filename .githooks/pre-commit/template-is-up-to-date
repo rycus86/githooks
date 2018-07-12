@@ -1,0 +1,23 @@
+#!/bin/sh
+python --version > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    python -c '
+with open("base-template.sh", "r") as template_file:
+    template = template_file.read()
+
+with open("install.sh", "r") as install_file:
+    content = install_file.read()
+
+if template not in content:
+    exit(1)
+    '
+
+    if [ $? -eq 0 ]; then
+        echo "* Template is up-to-date in the install script"
+    else 
+        echo "! Template is not up-to-date in the install script"
+        exit 1
+    fi
+else
+    echo "- Skipping template up-to-date check (missing python)"
+fi

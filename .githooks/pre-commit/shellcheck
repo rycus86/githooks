@@ -1,0 +1,7 @@
+#!/bin/sh
+if shellcheck *.sh; then
+    echo "* shellcheck OK"
+else
+    echo "! shellcheck problems detected"
+    exit 1
+fi
