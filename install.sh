@@ -4,6 +4,71 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 
+# The list of hooks we can manage with this script
+MANAGED_HOOK_NAMES="
+	applypatch-msg pre-applypatch post-applypatch
+	pre-commit prepare-commit-msg commit-msg post-commit
+	pre-rebase post-checkout post-merge pre-push
+	pre-receive update post-receive post-update
+	push-to-checkout pre-auto-gc post-rewrite sendemail-validate
+"
+
+# A copy of the base-template.sh file's contents
+# shellcheck disable=SC2016
+BASE_TEMPLATE_CONTENT='#!/bin/sh
+# Base Git hook template from https://github.com/rycus86/githooks
+#
+# It allows you to have a .githooks folder per-project that contains
+# its hooks to execute on various Git triggers.
+
+execute_hook() {
+	HOOK_PATH="$1"
+	shift
+
+	RESULT=0
+
+	if [ -x "$HOOK_PATH" ]; then
+		"$HOOK_PATH" "$@"
+		RESULT=$?
+
+	elif [ -f "$HOOK_PATH" ]; then
+		sh "$HOOK_PATH" "$@"
+
+		RESULT=$?
+	fi
+
+	return $RESULT
+}
+
+HOOK_NAME=$(basename "$0")
+HOOK_FOLDER=$(dirname "$0")
+
+# Execute the old hook if we moved it when installing our hooks.
+if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
+	ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
+
+	if ! execute_hook "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@"; then
+		exit 1
+	fi
+fi
+
+if [ -d ".githooks/${HOOK_NAME}" ]; then
+	# If there is a directory like .githooks/pre-commit,
+	#   then for files like .githooks/pre-commit/lint
+	for HOOK_FILE in .githooks/"${HOOK_NAME}"/*; do
+		if ! execute_hook "$(pwd)/$HOOK_FILE" "$@"; then
+			exit 1
+		fi
+	done
+
+elif [ -f ".githooks/${HOOK_NAME}" ]; then
+	if ! execute_hook ".githooks/${HOOK_NAME}" "$@"; then
+		exit 1
+	fi
+
+fi
+'
+
 ############################################################
 # Check if the install script is
 #   running in 'dry-run' mode.
@@ -33,11 +98,11 @@ is_dry_run() {
 ############################################################
 find_git_hook_templates() {
 	# 1. from environment variables
-	mark_directory_as_target "$GIT_TEMPLATE_DIR"
+	mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
 	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
 	# 2. from git config
-	mark_directory_as_target "$(git config --get init.templateDir)"
+	mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
 	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
 	# 3. from the default location
@@ -72,17 +137,22 @@ find_git_hook_templates() {
 #   None
 ############################################################
 mark_directory_as_target() {
-	if [ "$1" = "" ]; then
+	TARGET="$1"
+	if [ "$TARGET" = "" ]; then
 		return
 	fi
 
-	if [ -w "$1" ]; then
-		TARGET_TEMPLATE_DIR="$1"
+	if [ "$2" != "" ]; then
+		TARGET="${TARGET}/$2"
+	fi
+
+	if [ -w "$TARGET" ]; then
+		TARGET_TEMPLATE_DIR="$TARGET"
 		return
 	fi
 
 	# Try to see if the path is given with a tilde
-	TILDE_REPLACED=$(echo "$1" | awk 'gsub("~", "'"$HOME"'", $0)')
+	TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
 	if [ -w "$TILDE_REPLACED" ]; then
 		TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
 		return
@@ -183,71 +253,10 @@ setup_new_templates_folder() {
 #   have found previously.
 #
 # Returns:
-#   None
+#   0 on success, 1 on failure
 ############################################################
 setup_hook_templates() {
-	# shellcheck disable=SC2016
-	CONTENT='#!/bin/sh
-# Base Git hook template from https://github.com/rycus86/githooks
-#
-# It allows you to have a .githooks folder per-project that contains
-# its hooks to execute on various Git triggers.
-
-execute_hook() {
-	HOOK_PATH="$1"
-	shift
-
-	RESULT=0
-
-	if [ -x "$HOOK_PATH" ]; then
-		"$HOOK_PATH" "$@"
-		RESULT=$?
-
-	elif [ -f "$HOOK_PATH" ]; then
-		sh "$HOOK_PATH" "$@"
-
-		RESULT=$?
-	fi
-
-	return $RESULT
-}
-
-HOOK_NAME=$(basename "$0")
-HOOK_FOLDER=$(dirname "$0")
-
-# Execute the old hook if we moved it when installing our hooks.
-if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
-	ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
-
-	if ! execute_hook "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@"; then
-		exit 1
-	fi
-fi
-
-if [ -d ".githooks/${HOOK_NAME}" ]; then
-	# If there is a directory like .githooks/pre-commit,
-	#   then for files like .githooks/pre-commit/lint
-	for HOOK_FILE in .githooks/"${HOOK_NAME}"/*; do
-		if ! execute_hook "$(pwd)/$HOOK_FILE" "$@"; then
-			exit 1
-		fi
-	done
-
-elif [ -f ".githooks/${HOOK_NAME}" ]; then
-	if ! execute_hook ".githooks/${HOOK_NAME}" "$@"; then
-		exit 1
-	fi
-
-fi
-'
-
-	HOOK_NAMES="applypatch-msg pre-applypatch post-applypatch "
-	HOOK_NAMES="$HOOK_NAMES pre-commit prepare-commit-msg commit-msg post-commit "
-	HOOK_NAMES="$HOOK_NAMES pre-rebase post-checkout post-merge pre-push "
-	HOOK_NAMES="$HOOK_NAMES pre-receive update post-receive post-update "
-	HOOK_NAMES="$HOOK_NAMES push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
-
-	for HOOK in $HOOK_NAMES; do
+	for HOOK in $MANAGED_HOOK_NAMES; do
 		HOOK_TEMPLATE="${TARGET_TEMPLATE_DIR}/${HOOK}"
 
 		if [ -x "$HOOK_TEMPLATE" ]; then
@@ -256,25 +265,107 @@ fi
 			# shellcheck disable=SC2181
 			if [ $? -ne 0 ]; then
 				echo "Saving existing Git hook: $HOOK"
-				mv "$HOOK_TEMPLATE" "$HOOK_TEMPLATE.replaced.githook"
+				mv "$HOOK_TEMPLATE" "${HOOK_TEMPLATE}.replaced.githook"
 			fi
 		fi
 
-		echo "$CONTENT" >"$HOOK_TEMPLATE"
-		chmod +x "$HOOK_TEMPLATE"
-
-		echo "Git hook template ready: $HOOK_TEMPLATE"
+		if echo "$BASE_TEMPLATE_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
+			echo "Git hook template ready: $HOOK_TEMPLATE"
+		else
+			echo "Failed to setup the $HOOK template at $HOOK_TEMPLATE"
+			return 1
+		fi
 	done
+
+	return 0
 }
 
 ############################################################
-# Main program flow below:
-#   - check if we're running in dry-run mode
-#   - find the Git hook template directory to install into
-#   - setup the new hooks in the template directory
+# Install the new Git hook templates into the
+#   existing local repositories.
+#
+# Returns:
+#   0 on success, 1 on failure
 ############################################################
+install_into_existing_repositories() {
+	printf 'Do you want to install the hooks into existing repositories? [yN] '
+	read -r DO_INSTALL
+	if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then return 0; fi
 
+	printf 'Where do you want to start the search? [%s] ' ~
+	read -r START_DIR
+
+	if [ "$START_DIR" = "" ]; then
+		START_DIR="$HOME"
+	fi
+
+	if [ ! -d "$START_DIR" ]; then
+		echo "'$START_DIR' is not a directory"
+		return 1
+	fi
+
+	find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
+		install_hooks_into_repo "$EXISTING"
+	done
+
+	return 0
+}
+
+############################################################
+# Install the new Git hook templates into an existing
+#   local repository, given by the first parameter.
+#
+# Returns:
+#   None
+############################################################
+install_hooks_into_repo() {
+	TARGET="$1"
+	if [ ! -w "${TARGET}/hooks" ]; then
+		return
+	fi
+
+	INSTALLED="no"
+
+	for HOOK_NAME in $MANAGED_HOOK_NAMES; do
+		if [ "$DRY_RUN" = "yes" ]; then
+			INSTALLED="yes"
+			continue
+		fi
+
+		TARGET_HOOK="${TARGET}/hooks/${HOOK_NAME}"
+
+		if [ -f "$TARGET_HOOK" ]; then
+			grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
+
+			# shellcheck disable=SC2181
+			if [ $? -ne 0 ]; then
+				# Save the existing Git hook so that we'll continue to execute it
+				mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"
+			fi
+		fi
+
+		if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
+			INSTALLED="yes"
+		else
+			echo "Failed to install $TARGET_HOOK"
+		fi
+	done
+
+	if [ "$INSTALLED" = "yes" ]; then
+		TARGET_DIR=$(dirname "$TARGET")
+
+		if [ "$DRY_RUN" = "yes" ]; then
+			echo "[Dry run] Hooks would have been installed into $TARGET_DIR"
+		else
+			echo "Hooks installed into $TARGET_DIR"
+		fi
+	fi
+}
+
+# Check if we're running in dry-run mode
 DRY_RUN=$(is_dry_run "$@")
+
+# Find the Git hook template directory to install into
 TARGET_TEMPLATE_DIR=""
 
 find_git_hook_templates
@@ -284,12 +375,18 @@ if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
 	exit 1
 fi
 
+# Setup the new hooks in the template directory
 if [ "$DRY_RUN" = "yes" ]; then
 	echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
-	exit 0
+
+elif ! setup_hook_templates; then
+	exit 1
+
 fi
 
-setup_hook_templates
+# Install the hooks into existing local repositories
+if ! install_into_existing_repositories; then
+	exit 1
+fi
 
-# TODO ask to find and install the hooks into the existing repos
-# TODO maybe change the Git template directory config if that doesn't need root
+echo "All done! Enjoy!"
