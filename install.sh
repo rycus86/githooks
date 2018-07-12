@@ -26,65 +26,155 @@ is_dry_run() {
 # Try to find the directory where the Git
 #   hook templates are currently.
 #
+# Sets ${TARGET_TEMPLATE_DIR} if found.
+#
 # Returns:
-#   the path to the directory, or None if not found
+#   None
 ############################################################
 find_git_hook_templates() {
-	if [ -d "$GIT_TEMPLATE_DIR" ]; then
-		TARGET_TEMPLATE_DIR="${GIT_TEMPLATE_DIR}/hooks"
-		return
-	fi
+	# 1. from environment variables
+	mark_directory_as_target "$GIT_TEMPLATE_DIR"
+	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-	FROM_CONFIG=$(git config --get init.templateDir)
-	if [ -d "$FROM_CONFIG" ]; then
-		TARGET_TEMPLATE_DIR="${FROM_CONFIG}/hooks"
-		return
-	fi
+	# 2. from git config
+	mark_directory_as_target "$(git config --get init.templateDir)"
+	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-	if [ -d /usr/share/git-core/templates/hooks ]; then
-		TARGET_TEMPLATE_DIR="/usr/share/git-core/templates/hooks"
-		return
-	fi
+	# 3. from the default location
+	mark_directory_as_target "/usr/share/git-core/templates/hooks"
+	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-	printf 'Could not find the Git hook template directory, do you want to search for it? [yN] '
+	# 4. try to search for it on disk
+	printf 'Could not find the Git hook template directory. '
+	printf 'Do you want to search for it? [yN] '
 	read -r DO_SEARCH
 
 	if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
-		if [ -d "/usr" ]; then
-			echo "Searching for potential locations in /usr ..."
-			for HIT in $(find /usr 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
-				HIT=$(dirname "$HIT")
+		search_for_templates_dir
+		if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+	fi
 
-				printf -- "- Is it %s ? [yN] " "$HIT"
-				read -r ACCEPT
+	# 5. set up as new
+	printf "Do you want to set up a new Git templates folder? [yN] "
+	read -r SETUP_NEW_FOLDER
 
-				if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
-					TARGET_TEMPLATE_DIR="$HIT"
-					return
-				fi
-			done
+	if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ]; then
+		setup_new_templates_folder
+		if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+	fi
+}
 
-			printf "Git hook template directory not found in /usr. Do you want to keep searching? [yN] "
-			read -r DO_SEARCH
+############################################################
+# Sets the ${TARGET_TEMPLATE_DIR} variable if the
+#   first parameter is a writable directory.
+#
+# Returns:
+#   None
+############################################################
+mark_directory_as_target() {
+	if [ "$1" = "" ]; then
+		return
+	fi
 
-			if [ "${DO_SEARCH}" != "y" ] && [ "${DO_SEARCH}" != "Y" ]; then
-				return
-			fi
+	if [ -w "$1" ]; then
+		TARGET_TEMPLATE_DIR="$1"
+		return
+	fi
+
+	# Try to see if the path is given with a tilde
+	TILDE_REPLACED=$(echo "$1" | awk 'gsub("~", "'"$HOME"'", $0)')
+	if [ -w "$TILDE_REPLACED" ]; then
+		TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
+		return
+	fi
+}
+
+############################################################
+# Search for the template directory on the file system.
+#
+# Sets ${TARGET_TEMPLATE_DIR} if found.
+#
+# Returns:
+#   None
+############################################################
+search_for_templates_dir() {
+	if [ -d "/usr" ]; then
+		echo "Searching for potential locations in /usr ..."
+		search_pre_commit_sample_file "/usr"
+
+		if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+	fi
+
+	printf 'Git hook template directory not found in /usr. '
+	printf 'Do you want to keep searching? [yN] '
+	read -r DO_SEARCH
+
+	if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
+		echo "Searching for potential locations everywhere ..."
+		search_pre_commit_sample_file "/"
+	fi
+
+	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+}
+
+############################################################
+# Heuristics: Try to look for a default hook sample file
+#
+# Sets ${TARGET_TEMPLATE_DIR} if found.
+#
+# Returns:
+#   None
+############################################################
+search_pre_commit_sample_file() {
+	START_DIR="$1"
+
+	for HIT in $(find "$START_DIR" 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
+		HIT=$(dirname "$HIT")
+
+		if [ ! -w "$HIT" ]; then
+			echo "Skipping non-writable directory: $HIT"
+			continue
 		fi
 
-		echo "Searching for potential locations ..."
-		for HIT in $(find / 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
-			HIT=$(dirname "$HIT")
+		printf -- "- Is it %s ? [yN] " "$HIT"
+		read -r ACCEPT
 
-			printf -- "- Is it %s ? [yN] " "$HIT"
-			read -r ACCEPT
+		if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
+			TARGET_TEMPLATE_DIR="$HIT"
+			return
+		fi
+	done
+}
 
-			if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
-				TARGET_TEMPLATE_DIR="$HIT"
-				return
-			fi
-		done
+############################################################
+# Setup a new Git templates folder.
+#
+# Returns:
+#   None
+############################################################
+setup_new_templates_folder() {
+	# shellcheck disable=SC2088
+	DEFAULT_TARGET="~/.git-templates"
+	printf "Enter the target folder: [%s] " "$DEFAULT_TARGET"
+	read -r USER_TEMPLATES
+
+	if [ "$USER_TEMPLATES" = "" ]; then
+		USER_TEMPLATES="$DEFAULT_TARGET"
 	fi
+
+	TILDE_REPLACED=$(echo "$USER_TEMPLATES" | awk 'gsub("~", "'"$HOME"'", $0)')
+
+	if [ "$DRY_RUN" != "yes" ]; then
+		if mkdir -p "${TILDE_REPLACED}/hooks"; then
+			# Let this one go with or without a tilde
+			git config --global init.templateDir "$USER_TEMPLATES"
+		else
+			echo "Failed to set up the new Git templates folder"
+			return
+		fi
+	fi
+
+	TARGET_TEMPLATE_DIR="${TILDE_REPLACED}/hooks"
 }
 
 ############################################################
@@ -177,12 +267,19 @@ fi
 	done
 }
 
+############################################################
+# Main program flow below:
+#   - check if we're running in dry-run mode
+#   - find the Git hook template directory to install into
+#   - setup the new hooks in the template directory
+############################################################
+
 DRY_RUN=$(is_dry_run "$@")
 TARGET_TEMPLATE_DIR=""
 
 find_git_hook_templates
 
-if [ "$TARGET_TEMPLATE_DIR" = "" ] || [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
 	echo "Git hook templates directory not found"
 	exit 1
 fi
@@ -192,7 +289,7 @@ if [ "$DRY_RUN" = "yes" ]; then
 	exit 0
 fi
 
-#setup_hook_templates
+setup_hook_templates
 
 # TODO ask to find and install the hooks into the existing repos
 # TODO maybe change the Git template directory config if that doesn't need root
