@@ -1,5 +1,8 @@
 #!/bin/sh
+# shellcheck disable=SC2181
+
 python --version > /dev/null 2>&1
+
 if [ $? -eq 0 ]; then
     python -c '
 with open("base-template.sh", "r") as template_file:
@@ -19,5 +22,5 @@ if template not in content:
         exit 1
     fi
 else
-    echo "- Skipping template up-to-date check (missing python)"
+    printf -- "- Skipping template up-to-date check (missing python)"
 fi
