@@ -32,25 +32,25 @@ All hooks to be executed live under the `.githooks` top-level folder, that shoul
 
 The supported hooks are listed below. Refer to the [Git documentation](https://git-scm.com/docs/githooks) for information on what they do and what parameters they receive.
 
-- applypatch-msg
-- pre-applypatch
-- post-applypatch
-- pre-commit
-- prepare-commit-msg
-- commit-msg
-- post-commit
-- pre-rebase
-- post-checkout
-- post-merge
-- pre-push
-- pre-receive
-- update
-- post-receive
-- post-update
-- push-to-checkout
-- pre-auto-gc
-- post-rewrite
-- sendemail-validate
+- `applypatch-msg`
+- `pre-applypatch`
+- `post-applypatch`
+- `pre-commit`
+- `prepare-commit-msg`
+- `commit-msg`
+- `post-commit`
+- `pre-rebase`
+- `post-checkout`
+- `post-merge`
+- `pre-push`
+- `pre-receive`
+- `update`
+- `post-receive`
+- `post-update`
+- `push-to-checkout`
+- `pre-auto-gc`
+- `post-rewrite`
+- `sendemail-validate`
 
 The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
 
@@ -59,11 +59,11 @@ The `.ignore` files allow excluding files from being treated as a hook script. T
 The commands below fetch and execute the [install.sh](install.sh) script from this repository. It will:
 
 1. Find out where the Git templates directory is
-    a. From the `$GIT_TEMPLATE_DIR` environment variable
-    b. With the `git config --get init.templateDir` command
-    c. Checking the default `/usr/share/git-core/templates` folder
-    d. Search on the filesystem for matching directories
-    e. Offer to set up a new one, and make it `init.templateDir`
+    i. From the `$GIT_TEMPLATE_DIR` environment variable
+    ii. With the `git config --get init.templateDir` command
+    iii. Checking the default `/usr/share/git-core/templates` folder
+    iv. Search on the filesystem for matching directories
+    v. Offer to set up a new one, and make it `init.templateDir`
 2. Set up the hook templates for the supported hooks - the templates are basically a copy of the `base-template.sh` file content
 3. Offer to find existing Git repositories on the filesystem, and install the hooks into them
 
