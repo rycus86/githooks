@@ -59,11 +59,11 @@ The `.ignore` files allow excluding files from being treated as a hook script. T
 The commands below fetch and execute the [install.sh](install.sh) script from this repository. It will:
 
 1. Find out where the Git templates directory is
-    i. From the `$GIT_TEMPLATE_DIR` environment variable
-    ii. With the `git config --get init.templateDir` command
-    iii. Checking the default `/usr/share/git-core/templates` folder
-    iv. Search on the filesystem for matching directories
-    v. Offer to set up a new one, and make it `init.templateDir`
+    1. From the `$GIT_TEMPLATE_DIR` environment variable
+    2. With the `git config --get init.templateDir` command
+    3. Checking the default `/usr/share/git-core/templates` folder
+    4. Search on the filesystem for matching directories
+    5. Offer to set up a new one, and make it `init.templateDir`
 2. Set up the hook templates for the supported hooks - the templates are basically a copy of the `base-template.sh` file content
 3. Offer to find existing Git repositories on the filesystem, and install the hooks into them
 
