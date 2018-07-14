@@ -79,11 +79,15 @@ If you want, you can try out what the script would do first, without changing an
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --dry-run
 ```
 
-And if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`.
+And if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
 
 ```shell
-$ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh)" -- --dry-run
+$ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh)"
 ```
+
+### Updates
+
+You can update the scripts any time by running one of the install commands above. It will simply overwrite the templates with the new ones, and if you opt-in to install into existing local repositories, those will get overwritten too.
 
 ## Acknowledgements
 
