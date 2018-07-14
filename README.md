@@ -89,6 +89,16 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 
 You can update the scripts any time by running one of the install commands above. It will simply overwrite the templates with the new ones, and if you opt-in to install into existing local repositories, those will get overwritten too.
 
+### Uninstalling
+
+If you want to get rid of these hooks and templates, you can execute the `uninstall.sh` script similarly to the install scripts.
+
+```shell
+$ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/uninstall.sh)"
+```
+
+This will delete the template files, optionally the installed hooks from the existing local repositories, and reinstates any previous hooks that were moved during the installation.
+
 ## Acknowledgements
 
 These two projects gave some ideas and inspiration, you should check them out:

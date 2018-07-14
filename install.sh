@@ -429,4 +429,8 @@ if ! install_into_existing_repositories; then
 	exit 1
 fi
 
-echo "All done! Enjoy!"
+echo "All done! Enjoy!
+
+Please support the project by starring the project
+at https://github.com/rycus86/githooks, and report bugs
+or missing features or improvements as issues. Thanks!"
