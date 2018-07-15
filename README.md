@@ -54,6 +54,19 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 
 The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
 
+## Shared hook repositories
+
+The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
+
+For this reason, you can have a comma-separated list of shared repositories set in the `githooks.shared` global Git configuration variable, and the hooks in these repositories will execute for all local projects where the base hooks are installed. Below is an example value for this setting.
+
+```shell
+$ git config --global --get githooks.shared
+git@github.com:shared/hooks-python.git,git@github.com:shared/hooks-maven.git
+```
+
+The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+
 ## Installation
 
 The commands below fetch and execute the [install.sh](install.sh) script from this repository. It will:
@@ -66,6 +79,7 @@ The commands below fetch and execute the [install.sh](install.sh) script from th
     5. Offer to set up a new one, and make it `init.templateDir`
 2. Set up the hook templates for the supported hooks - the templates are basically a copy of the `base-template.sh` file content
 3. Offer to find existing Git repositories on the filesystem, and install the hooks into them
+4. Offer to set up shared hook repositories
 
 To install the templates, just exectue the command below, and follow the instructions in the terminal.
 
