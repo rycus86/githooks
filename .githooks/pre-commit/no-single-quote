@@ -1,0 +1,7 @@
+#!/bin/sh
+if grep -q "'" base-template.sh; then
+    echo "! Single quote characters detected in base-template.sh"
+    exit 1
+else
+    echo "* No single quote characters detected in base-template.sh"
+fi
