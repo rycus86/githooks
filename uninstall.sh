@@ -13,17 +13,17 @@
 #   None
 ############################################################
 find_git_hook_templates() {
-	# 1. from environment variables
-	mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
-	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    # 1. from environment variables
+    mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
+    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-	# 2. from git config
-	mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
-	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    # 2. from git config
+    mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
+    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-	# 3. from the default location
-	mark_directory_as_target "/usr/share/git-core/templates/hooks"
-	if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    # 3. from the default location
+    mark_directory_as_target "/usr/share/git-core/templates/hooks"
+    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 }
 
 ############################################################
@@ -34,26 +34,26 @@ find_git_hook_templates() {
 #   None
 ############################################################
 mark_directory_as_target() {
-	TARGET="$1"
-	if [ "$TARGET" = "" ]; then
-		return
-	fi
+    TARGET="$1"
+    if [ "$TARGET" = "" ]; then
+        return
+    fi
 
-	if [ "$2" != "" ]; then
-		TARGET="${TARGET}/$2"
-	fi
+    if [ "$2" != "" ]; then
+        TARGET="${TARGET}/$2"
+    fi
 
-	if [ -w "$TARGET" ]; then
-		TARGET_TEMPLATE_DIR="$TARGET"
-		return
-	fi
+    if [ -w "$TARGET" ]; then
+        TARGET_TEMPLATE_DIR="$TARGET"
+        return
+    fi
 
-	# Try to see if the path is given with a tilde
-	TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
-	if [ -w "$TILDE_REPLACED" ]; then
-		TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
-		return
-	fi
+    # Try to see if the path is given with a tilde
+    TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
+    if [ -w "$TILDE_REPLACED" ]; then
+        TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
+        return
+    fi
 }
 
 ############################################################
@@ -88,27 +88,27 @@ remove_existing_hook_templates() {
 #   0 on success, 1 on failure
 ############################################################
 uninstall_from_existing_repositories() {
-	printf 'Do you want to uninstall the hooks from existing repositories? [yN] '
-	read -r DO_UNINSTALL
-	if [ "$DO_UNINSTALL" != "y" ] && [ "$DO_UNINSTALL" != "Y" ]; then return 0; fi
+    printf 'Do you want to uninstall the hooks from existing repositories? [yN] '
+    read -r DO_UNINSTALL
+    if [ "$DO_UNINSTALL" != "y" ] && [ "$DO_UNINSTALL" != "Y" ]; then return 0; fi
 
-	printf 'Where do you want to start the search? [%s] ' ~
-	read -r START_DIR
+    printf 'Where do you want to start the search? [%s] ' ~
+    read -r START_DIR
 
-	if [ "$START_DIR" = "" ]; then
-		START_DIR="$HOME"
-	fi
+    if [ "$START_DIR" = "" ]; then
+        START_DIR="$HOME"
+    fi
 
-	if [ ! -d "$START_DIR" ]; then
-		echo "'$START_DIR' is not a directory"
-		return 1
-	fi
+    if [ ! -d "$START_DIR" ]; then
+        echo "'$START_DIR' is not a directory"
+        return 1
+    fi
 
-	find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
-		uninstall_hooks_from_repo "$EXISTING"
-	done
+    find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
+        uninstall_hooks_from_repo "$EXISTING"
+    done
 
-	return 0
+    return 0
 }
 
 ############################################################
@@ -119,34 +119,34 @@ uninstall_from_existing_repositories() {
 #   None
 ############################################################
 uninstall_hooks_from_repo() {
-	TARGET="$1"
-	if [ ! -w "${TARGET}/hooks" ]; then
-		return
-	fi
+    TARGET="$1"
+    if [ ! -w "${TARGET}/hooks" ]; then
+        return
+    fi
 
-	UNINSTALLED="no"
+    UNINSTALLED="no"
 
-	for TARGET_HOOK in "$TARGET"/hooks/*; do
-		if [ -f "$TARGET_HOOK" ]; then
-			grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
+    for TARGET_HOOK in "$TARGET"/hooks/*; do
+        if [ -f "$TARGET_HOOK" ]; then
+            grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
             
-			# shellcheck disable=SC2181
-			if [ $? -eq 0 ]; then
-				rm -f "$TARGET_HOOK"
+            # shellcheck disable=SC2181
+            if [ $? -eq 0 ]; then
+                rm -f "$TARGET_HOOK"
                 UNINSTALLED="yes"
 
                 # Restore the previously moved hook if there was any
                 if [ -f "${TARGET_HOOK}.replaced.githook" ]; then
                     mv "${TARGET_HOOK}.replaced.githook" "$TARGET_HOOK"
                 fi
-			fi
-		fi
-	done
+            fi
+        fi
+    done
 
-	if [ "$UNINSTALLED" = "yes" ]; then
-		TARGET_DIR=$(dirname "$TARGET")
+    if [ "$UNINSTALLED" = "yes" ]; then
+        TARGET_DIR=$(dirname "$TARGET")
         echo "Hooks are uninstalled from $TARGET_DIR"
-	fi
+    fi
 }
 
 # Find the current Git hook templates directory
@@ -155,8 +155,8 @@ TARGET_TEMPLATE_DIR=""
 find_git_hook_templates
 
 if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-	echo "Git hook templates directory not found"
-	exit 1
+    echo "Git hook templates directory not found"
+    exit 1
 fi
 
 # Delete the hook templates
