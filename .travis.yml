@@ -1,0 +1,14 @@
+sudo:
+  - required
+services:
+  - docker
+install: skip
+
+script:
+  - sh "tests/test-${IMAGE_TYPE}.sh"
+
+env:
+  - IMAGE_TYPE=alpine
+  - IMAGE_TYPE=debian
+  - IMAGE_TYPE=ubuntu
+  - IMAGE_TYPE=centos
