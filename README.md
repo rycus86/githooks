@@ -1,5 +1,7 @@
 # Githooks
 
+[![Build Status](https://travis-ci.org/rycus86/githooks.svg?branch=master)](https://travis-ci.org/rycus86/githooks)
+
 A simple Shell script to support per-repository [Git hooks](https://git-scm.com/docs/githooks), checked into the actual repository that uses them.
 
 To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
