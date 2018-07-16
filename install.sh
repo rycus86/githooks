@@ -222,7 +222,20 @@ find_git_hook_templates() {
 
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
         search_for_templates_dir
-        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+
+        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then 
+            printf 'Do you want to set this up as the Git template directory for future use? [yN] '
+            read -r MARK_AS_TEMPLATES
+
+            if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
+                TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
+                if ! git config --global init.templateDir "$TEMPLATE_DIR"; then
+                    echo "! Failed to set it up as Git template directory"
+                fi
+            fi
+            
+            return; 
+        fi
     fi
 
     # 5. set up as new
@@ -554,6 +567,4 @@ echo # For visual separation
 
 echo "All done! Enjoy!
 
-Please support the project by starring the project
-at https://github.com/rycus86/githooks, and report bugs
-or missing features or improvements as issues. Thanks!"
+Please support the project by starring the project at https://github.com/rycus86/githooks, and report bugs or missing features or improvements as issues. Thanks!"
