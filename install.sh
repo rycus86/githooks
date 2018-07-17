@@ -418,6 +418,8 @@ install_into_existing_repositories() {
         START_DIR="$HOME"
     fi
 
+    START_DIR=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
+
     if [ ! -d "$START_DIR" ]; then
         echo "'$START_DIR' is not a directory"
         return 1
