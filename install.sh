@@ -272,7 +272,7 @@ mark_directory_as_target() {
 
     # Try to see if the path is given with a tilde
     TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
-    if [ -w "$TILDE_REPLACED" ]; then
+    if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
         TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
         return
     fi
@@ -352,6 +352,9 @@ setup_new_templates_folder() {
     fi
 
     TILDE_REPLACED=$(echo "$USER_TEMPLATES" | awk 'gsub("~", "'"$HOME"'", $0)')
+    if [ -z "$TILDE_REPLACED" ]; then
+        TILDE_REPLACED="$USER_TEMPLATES"
+    fi
 
     if [ "$DRY_RUN" != "yes" ]; then
         if mkdir -p "${TILDE_REPLACED}/hooks"; then
@@ -418,7 +421,10 @@ install_into_existing_repositories() {
         START_DIR="$HOME"
     fi
 
-    START_DIR=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
+    TILDE_REPLACED=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
+    if [ -n "$TILDE_REPLACED" ]; then
+        START_DIR="$TILDE_REPLACED"
+    fi
 
     if [ ! -d "$START_DIR" ]; then
         echo "'$START_DIR' is not a directory"
