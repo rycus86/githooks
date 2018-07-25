@@ -25,6 +25,7 @@ Take this snippet of a project layout as an example:
     └── post-checkout
     └── ...
     └── .ignore
+    └── .shared
 ├── README.md
 ├── LICENSE
 └── ...
@@ -64,7 +65,7 @@ The `.ignore` files allow excluding files from being treated as a hook script. T
 
 The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
 
-For this reason, you can have a comma-separated list of shared repositories set in the `githooks.shared` global Git configuration variable, and the hooks in these repositories will execute for all local projects where the base hooks are installed. Below is an example value for this setting.
+For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line or separated by comma, which hold common and shared hooks. Alternatively, you can have a comma-separated list of shared repositories set in the `githooks.shared` global Git configuration variable, and the hooks in these repositories will execute for all local projects where the base hooks are installed. Below is an example value for this setting.
 
 ```shell
 $ git config --global --get githooks.shared

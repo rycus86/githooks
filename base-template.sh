@@ -94,7 +94,10 @@ process_shared_hooks() {
 
     # run an init/update if we are after a "git pull" or triggered manually
     if [ "$HOOK_NAME" = "post-merge" ] || [ "$HOOK_NAME" = ".githooks.shared.trigger" ]; then
-        IFS=","
+        # split on comma and newline
+        IFS=",
+        "
+
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             mkdir -p ~/.githooks.shared
 
@@ -125,6 +128,12 @@ process_shared_hooks() {
     fi
 
     for SHARED_ROOT in ~/.githooks.shared/*; do
+        REMOTE_URL=$(cd "$SHARED_ROOT" && git remote get-url origin)
+        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
+        if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
+            continue
+        fi
+        
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
             execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"
         elif [ -d "$SHARED_ROOT" ]; then
@@ -145,10 +154,16 @@ if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
     fi
 fi
 
-# Check for shared hooks
+# Check for shared hooks set globally
 SHARED_HOOKS=$(git config --global --get githooks.shared)
 
 if [ -n "$SHARED_HOOKS" ]; then
+    process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
+fi
+
+# Check for shared hooks within the current repo
+if [ -f "$(pwd)/.githooks/.shared" ]; then
+    SHARED_HOOKS=$(grep -E "^[^#].+$" < "$(pwd)/.githooks/.shared")
     process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
 fi
 

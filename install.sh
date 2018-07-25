@@ -111,7 +111,10 @@ process_shared_hooks() {
 
     # run an init/update if we are after a "git pull" or triggered manually
     if [ "$HOOK_NAME" = "post-merge" ] || [ "$HOOK_NAME" = ".githooks.shared.trigger" ]; then
-        IFS=","
+        # split on comma and newline
+        IFS=",
+        "
+
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             mkdir -p ~/.githooks.shared
 
@@ -142,6 +145,12 @@ process_shared_hooks() {
     fi
 
     for SHARED_ROOT in ~/.githooks.shared/*; do
+        REMOTE_URL=$(cd "$SHARED_ROOT" && git remote get-url origin)
+        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
+        if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
+            continue
+        fi
+        
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
             execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"
         elif [ -d "$SHARED_ROOT" ]; then
@@ -162,10 +171,16 @@ if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
     fi
 fi
 
-# Check for shared hooks
+# Check for shared hooks set globally
 SHARED_HOOKS=$(git config --global --get githooks.shared)
 
 if [ -n "$SHARED_HOOKS" ]; then
+    process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
+fi
+
+# Check for shared hooks within the current repo
+if [ -f "$(pwd)/.githooks/.shared" ]; then
+    SHARED_HOOKS=$(grep -E "^[^#].+$" < "$(pwd)/.githooks/.shared")
     process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
 fi
 
@@ -500,8 +515,9 @@ setup_shared_hook_repositories() {
     if [ -n "$(git config --global --get githooks.shared)" ]; then
         printf "Looks like you already have shared hook repositories setup, do you want to change them now? [yN] "
     else
-        echo "You can set up shared hook repositories to avoid duplicating common hooks across repositories you work on. See information on what are these in the project's documentation at https://github.com/rycus86/githooks"
-        printf "Would you like to do that now? [yN] "
+        echo "You can set up shared hook repositories to avoid duplicating common hooks across repositories you work on. See information on what are these in the project's documentation at https://github.com/rycus86/githooks#shared-hook-repositories"
+        echo "Note: you can also have a .githooks/.shared file listing the repositories where you keep the shared hook files"
+        printf "Would you like to set up shared hook repos now? [yN] "
     fi
 
     read -r DO_SETUP
@@ -524,6 +540,7 @@ setup_shared_hook_repositories() {
 
     if [ -z "$SHARED_REPOS_LIST" ] && git config --global --unset githooks.shared; then
         echo "Shared hook repositories are now unset. If you want to set them up again in the future, run this script again, or change the 'githooks.shared' Git config variable manually."
+        echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
         # Trigger the shared hook repository checkout manually
         echo "$BASE_TEMPLATE_CONTENT" >".githooks.shared.trigger" &&
@@ -532,6 +549,7 @@ setup_shared_hook_repositories() {
         rm -f .githooks.shared.trigger 
 
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
+        echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
         echo "Failed to set up the shared hook repositories!"
     fi
