@@ -8,4 +8,3 @@ git init || exit 1
 
 # verify that the pre-commit is installed
 grep -q 'https://github.com/rycus86/githooks' .git/hooks/pre-commit
-

@@ -128,7 +128,7 @@ process_shared_hooks() {
     fi
 
     for SHARED_ROOT in ~/.githooks.shared/*; do
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git remote get-url origin)
+        REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue

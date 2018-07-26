@@ -7,6 +7,7 @@ echo 'y
 /does/not/exist
 ' | sh /var/lib/githooks/install.sh
 
+# shellcheck disable=SC2181
 if [ $? -eq 0 ]; then
     echo "! Expected to fail"
     exit 1

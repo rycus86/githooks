@@ -5,10 +5,11 @@ services:
 install: skip
 
 script:
-  - sh "tests/test-${IMAGE_TYPE}.sh"
+  - sh "tests/${TEST_INSTANCE}.sh"
 
 env:
-  - IMAGE_TYPE=alpine
-  - IMAGE_TYPE=debian
-  - IMAGE_TYPE=ubuntu
-  - IMAGE_TYPE=centos
+  - TEST_INSTANCE=test-alpine
+  - TEST_INSTANCE=test-debian
+  - TEST_INSTANCE=test-ubuntu
+  - TEST_INSTANCE=test-centos
+  - TEST_INSTANCE=coverage
