@@ -6,6 +6,8 @@ A simple Shell script to support per-repository [Git hooks](https://git-scm.com/
 
 To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
 
+> Check out the [blog post](https://blog.viktoradam.net/2018/07/26/githooks-auto-install-hooks/) for the long read!
+
 ## Layout and options
 
 Take this snippet of a project layout as an example:
