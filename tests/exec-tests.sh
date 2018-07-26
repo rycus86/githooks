@@ -4,19 +4,14 @@ IMAGE_TYPE="$1"
 cat << EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
-ADD install.sh /var/lib/githooks.sh
-ADD uninstall.sh /var/lib/uninstall.sh
+ADD base-template.sh install.sh uninstall.sh /var/lib/githooks/
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/step-* /var/lib/tests/
+ADD tests/exec-steps.sh tests/step-* /var/lib/tests/
 
-RUN for STEP in /var/lib/tests/step-*.sh; do \
-        echo "> Executing "\$(basename "\$STEP") && \
-        sh \$STEP && \
-        sh /var/lib/uninstall.sh ; \
-    done
+RUN sh /var/lib/tests/exec-steps.sh
 EOF
 
 RESULT=$?
