@@ -1,4 +1,6 @@
 #!/bin/sh
+# Test:
+#   Run an install with shared hooks set up, and verify those trigger properly
 
 mkdir -p /shared/hooks-005.git/pre-commit && \
     echo 'echo "From shared hook" > /tmp/test-005.out' \

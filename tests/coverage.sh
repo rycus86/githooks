@@ -11,13 +11,28 @@ ADD base-template.sh install.sh uninstall.sh /var/lib/githooks/
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/exec-steps.sh tests/step-* /var/lib/tests/
+ADD tests/exec-steps.sh tests/step-* tests/replace-template-loader.py /var/lib/tests/
 
 # Make sure we're using Bash for kcov
 RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\;
 RUN find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\;
 RUN find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\;
+
+# Replace the inline template with loading the base template file
+RUN python /var/lib/tests/replace-template-loader.py /var/lib/githooks
 EOF
+
+# shellcheck disable=SC2181
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+# Make sure we delete the previous run results
+docker run --security-opt seccomp=unconfined \
+    -v "$PWD/cover":/cover \
+    --entrypoint sh \
+    githooks:coverage \
+    -c 'rm -rf /cover/*'
 
 # Run the actual tests and collect the coverage info
 docker run --security-opt seccomp=unconfined \

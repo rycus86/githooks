@@ -1,4 +1,6 @@
 #!/bin/sh
+# Test:
+#   Run a simple install and verify the hooks are in place
 
 # run the default install
 sh /var/lib/githooks/install.sh || exit 1

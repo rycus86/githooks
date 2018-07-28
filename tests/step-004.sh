@@ -1,4 +1,6 @@
 #!/bin/sh
+# Test:
+#   Set up local repos, run the install and verify the hooks get installed
 
 mkdir -p /tmp/test4/p001 && mkdir -p /tmp/test4/p002 || exit 1
 
