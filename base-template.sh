@@ -42,10 +42,12 @@ execute_hook() {
     # If there are .ignore files, read the list of patterns to exclude.
     ALL_IGNORE_FILE=$(mktemp)
     if [ -f ".githooks/.ignore" ]; then
-        (cat ".githooks/.ignore" ; echo) > "$ALL_IGNORE_FILE"
+        cat ".githooks/.ignore" >"$ALL_IGNORE_FILE"
+        echo >>"$ALL_IGNORE_FILE"
     fi
     if [ -f ".githooks/${HOOK_NAME}/.ignore" ]; then
-        (cat ".githooks/${HOOK_NAME}/.ignore" ; echo) >> "$ALL_IGNORE_FILE"
+        cat ".githooks/${HOOK_NAME}/.ignore" >>"$ALL_IGNORE_FILE"
+        echo >>"$ALL_IGNORE_FILE"
     fi
 
     # Check if the filename matches any of the ignored patterns
@@ -80,7 +82,7 @@ execute_hook() {
         # Run as a Shell script
         sh "$HOOK_PATH" "$@"
         RESULT=$?
-        
+
     fi
 
     return $RESULT
@@ -133,7 +135,7 @@ process_shared_hooks() {
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
         fi
-        
+
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
             execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"
         elif [ -d "$SHARED_ROOT" ]; then
@@ -163,7 +165,7 @@ fi
 
 # Check for shared hooks within the current repo
 if [ -f "$(pwd)/.githooks/.shared" ]; then
-    SHARED_HOOKS=$(grep -E "^[^#].+$" < "$(pwd)/.githooks/.shared")
+    SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
     process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
 fi
 

@@ -1,4 +1,10 @@
 #!/bin/sh
+
+if ! shellcheck --version >/dev/null 2>&1; then
+    echo "_ Skipping shellcheck - not installed"
+    exit 0
+fi
+
 if shellcheck ./*.sh ./tests/*.sh; then
     echo "* shellcheck OK"
 else

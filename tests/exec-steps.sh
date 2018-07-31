@@ -33,7 +33,7 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     git config --global --unset init.templateDir
 
-    echo 
+    echo
 
 done
 

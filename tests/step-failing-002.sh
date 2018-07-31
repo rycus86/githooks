@@ -13,4 +13,3 @@ if [ $? -eq 0 ]; then
     echo "! Expected to fail"
     exit 1
 fi
-

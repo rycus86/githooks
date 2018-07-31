@@ -2,7 +2,7 @@
 
 TEST_DIR=$(dirname "$0")
 
-cat << EOF | docker build --force-rm -t githooks:ubuntu-base -
+cat <<EOF | docker build --force-rm -t githooks:ubuntu-base -
 FROM ubuntu
 RUN apt-get update && \
     apt-get install --no-install-recommends --no-install-suggests -y \

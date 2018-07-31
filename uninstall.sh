@@ -129,7 +129,7 @@ uninstall_hooks_from_repo() {
     for TARGET_HOOK in "$TARGET"/hooks/*; do
         if [ -f "$TARGET_HOOK" ]; then
             grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
-            
+
             # shellcheck disable=SC2181
             if [ $? -eq 0 ]; then
                 rm -f "$TARGET_HOOK"

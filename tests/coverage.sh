@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Build a Docker image on top of kcov with our scripts
-cat << EOF | docker build --force-rm -t githooks:coverage -f - .
+cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM ragnaroek/kcov:v33
 
 RUN apt-get update && apt-get install -y --no-install-recommends git
@@ -38,7 +38,7 @@ docker run --security-opt seccomp=unconfined \
 docker run --security-opt seccomp=unconfined \
     -v "$PWD/cover":/cover \
     githooks:coverage \
-        --coveralls-id="$TRAVIS_JOB_ID" \
-        --include-pattern="/var/lib/githooks/" \
-        /cover \
-        /var/lib/tests/exec-steps.sh
+    --coveralls-id="$TRAVIS_JOB_ID" \
+    --include-pattern="/var/lib/githooks/" \
+    /cover \
+    /var/lib/tests/exec-steps.sh

@@ -1,7 +1,7 @@
 #!/bin/sh
 IMAGE_TYPE="$1"
 
-cat << EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
+cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
 ADD base-template.sh install.sh uninstall.sh /var/lib/githooks/

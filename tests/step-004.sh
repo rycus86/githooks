@@ -26,4 +26,3 @@ if ! grep -r 'github.com/rycus86/githooks' /tmp/test4/p002/.git/hooks; then
     echo "! Hooks were not installed successfully"
     exit 1
 fi
-

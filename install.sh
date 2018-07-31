@@ -59,10 +59,12 @@ execute_hook() {
     # If there are .ignore files, read the list of patterns to exclude.
     ALL_IGNORE_FILE=$(mktemp)
     if [ -f ".githooks/.ignore" ]; then
-        (cat ".githooks/.ignore" ; echo) > "$ALL_IGNORE_FILE"
+        cat ".githooks/.ignore" >"$ALL_IGNORE_FILE"
+        echo >>"$ALL_IGNORE_FILE"
     fi
     if [ -f ".githooks/${HOOK_NAME}/.ignore" ]; then
-        (cat ".githooks/${HOOK_NAME}/.ignore" ; echo) >> "$ALL_IGNORE_FILE"
+        cat ".githooks/${HOOK_NAME}/.ignore" >>"$ALL_IGNORE_FILE"
+        echo >>"$ALL_IGNORE_FILE"
     fi
 
     # Check if the filename matches any of the ignored patterns
@@ -97,7 +99,7 @@ execute_hook() {
         # Run as a Shell script
         sh "$HOOK_PATH" "$@"
         RESULT=$?
-        
+
     fi
 
     return $RESULT
@@ -150,7 +152,7 @@ process_shared_hooks() {
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
         fi
-        
+
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
             execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"
         elif [ -d "$SHARED_ROOT" ]; then
@@ -180,7 +182,7 @@ fi
 
 # Check for shared hooks within the current repo
 if [ -f "$(pwd)/.githooks/.shared" ]; then
-    SHARED_HOOKS=$(grep -E "^[^#].+$" < "$(pwd)/.githooks/.shared")
+    SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
     process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
 fi
 
@@ -238,7 +240,7 @@ find_git_hook_templates() {
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
         search_for_templates_dir
 
-        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then 
+        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then
             printf 'Do you want to set this up as the Git template directory for future use? [yN] '
             read -r MARK_AS_TEMPLATES
 
@@ -248,8 +250,8 @@ find_git_hook_templates() {
                     echo "! Failed to set it up as Git template directory"
                 fi
             fi
-            
-            return; 
+
+            return
         fi
     fi
 
@@ -546,7 +548,7 @@ setup_shared_hook_repositories() {
         echo "$BASE_TEMPLATE_CONTENT" >".githooks.shared.trigger" &&
             chmod +x ".githooks.shared.trigger" &&
             ./.githooks.shared.trigger
-        rm -f .githooks.shared.trigger 
+        rm -f .githooks.shared.trigger
 
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"

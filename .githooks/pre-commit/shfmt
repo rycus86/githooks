@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if ! shfmt --version >/dev/null 2>&1; then
+    echo "_ Skipping shfmt - not installed"
+    exit 0
+fi
+
+if shfmt -p -d -i 4 ./*.sh ./.githooks ./tests; then
+    echo "* shfmt OK"
+else
+    echo "! shfmt problems detected"
+    exit 1
+fi

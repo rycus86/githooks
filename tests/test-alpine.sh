@@ -2,7 +2,7 @@
 
 TEST_DIR=$(dirname "$0")
 
-cat << EOF | docker build --force-rm -t githooks:alpine-base -
+cat <<EOF | docker build --force-rm -t githooks:alpine-base -
 FROM alpine
 RUN apk add --no-cache git curl
 EOF

@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2181
 
-python --version > /dev/null 2>&1
+python --version >/dev/null 2>&1
 
 if [ $? -eq 0 ]; then
     python -c '
@@ -17,7 +17,7 @@ if template not in content:
 
     if [ $? -eq 0 ]; then
         echo "* Template is up-to-date in the install script"
-    else 
+    else
         echo "! Template is not up-to-date in the install script"
         exit 1
     fi

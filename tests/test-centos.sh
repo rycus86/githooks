@@ -2,7 +2,7 @@
 
 TEST_DIR=$(dirname "$0")
 
-cat << EOF | docker build --force-rm -t githooks:centos-base -
+cat <<EOF | docker build --force-rm -t githooks:centos-base -
 FROM centos
 RUN yum install -y git curl ca-certificates
 EOF

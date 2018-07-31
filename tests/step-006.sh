@@ -3,11 +3,11 @@
 #   Run an install, and let it search for the template dir
 
 # move the built-in git template folder
-mkdir -p /tmp/git-templates && \
-    mv /usr/share/git-core/templates /tmp/git-templates/ && \
-    rm -f /tmp/git-templates/templates/hooks/* && \
-    touch /tmp/git-templates/templates/hooks/pre-commit.sample \
-    || exit 1
+mkdir -p /tmp/git-templates &&
+    mv /usr/share/git-core/templates /tmp/git-templates/ &&
+    rm -f /tmp/git-templates/templates/hooks/* &&
+    touch /tmp/git-templates/templates/hooks/pre-commit.sample ||
+    exit 1
 
 # run the install, and let it search for the templates
 echo 'y
