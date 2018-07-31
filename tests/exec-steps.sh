@@ -11,6 +11,8 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     mkdir -p /usr/share/git-core/templates/hooks
     rm -rf /usr/share/git-core/templates/hooks/*
+    rm -rf ~/.githooks.shared
+    rm -rf /tmp/*
 
     TEST_OUTPUT=$(sh "$STEP" 2>&1)
     # shellcheck disable=SC2181
@@ -23,7 +25,7 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     mkdir -p /usr/share/git-core/templates/hooks
 
-    UNINSTALL_OUTPUT=$(sh /var/lib/githooks/uninstall.sh 2>&1)
+    UNINSTALL_OUTPUT=$(printf "y\\n/\\n" | sh /var/lib/githooks/uninstall.sh 2>&1)
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "! Uninstall failed in $STEP, output:"
@@ -32,6 +34,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     fi
 
     git config --global --unset init.templateDir
+    git config --global --unset githooks.shared
 
     echo
 

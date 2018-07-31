@@ -137,11 +137,17 @@ process_shared_hooks() {
         fi
 
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
-            execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"
+            if ! execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"; then
+                return 1
+            fi
         elif [ -d "$SHARED_ROOT" ]; then
-            execute_all_hooks_in "$SHARED_ROOT" "$@"
+            if ! execute_all_hooks_in "$SHARED_ROOT" "$@"; then
+                return 1
+            fi
         fi
     done
+
+    return 0
 }
 
 HOOK_NAME=$(basename "$0")
@@ -160,13 +166,17 @@ fi
 SHARED_HOOKS=$(git config --global --get githooks.shared)
 
 if [ -n "$SHARED_HOOKS" ]; then
-    process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
+    if ! process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"; then
+        exit 1
+    fi
 fi
 
 # Check for shared hooks within the current repo
 if [ -f "$(pwd)/.githooks/.shared" ]; then
     SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-    process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"
+    if ! process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"; then
+        exit 1
+    fi
 fi
 
 # Execute all hooks in a directory, or a file named as the hook
