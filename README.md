@@ -109,6 +109,15 @@ And if you trust GitHub URLs more, use the command below that skips the redirect
 $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh)"
 ```
 
+### Required tools
+
+Although most systems will usually have these tools (especially if you're using Git), I should mention that the project assumes the following programs to be available:
+
+- git
+- awk
+- sed
+- grep
+
 ### Updates
 
 You can update the scripts any time by running one of the install commands above. It will simply overwrite the templates with the new ones, and if you opt-in to install into existing local repositories, those will get overwritten too.
