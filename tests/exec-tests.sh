@@ -11,6 +11,10 @@ RUN git config --global user.email "githook@test.com" && \
 
 ADD tests/exec-steps.sh tests/step-* /var/lib/tests/
 
+# Change the base template so we can pass in the hook name
+RUN sed -i 's|^HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
+    sed -i 's|^HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh
+
 RUN sh /var/lib/tests/exec-steps.sh
 EOF
 

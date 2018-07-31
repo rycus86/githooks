@@ -9,7 +9,6 @@ mkdir -p .githooks/pre-commit &&
     echo 'echo "Direct execution" >> /tmp/test017.out' >.githooks/pre-commit/test &&
     echo 'echo "Previous hook" >> /tmp/test017.out' >.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    ls -la .git/hooks/ &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
         sh /var/lib/githooks/base-template.sh ||
     exit 1
