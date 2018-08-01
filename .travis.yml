@@ -13,6 +13,6 @@ env:
   - TEST_INSTANCE=test-ubuntu
   - TEST_INSTANCE=test-centos
   - TEST_INSTANCE=test-arch
-  # - TEST_INSTANCE=test-fedora # TODO has some problems at the moment
+  - TEST_INSTANCE=test-fedora
   - TEST_INSTANCE=test-opensuse
   - TEST_INSTANCE=coverage

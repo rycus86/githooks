@@ -113,10 +113,11 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 
 Although most systems will usually have these tools (especially if you're using Git), I should mention that the project assumes the following programs to be available:
 
-- git
-- awk
-- sed
-- grep
+- `git`
+- `awk`
+- `sed`
+- `grep`
+- `find`
 
 ### Updates
 
