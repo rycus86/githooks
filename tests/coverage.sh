@@ -20,9 +20,11 @@ RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; &
     find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
 # Replace the inline template with loading the base template file
     python /var/lib/tests/replace-template-loader.py /var/lib/githooks && \\
-# Change the base template so we can pass in the hook name
+# Change the base template so we can pass in the hook name and accept flags
     sed -i 's|^HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
-    sed -i 's|^HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh
+    sed -i 's|^HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
+    sed -i 's|^ACCEPT_CHANGES=.*|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
+    sed -i 's|read -r ACCEPT_CHANGES|echo "Accepted: \$ACCEPT_CHANGES" # disabled for tests: read -r ACCEPT_CHANGES|' /var/lib/githooks/base-template.sh
 EOF
 
 # shellcheck disable=SC2181

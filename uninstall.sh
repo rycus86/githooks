@@ -143,6 +143,11 @@ uninstall_hooks_from_repo() {
         fi
     done
 
+    if [ -f "${TARGET}/.githooks.checksum" ]; then
+        rm -f "${TARGET}/.githooks.checksum"
+        UNINSTALLED="yes"
+    fi
+
     if [ "$UNINSTALLED" = "yes" ]; then
         TARGET_DIR=$(dirname "$TARGET")
         echo "Hooks are uninstalled from $TARGET_DIR"

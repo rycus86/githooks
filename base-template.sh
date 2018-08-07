@@ -70,22 +70,75 @@ execute_hook() {
         return 0
     fi
 
-    # Assume success by default
-    RESULT=0
+    check_and_execute "$@"
+    return $?
+}
+
+check_and_execute() {
+    if ! [ -f "$HOOK_PATH" ]; then
+        return 0
+    fi
+
+    # get hash of the hook contents
+    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
+        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
+    fi
+    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+    # check against the previous hash
+    if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+        # assign a terminal
+        [ -f /dev/tty ] && exec </dev/tty
+
+        if [ -z "$CURRENT_HASHES" ]; then
+            MESSAGE="New hook file found"
+        elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
+            echo "* Skipping disabled $HOOK_PATH"
+            echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+            return 0
+        else
+            MESSAGE="Hook file changed"
+        fi
+
+        echo "? $MESSAGE: $HOOK_PATH"
+
+        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+            echo "  Already accepted"
+        else
+            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
+            read -r ACCEPT_CHANGES
+
+            if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
+                echo "* Not running $HOOK_FILE"
+                return 0
+            fi
+
+            if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
+                echo "* Disabled $HOOK_PATH"
+                echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+
+                echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
+                return 0
+            fi
+        fi
+
+        # save the new accepted checksum
+        echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+    fi
 
     if [ -x "$HOOK_PATH" ]; then
         # Run as an executable file
         "$HOOK_PATH" "$@"
-        RESULT=$?
+        return $?
 
     elif [ -f "$HOOK_PATH" ]; then
         # Run as a Shell script
         sh "$HOOK_PATH" "$@"
-        RESULT=$?
+        return $?
 
     fi
 
-    return $RESULT
+    return 0
 }
 
 process_shared_hooks() {
@@ -152,6 +205,7 @@ process_shared_hooks() {
 
 HOOK_NAME=$(basename "$0")
 HOOK_FOLDER=$(dirname "$0")
+ACCEPT_CHANGES=
 
 # Execute the old hook if we moved it when installing our hooks.
 if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
