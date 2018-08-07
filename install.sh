@@ -104,9 +104,6 @@ check_and_execute() {
     CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
     # check against the previous hash
     if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
-        # assign a terminal
-        [ -f /dev/tty ] && exec </dev/tty
-
         if [ -z "$CURRENT_HASHES" ]; then
             MESSAGE="New hook file found"
         elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
@@ -123,7 +120,7 @@ check_and_execute() {
             echo "  Already accepted"
         else
             printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
-            read -r ACCEPT_CHANGES
+            read -r ACCEPT_CHANGES </dev/tty
 
             if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
                 echo "* Not running $HOOK_FILE"
