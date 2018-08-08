@@ -1,4 +1,9 @@
 #!/bin/sh
+
+if [ -n "$GITHOOKS_SKIP_UPDATE_VERSION" ]; then
+    exit 0
+fi
+
 CHANGES="$(git diff --name-only origin/master..HEAD base-template.sh install.sh)"
 if [ -z "$CHANGES" ]; then
     # stop here if there are changes for this push
@@ -19,6 +24,8 @@ done
 # restore the execute flag on the install script
 chmod +x install.sh
 
-# rewrite the last commit to include the version number change
 git add base-template.sh install.sh
-git commit --amend --no-edit --no-verify >/dev/null
+
+# rewrite the last commit to include the version number change
+GITHOOKS_SKIP_UPDATE_VERSION=1 \
+    git commit --amend --no-edit --no-verify >/dev/null
