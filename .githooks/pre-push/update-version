@@ -21,4 +21,4 @@ chmod +x install.sh
 
 # rewrite the last commit to include the version number change
 git add base-template.sh install.sh
-git commit --amend --no-edit --no-verify
+git commit --amend --no-edit --no-verify >/dev/null

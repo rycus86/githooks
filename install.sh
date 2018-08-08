@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.081751-1c4987
+# Version: 1808.081841-e44727
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -219,9 +219,64 @@ process_shared_hooks() {
     return 0
 }
 
+# shellcheck disable=SC2181
+check_for_updates() {
+    echo "^ Checking for updates ..."
+
+    INSTALL_SCRIPT=$(mktemp githooks-install.sh.XXXXXX)
+    if [ $? -ne 0 ]; then
+        # bail out, we cannot create a temporary file
+        echo "! Cannot create temporary files"
+        return
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh >"$INSTALL_SCRIPT" 2>/dev/null
+
+    elif wget --version >/dev/null 2>&1; then
+        wget -O- https://raw.githubusercontent.com/rycus86/githooks/master/install.sh >"$INSTALL_SCRIPT" 2>/dev/null
+
+    else
+        echo "! Cannot check for updates - needs either curl or wget"
+        rm "$INSTALL_SCRIPT"
+        return
+    fi
+
+    if [ $? -ne 0 ]; then
+        echo "! Failed to check for updates"
+        rm "$INSTALL_SCRIPT"
+        return
+    fi
+
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | sed "s/^# Version: //")
+    LATEST_VERSION=$(grep "^# Version: .*" "$INSTALL_SCRIPT" | sed "s/^# Version: //")
+
+    UPDATE_AVAILABLE=$(echo "$LATEST_VERSION $CURRENT_VERSION" | awk "{ print (\$1 < \$2) }")
+    if [ "$UPDATE_AVAILABLE" = "0" ]; then
+        echo "* There is a new Githooks update available: Version $LATEST_VERSION"
+        printf "    Would you like to install it now? [Y/n] "
+        read -r EXECUTE_UPDATE </dev/tty
+
+        if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
+            if sh "$INSTALL_SCRIPT"; then
+                rm "$INSTALL_SCRIPT"
+                return
+            fi
+        fi
+
+        echo "  If you would like to disable auto-updates, run:"
+        echo "    \$ git config --global githooks.autoupdate.enabled N"
+    fi
+
+    rm "$INSTALL_SCRIPT"
+}
+
 HOOK_NAME=$(basename "$0")
 HOOK_FOLDER=$(dirname "$0")
 ACCEPT_CHANGES=
+
+# Check for updates first, if needed
+# check_for_updates -- not ready yet
 
 # Execute the old hook if we moved it when installing our hooks.
 if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
