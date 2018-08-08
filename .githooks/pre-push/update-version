@@ -1,5 +1,5 @@
 #!/bin/sh
-CHANGES="$(git diff --name-only origin/HEAD..HEAD base-template.sh install.sh)"
+CHANGES="$(git diff --name-only origin/master..HEAD base-template.sh install.sh)"
 if [ -z "$CHANGES" ]; then
     # stop here if there are changes for this push
     exit 0

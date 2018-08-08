@@ -173,6 +173,12 @@ if ! uninstall_from_existing_repositories; then
     exit 1
 fi
 
+# Unset global Githooks variables
+git config --global --unset githooks.shared
+git config --global --unset githooks.autoupdate.enabled
+git config --global --unset githooks.autoupdate.lastrun
+
+# Finished
 echo "All done!"
 echo
 echo "If you ever want to reinstall the hooks, just follow"
