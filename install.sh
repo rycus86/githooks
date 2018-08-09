@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.092222-614de9
+# Version: 1808.092314-5e0ec5
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -594,6 +594,43 @@ setup_hook_templates() {
 }
 
 ############################################################
+# Prompt whether to enable automatic update checks or not.
+#   This is skipped if it is already enabled.
+#   If it is currently disabled, it asks if you
+#   want it enabled.
+#
+# Returns:
+#   1 when already enabled, 0 otherwise
+############################################################
+setup_automatic_update_checks() {
+    if CURRENT_SETTING=$(git config --global --get githooks.autoupdate.enabled); then
+        if [ "$CURRENT_SETTING" = "Y" ]; then
+            # OK, it's already enabled
+            return 1
+        else
+            echo "Automatic update checks are currently disabled."
+            printf "Would you like to re-enable them, done once a day after a commit? [Y/n] "
+        fi
+    else
+        printf "Would you like to enable automatic update checks, done once a day after a commit? [Y/n] "
+    fi
+
+    read -r DO_AUTO_UPDATES
+    if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
+        if [ "$DRY_RUN" = "yes" ]; then
+            echo "[Dry run] Automatic update checks would have been enabled"
+        elif git config --global githooks.autoupdate.enabled Y; then
+            echo "Automatic update checks are now enabled"
+        else
+            echo "! Failed to enable automatic update checks"
+        fi
+    else
+        echo "If you change your mind in the future, you can enable it by running:"
+        echo "  \$ git config --global githooks.autoupdate.enabled Y"
+    fi
+}
+
+############################################################
 # Install the new Git hook templates into the
 #   existing local repositories.
 #
@@ -601,15 +638,34 @@ setup_hook_templates() {
 #   0 on success, 1 on failure
 ############################################################
 install_into_existing_repositories() {
-    printf 'Do you want to install the hooks into existing repositories? [y/N] '
-    read -r DO_INSTALL
-    if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then return 0; fi
+    PRE_START_DIR=$(git config --global --get githooks.previous.searchdir)
+    # shellcheck disable=SC2181
+    if [ $? -eq 0 ] && [ -n "$PRE_START_DIR" ]; then
+        HAS_PRE_START_DIR="Y"
+    else
+        PRE_START_DIR="$HOME"
+    fi
 
-    printf 'Where do you want to start the search? [%s] ' ~
+    if [ "$HAS_PRE_START_DIR" = "Y" ]; then
+        QUESTION_PROMPT="[Y/n]"
+    else
+        QUESTION_PROMPT="[y/N]"
+    fi
+
+    printf 'Do you want to install the hooks into existing repositories? %s ' "$QUESTION_PROMPT"
+    read -r DO_INSTALL
+
+    if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
+        if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
+            return 0
+        fi
+    fi
+
+    printf 'Where do you want to start the search? [%s] ' "$PRE_START_DIR"
     read -r START_DIR
 
     if [ "$START_DIR" = "" ]; then
-        START_DIR="$HOME"
+        START_DIR="$PRE_START_DIR"
     fi
 
     TILDE_REPLACED=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
@@ -621,6 +677,8 @@ install_into_existing_repositories() {
         echo "'$START_DIR' is not a directory"
         return 1
     fi
+
+    git config --global githooks.previous.searchdir "$START_DIR"
 
     find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
         install_hooks_into_repo "$EXISTING"
@@ -760,22 +818,9 @@ fi
 echo # For visual separation
 
 # Automatic updates
-printf "Would you like to enable automatic update checks, done once a day after a commit? [Y/n] "
-read -r DO_AUTO_UPDATES
-if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
-    if [ "$DRY_RUN" = "yes" ]; then
-        echo "[Dry run] Automatic update checks would have been enabled"
-    elif git config --global githooks.autoupdate.enabled Y; then
-        echo "Automatic update checks are now enabled"
-    else
-        echo "! Failed to enable automatic update checks"
-    fi
-else
-    echo "If you change your mind in the future, you can enable it by running:"
-    echo "  $ git config --global githooks.autoupdate.enabled Y"
+if setup_automatic_update_checks; then
+    echo # For visual separation
 fi
-
-echo # For visual separation
 
 # Install the hooks into existing local repositories
 if ! install_into_existing_repositories; then

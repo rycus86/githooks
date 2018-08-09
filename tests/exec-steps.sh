@@ -37,6 +37,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.shared
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
+    git config --global --unset githooks.previous.searchdir
 
     echo
 
