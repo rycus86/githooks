@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.091843-d5e832
+# Version: 1808.092222-614de9
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -101,20 +101,22 @@ check_and_execute() {
     TRUSTED_REPO=
 
     if [ -f ".githooks/trust-all" ]; then
-        TRUST_ALL_CONFIG=$(git config --get githooks.trust.all)
+        TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
+        TRUST_ALL_RESULT=$?
 
         # shellcheck disable=SC2181
-        if [ $? -ne 0 ]; then
+        if [ $TRUST_ALL_RESULT -ne 0 ]; then
             echo "! This repository wants you to trust all current and future hooks without prompting"
             printf "  Do you want to allow running every current and future hooks? [y/N] "
             read -r TRUST_ALL_HOOKS </dev/tty
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
+                TRUSTED_REPO="Y"
             else
                 git config githooks.trust.all N
             fi
-        elif [ $? -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
             TRUSTED_REPO="Y"
         fi
     fi
