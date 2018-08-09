@@ -7,6 +7,7 @@ git config --global githooks.shared /shared/some-previous-example
 
 # run the install, and set up shared repos
 echo 'n
+n
 y
 
 ' | sh /var/lib/githooks/install.sh || exit 1

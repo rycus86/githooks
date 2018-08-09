@@ -5,7 +5,8 @@
 mkdir -p /tmp/test10/a && cd /tmp/test10/a || exit 1
 git init || exit 1
 
-echo 'y
+echo 'n
+y
 /
 ' | sh /var/lib/githooks/install.sh --dry-run || exit 1
 

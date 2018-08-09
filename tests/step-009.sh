@@ -11,7 +11,8 @@ mkdir -p /tmp/test9/.githooks/pre-commit &&
     chmod +x .git/hooks/pre-commit ||
     exit 1
 
-echo 'y
+echo 'n
+y
 /tmp/test9
 ' | sh /var/lib/githooks/install.sh || exit 1
 

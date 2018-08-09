@@ -13,7 +13,8 @@ if grep -r 'github.com/rycus86/githooks' ~/test022/; then
 fi
 
 # run the install, and select installing the hooks into existing repos
-echo 'y
+echo 'n
+y
 
 ' | sh /var/lib/githooks/install.sh || exit 1
 

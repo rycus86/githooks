@@ -13,6 +13,7 @@ cd /shared/hooks-005.git &&
 
 # run the install, and set up shared repos
 echo 'n
+n
 y
 /shared/hooks-005.git
 ' | sh /var/lib/githooks/install.sh || exit 1

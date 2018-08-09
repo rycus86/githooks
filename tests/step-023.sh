@@ -25,6 +25,7 @@ git config --global githooks.shared /shared/some-previous-example
 
 # run the install, and set up shared repos
 echo 'n
+n
 y
 /shared/hooks-023-a.git
 /shared/hooks-023-b.git

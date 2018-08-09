@@ -129,6 +129,16 @@ Although most systems will usually have these tools (especially if you're using 
 
 You can update the scripts any time by running one of the install commands above. It will simply overwrite the templates with the new ones, and if you opt-in to install into existing local repositories, those will get overwritten too.
 
+You can also enable automatic update checks during the installation, that is executed once a day after a successful commit. It downloads the latest version of the install script, and asks whether you want to install it. Automatic updates can be enabled or disabled at any time by running the command below.
+
+```shell
+# enable with:
+$ git config --global githooks.autoupdate.enabled Y
+# disable with either:
+$ git config --global githooks.autoupdate.enabled N
+$ git config --global --unset githooks.autoupdate.enabled
+```
+
 ### Uninstalling
 
 If you want to get rid of these hooks and templates, you can execute the `uninstall.sh` script similarly to the install scripts.

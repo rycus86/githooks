@@ -4,7 +4,8 @@
 
 rm -rf /does/not/exist
 
-echo 'y
+echo 'n
+y
 /does/not/exist
 ' | sh /var/lib/githooks/install.sh
 

@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.082146-61a4c2
+# Version: 1808.091806-8e7b9f
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -709,6 +709,22 @@ if [ "$DRY_RUN" = "yes" ]; then
 elif ! setup_hook_templates; then
     exit 1
 
+fi
+
+echo # For visual separation
+
+# Automatic updates
+printf "Would you like to enable automatic update checks, done once a day after a commit? [Y/n] "
+read -r DO_AUTO_UPDATES
+if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
+    if git config --global githooks.autoupdate.enabled Y; then
+        echo "Automatic update checks are now enabled"
+    else
+        echo "! Failed to enable automatic update checks"
+    fi
+else
+    echo "If you change your mind in the future, you can enable it by running:"
+    echo "  $ git config --global githooks.autoupdate.enabled Y"
 fi
 
 echo # For visual separation
