@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.091806-8e7b9f
+# Version: 1808.091818-06aa13
 
 execute_all_hooks_in() {
     PARENT="$1"

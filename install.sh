@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.091806-8e7b9f
+# Version: 1808.091818-06aa13
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -340,6 +340,23 @@ is_dry_run() {
     done
 
     echo "no"
+}
+
+############################################################
+# Check if the install script is
+#   running in non-interactive mode.
+#
+# Returns:
+#   0 in non-interactive mode, 1 otherwise
+############################################################
+is_non_interactive() {
+    for p in "$@"; do
+        if [ "$p" = "--non-interactive" ]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 ############################################################
@@ -692,6 +709,10 @@ setup_shared_hook_repositories() {
 # Check if we're running in dry-run mode
 DRY_RUN=$(is_dry_run "$@")
 
+if is_non_interactive "$@"; then
+    exec </dev/null
+fi
+
 # Find the Git hook template directory to install into
 TARGET_TEMPLATE_DIR=""
 
@@ -717,7 +738,9 @@ echo # For visual separation
 printf "Would you like to enable automatic update checks, done once a day after a commit? [Y/n] "
 read -r DO_AUTO_UPDATES
 if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
-    if git config --global githooks.autoupdate.enabled Y; then
+    if [ "$DRY_RUN" = "yes" ]; then
+        echo "[Dry run] Automatic update checks would have been enabled"
+    elif git config --global githooks.autoupdate.enabled Y; then
         echo "Automatic update checks are now enabled"
     else
         echo "! Failed to enable automatic update checks"

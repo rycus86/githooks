@@ -109,11 +109,19 @@ If you want, you can try out what the script would do first, without changing an
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --dry-run
 ```
 
+You can also run the installation in non-interactive mode with the command below. This will try to find the template directory, install the hooks automatically, and enable periodic update checks.
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --non-interactive
+```
+
 And if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
 
 ```shell
 $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh)"
 ```
+
+The GitHub URL also accepts the additional parameters mentioned above, the `https://r.viktoradam.net/githooks` URL is just a redirect to the longer GitHub address.
 
 ### Required tools
 
