@@ -1,9 +1,9 @@
 #!/bin/sh
 # Test:
-#   Run a simple install and verify the hooks are in place
+#   Run a simple install non-interactively and verify the hooks are in place
 
 # run the default install
-sh /var/lib/githooks/install.sh || exit 1
+sh /var/lib/githooks/install.sh --non-interactive || exit 1
 
 mkdir -p /tmp/test1 && cd /tmp/test1 || exit 1
 git init || exit 1

@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.091818-06aa13
+# Version: 1808.091843-d5e832
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -81,48 +81,71 @@ check_and_execute() {
         return 0
     fi
 
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
+    TRUSTED_REPO=
+
+    if [ -f ".githooks/trust-all" ]; then
+        TRUST_ALL_CONFIG=$(git config --get githooks.trust.all)
+
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! This repository wants you to trust all current and future hooks without prompting"
+            printf "  Do you want to allow running every current and future hooks? [y/N] "
+            read -r TRUST_ALL_HOOKS </dev/tty
+
+            if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
+                git config githooks.trust.all Y
+            else
+                git config githooks.trust.all N
+            fi
+        elif [ $? -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+            TRUSTED_REPO="Y"
+        fi
     fi
-    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
-    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
-    # check against the previous hash
-    if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
-        if [ -z "$CURRENT_HASHES" ]; then
-            MESSAGE="New hook file found"
-        elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-            echo "* Skipping disabled $HOOK_PATH"
-            echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-            return 0
-        else
-            MESSAGE="Hook file changed"
+
+    if [ "$TRUSTED_REPO" != "Y" ]; then
+        # get hash of the hook contents
+        if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
+            MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
         fi
-
-        echo "? $MESSAGE: $HOOK_PATH"
-
-        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
-            echo "  Already accepted"
-        else
-            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
-            read -r ACCEPT_CHANGES </dev/tty
-
-            if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
-                echo "* Not running $HOOK_FILE"
-                return 0
-            fi
-
-            if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
-                echo "* Disabled $HOOK_PATH"
+        MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+        CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+        # check against the previous hash
+        if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+            if [ -z "$CURRENT_HASHES" ]; then
+                MESSAGE="New hook file found"
+            elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
+                echo "* Skipping disabled $HOOK_PATH"
                 echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-
-                echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
                 return 0
+            else
+                MESSAGE="Hook file changed"
             fi
-        fi
 
-        # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+            echo "? $MESSAGE: $HOOK_PATH"
+
+            if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+                echo "  Already accepted"
+            else
+                printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
+                read -r ACCEPT_CHANGES </dev/tty
+
+                if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
+                    echo "* Not running $HOOK_FILE"
+                    return 0
+                fi
+
+                if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
+                    echo "* Disabled $HOOK_PATH"
+                    echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+
+                    echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
+                    return 0
+                fi
+            fi
+
+            # save the new accepted checksum
+            echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+        fi
     fi
 
     if [ -x "$HOOK_PATH" ]; then

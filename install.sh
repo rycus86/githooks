@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.091818-06aa13
+# Version: 1808.091843-d5e832
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -98,48 +98,71 @@ check_and_execute() {
         return 0
     fi
 
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
+    TRUSTED_REPO=
+
+    if [ -f ".githooks/trust-all" ]; then
+        TRUST_ALL_CONFIG=$(git config --get githooks.trust.all)
+
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! This repository wants you to trust all current and future hooks without prompting"
+            printf "  Do you want to allow running every current and future hooks? [y/N] "
+            read -r TRUST_ALL_HOOKS </dev/tty
+
+            if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
+                git config githooks.trust.all Y
+            else
+                git config githooks.trust.all N
+            fi
+        elif [ $? -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+            TRUSTED_REPO="Y"
+        fi
     fi
-    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
-    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
-    # check against the previous hash
-    if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
-        if [ -z "$CURRENT_HASHES" ]; then
-            MESSAGE="New hook file found"
-        elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-            echo "* Skipping disabled $HOOK_PATH"
-            echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-            return 0
-        else
-            MESSAGE="Hook file changed"
+
+    if [ "$TRUSTED_REPO" != "Y" ]; then
+        # get hash of the hook contents
+        if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
+            MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
         fi
-
-        echo "? $MESSAGE: $HOOK_PATH"
-
-        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
-            echo "  Already accepted"
-        else
-            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
-            read -r ACCEPT_CHANGES </dev/tty
-
-            if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
-                echo "* Not running $HOOK_FILE"
-                return 0
-            fi
-
-            if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
-                echo "* Disabled $HOOK_PATH"
+        MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+        CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+        # check against the previous hash
+        if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+            if [ -z "$CURRENT_HASHES" ]; then
+                MESSAGE="New hook file found"
+            elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
+                echo "* Skipping disabled $HOOK_PATH"
                 echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-
-                echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
                 return 0
+            else
+                MESSAGE="Hook file changed"
             fi
-        fi
 
-        # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+            echo "? $MESSAGE: $HOOK_PATH"
+
+            if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+                echo "  Already accepted"
+            else
+                printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
+                read -r ACCEPT_CHANGES </dev/tty
+
+                if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
+                    echo "* Not running $HOOK_FILE"
+                    return 0
+                fi
+
+                if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
+                    echo "* Disabled $HOOK_PATH"
+                    echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+
+                    echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
+                    return 0
+                fi
+            fi
+
+            # save the new accepted checksum
+            echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+        fi
     fi
 
     if [ -x "$HOOK_PATH" ]; then
@@ -383,14 +406,14 @@ find_git_hook_templates() {
 
     # 4. try to search for it on disk
     printf 'Could not find the Git hook template directory. '
-    printf 'Do you want to search for it? [yN] '
+    printf 'Do you want to search for it? [y/N] '
     read -r DO_SEARCH
 
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
         search_for_templates_dir
 
         if [ "$TARGET_TEMPLATE_DIR" != "" ]; then
-            printf 'Do you want to set this up as the Git template directory for future use? [yN] '
+            printf 'Do you want to set this up as the Git template directory for future use? [y/N] '
             read -r MARK_AS_TEMPLATES
 
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
@@ -405,7 +428,7 @@ find_git_hook_templates() {
     fi
 
     # 5. set up as new
-    printf "Do you want to set up a new Git templates folder? [yN] "
+    printf "Do you want to set up a new Git templates folder? [y/N] "
     read -r SETUP_NEW_FOLDER
 
     if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ]; then
@@ -461,7 +484,7 @@ search_for_templates_dir() {
     fi
 
     printf 'Git hook template directory not found in /usr. '
-    printf 'Do you want to keep searching? [yN] '
+    printf 'Do you want to keep searching? [y/N] '
     read -r DO_SEARCH
 
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
@@ -491,7 +514,7 @@ search_pre_commit_sample_file() {
             continue
         fi
 
-        printf -- "- Is it %s ? [yN] " "$HIT"
+        printf -- "- Is it %s ? [y/N] " "$HIT"
         read -r ACCEPT
 
         if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
@@ -576,7 +599,7 @@ setup_hook_templates() {
 #   0 on success, 1 on failure
 ############################################################
 install_into_existing_repositories() {
-    printf 'Do you want to install the hooks into existing repositories? [yN] '
+    printf 'Do you want to install the hooks into existing repositories? [y/N] '
     read -r DO_INSTALL
     if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then return 0; fi
 
@@ -664,11 +687,11 @@ install_hooks_into_repo() {
 ############################################################
 setup_shared_hook_repositories() {
     if [ -n "$(git config --global --get githooks.shared)" ]; then
-        printf "Looks like you already have shared hook repositories setup, do you want to change them now? [yN] "
+        printf "Looks like you already have shared hook repositories setup, do you want to change them now? [y/N] "
     else
         echo "You can set up shared hook repositories to avoid duplicating common hooks across repositories you work on. See information on what are these in the project's documentation at https://github.com/rycus86/githooks#shared-hook-repositories"
         echo "Note: you can also have a .githooks/.shared file listing the repositories where you keep the shared hook files"
-        printf "Would you like to set up shared hook repos now? [yN] "
+        printf "Would you like to set up shared hook repos now? [y/N] "
     fi
 
     read -r DO_SETUP
