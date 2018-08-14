@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if ! grep '/docker/' </proc/self/cgroup >/dev/null 2>&1; then
+    echo "! This script is only meant to be run in a Docker container"
+    exit 1
+fi
+
 FAILED=0
 
 for STEP in /var/lib/tests/step-*.sh; do
@@ -13,6 +18,9 @@ for STEP in /var/lib/tests/step-*.sh; do
     rm -rf /usr/share/git-core/templates/hooks/*
     rm -rf ~/.githooks.shared
     rm -rf /tmp/*
+
+    mkdir -p /var/backup/gihooks &&
+        cp /var/lib/githooks/* /var/backup/gihooks/.
 
     TEST_OUTPUT=$(sh "$STEP" 2>&1)
     # shellcheck disable=SC2181
@@ -38,6 +46,8 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
     git config --global --unset githooks.previous.searchdir
+
+    cp /var/backup/gihooks/* /var/lib/githooks/.
 
     echo
 

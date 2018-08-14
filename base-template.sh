@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.092314-5e0ec5
+# Version: 1808.142252-4d09ae
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -232,7 +232,7 @@ check_for_updates() {
         return
     fi
 
-    UPDATES_ENABLED=$(git config --global --get githooks.autoupdate.enabled)
+    UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
     if [ "$UPDATES_ENABLED" != "Y" ]; then
         return
     fi
@@ -283,13 +283,25 @@ check_for_updates() {
         read -r EXECUTE_UPDATE </dev/tty
 
         if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
-            if sh -c "$INSTALL_SCRIPT"; then
-                return
+            IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+
+            if [ "$IS_SINGLE_REPO" = "yes" ]; then
+                if sh -c "$INSTALL_SCRIPT" -- --single; then
+                    return
+                fi
+            else
+                if sh -c "$INSTALL_SCRIPT"; then
+                    return
+                fi
             fi
         fi
 
+        if [ "$IS_SINGLE_REPO" != "yes" ]; then
+            GLOBAL_CONFIG="--global"
+        fi
+
         echo "  If you would like to disable auto-updates, run:"
-        echo "    \$ git config --global githooks.autoupdate.enabled N"
+        echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
     fi
 }
 

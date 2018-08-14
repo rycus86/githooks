@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.092314-5e0ec5
+# Version: 1808.142252-4d09ae
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -249,7 +249,7 @@ check_for_updates() {
         return
     fi
 
-    UPDATES_ENABLED=$(git config --global --get githooks.autoupdate.enabled)
+    UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
     if [ "$UPDATES_ENABLED" != "Y" ]; then
         return
     fi
@@ -300,13 +300,25 @@ check_for_updates() {
         read -r EXECUTE_UPDATE </dev/tty
 
         if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
-            if sh -c "$INSTALL_SCRIPT"; then
-                return
+            IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+
+            if [ "$IS_SINGLE_REPO" = "yes" ]; then
+                if sh -c "$INSTALL_SCRIPT" -- --single; then
+                    return
+                fi
+            else
+                if sh -c "$INSTALL_SCRIPT"; then
+                    return
+                fi
             fi
         fi
 
+        if [ "$IS_SINGLE_REPO" != "yes" ]; then
+            GLOBAL_CONFIG="--global"
+        fi
+
         echo "  If you would like to disable auto-updates, run:"
-        echo "    \$ git config --global githooks.autoupdate.enabled N"
+        echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
     fi
 }
 
@@ -382,6 +394,24 @@ is_non_interactive() {
     done
 
     return 1
+}
+
+############################################################
+# Check if the install script is
+#   running in for a single repository without templates.
+#
+# Returns:
+#   'yes' or 'no' as string
+############################################################
+is_single_repo_install() {
+    for p in "$@"; do
+        if [ "$p" = "--single" ]; then
+            echo "yes"
+            return
+        fi
+    done
+
+    echo "no"
 }
 
 ############################################################
@@ -552,7 +582,7 @@ setup_new_templates_folder() {
             # Let this one go with or without a tilde
             git config --global init.templateDir "$USER_TEMPLATES"
         else
-            echo "Failed to set up the new Git templates folder"
+            echo "! Failed to set up the new Git templates folder"
             return
         fi
     fi
@@ -585,7 +615,7 @@ setup_hook_templates() {
         if echo "$BASE_TEMPLATE_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
             echo "Git hook template ready: $HOOK_TEMPLATE"
         else
-            echo "Failed to setup the $HOOK template at $HOOK_TEMPLATE"
+            echo "! Failed to setup the $HOOK template at $HOOK_TEMPLATE"
             return 1
         fi
     done
@@ -603,7 +633,7 @@ setup_hook_templates() {
 #   1 when already enabled, 0 otherwise
 ############################################################
 setup_automatic_update_checks() {
-    if CURRENT_SETTING=$(git config --global --get githooks.autoupdate.enabled); then
+    if CURRENT_SETTING=$(git config --get githooks.autoupdate.enabled); then
         if [ "$CURRENT_SETTING" = "Y" ]; then
             # OK, it's already enabled
             return 1
@@ -617,9 +647,13 @@ setup_automatic_update_checks() {
 
     read -r DO_AUTO_UPDATES
     if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
+        if [ "$SINGLE_REPO_INSTALL" != "yes" ]; then
+            GLOBAL_CONFIG="--global"
+        fi
+
         if [ "$DRY_RUN" = "yes" ]; then
             echo "[Dry run] Automatic update checks would have been enabled"
-        elif git config --global githooks.autoupdate.enabled Y; then
+        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled Y; then
             echo "Automatic update checks are now enabled"
         else
             echo "! Failed to enable automatic update checks"
@@ -692,12 +726,16 @@ install_into_existing_repositories() {
 #   local repository, given by the first parameter.
 #
 # Returns:
-#   None
+#   0 on success, 1 on failure
 ############################################################
 install_hooks_into_repo() {
     TARGET="$1"
+
     if [ ! -w "${TARGET}/hooks" ]; then
-        return
+        # Try to create the .git/hooks folder
+        if ! mkdir "${TARGET}/hooks" 2>/dev/null; then
+            return 1
+        fi
     fi
 
     INSTALLED="no"
@@ -716,14 +754,19 @@ install_hooks_into_repo() {
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 # Save the existing Git hook so that we'll continue to execute it
-                mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"
+                if ! mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"; then
+                    HAD_FAILURE=Y
+                    echo "! Failed to save the existing hook at $TARGET_HOOK"
+                    continue
+                fi
             fi
         fi
 
         if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="yes"
         else
-            echo "Failed to install $TARGET_HOOK"
+            HAD_FAILURE=Y
+            echo "! Failed to install $TARGET_HOOK"
         fi
     done
 
@@ -735,6 +778,12 @@ install_hooks_into_repo() {
         else
             echo "Hooks installed into $TARGET_DIR"
         fi
+    fi
+
+    if [ "$HAD_FAILURE" = "Y" ]; then
+        return 1
+    else
+        return 0
     fi
 }
 
@@ -785,7 +834,7 @@ setup_shared_hook_repositories() {
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
-        echo "Failed to set up the shared hook repositories!"
+        echo "! Failed to set up the shared hook repositories"
     fi
 }
 
@@ -796,26 +845,40 @@ if is_non_interactive "$@"; then
     exec </dev/null
 fi
 
-# Find the Git hook template directory to install into
-TARGET_TEMPLATE_DIR=""
+SINGLE_REPO_INSTALL=$(is_single_repo_install "$@")
 
-find_git_hook_templates
+if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+    # Make sure we are in a git repo
+    if ! git status >/dev/null 2>&1; then
+        echo "! The current directory is not Git repository"
+        exit 1
+    fi
 
-if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-    echo "Git hook templates directory not found"
-    exit 1
+    git config githooks.single.install yes
+
+else
+    # Find the Git hook template directory to install into
+    TARGET_TEMPLATE_DIR=""
+
+    find_git_hook_templates
+
+    if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+        echo "Git hook templates directory not found"
+        exit 1
+    fi
+
+    # Setup the new hooks in the template directory
+    if [ "$DRY_RUN" = "yes" ]; then
+        echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
+
+    elif ! setup_hook_templates; then
+        exit 1
+
+    fi
+
+    echo # For visual separation
+
 fi
-
-# Setup the new hooks in the template directory
-if [ "$DRY_RUN" = "yes" ]; then
-    echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
-
-elif ! setup_hook_templates; then
-    exit 1
-
-fi
-
-echo # For visual separation
 
 # Automatic updates
 if setup_automatic_update_checks; then
@@ -823,16 +886,27 @@ if setup_automatic_update_checks; then
 fi
 
 # Install the hooks into existing local repositories
-if ! install_into_existing_repositories; then
-    exit 1
+if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+    if ! install_hooks_into_repo "$(pwd)/.git"; then
+
+        exit 1
+    fi
+
+else
+    if ! install_into_existing_repositories; then
+        exit 1
+    fi
+
 fi
 
 echo # For visual separation
 
-# Set up shared hook repositories
-setup_shared_hook_repositories
+if [ "$SINGLE_REPO_INSTALL" != "yes" ]; then
+    # Set up shared hook repositories
+    setup_shared_hook_repositories
 
-echo # For visual separation
+    echo # For visual separation
+fi
 
 echo "All done! Enjoy!
 

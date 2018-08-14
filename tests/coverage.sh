@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ -z "$1" ]; then
+    TESTS_TO_RUN="/var/lib/tests/exec-steps.sh"
+else
+    TESTS_TO_RUN="/var/lib/tests/${1}.sh"
+fi
+
 # Build a Docker image on top of kcov with our scripts
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM ragnaroek/kcov:v33
@@ -45,4 +51,4 @@ docker run --security-opt seccomp=unconfined \
     --coveralls-id="$TRAVIS_JOB_ID" \
     --include-pattern="/var/lib/githooks/" \
     /cover \
-    /var/lib/tests/exec-steps.sh
+    "$TESTS_TO_RUN"

@@ -96,10 +96,11 @@ The commands below fetch and execute the [install.sh](install.sh) script from th
     4. Search on the filesystem for matching directories
     5. Offer to set up a new one, and make it `init.templateDir`
 2. Set up the hook templates for the supported hooks - the templates are basically a copy of the `base-template.sh` file content
-3. Offer to find existing Git repositories on the filesystem, and install the hooks into them
-4. Offer to set up shared hook repositories
+3. Offer to enable automatic update checks
+4. Offer to find existing Git repositories on the filesystem, and install the hooks into them
+5. Offer to set up shared hook repositories
 
-To install the templates, just exectue the command below, and follow the instructions in the terminal.
+To install the templates, just execute the command below, and follow the instructions in the terminal.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)"
@@ -115,6 +116,12 @@ You can also run the installation in non-interactive mode with the command below
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --non-interactive
+```
+
+There is also an option to run the install script for the repository in the current directory only, without setting up the Git templates for any future repositories. For this, run the command below.
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
 
 And if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
