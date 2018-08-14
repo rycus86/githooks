@@ -2,6 +2,18 @@
 # Test:
 #   Run a single-repo install and try the auto-update
 
+if ! curl --version && ! wget --version; then
+    # we can't run this test
+    exit 0
+fi
+
+if ! curl -fsSL https://github.com/rycus86/githooks >/dev/null 2>&1; then
+    if ! wget -O- https://github.com/rycus86/githooks >/dev/null 2>&1; then
+        # we can't run this test
+        exit 0
+    fi
+fi
+
 LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update already marked as run"
