@@ -4,8 +4,6 @@
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM ragnaroek/kcov:v33
 
-RUN apt-get update && apt-get install -y --no-install-recommends git
-
 ADD base-template.sh install.sh uninstall.sh /var/lib/githooks/
 
 RUN git config --global user.email "githook@test.com" && \
