@@ -1,7 +1,6 @@
 # Githooks
 
 [![Build Status](https://travis-ci.org/rycus86/githooks.svg?branch=master)](https://travis-ci.org/rycus86/githooks)
-[![Coverage Status](https://coveralls.io/repos/github/rycus86/githooks/badge.svg?branch=master)](https://coveralls.io/github/rycus86/githooks?branch=master)
 
 A simple Shell script to support per-repository [Git hooks](https://git-scm.com/docs/githooks), checked into the actual repository that uses them.
 
