@@ -2,6 +2,11 @@
 # Test:
 #   Direct template execution: choose to ignore the update
 
+if ! curl --version && ! wget --version; then
+    # we can't run this test
+    exit 0
+fi
+
 if ! curl -fsSL https://github.com/rycus86/githooks >/dev/null 2>&1; then
     if ! wget -O- https://github.com/rycus86/githooks >/dev/null 2>&1; then
         # we can't run this test
