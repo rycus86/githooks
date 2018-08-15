@@ -3,7 +3,7 @@
 #   Run an install, adding the intro README files into an existing repo
 
 mkdir -p /tmp/test046/.githooks/pre-commit &&
-    echo 'echo "Testing" > /tmp/test46.out' > /tmp/test046/.githooks/pre-commit/test &&
+    echo 'echo "Testing" > /tmp/test46.out' >/tmp/test046/.githooks/pre-commit/test &&
     cd /tmp/test046 ||
     exit 1
 
