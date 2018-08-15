@@ -1,0 +1,26 @@
+#!/bin/sh
+# shellcheck disable=SC2181
+
+python --version >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    python -c '
+with open(".githooks/README.md", "r") as readme_file:
+    readme = readme_file.read()
+
+with open("install.sh", "r") as install_file:
+    content = install_file.read()
+
+if readme not in content:
+    exit(1)
+    '
+
+    if [ $? -eq 0 ]; then
+        echo "* Included README is up-to-date in the install script"
+    else
+        echo "! Included README is not up-to-date in the install script"
+        exit 1
+    fi
+else
+    printf -- "- Skipping included README up-to-date check (missing python)"
+fi

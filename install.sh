@@ -21,7 +21,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.142252-4d09ae
+# Version: 1808.152236-734c9d
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -360,6 +360,30 @@ if ! execute_all_hooks_in "$(pwd)/.githooks" "$@"; then
     exit 1
 fi
 '
+
+# A copy of the .githooks/README.md file's contents
+# shellcheck disable=SC2016
+INCLUDED_README_CONTENT='# Githooks
+
+This project uses [Githooks](https://github.com/rycus86/githooks), that allows running [Git hooks](https://git-scm.com/docs/githooks) checked into this repository. This folder contains hooks that should be executed by everyone who interacts with this source repository. For a documentation on how this works and how to get it [installed](https://github.com/rycus86/githooks#installation), check the project [README](https://github.com/rycus86/githooks/blob/master/README.md) in the [rycus86/githooks](https://github.com/rycus86/githooks) GitHub repository.
+
+## Brief summary
+
+The [directories or files](https://github.com/rycus86/githooks#layout-and-options) in this folder tell Git to execute certain scripts on various [trigger events](https://github.com/rycus86/githooks#supported-hooks), before or after a commit, on every checkout, before a push for example - assuming [Githooks](https://github.com/rycus86/githooks) is already [installed](https://github.com/rycus86/githooks#installation) and [enabled](https://github.com/rycus86/githooks#opt-in-hooks) for the repository. The directory or file names refer to these events, like `pre-commit`, `post-commit`, `post-checkout`, `pre-push`, etc. If they are folders, each file inside them is treated as a hook script (unless [ignored](https://github.com/rycus86/githooks#ignoring-files)), and will be executed when Git runs the hooks as part of the command issued by the user.
+
+### Is this safe?
+
+[Githooks](https://github.com/rycus86/githooks) uses an [opt-in model](https://github.com/rycus86/githooks#opt-in-hooks), where it will ask for confirmation whether new or changed scripts should be run or not (or disabled).
+
+### How do I add a new hook script?
+
+Either create a file with the [Git hook](https://github.com/rycus86/githooks#supported-hooks) name, or a directory (recommended) inside the `.githooks` folder, and place files with the individual steps that should be executed for that event inside. If the file is executable, it will be invoked directly, otherwise it is assumed to be a Shell script - unless this file matches one of the [ignore patterns](https://github.com/rycus86/githooks#ignoring-files) in the `.githooks` area.
+
+## More information
+
+You can find more information about how this all works in the [README](https://github.com/rycus86/githooks/blob/master/README.md) of the [Githooks](https://github.com/rycus86/githooks) project repository.
+
+If you find it useful, please show your support by starring the project in GitHub!'
 
 ############################################################
 # Check if the install script is
@@ -714,8 +738,10 @@ install_into_existing_repositories() {
 
     git config --global githooks.previous.searchdir "$START_DIR"
 
-    find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
-        install_hooks_into_repo "$EXISTING"
+    LOCAL_REPOSITORY_LIST=$(find "$START_DIR" -type d -name .git 2>/dev/null)
+    for EXISTING in $LOCAL_REPOSITORY_LIST; do
+        EXISTING_REPO_ROOT=$(dirname "$EXISTING")
+        install_hooks_into_repo "$EXISTING_REPO_ROOT"
     done
 
     return 0
@@ -729,7 +755,8 @@ install_into_existing_repositories() {
 #   0 on success, 1 on failure
 ############################################################
 install_hooks_into_repo() {
-    TARGET="$1"
+    TARGET_ROOT="$1"
+    TARGET="${TARGET_ROOT}/.git"
 
     if [ ! -w "${TARGET}/hooks" ]; then
         # Try to create the .git/hooks folder
@@ -770,13 +797,42 @@ install_hooks_into_repo() {
         fi
     done
 
-    if [ "$INSTALLED" = "yes" ]; then
-        TARGET_DIR=$(dirname "$TARGET")
+    # Offer to setup the intro README
+    if [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
+        if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
+            true # OK, we already said we want to skip all
 
-        if [ "$DRY_RUN" = "yes" ]; then
-            echo "[Dry run] Hooks would have been installed into $TARGET_DIR"
+        elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
+            mkdir -p "${TARGET_ROOT}/.githooks" &&
+                echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+
         else
-            echo "Hooks installed into $TARGET_DIR"
+            if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
+                echo "Looks like you don't have a .githooks folder in the ${TARGET_ROOT} repository yet."
+                printf "  Would you like to create one with a README containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+            else
+                echo "Looks like you don't have a README.md in the ${TARGET_ROOT}/.githooks folder yet."
+                echo "  A README file might help contributors and other team members learn about what is this for."
+                printf "  Would you like to add one now with a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+            fi
+
+            read -r SETUP_INCLUDED_README
+
+            if [ -z "$SETUP_INCLUDED_README" ] ||
+                [ "$SETUP_INCLUDED_README" = "y" ] || [ "$SETUP_INCLUDED_README" = "Y" ] ||
+                [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
+
+                mkdir -p "${TARGET_ROOT}/.githooks" &&
+                    echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+            fi
+        fi
+    fi
+
+    if [ "$INSTALLED" = "yes" ]; then
+        if [ "$DRY_RUN" = "yes" ]; then
+            echo "[Dry run] Hooks would have been installed into $TARGET_ROOT"
+        else
+            echo "Hooks installed into $TARGET_ROOT"
         fi
     fi
 
@@ -887,7 +943,7 @@ fi
 
 # Install the hooks into existing local repositories
 if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
-    if ! install_hooks_into_repo "$(pwd)/.git"; then
+    if ! install_hooks_into_repo "$(pwd)"; then
 
         exit 1
     fi

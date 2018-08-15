@@ -10,20 +10,20 @@ fi
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM ragnaroek/kcov:v33
 
-ADD base-template.sh install.sh uninstall.sh /var/lib/githooks/
+ADD base-template.sh install.sh uninstall.sh .githooks/README.md /var/lib/githooks/
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/exec-steps.sh tests/step-* tests/replace-template-loader.py /var/lib/tests/
+ADD tests/exec-steps.sh tests/step-* tests/replace-inline-content.py /var/lib/tests/
 
 # Some fixup below:
 # Make sure we're using Bash for kcov
 RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
-# Replace the inline template with loading the base template file
-    python /var/lib/tests/replace-template-loader.py /var/lib/githooks && \\
+# Replace the inline content with loading the source file
+    python /var/lib/tests/replace-inline-content.py /var/lib/githooks && \\
 # Change the base template so we can pass in the hook name and accept flags
     sed -i 's|^HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|^HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
