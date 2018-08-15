@@ -6,6 +6,7 @@ if ! grep '/docker/' </proc/self/cgroup >/dev/null 2>&1; then
 fi
 
 FAILED=0
+SKIPPED=0
 
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
@@ -23,12 +24,19 @@ for STEP in /var/lib/tests/step-*.sh; do
         cp /var/lib/githooks/* /var/backup/gihooks/.
 
     TEST_OUTPUT=$(sh "$STEP" 2>&1)
+    TEST_RESULT=$?
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if [ $TEST_RESULT -eq 249 ]; then
+        REASON=$(echo "$TEST_OUTPUT" | tail -1)
+        echo "  x  $STEP has been skipped, reason: $REASON"
+        SKIPPED=$((SKIPPED + 1))
+
+    elif [ $TEST_RESULT -ne 0 ]; then
         FAILURE=$(echo "$TEST_OUTPUT" | tail -1)
-        echo "! $STEP has failed ($FAILURE), output:"
+        echo "! $STEP has failed with code $TEST_RESULT ($FAILURE), output:"
         echo "$TEST_OUTPUT"
         FAILED=$((FAILED + 1))
+
     fi
 
     mkdir -p /usr/share/git-core/templates/hooks
@@ -53,8 +61,13 @@ for STEP in /var/lib/tests/step-*.sh; do
 
 done
 
-if [ $FAILED -ne 0 ]; then
-    echo "There were $FAILED test failure(s)"
+if [ $FAILED -ne 0 ] || [ $SKIPPED -ne 0 ]; then
+    echo "There were $FAILED test failure(s), and $SKIPPED test(s) were skipped"
     echo
-    exit 1
+
+    if [ $FAILED -ne 0 ]; then
+        exit 1
+    else
+        exit 0
+    fi
 fi

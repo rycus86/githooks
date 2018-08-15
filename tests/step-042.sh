@@ -3,14 +3,14 @@
 #   Run a single-repo install and try the auto-update
 
 if ! curl --version && ! wget --version; then
-    # we can't run this test
-    exit 0
+    echo "Neither curl nor wget is available"
+    exit 249
 fi
 
-if ! curl -fsSL https://github.com/rycus86/githooks >/dev/null 2>&1; then
-    if ! wget -O- https://github.com/rycus86/githooks >/dev/null 2>&1; then
-        # we can't run this test
-        exit 0
+if ! curl -fsSL --connect-timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
+    if ! wget -O- --timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
+        echo "Could not connect to GitHub"
+        exit 249
     fi
 fi
 

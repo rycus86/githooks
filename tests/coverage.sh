@@ -38,14 +38,14 @@ if [ $? -ne 0 ]; then
 fi
 
 # Make sure we delete the previous run results
-docker run --security-opt seccomp=unconfined \
+docker run --rm --security-opt seccomp=unconfined \
     -v "$PWD/cover":/cover \
     --entrypoint sh \
     githooks:coverage \
     -c 'rm -rf /cover/*'
 
 # Run the actual tests and collect the coverage info
-docker run --security-opt seccomp=unconfined \
+docker run --rm --security-opt seccomp=unconfined \
     -v "$PWD/cover":/cover \
     githooks:coverage \
     --coveralls-id="$TRAVIS_JOB_ID" \
