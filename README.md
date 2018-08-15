@@ -85,6 +85,19 @@ If the repository contains a `.githooks/trust-all` file, it is marked as a trust
 
 There is a caveat worth mentioning: if a terminal *(tty)* can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
 
+### Opt-out
+
+In a similar spirit to the opt-in above, you can also opt-out of running the hooks in the repository. You can disable executing the files per project, or globally, using the commands below.
+
+```shell
+# Disable in the current repository
+$ git config githooks.disable Y
+# Disable in all repositories
+$ git config --global githooks.disable Y
+```
+
+Also, as mentioned above, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
+
 ## Installation
 
 The commands below fetch and execute the [install.sh](install.sh) script from this repository. It will:

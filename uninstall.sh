@@ -178,6 +178,7 @@ git config --global --unset githooks.shared
 git config --global --unset githooks.autoupdate.enabled
 git config --global --unset githooks.autoupdate.lastrun
 git config --global --unset githooks.previous.searchdir
+git config --global --unset githooks.disable
 
 # Finished
 echo "All done!"

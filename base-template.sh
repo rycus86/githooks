@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.152236-734c9d
+# Version: 1808.152304-674435
 
 execute_all_hooks_in() {
     PARENT="$1"
@@ -304,6 +304,12 @@ check_for_updates() {
         echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
     fi
 }
+
+# Bail out early if Githooks is disabled
+GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
+if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+    exit 0
+fi
 
 HOOK_NAME=$(basename "$0")
 HOOK_FOLDER=$(dirname "$0")

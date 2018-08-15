@@ -54,6 +54,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
     git config --global --unset githooks.previous.searchdir
+    git config --global --unset githooks.disable
 
     cp /var/backup/gihooks/* /var/lib/githooks/.
 
