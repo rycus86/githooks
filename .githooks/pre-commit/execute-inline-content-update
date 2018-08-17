@@ -1,0 +1,47 @@
+#!/bin/sh
+if ! python --version 2>/dev/null; then
+    echo "_ Skipping automatic template and README update: Python is not available"
+    exit 0
+fi
+
+# shellcheck disable=SC1117
+cat <<EOF | python -
+import re
+
+TEMPLATE_PATTERN="(.+)(BASE_TEMPLATE_CONTENT='[^']+')(.+)"
+README_PATTERN="(.+)(INCLUDED_README_CONTENT='[^']+')(.+)"
+
+if __name__ == '__main__':
+    with open('base-template.sh', 'r') as template_file:
+        template_contents = template_file.read()
+    
+    with open('.githooks/README.md', 'r') as readme_file:
+        readme_contents = readme_file.read()
+
+    contents = ''
+
+    with open('install.sh', 'r') as source:
+        contents = source.read()
+
+    match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
+    before, template, after = match.groups()
+
+    contents = "%sBASE_TEMPLATE_CONTENT='%s'%s" % (
+        before, template_contents, after
+    )
+
+    match = re.match(README_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
+    before, template, after = match.groups()
+
+    contents = "%sINCLUDED_README_CONTENT='%s'%s" % (
+        before, readme_contents, after
+    )
+    
+    with open('install.sh', 'w') as target:
+        target.write(contents)
+EOF
+
+# shellcheck disable=SC2181
+if [ $? -eq 0 ]; then
+    echo "* Base template and README updated in the install script"
+fi
