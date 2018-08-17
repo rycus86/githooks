@@ -21,8 +21,113 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.152304-674435
+# Version: 1808.172152-3d67fd
 
+#####################################################
+# Execute the current hook,
+#   that in turn executes the hooks in the repo.
+#
+# Returns:
+#   0 when successfully finished, 1 otherwise
+#####################################################
+process_git_hook() {
+    are_githooks_disabled && return 0
+    set_main_variables
+    check_for_updates_if_needed
+    execute_old_hook_if_available "$@" || return 1
+    execute_global_shared_hooks "$@" || return 1
+    execute_local_shared_hooks "$@" || return 1
+    execute_all_hooks_in "$(pwd)/.githooks" "$@" || return 1
+}
+
+#####################################################
+# Checks if Githooks is completely disabled
+#   for the current repository or globally.
+#   This can be done with Git config or using
+#   the ${GITHOOKS_DISABLE} environment variable.
+#
+# Returns:
+#   0 when disabled, 1 otherwise
+#####################################################
+are_githooks_disabled() {
+    [ -n "$GITHOOKS_DISABLE" ] && return 0
+
+    GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
+    if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+#####################################################
+# Set up the main variables that
+#   we will throughout the hook.
+#
+# Sets the ${HOOK_NAME} variable
+# Sets the ${HOOK_FOLDER} variable
+# Resets the ${ACCEPT_CHANGES} variable
+#
+# Returns:
+#   None
+#####################################################
+set_main_variables() {
+    HOOK_NAME=$(basename "$0")
+    HOOK_FOLDER=$(dirname "$0")
+    ACCEPT_CHANGES=
+}
+
+#####################################################
+# Executes the old hook if we moved one
+#   while installing our hooks.
+#
+# Returns:
+#   1 if the old hook failed, 0 otherwise
+#####################################################
+execute_old_hook_if_available() {
+    if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
+        ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
+        execute_hook "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@" || return 1
+    fi
+}
+
+#####################################################
+# Check if we have shared hooks set up globally,
+#   and execute all of them if we do.
+#
+# Returns:
+#   1 if the hooks fail, 0 otherwise
+#####################################################
+execute_global_shared_hooks() {
+    SHARED_HOOKS=$(git config --global --get githooks.shared)
+
+    if [ -n "$SHARED_HOOKS" ]; then
+        process_shared_hooks "$SHARED_HOOKS" "$@" || return 1
+    fi
+}
+
+#####################################################
+# Check if we have shared hooks set up
+#   within the current repository,
+#   and execute all of them if we do.
+#
+# Returns:
+#   1 if the hooks fail, 0 otherwise
+#####################################################
+execute_local_shared_hooks() {
+    if [ -f "$(pwd)/.githooks/.shared" ]; then
+        SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+        process_shared_hooks "$SHARED_HOOKS" "$@" || return 1
+    fi
+}
+
+#####################################################
+# Executes all hook files or scripts in the
+#   directory passed in on the first argument.
+#
+# Returns:
+#   1 if the hooks fail, 0 otherwise
+#####################################################
 execute_all_hooks_in() {
     PARENT="$1"
     shift
@@ -30,33 +135,47 @@ execute_all_hooks_in() {
     # Execute all hooks in a directory, or a file named as the hook
     if [ -d "${PARENT}/${HOOK_NAME}" ]; then
         for HOOK_FILE in "${PARENT}/${HOOK_NAME}"/*; do
-            if ! execute_hook "$HOOK_FILE" "$@"; then
-                return 1
-            fi
+            execute_hook "$HOOK_FILE" "$@" || return 1
         done
 
     elif [ -f "${PARENT}/${HOOK_NAME}" ]; then
-        if ! execute_hook "${PARENT}/${HOOK_NAME}" "$@"; then
-            return 1
-        fi
+        execute_hook "${PARENT}/${HOOK_NAME}" "$@" || return 1
 
     fi
-
-    return 0
 }
 
+#####################################################
+# Executes a single hook file or script
+#   at the path passed in on the first argument.
+#
+# Returns:
+#   0 if the hook is ignored,
+#     otherwise the exit code of the hook
+#####################################################
 execute_hook() {
     HOOK_PATH="$1"
     shift
 
+    # stop if the file does not exist
+    [ -f "$HOOK_PATH" ] || return 0
+
+    # stop if the file is ignored
+    is_file_ignored && return 0
+
+    check_and_execute_hook "$@"
+    return $?
+}
+
+#####################################################
+# Checks if the hook file at ${HOOK_PATH}
+#   is ignored and should not be executed.
+#
+# Returns:
+#   0 if ignored, 1 otherwise
+#####################################################
+is_file_ignored() {
     HOOK_FILENAME=$(basename "$HOOK_PATH")
     IS_IGNORED=""
-
-    # If the ${GITHOOKS_DISABLE} environment variable is set,
-    #   do not execute any of the hooks.
-    if [ -n "$GITHOOKS_DISABLE" ]; then
-        return 0
-    fi
 
     # If there are .ignore files, read the list of patterns to exclude.
     ALL_IGNORE_FILE=$(mktemp)
@@ -84,22 +203,39 @@ execute_hook() {
     # Remove the temporary file
     rm -f "$ALL_IGNORE_FILE"
 
-    # If this file is ignored, stop
     if [ -n "$IS_IGNORED" ]; then
         return 0
+    else
+        return 1
+    fi
+}
+
+#####################################################
+# Performs the necessary checks,
+#   and asks for confirmation if needed,
+#   then executes a hook if all good and approved.
+#
+# Returns:
+#   0 when skipped,
+#   otherwise the exit code of the hook
+#####################################################
+check_and_execute_hook() {
+    if ! is_trusted_repo; then
+        execute_opt_in_checks || return 0
     fi
 
-    check_and_execute "$@"
+    run_hook_file "$@"
     return $?
 }
 
-check_and_execute() {
-    if ! [ -f "$HOOK_PATH" ]; then
-        return 0
-    fi
-
-    TRUSTED_REPO=
-
+#####################################################
+# Returns and/or sets whether the current
+#   local repository is a trusted repository or not.
+#
+# Returns:
+#   0 when it is a trusted repository, 1 otherwise
+#####################################################
+is_trusted_repo() {
     if [ -f ".githooks/trust-all" ]; then
         TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
         TRUST_ALL_RESULT=$?
@@ -112,61 +248,81 @@ check_and_execute() {
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
-                TRUSTED_REPO="Y"
-            else
-                git config githooks.trust.all N
-            fi
-        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
-            TRUSTED_REPO="Y"
-        fi
-    fi
-
-    if [ "$TRUSTED_REPO" != "Y" ]; then
-        # get hash of the hook contents
-        if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-            MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
-        fi
-        MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
-        CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
-        # check against the previous hash
-        if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
-            if [ -z "$CURRENT_HASHES" ]; then
-                MESSAGE="New hook file found"
-            elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-                echo "* Skipping disabled $HOOK_PATH"
-                echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
                 return 0
             else
-                MESSAGE="Hook file changed"
+                git config githooks.trust.all N
+                return 1
             fi
-
-            echo "? $MESSAGE: $HOOK_PATH"
-
-            if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
-                echo "  Already accepted"
-            else
-                printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
-                read -r ACCEPT_CHANGES </dev/tty
-
-                if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
-                    echo "* Not running $HOOK_FILE"
-                    return 0
-                fi
-
-                if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
-                    echo "* Disabled $HOOK_PATH"
-                    echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-
-                    echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
-                    return 0
-                fi
-            fi
-
-            # save the new accepted checksum
-            echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+            return 0
         fi
     fi
 
+    return 1
+}
+
+#####################################################
+# Performs checks for new and changed hooks,
+#   and prompts the user for approval if needed.
+#
+# Returns:
+#   0 when approved to run the hook, 1 otherwise
+#####################################################
+execute_opt_in_checks() {
+    # get hash of the hook contents
+    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
+        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
+    fi
+    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+
+    # check against the previous hash
+    if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+        if [ -z "$CURRENT_HASHES" ]; then
+            MESSAGE="New hook file found"
+        elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
+            echo "* Skipping disabled $HOOK_PATH"
+            echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+            return 1
+        else
+            MESSAGE="Hook file changed"
+        fi
+
+        echo "? $MESSAGE: $HOOK_PATH"
+
+        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+            echo "  Already accepted"
+        else
+            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
+            read -r ACCEPT_CHANGES </dev/tty
+
+            if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
+                echo "* Not running $HOOK_FILE"
+                return 1
+            fi
+
+            if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
+                echo "* Disabled $HOOK_PATH"
+                echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+
+                echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
+                return 1
+            fi
+        fi
+
+        # save the new accepted checksum
+        echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+    fi
+}
+
+#####################################################
+# Executes the current hook file.
+#
+# Returns:
+#   0 when not found,
+#     otherwise the exit code of the hook
+#####################################################
+run_hook_file() {
     if [ -x "$HOOK_PATH" ]; then
         # Run as an executable file
         "$HOOK_PATH" "$@"
@@ -182,12 +338,29 @@ check_and_execute() {
     return 0
 }
 
+#####################################################
+# Update and execute the shared hooks on
+#   the list passed in on the first argument.
+#
+# Returns:
+#   1 in case a hook fails, 0 otherwise
+#####################################################
 process_shared_hooks() {
     SHARED_REPOS_LIST="$1"
     shift
-    HOOK_NAME="$1"
-    shift
 
+    update_shared_hooks_if_appropriate
+    execute_shared_hooks "$@" || return 1
+}
+
+#####################################################
+# Update the shared hooks that are on the
+#   ${SHARED_REPOS_LIST} variable.
+#
+# Returns:
+#   0 when successfully finished, 1 otherwise
+#####################################################
+update_shared_hooks_if_appropriate() {
     # run an init/update if we are after a "git pull" or triggered manually
     if [ "$HOOK_NAME" = "post-merge" ] || [ "$HOOK_NAME" = ".githooks.shared.trigger" ]; then
         # split on comma and newline
@@ -222,7 +395,16 @@ process_shared_hooks() {
 
         unset IFS
     fi
+}
 
+#####################################################
+# Execute the shared hooks in the
+#   ~/.githooks.shared directory.
+#
+# Returns:
+#   1 in case a hook fails, 0 otherwise
+#####################################################
+execute_shared_hooks() {
     for SHARED_ROOT in ~/.githooks.shared/*; do
         REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
@@ -231,44 +413,90 @@ process_shared_hooks() {
         fi
 
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
-            if ! execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@"; then
-                return 1
-            fi
+            execute_all_hooks_in "${SHARED_ROOT}/.githooks" "$@" || return 1
         elif [ -d "$SHARED_ROOT" ]; then
-            if ! execute_all_hooks_in "$SHARED_ROOT" "$@"; then
-                return 1
-            fi
+            execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
     done
-
-    return 0
 }
 
-check_for_updates() {
-    if [ "$HOOK_NAME" != "post-commit" ]; then
-        return
-    fi
+#####################################################
+# Checks in an update is available,
+#   and optionally executes it.
+#
+# Returns:
+#   None
+#####################################################
+check_for_updates_if_needed() {
+    read_last_update_time
+    should_run_update_checks || return
+    record_update_time
+    fetch_latest_update_script || return
+    read_updated_version_number
+    is_update_available || return
+    read_single_repo_information
+    should_run_update && execute_update && return
+    print_update_disable_info
+}
 
-    UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
-    if [ "$UPDATES_ENABLED" != "Y" ]; then
-        return
-    fi
-
+#####################################################
+# Read the last time we have run an update check.
+#
+# Sets the ${LAST_UPDATE} variable.
+#
+# Returns:
+#   None
+#####################################################
+read_last_update_time() {
     LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
     if [ -z "$LAST_UPDATE" ]; then
         LAST_UPDATE=0
     fi
+}
+
+#####################################################
+# Saves the last update time into the
+#   githooks.autoupdate.lastrun global Git config.
+#
+# Returns:
+#   None
+#####################################################
+record_update_time() {
+    git config --global githooks.autoupdate.lastrun "$(date +%s)"
+}
+
+#####################################################
+# Checks an update check should run already,
+#   and updates are not disabled.
+#
+# Returns:
+#   1 if updates should not run, 0 otherwise
+#####################################################
+should_run_update_checks() {
+    [ "$HOOK_NAME" != "post-commit" ] && return 1
+
+    UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
+    [ "$UPDATES_ENABLED" != "Y" ] && return 1
 
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - LAST_UPDATE))
     ONE_DAY=86400
 
     if [ $ELAPSED_TIME -lt $ONE_DAY ]; then
-        return # it is not time to update yet
+        return 1 # it is not time to update yet
     fi
+}
 
-    git config --global githooks.autoupdate.lastrun "$(date +%s)"
-
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_update_script() {
     DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
 
     echo "^ Checking for updates ..."
@@ -281,90 +509,124 @@ check_for_updates() {
 
     else
         echo "! Cannot check for updates - needs either curl or wget"
-        return
+        return 1
     fi
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "! Failed to check for updates"
-        return
-    fi
-
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | sed "s/^# Version: //")
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | sed "s/^# Version: //")
-
-    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
-    if [ "$UPDATE_AVAILABLE" = "0" ]; then
-        echo "* There is a new Githooks update available: Version $LATEST_VERSION"
-        printf "    Would you like to install it now? [Y/n] "
-        read -r EXECUTE_UPDATE </dev/tty
-
-        if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
-            IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
-
-            if [ "$IS_SINGLE_REPO" = "yes" ]; then
-                if sh -c "$INSTALL_SCRIPT" -- --single; then
-                    return
-                fi
-            else
-                if sh -c "$INSTALL_SCRIPT"; then
-                    return
-                fi
-            fi
-        fi
-
-        if [ "$IS_SINGLE_REPO" != "yes" ]; then
-            GLOBAL_CONFIG="--global"
-        fi
-
-        echo "  If you would like to disable auto-updates, run:"
-        echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
+        return 1
     fi
 }
 
-# Bail out early if Githooks is disabled
-GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
-if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
-    exit 0
-fi
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_updated_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | sed "s/^# Version: //")
+}
 
-HOOK_NAME=$(basename "$0")
-HOOK_FOLDER=$(dirname "$0")
-ACCEPT_CHANGES=
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
 
-# Check for updates first, if needed
-check_for_updates
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
 
-# Execute the old hook if we moved it when installing our hooks.
-if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
-    ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   1 if they were, 0 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
 
-    if ! execute_hook "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@"; then
-        exit 1
+#####################################################
+# Prompts the user whether the new update
+#   should be installed or not.
+#
+# Returns:
+#   0 if it should be, 1 otherwise
+#####################################################
+should_run_update() {
+    echo "* There is a new Githooks update available: Version $LATEST_VERSION"
+    printf "    Would you like to install it now? [Y/n] "
+    read -r EXECUTE_UPDATE </dev/tty
+
+    if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
+        return 0
+    else
+        return 1
     fi
-fi
+}
 
-# Check for shared hooks set globally
-SHARED_HOOKS=$(git config --global --get githooks.shared)
-
-if [ -n "$SHARED_HOOKS" ]; then
-    if ! process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"; then
-        exit 1
+#####################################################
+# Performs the installation of the latest update.
+#
+# Returns:
+#   0 if the update was successful, 1 otherwise
+#####################################################
+execute_update() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
     fi
-fi
 
-# Check for shared hooks within the current repo
-if [ -f "$(pwd)/.githooks/.shared" ]; then
-    SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-    if ! process_shared_hooks "$SHARED_HOOKS" "$HOOK_NAME" "$@"; then
-        exit 1
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    if is_single_repo; then
+        GLOBAL_CONFIG="--global"
     fi
-fi
 
-# Execute all hooks in a directory, or a file named as the hook
-if ! execute_all_hooks_in "$(pwd)/.githooks" "$@"; then
-    exit 1
-fi
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
+}
+
+process_git_hook "$@" || exit 1
 '
 
 # A copy of the .githooks/README.md file's contents
@@ -392,21 +654,88 @@ You can find more information about how this all works in the [README](https://g
 If you find it useful, please show your support by starring the project in GitHub!'
 
 ############################################################
+# Execute the full installation process.
+#
+# Returns:
+#   0 when successfully finished, 1 if failed
+############################################################
+execute_installation() {
+    parse_command_line_arguments "$@"
+
+    if is_non_interactive; then
+        disable_tty_input
+    fi
+
+    # Find the directory to install to
+    if is_single_repo_install; then
+        ensure_running_in_git_repo || return 1
+        mark_as_single_install_repo
+    else
+        prepare_target_template_directory || return 1
+    fi
+
+    # Install the hook templates if needed
+    if ! is_single_repo_install; then
+        setup_hook_templates || return 1
+        echo # For visual separation
+    fi
+
+    # Automatic updates
+    if setup_automatic_update_checks; then
+        echo # For visual separation
+    fi
+
+    # Install the hooks into existing local repositories
+    if is_single_repo_install; then
+        install_hooks_into_repo "$(pwd)" || return 1
+    else
+        install_into_existing_repositories || return 1
+    fi
+
+    echo # For visual separation
+
+    # Set up shared hook repositories if needed
+    if ! is_single_repo_install && ! is_non_interactive; then
+        setup_shared_hook_repositories
+        echo # For visual separation
+    fi
+}
+
+############################################################
+# Set up variables based on command line arguments.
+#
+# Sets ${DRY_RUN} for --dry-run
+# Sets ${NON_INTERACTIVE} for --non-interactive
+# Sets ${SINGLE_REPO_INSTALL} for --single
+#
+# Returns:
+#   None
+############################################################
+parse_command_line_arguments() {
+    for p in "$@"; do
+        if [ "$p" = "--dry-run" ]; then
+            DRY_RUN="yes"
+        elif [ "$p" = "--non-interactive" ]; then
+            NON_INTERACTIVE="yes"
+        elif [ "$p" = "--single" ]; then
+            SINGLE_REPO_INSTALL="yes"
+        fi
+    done
+}
+
+############################################################
 # Check if the install script is
 #   running in 'dry-run' mode.
 #
 # Returns:
-#   'yes' or 'no' as string
+#   0 in dry-run mode, 1 otherwise
 ############################################################
 is_dry_run() {
-    for p in "$@"; do
-        if [ "$p" = "--dry-run" ]; then
-            echo "yes"
-            return
-        fi
-    done
-
-    echo "no"
+    if [ "$DRY_RUN" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 ############################################################
@@ -417,13 +746,11 @@ is_dry_run() {
 #   0 in non-interactive mode, 1 otherwise
 ############################################################
 is_non_interactive() {
-    for p in "$@"; do
-        if [ "$p" = "--non-interactive" ]; then
-            return 0
-        fi
-    done
-
-    return 1
+    if [ "$NON_INTERACTIVE" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 ############################################################
@@ -431,17 +758,73 @@ is_non_interactive() {
 #   running in for a single repository without templates.
 #
 # Returns:
-#   'yes' or 'no' as string
+#   0 in single repository install mode, 1 otherwise
 ############################################################
 is_single_repo_install() {
-    for p in "$@"; do
-        if [ "$p" = "--single" ]; then
-            echo "yes"
-            return
-        fi
-    done
+    if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
 
-    echo "no"
+############################################################
+# Disable user input by redirecting /dev/null
+#   to the standard input of the install script.
+#
+# Returns:
+#   None
+############################################################
+disable_tty_input() {
+    exec </dev/null
+}
+
+############################################################
+# Checks whether the current working directory
+#   is a Git repository or not.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+ensure_running_in_git_repo() {
+    if ! git status >/dev/null 2>&1; then
+        echo "! The current directory is not Git repository"
+        return 1
+    fi
+}
+
+############################################################
+# Marks the repository in the current working directory
+#   as a single install project for future Githooks
+#   install or update runs.
+#
+# Sets the 'githooks.single.install' configuration.
+#
+# Returns:
+#   None
+############################################################
+mark_as_single_install_repo() {
+    git config githooks.single.install yes
+}
+
+############################################################
+# Prepare the target template directory variable,
+#   and make sure it points to a directory when set.
+#
+# Resets and sets the ${TARGET_TEMPLATE_DIR} variable.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+prepare_target_template_directory() {
+    TARGET_TEMPLATE_DIR=""
+
+    find_git_hook_templates
+
+    if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+        echo "Git hook templates directory not found"
+        return 1
+    fi
 }
 
 ############################################################
@@ -607,7 +990,7 @@ setup_new_templates_folder() {
         TILDE_REPLACED="$USER_TEMPLATES"
     fi
 
-    if [ "$DRY_RUN" != "yes" ]; then
+    if ! is_dry_run; then
         if mkdir -p "${TILDE_REPLACED}/hooks"; then
             # Let this one go with or without a tilde
             git config --global init.templateDir "$USER_TEMPLATES"
@@ -629,6 +1012,11 @@ setup_new_templates_folder() {
 #   0 on success, 1 on failure
 ############################################################
 setup_hook_templates() {
+    if is_dry_run; then
+        echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
+        return 0
+    fi
+
     for HOOK in $MANAGED_HOOK_NAMES; do
         HOOK_TEMPLATE="${TARGET_TEMPLATE_DIR}/${HOOK}"
 
@@ -669,19 +1057,32 @@ setup_automatic_update_checks() {
             return 1
         else
             echo "Automatic update checks are currently disabled."
-            printf "Would you like to re-enable them, done once a day after a commit? [Y/n] "
+
+            if is_non_interactive; then
+                return 1
+            else
+                printf "Would you like to re-enable them, done once a day after a commit? [Y/n] "
+            fi
         fi
+
+    elif is_non_interactive; then
+        DO_AUTO_UPDATES="Y"
+
     else
         printf "Would you like to enable automatic update checks, done once a day after a commit? [Y/n] "
+
     fi
 
-    read -r DO_AUTO_UPDATES
+    if ! is_non_interactive; then
+        read -r DO_AUTO_UPDATES
+    fi
+
     if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
-        if [ "$SINGLE_REPO_INSTALL" != "yes" ]; then
+        if ! is_single_repo_install; then
             GLOBAL_CONFIG="--global"
         fi
 
-        if [ "$DRY_RUN" = "yes" ]; then
+        if is_dry_run; then
             echo "[Dry run] Automatic update checks would have been enabled"
         elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled Y; then
             echo "Automatic update checks are now enabled"
@@ -716,17 +1117,23 @@ install_into_existing_repositories() {
         QUESTION_PROMPT="[y/N]"
     fi
 
-    printf 'Do you want to install the hooks into existing repositories? %s ' "$QUESTION_PROMPT"
-    read -r DO_INSTALL
+    if is_non_interactive; then
+        echo "Installing the hooks into existing repositories under $PRE_START_DIR"
+        START_DIR="$PRE_START_DIR"
 
-    if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
-        if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
-            return 0
+    else
+        printf 'Do you want to install the hooks into existing repositories? %s ' "$QUESTION_PROMPT"
+        read -r DO_INSTALL
+
+        if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
+            if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
+                return 0
+            fi
         fi
-    fi
 
-    printf 'Where do you want to start the search? [%s] ' "$PRE_START_DIR"
-    read -r START_DIR
+        printf 'Where do you want to start the search? [%s] ' "$PRE_START_DIR"
+        read -r START_DIR
+    fi
 
     if [ "$START_DIR" = "" ]; then
         START_DIR="$PRE_START_DIR"
@@ -745,6 +1152,12 @@ install_into_existing_repositories() {
     git config --global githooks.previous.searchdir "$START_DIR"
 
     LOCAL_REPOSITORY_LIST=$(find "$START_DIR" -type d -name .git 2>/dev/null)
+
+    # Sort the list if we can
+    if sort --help >/dev/null 2>&1; then
+        LOCAL_REPOSITORY_LIST=$(echo "$LOCAL_REPOSITORY_LIST" | sort)
+    fi
+
     for EXISTING in $LOCAL_REPOSITORY_LIST; do
         EXISTING_REPO_ROOT=$(dirname "$EXISTING")
         install_hooks_into_repo "$EXISTING_REPO_ROOT"
@@ -774,7 +1187,7 @@ install_hooks_into_repo() {
     INSTALLED="no"
 
     for HOOK_NAME in $MANAGED_HOOK_NAMES; do
-        if [ "$DRY_RUN" = "yes" ]; then
+        if is_dry_run; then
             INSTALLED="yes"
             continue
         fi
@@ -803,8 +1216,11 @@ install_hooks_into_repo() {
         fi
     done
 
-    # Offer to setup the intro README
-    if [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
+    # Offer to setup the intro README if running in interactive mode
+    if is_non_interactive; then
+        true # Let's skip this in non-interactive mode to avoid polluting the local repos with README files
+
+    elif [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
         if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
             true # OK, we already said we want to skip all
 
@@ -835,7 +1251,7 @@ install_hooks_into_repo() {
     fi
 
     if [ "$INSTALLED" = "yes" ]; then
-        if [ "$DRY_RUN" = "yes" ]; then
+        if is_dry_run; then
             echo "[Dry run] Hooks would have been installed into $TARGET_ROOT"
         else
             echo "Hooks installed into $TARGET_ROOT"
@@ -900,76 +1316,19 @@ setup_shared_hook_repositories() {
     fi
 }
 
-# Check if we're running in dry-run mode
-DRY_RUN=$(is_dry_run "$@")
+############################################################
+# Prints a thank you message and some more info
+#   when the script is finished.
+#
+# Returns:
+#   None
+############################################################
+thank_you() {
+    echo "All done! Enjoy!"
+    echo
+    echo "Please support the project by starring the project at https://github.com/rycus86/githooks, and report bugs or missing features or improvements as issues. Thanks!"
+}
 
-if is_non_interactive "$@"; then
-    exec </dev/null
-fi
-
-SINGLE_REPO_INSTALL=$(is_single_repo_install "$@")
-
-if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
-    # Make sure we are in a git repo
-    if ! git status >/dev/null 2>&1; then
-        echo "! The current directory is not Git repository"
-        exit 1
-    fi
-
-    git config githooks.single.install yes
-
-else
-    # Find the Git hook template directory to install into
-    TARGET_TEMPLATE_DIR=""
-
-    find_git_hook_templates
-
-    if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-        echo "Git hook templates directory not found"
-        exit 1
-    fi
-
-    # Setup the new hooks in the template directory
-    if [ "$DRY_RUN" = "yes" ]; then
-        echo "[Dry run] Would install Git hook templates into $TARGET_TEMPLATE_DIR"
-
-    elif ! setup_hook_templates; then
-        exit 1
-
-    fi
-
-    echo # For visual separation
-
-fi
-
-# Automatic updates
-if setup_automatic_update_checks; then
-    echo # For visual separation
-fi
-
-# Install the hooks into existing local repositories
-if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
-    if ! install_hooks_into_repo "$(pwd)"; then
-
-        exit 1
-    fi
-
-else
-    if ! install_into_existing_repositories; then
-        exit 1
-    fi
-
-fi
-
-echo # For visual separation
-
-if [ "$SINGLE_REPO_INSTALL" != "yes" ]; then
-    # Set up shared hook repositories
-    setup_shared_hook_repositories
-
-    echo # For visual separation
-fi
-
-echo "All done! Enjoy!
-
-Please support the project by starring the project at https://github.com/rycus86/githooks, and report bugs or missing features or improvements as issues. Thanks!"
+# Start the installation process
+execute_installation "$@" || exit 1
+thank_you

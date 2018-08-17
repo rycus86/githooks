@@ -1,0 +1,20 @@
+#!/bin/sh
+TODO_FOUND="no"
+
+OFFENDING_FILES=$(
+    grep -rE "(TODO|FIXME)" ./* .githooks/ |
+        grep -vE '(/cover/|/pre-commit/no-todo-or-fixme)' |
+        tr ':' ' ' | awk '{ print $1 }' |
+        sort | uniq
+)
+
+for WITH_TODO in $OFFENDING_FILES; do
+    echo "! TODO or FIXME found in: $WITH_TODO"
+    TODO_FOUND="yes"
+done
+
+if [ "$TODO_FOUND" = "no" ]; then
+    echo "* No TODO or FIXME detected"
+else
+    exit 1
+fi

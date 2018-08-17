@@ -14,6 +14,8 @@ n
 y
 " | sh /var/lib/githooks/install.sh || exit 1
 
+find /tmp/test044
+
 if ! grep "github.com/rycus86/githooks" /tmp/test044/001/.git/hooks/pre-commit; then
     echo "! Hooks were not installed into 001"
     exit 1

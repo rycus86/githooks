@@ -5,6 +5,7 @@ if ! grep '/docker/' </proc/self/cgroup >/dev/null 2>&1; then
     exit 1
 fi
 
+TEST_RUNS=0
 FAILED=0
 SKIPPED=0
 
@@ -22,6 +23,8 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     mkdir -p /var/backup/gihooks &&
         cp /var/lib/githooks/* /var/backup/gihooks/.
+
+    TEST_RUNS=$((TEST_RUNS + 1))
 
     TEST_OUTPUT=$(sh "$STEP" 2>&1)
     TEST_RESULT=$?
@@ -62,13 +65,11 @@ for STEP in /var/lib/tests/step-*.sh; do
 
 done
 
-if [ $FAILED -ne 0 ] || [ $SKIPPED -ne 0 ]; then
-    echo "There were $FAILED test failure(s), and $SKIPPED test(s) were skipped"
-    echo
+echo "$TEST_RUNS tests run: $FAILED failed and $SKIPPED skipped"
+echo
 
-    if [ $FAILED -ne 0 ]; then
-        exit 1
-    else
-        exit 0
-    fi
+if [ $FAILED -ne 0 ]; then
+    exit 1
+else
+    exit 0
 fi

@@ -1,7 +1,7 @@
 #!/bin/sh
 TAB_FOUND="no"
 
-for WITH_TAB in $(grep -r "$(printf '\t')" ./* .githooks/* tests/ | grep -v '/cover/' | tr ':' ' ' | awk '{ print $1 }' | sort | uniq); do
+for WITH_TAB in $(grep -r "$(printf '\t')" ./* .githooks/* | grep -v '/cover/' | tr ':' ' ' | awk '{ print $1 }' | sort | uniq); do
     echo "! Tab character found in: $WITH_TAB"
     TAB_FOUND="yes"
 done
