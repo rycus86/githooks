@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for EMBEDDED_FILE in base-template.sh .githooks/README.md; do
+for EMBEDDED_FILE in base-template.sh cli.sh .githooks/README.md; do
     if grep -q "'" "$EMBEDDED_FILE"; then
         echo "! Single quote characters detected in $EMBEDDED_FILE"
         exit 1

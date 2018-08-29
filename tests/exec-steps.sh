@@ -18,11 +18,11 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     mkdir -p /usr/share/git-core/templates/hooks
     rm -rf /usr/share/git-core/templates/hooks/*
-    rm -rf ~/.githooks.shared
+    rm -rf ~/.githooks
     rm -rf /tmp/*
 
-    mkdir -p /var/backup/gihooks &&
-        cp /var/lib/githooks/* /var/backup/gihooks/.
+    mkdir -p /var/backup/githooks &&
+        cp /var/lib/githooks/* /var/backup/githooks/.
 
     TEST_RUNS=$((TEST_RUNS + 1))
 
@@ -58,8 +58,9 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.autoupdate.lastrun
     git config --global --unset githooks.previous.searchdir
     git config --global --unset githooks.disable
+    git config --global --unset alias.hooks
 
-    cp /var/backup/gihooks/* /var/lib/githooks/.
+    cp /var/backup/githooks/* /var/lib/githooks/.
 
     echo
 

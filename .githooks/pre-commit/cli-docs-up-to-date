@@ -1,0 +1,19 @@
+#!/bin/sh
+
+for HELP_OPTION in $(sh cli.sh help | grep '^  ' | awk '{ print $1 }'); do
+    if ! grep -q "## git hooks $HELP_OPTION" docs/command-line-tool.md; then
+        echo "! Documentation is missing for \`git hooks $HELP_OPTION\`"
+        MISSING=1
+    fi
+
+    if ! grep -q "\\- \\[${HELP_OPTION}\\](#git-hooks-${HELP_OPTION})" docs/command-line-tool.md; then
+        echo "! TOC item is missing for \`git hooks $HELP_OPTION\`"
+        MISSING=1
+    fi
+done
+
+if [ -z "$MISSING" ]; then
+    echo "* Command line tool docs is up-to-date"
+else
+    exit 1
+fi

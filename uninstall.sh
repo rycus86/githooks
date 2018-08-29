@@ -92,7 +92,15 @@ uninstall_from_existing_repositories() {
     read -r DO_UNINSTALL
     if [ "$DO_UNINSTALL" != "y" ] && [ "$DO_UNINSTALL" != "Y" ]; then return 0; fi
 
-    printf 'Where do you want to start the search? [%s] ' ~
+    PRE_START_DIR=$(git config --global --get githooks.previous.searchdir)
+    # shellcheck disable=SC2181
+    if [ $? -eq 0 ] && [ -n "$PRE_START_DIR" ]; then
+        START_DIR="$PRE_START_DIR"
+    else
+        START_DIR=~
+    fi
+
+    printf 'Where do you want to start the search? [%s] ' "$START_DIR"
     read -r START_DIR
 
     if [ "$START_DIR" = "" ]; then

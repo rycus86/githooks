@@ -85,6 +85,8 @@ If the repository contains a `.githooks/trust-all` file, it is marked as a trust
 
 There is a caveat worth mentioning: if a terminal *(tty)* can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
 
+You can also accept changes to a hook using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks accept <hook>`. See the tool's documentation in the `docs/` folder to see the available options.
+
 ### Opt-out
 
 In a similar spirit to the opt-in above, you can also opt-out of running the hooks in the repository. You can disable executing the files per project, or globally, using the commands below.
@@ -97,6 +99,14 @@ $ git config --global githooks.disable Y
 ```
 
 Also, as mentioned above, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
+
+You can also selectively disable some or all of the hooks using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks disable <hook>`. See the tool's documentation in the `docs/` folder to see the available options.
+
+## Command line helper
+
+Githooks will set up a Git alias for `git hooks <cmd>` for you, that enables you to print the names and state of the hooks in the current repository, and also manage them, along with some other functionality, like updating shared hook repositories, running a Githooks update, etc.
+
+> See the documentation of the command line helper tool on its [docs page](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md)!
 
 ## Installation
 
@@ -164,12 +174,16 @@ You can update the scripts any time by running one of the install commands above
 You can also enable automatic update checks during the installation, that is executed once a day after a successful commit. It downloads the latest version of the install script, and asks whether you want to install it. Automatic updates can be enabled or disabled at any time by running the command below.
 
 ```shell
-# enable with:
+# enable with either:
+$ git hooks update enable
 $ git config --global githooks.autoupdate.enabled Y
 # disable with either:
+$ git hooks update disable
 $ git config --global githooks.autoupdate.enabled N
 $ git config --global --unset githooks.autoupdate.enabled
 ```
+
+You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool.
 
 ### Uninstalling
 

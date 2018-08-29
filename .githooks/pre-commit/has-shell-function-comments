@@ -1,0 +1,24 @@
+#!/bin/sh
+
+for SCRIPT_FILE in *.sh; do
+    IFS='\-'
+    for LINES in $(grep -hE -B 1 '^.+\(\) {$' "$SCRIPT_FILE"); do
+        if [ -z "$LINES" ]; then
+            continue
+        fi
+
+        if ! echo "$LINES" | grep -q '^#'; then
+            echo "! Missing function header in ${SCRIPT_FILE}:" \
+                "$(echo "$LINES" | grep -vE '^\s*$' | sed 's/ {//')"
+
+            HAS_MISSING_HEADERS=1
+        fi
+    done
+    unset IFS
+done
+
+if [ -z "$HAS_MISSING_HEADERS" ]; then
+    echo "* All Shell functions have headers"
+else
+    exit 1
+fi

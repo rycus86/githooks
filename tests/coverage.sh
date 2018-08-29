@@ -10,7 +10,7 @@ fi
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM ragnaroek/kcov:v33
 
-ADD base-template.sh install.sh uninstall.sh .githooks/README.md /var/lib/githooks/
+ADD base-template.sh install.sh uninstall.sh cli.sh .githooks/README.md /var/lib/githooks/
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
@@ -22,6 +22,8 @@ ADD tests/exec-steps.sh tests/step-* tests/replace-inline-content.py /var/lib/te
 RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
+# Revert changed shell script filenames
+    find /var/lib -name '*.sh' -exec sed -E -i "s|/var/lib/githooks/([a-z-]+)\\.bash|/var/lib/githooks/\\1.sh|g" {} \\; && \\
 # Replace the inline content with loading the source file
     python /var/lib/tests/replace-inline-content.py /var/lib/githooks && \\
 # Change the base template so we can pass in the hook name and accept flags

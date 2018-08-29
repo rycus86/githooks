@@ -1,6 +1,6 @@
 #!/bin/sh
 if ! python --version 2>/dev/null; then
-    echo "_ Skipping automatic template and README update: Python is not available"
+    echo "_ Skipping automatic inline content update: Python is not available"
     exit 0
 fi
 
@@ -9,11 +9,15 @@ cat <<EOF | python -
 import re
 
 TEMPLATE_PATTERN="(.+)(BASE_TEMPLATE_CONTENT='[^']+')(.+)"
+CLI_TOOL_PATTERN="(.+)(CLI_TOOL_CONTENT='[^']+')(.+)"
 README_PATTERN="(.+)(INCLUDED_README_CONTENT='[^']+')(.+)"
 
 if __name__ == '__main__':
     with open('base-template.sh', 'r') as template_file:
         template_contents = template_file.read()
+    
+    with open('cli.sh', 'r') as cli_tool_file:
+        cli_tool_contents = cli_tool_file.read()
     
     with open('.githooks/README.md', 'r') as readme_file:
         readme_contents = readme_file.read()
@@ -30,6 +34,13 @@ if __name__ == '__main__':
         before, template_contents, after
     )
 
+    match = re.match(CLI_TOOL_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
+    before, template, after = match.groups()
+
+    contents = "%sCLI_TOOL_CONTENT='%s'%s" % (
+        before, cli_tool_contents, after
+    )
+
     match = re.match(README_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
@@ -43,5 +54,5 @@ EOF
 
 # shellcheck disable=SC2181
 if [ $? -eq 0 ]; then
-    echo "* Base template and README updated in the install script"
+    echo "* Inline content is updated in the install script"
 fi

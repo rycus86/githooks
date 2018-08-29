@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.172152-3d67fd
+# Version: 1808.292318-630c3b
 
 #####################################################
 # Execute the current hook,
@@ -260,13 +260,14 @@ execute_opt_in_checks() {
     CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
 
     # check against the previous hash
-    if ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+    if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
+        echo "* Skipping disabled $HOOK_PATH"
+        echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+        return 1
+
+    elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
         if [ -z "$CURRENT_HASHES" ]; then
             MESSAGE="New hook file found"
-        elif echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-            echo "* Skipping disabled $HOOK_PATH"
-            echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
-            return 1
         else
             MESSAGE="Hook file changed"
         fi
@@ -351,15 +352,15 @@ update_shared_hooks_if_appropriate() {
         "
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
-            mkdir -p ~/.githooks.shared
+            mkdir -p ~/.githooks/shared
 
             NORMALIZED_NAME=$(echo "$SHARED_REPO" |
                 sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
                 sed -E "s/[^a-zA-Z0-9]/_/g")
 
-            if [ -d ~/.githooks.shared/"$NORMALIZED_NAME"/.git ]; then
+            if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd ~/.githooks.shared/"$NORMALIZED_NAME" && git pull 2>&1)
+                PULL_OUTPUT=$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:"
@@ -367,7 +368,7 @@ update_shared_hooks_if_appropriate() {
                 fi
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO"
-                CLONE_OUTPUT=$(cd ~/.githooks.shared && git clone "$SHARED_REPO" "$NORMALIZED_NAME" 2>&1)
+                CLONE_OUTPUT=$(cd ~/.githooks/shared && git clone "$SHARED_REPO" "$NORMALIZED_NAME" 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Clone failed, git clone output:"
@@ -382,13 +383,13 @@ update_shared_hooks_if_appropriate() {
 
 #####################################################
 # Execute the shared hooks in the
-#   ~/.githooks.shared directory.
+#   ~/.githooks/shared directory.
 #
 # Returns:
 #   1 in case a hook fails, 0 otherwise
 #####################################################
 execute_shared_hooks() {
-    for SHARED_ROOT in ~/.githooks.shared/*; do
+    for SHARED_ROOT in ~/.githooks/shared/*; do
         REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
@@ -548,7 +549,7 @@ read_single_repo_information() {
 #   single repository install mode.
 #
 # Returns:
-#   1 if they were, 0 otherwise
+#   0 if they were, 1 otherwise
 #####################################################
 is_single_repo() {
     [ "$IS_SINGLE_REPO" = "yes" ] || return 1
@@ -602,11 +603,14 @@ execute_update() {
 #####################################################
 print_update_disable_info() {
     if is_single_repo; then
-        GLOBAL_CONFIG="--global"
+        GIT_CONFIG_CMD="config"
+    else
+        GIT_CONFIG_CMD="config --global"
     fi
 
     echo "  If you would like to disable auto-updates, run:"
-    echo "    \$ git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled N"
+    echo "    \$ git ${GIT_CONFIG_CMD} githooks.autoupdate.enabled N"
 }
 
+# Start processing the hooks
 process_git_hook "$@" || exit 1
