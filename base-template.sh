@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.292335-f9119d
+# Version: 1808.300000-5fadbb
 
 #####################################################
 # Execute the current hook,
@@ -513,7 +513,7 @@ fetch_latest_update_script() {
 #   None
 #####################################################
 read_updated_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | sed "s/^# Version: //")
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
 }
 
 #####################################################
@@ -524,7 +524,7 @@ read_updated_version_number() {
 #   0 if the script is newer, 1 otherwise
 #####################################################
 is_update_available() {
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | sed "s/^# Version: //")
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
     UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
     [ "$UPDATE_AVAILABLE" = "0" ] || return 1
 }

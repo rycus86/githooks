@@ -17,7 +17,7 @@ echo "* Setting version number to: ${VERSION_DATE}-${VERSION_COMMIT}"
 
 # update the version number
 for FILENAME in base-template.sh install.sh cli.sh; do
-    sed "s/^# Version: .*/# Version: ${VERSION_DATE}-${VERSION_COMMIT}/" "$FILENAME" >"${FILENAME}.copy"
+    sed "s/^# Version: .*/# Version: ${VERSION_DATE}-${VERSION_COMMIT}/g" "$FILENAME" >"${FILENAME}.copy"
     mv "${FILENAME}.copy" "$FILENAME"
 done
 
