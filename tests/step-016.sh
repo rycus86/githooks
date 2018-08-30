@@ -2,19 +2,19 @@
 # Test:
 #   Direct template execution: update shared hooks
 
-mkdir -p /shared/hooks-016-a.git/pre-commit &&
+mkdir -p /tmp/shared/hooks-016-a.git/pre-commit &&
     echo 'echo "From shared hook A" >> /tmp/test-016.out' \
-        >/shared/hooks-016-a.git/pre-commit/say-hello &&
-    cd /shared/hooks-016-a.git &&
+        >/tmp/shared/hooks-016-a.git/pre-commit/say-hello &&
+    cd /tmp/shared/hooks-016-a.git &&
     git init &&
     git add . &&
     git commit -m 'Initial commit' ||
     exit 1
 
-mkdir -p /shared/hooks-016-b.git/.githooks/pre-commit &&
+mkdir -p /tmp/shared/hooks-016-b.git/.githooks/pre-commit &&
     echo 'echo "From shared hook B" >> /tmp/test-016.out' \
-        >/shared/hooks-016-b.git/.githooks/pre-commit/say-hello &&
-    cd /shared/hooks-016-b.git &&
+        >/tmp/shared/hooks-016-b.git/.githooks/pre-commit/say-hello &&
+    cd /tmp/shared/hooks-016-b.git &&
     git init &&
     git add . &&
     git commit -m 'Initial commit' ||
@@ -24,8 +24,8 @@ mkdir -p /tmp/test16 && cd /tmp/test16 || exit 1
 git init || exit 1
 
 mkdir -p .githooks &&
-    git config --global githooks.shared '/shared/hooks-016-a.git' &&
-    echo '/shared/hooks-016-b.git' >.githooks/.shared &&
+    git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
+    echo '/tmp/shared/hooks-016-b.git' >.githooks/.shared &&
     HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
         sh /var/lib/githooks/base-template.sh ||
     exit 1

@@ -2,33 +2,33 @@
 # Test:
 #   Run an install with multiple shared hooks set up, and verify those trigger properly
 
-mkdir -p /shared/hooks-023-a.git/pre-commit &&
+mkdir -p /tmp/shared/hooks-023-a.git/pre-commit &&
     echo 'echo "From shared hook A" >> /tmp/test-023.out' \
-        >/shared/hooks-023-a.git/pre-commit/say-hello &&
-    cd /shared/hooks-023-a.git &&
+        >/tmp/shared/hooks-023-a.git/pre-commit/say-hello &&
+    cd /tmp/shared/hooks-023-a.git &&
     git init &&
     git add . &&
     git commit -m 'Initial commit' ||
     exit 1
 
-mkdir -p /shared/hooks-023-b.git/pre-commit &&
+mkdir -p /tmp/shared/hooks-023-b.git/pre-commit &&
     echo 'echo "From shared hook B" >> /tmp/test-023.out' \
-        >/shared/hooks-023-b.git/pre-commit/say-hello &&
-    cd /shared/hooks-023-b.git &&
+        >/tmp/shared/hooks-023-b.git/pre-commit/say-hello &&
+    cd /tmp/shared/hooks-023-b.git &&
     git init &&
     git add . &&
     git commit -m 'Initial commit' ||
     exit 1
 
 # change it and expect it to change it back
-git config --global githooks.shared /shared/some-previous-example
+git config --global githooks.shared /tmp/shared/some-previous-example
 
 # run the install, and set up shared repos
 echo 'n
 n
 y
-/shared/hooks-023-a.git
-/shared/hooks-023-b.git
+/tmp/shared/hooks-023-a.git
+/tmp/shared/hooks-023-b.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 git config --global --get githooks.shared | grep -v 'some-previous-example' || exit 1

@@ -2,11 +2,11 @@
 # Test:
 #   Run an install with shared hooks set up, and verify those trigger properly
 
-mkdir -p /shared/hooks-005.git/pre-commit &&
+mkdir -p /tmp/shared/hooks-005.git/pre-commit &&
     echo 'echo "From shared hook" > /tmp/test-005.out' \
-        >/shared/hooks-005.git/pre-commit/say-hello || exit 1
+        >/tmp/shared/hooks-005.git/pre-commit/say-hello || exit 1
 
-cd /shared/hooks-005.git &&
+cd /tmp/shared/hooks-005.git &&
     git init &&
     git add . &&
     git commit -m 'Initial commit'
@@ -15,7 +15,7 @@ cd /shared/hooks-005.git &&
 echo 'n
 n
 y
-/shared/hooks-005.git
+/tmp/shared/hooks-005.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 mkdir -p /tmp/test5 && cd /tmp/test5 || exit 1

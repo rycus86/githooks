@@ -3,7 +3,7 @@
 #   Run an install that unsets shared repositories
 
 # change it and expect it to reset it
-git config --global githooks.shared /shared/some-previous-example
+git config --global githooks.shared /tmp/shared/some-previous-example
 
 # run the install, and set up shared repos
 echo 'n

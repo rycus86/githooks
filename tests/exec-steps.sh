@@ -16,8 +16,10 @@ for STEP in /var/lib/tests/step-*.sh; do
     echo "> Executing $STEP_NAME"
     echo "  :: $STEP_DESC"
 
-    mkdir -p /usr/share/git-core/templates/hooks
-    rm -rf /usr/share/git-core/templates/hooks/*
+    if [ -w /usr/share/git-core ]; then
+        mkdir -p /usr/share/git-core/templates/hooks
+        rm -rf /usr/share/git-core/templates/hooks/*
+    fi
     rm -rf ~/.githooks
     rm -rf /tmp/*
 
@@ -42,7 +44,9 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     fi
 
-    mkdir -p /usr/share/git-core/templates/hooks
+    if [ -w /usr/share/git-core ]; then
+        mkdir -p /usr/share/git-core/templates/hooks
+    fi
 
     UNINSTALL_OUTPUT=$(printf "y\\n/\\n" | sh /var/lib/githooks/uninstall.sh 2>&1)
     # shellcheck disable=SC2181
@@ -60,7 +64,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.disable
     git config --global --unset alias.hooks
 
-    cp /var/backup/githooks/* /var/lib/githooks/.
+    cp /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
 
     echo
 

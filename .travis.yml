@@ -11,7 +11,9 @@ env:
   - TEST_INSTANCE=test-alpine
   - TEST_INSTANCE=test-alpine-curl
   - TEST_INSTANCE=test-alpine-wget
+  - TEST_INSTANCE=test-alpine-user
   - TEST_INSTANCE=test-debian
+  - TEST_INSTANCE=test-debian-user
   - TEST_INSTANCE=test-ubuntu
   - TEST_INSTANCE=test-centos
   - TEST_INSTANCE=test-arch
