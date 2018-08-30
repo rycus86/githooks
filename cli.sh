@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.301741-e06e1d
+# Version: 1808.301817-6054db
 
 #####################################################
 # Prints the command line help for usage and
@@ -800,6 +800,89 @@ print_current_version_number() {
 }
 
 #####################################################
+# Adds or updates the Githooks README in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_readme_file() {
+    case "$1" in
+    "add")
+        FORCE_README=""
+        ;;
+    "update")
+        FORCE_README="y"
+        ;;
+    *)
+        print_help_header
+        echo "
+git hooks readme [add|update]
+
+    Adds or updates the Githooks README in the \`.githooks\` folder.
+    If \`add\` is used, it checks first if there is a README file already.
+    With \`update\`, the file is always updated, creating it if necessary.
+    This command needs to be run at the root of a repository.
+"
+        if [ "$1" = "help" ]; then
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    esac
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
+        echo "! This repository already seems to have a Githooks README."
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`"
+        exit 1
+    fi
+
+    if ! fetch_latest_readme; then
+        exit 1
+    fi
+
+    printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "! Failed to update the README file in the current repository"
+}
+
+#####################################################
+# Loads the contents of the latest Githooks README
+#   into a variable.
+#
+# Sets the ${README_CONTENTS} variable
+#
+# Returns:
+#   1 if failed the load the contents, 0 otherwise
+#####################################################
+fetch_latest_readme() {
+    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/.githooks/README.md"
+
+    if curl --version >/dev/null 2>&1; then
+        README_CONTENTS=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
+
+    elif wget --version >/dev/null 2>&1; then
+        README_CONTENTS=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
+
+    else
+        echo "! Failed to fetch the latest README - needs either curl or wget"
+        return 1
+    fi
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to fetch the latest README"
+        return 1
+    fi
+}
+
+#####################################################
 # Dispatches the command to the
 #   appropriate helper function to process it.
 #
@@ -829,6 +912,9 @@ choose_command() {
         ;;
     "update")
         run_update_check "$@"
+        ;;
+    "readme")
+        manage_readme_file "$@"
         ;;
     "help")
         print_help

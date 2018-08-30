@@ -6,6 +6,7 @@
 - [list](#git-hooks-list)
 - [pull](#git-hooks-pull)
 - [update](#git-hooks-update)
+- [readme](#git-hooks-readme)
 - [help](#git-hooks-help)
 - [version](#git-hooks-version)
 
@@ -79,6 +80,16 @@ $ git hooks update [enable|disable]
 ```
 
 Executes an update check for a newer Githooks version. If it finds one, or if `force` was given, the downloaded install script is executed for the latest version. The `enable` and `disable` options enable or disable the automatic checks that would normally run daily after a successful commit event.
+
+## git hooks readme
+
+Manages the Githooks README in the current repository.
+
+```shell
+$ git hooks readme [add|update]
+```
+
+Adds or updates the Githooks README in the `.githooks` folder. If `add` is used, it checks first if there is a README file already. With `update`, the file is always updated, creating it if necessary. This command needs to be run at the root of a repository.
 
 ## git hooks help
 

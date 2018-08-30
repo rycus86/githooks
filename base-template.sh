@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.301741-e06e1d
+# Version: 1808.301817-6054db
 
 #####################################################
 # Execute the current hook,
@@ -262,7 +262,8 @@ execute_opt_in_checks() {
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
         echo "* Skipping disabled $HOOK_PATH"
-        echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+        echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
+        echo "  Alternatively, edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
         return 1
 
     elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
@@ -287,7 +288,8 @@ execute_opt_in_checks() {
 
             if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
                 echo "* Disabled $HOOK_PATH"
-                echo "  Edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+                echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
+                echo "  Alternatively, edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
 
                 echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
                 return 1
