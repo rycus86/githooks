@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1808.300000-5fadbb
+# Version: 1808.301741-e06e1d
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.300000-5fadbb
+# Version: 1808.301741-e06e1d
 
 #####################################################
 # Execute the current hook,
@@ -650,7 +650,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.300000-5fadbb
+# Version: 1808.301741-e06e1d
 
 #####################################################
 # Prints the command line help for usage and
@@ -1268,10 +1268,17 @@ git hooks update [enable|disable]
     fi
 
     if [ "$1" = "enable" ]; then
-        git config --global githooks.autoupdate.enabled Y && return
+        git config --global githooks.autoupdate.enabled Y &&
+            echo "Automatic update checks have been enabled" &&
+            return
+
         echo "! Failed to enable automatic updates" && exit 1
+
     elif [ "$1" = "disable" ]; then
-        git config --global githooks.autoupdate.enabled N && return
+        git config --global githooks.autoupdate.enabled N &&
+            echo "Automatic update checks have been disabled" &&
+            return
+
         echo "! Failed to disable automatic updates" && exit 1
     fi
 
