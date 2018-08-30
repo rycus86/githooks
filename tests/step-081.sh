@@ -1,0 +1,39 @@
+#!/bin/sh
+# Test:
+#   Cli tool: manage trust settings
+
+if ! sh /var/lib/githooks/install.sh; then
+    echo "! Failed to execute the install script"
+    exit 1
+fi
+
+mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
+
+sh /var/lib/githooks/cli.sh trust &&
+    [ -f .githooks/trust-all ] &&
+    [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
+    exit 1
+
+sh /var/lib/githooks/cli.sh trust revoke &&
+    [ -f .githooks/trust-all ] &&
+    [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
+    exit 2
+
+sh /var/lib/githooks/cli.sh trust delete &&
+    [ ! -f .githooks/trust-all ] &&
+    [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
+    exit 3
+
+sh /var/lib/githooks/cli.sh trust forget &&
+    [ -z "$(git config --local --get githooks.trust.all)" ] &&
+    sh /var/lib/githooks/cli.sh trust forget ||
+    exit 4
+
+sh /var/lib/githooks/cli.sh trust invalid && exit 5
+
+# Check the Git alias
+git hooks trust &&
+    git hooks trust revoke &&
+    git hooks trust delete &&
+    git hooks trust forget ||
+    exit 6

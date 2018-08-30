@@ -3,6 +3,7 @@
 - [disable](#git-hooks-disable)
 - [enable](#git-hooks-enable)
 - [accept](#git-hooks-accept)
+- [trust](#git-hooks-trust)
 - [list](#git-hooks-list)
 - [pull](#git-hooks-pull)
 - [update](#git-hooks-update)
@@ -51,6 +52,19 @@ $ git hooks accept [trigger]
 ```
 
 Accepts a new hook or changes to an existing hook. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository.
+
+## git hooks trust
+
+Manage settings related to trusted repositories.
+
+```shell
+$ git hooks trust
+$ git hooks trust [revoke]
+$ git hooks trust [delete]
+$ git hooks trust [forget]
+```
+
+Sets up, or reverts the trusted setting for the local repository. When called without arguments, it marks the local repository as trusted. The `revoke` argument resets the already accepted trust setting, and the `delete` argument also deletes the trusted marker. The `forget` option unsets the trust setting, asking for accepting it again next time, if the repository is marked as trusted. This command needs to be run at the root of a repository.
 
 ## git hooks list
 

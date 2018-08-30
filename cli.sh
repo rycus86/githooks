@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.301835-d56646
+# Version: 1808.302330-c983fc
 
 #####################################################
 # Prints the command line help for usage and
@@ -26,6 +26,7 @@ Available commands:
     disable     Disables a hook in the current repository
     enable      Enables a previously disabled hook in the current repository
     accept      Accept the pending changes of a new or modified hook
+    trust       Manage settings related to trusted repositories
     list        Lists the active hooks in the current repository
     pull        Updates the shared repositories
     update      Performs an update check
@@ -301,6 +302,90 @@ get_hook_checksum() {
     fi
 
     echo "$MD5_HASH" | awk "{ print \$1 }"
+}
+
+#####################################################
+# Manage settings related to trusted repositories.
+#   It allows setting up and clearing marker
+#   files and Git configuration.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_trusted_repo() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks trust
+git hooks trust [revoke]
+git hooks trust [delete]
+git hooks trust [forget]
+
+    Sets up, or reverts the trusted setting for the local repository.
+    When called without arguments, it marks the local repository as trusted.
+    The \`revoke\` argument resets the already accepted trust setting,
+    and the \`delete\` argument also deletes the trusted marker.
+    The \`forget\` option unsets the trust setting, asking for accepting
+    it again next time, if the repository is marked as trusted.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ -z "$1" ]; then
+        mkdir -p .githooks &&
+            touch .githooks/trust-all &&
+            git config githooks.trust.all Y &&
+            echo "The current repository is now trusted." &&
+            echo "  Do not forget to commit and push the trust marker!" &&
+            return
+
+        echo "! Failed to mark the current repository as trusted"
+        exit 1
+    fi
+
+    if [ "$1" = "forget" ]; then
+        if [ -z "$(git config --local --get githooks.trust.all)" ]; then
+            echo "The current repository does not have trust settings."
+            return
+        elif git config --unset githooks.trust.all; then
+            echo "The current repository is no longer trusted."
+            return
+        else
+            echo "! Failed to revoke the trusted setting"
+            exit 1
+        fi
+
+    elif [ "$1" = "revoke" ] || [ "$1" = "delete" ]; then
+        if git config githooks.trust.all N; then
+            echo "The current repository is no longer trusted."
+        else
+            echo "! Failed to revoke the trusted setting"
+            exit 1
+        fi
+
+        if [ "$1" = "revoke" ]; then
+            return
+        fi
+    fi
+
+    if [ "$1" = "delete" ] || [ -f .githooks/trust-all ]; then
+        rm -rf .githooks/trust-all &&
+            echo "The trust marker is removed from the repository." &&
+            echo "  Do not forget to commit and push the change!" &&
+            return
+
+        echo "! Failed to delete the trust marker"
+        exit 1
+    fi
+
+    echo "! Unknown subcommand: $1"
+    echo "  Run \`git hooks trust help\` to see the available options."
+    exit 1
 }
 
 #####################################################
@@ -929,6 +1014,9 @@ choose_command() {
         ;;
     "accept")
         accept_changes "$@"
+        ;;
+    "trust")
+        manage_trusted_repo "$@"
         ;;
     "list")
         list_hooks "$@"

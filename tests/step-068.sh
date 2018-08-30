@@ -9,7 +9,7 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
-for SUBCOMMAND in enable disable accept list; do
+for SUBCOMMAND in enable disable accept trust list; do
     if sh /var/lib/githooks/cli.sh "$SUBCOMMAND"; then
         echo "! Expected to fail: $SUBCOMMAND"
         exit 1
