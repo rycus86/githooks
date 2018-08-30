@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.301817-6054db
+# Version: 1808.301835-d56646
 
 #####################################################
 # Prints the command line help for usage and
@@ -29,6 +29,7 @@ Available commands:
     list        Lists the active hooks in the current repository
     pull        Updates the shared repositories
     update      Performs an update check
+    readme      Manages the Githooks README in the current repository
     help        Prints this help message
     version     Prints the version number of this script
 
@@ -155,11 +156,16 @@ disable_hook() {
 git hooks disable [trigger] [hook-script]
 git hooks disable [hook-script]
 git hooks disable [trigger]
+git hooks disable [-a|--all]
+git hooks disable [-r|--reset]
 
     Disables a hook in the current repository.
     The \`trigger\` parameter should be the name of the Git event if given.
     The \`hook-script\` can be the name of the file to disable, or its
     relative path, or an absolute path, we will try to find it.
+    The \`--all\` parameter on its own will disable running any Githooks
+    in the current repository, both existing ones and any future hooks.
+    The \`--reset\` parameter is used to undo this, and let hooks run again.
 "
         return
     fi
@@ -167,6 +173,25 @@ git hooks disable [trigger]
     if ! is_running_in_git_repo_root; then
         echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
         exit 1
+    fi
+
+    if [ "$1" = "-a" ] || [ "$1" = "--all" ]; then
+        git config githooks.disable Y &&
+            echo "All existing and future hooks are disabled in the current repository" &&
+            return
+
+        echo "! Failed to disable hooks in the current repository"
+        exit 1
+
+    elif [ "$1" = "-r" ] || [ "$1" = "--reset" ]; then
+        git config --unset githooks.disable
+
+        if ! git config --get githooks.single.install; then
+            echo "Githooks hook files are not disabled anymore by default" && return
+        else
+            echo "! Failed to re-enable Githooks hook files"
+            exit 1
+        fi
     fi
 
     find_hook_path_to_enable_or_disable "$@"
@@ -847,7 +872,8 @@ git hooks readme [add|update]
         exit 1
     fi
 
-    printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+    mkdir -p "$(pwd)/.githooks" &&
+        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
         echo "The README file is updated, do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository"
 }

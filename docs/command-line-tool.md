@@ -22,9 +22,11 @@ Disables a hook in the current repository.
 $ git hooks disable [trigger] [hook-script]
 $ git hooks disable [hook-script]
 $ git hooks disable [trigger]
+$ git hooks disable [-a|--all]
+$ git hooks disable [-r|--reset]
 ```
 
-Disables a hook in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to disable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository.
+Disables a hook in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to disable, or its relative path, or an absolute path, we will try to find it. The `--all` parameter on its own will disable running any Githooks in the current repository, both existing ones and any future hooks. The `--reset` parameter is used to undo this, and let hooks run again. This command needs to be run at the root of a repository.
 
 ## git hooks enable
 
