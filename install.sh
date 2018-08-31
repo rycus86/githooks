@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1808.302330-c983fc
+# Version: 1808.311613-aea37f
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1808.302330-c983fc
+# Version: 1808.311613-aea37f
 
 #####################################################
 # Execute the current hook,
@@ -652,7 +652,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.302330-c983fc
+# Version: 1808.311613-aea37f
 
 #####################################################
 # Prints the command line help for usage and
@@ -2162,7 +2162,7 @@ setup_automatic_update_checks() {
     fi
 
     if ! is_non_interactive; then
-        read -r DO_AUTO_UPDATES
+        read -r DO_AUTO_UPDATES </dev/tty
     fi
 
     if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
@@ -2211,7 +2211,7 @@ install_into_existing_repositories() {
 
     else
         printf 'Do you want to install the hooks into existing repositories? %s ' "$QUESTION_PROMPT"
-        read -r DO_INSTALL
+        read -r DO_INSTALL </dev/tty
 
         if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
             if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
@@ -2220,7 +2220,7 @@ install_into_existing_repositories() {
         fi
 
         printf 'Where do you want to start the search? [%s] ' "$PRE_START_DIR"
-        read -r START_DIR
+        read -r START_DIR </dev/tty
     fi
 
     if [ "$START_DIR" = "" ]; then
@@ -2326,7 +2326,7 @@ install_hooks_into_repo() {
                 printf "  Would you like to add one now with a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
             fi
 
-            read -r SETUP_INCLUDED_README
+            read -r SETUP_INCLUDED_README </dev/tty
 
             if [ -z "$SETUP_INCLUDED_README" ] ||
                 [ "$SETUP_INCLUDED_README" = "y" ] || [ "$SETUP_INCLUDED_README" = "Y" ] ||

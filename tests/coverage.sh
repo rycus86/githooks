@@ -26,6 +26,8 @@ RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; &
     find /var/lib -name '*.sh' -exec sed -E -i "s|/var/lib/githooks/([a-z-]+)\\.bash|/var/lib/githooks/\\1.sh|g" {} \\; && \\
 # Replace the inline content with loading the source file
     python /var/lib/tests/replace-inline-content.py /var/lib/githooks && \\
+# Do not use the terminal in tests
+    sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 # Change the base template so we can pass in the hook name and accept flags
     sed -i 's|HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
