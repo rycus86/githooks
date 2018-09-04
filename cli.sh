@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.042214-271a8a
+# Version: 1809.042323-f91e34
 
 #####################################################
 # Prints the command line help for usage and
@@ -770,6 +770,8 @@ add_shared_hook_repo() {
             exit 1
         fi
 
+        mkdir -p "$(pwd)/.githooks"
+
         [ -f "$(pwd)/.githooks/.shared" ] &&
             echo "" >>"$(pwd)/.githooks/.shared"
 
@@ -950,8 +952,9 @@ list_shared_hook_repos() {
         "--local")
             LIST_GLOBAL=
             ;;
-        "--all") ;;
-
+        "--all")
+            # leave both list options on
+            ;;
         "--with-url")
             LIST_WITH_URL=1
             ;;
@@ -1001,6 +1004,7 @@ list_shared_hook_repos() {
 
         if ! is_running_in_git_repo_root; then
             echo "  - Current folder does not seem to be a Git repository"
+            exit 1
         elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
             echo "  - None"
         else

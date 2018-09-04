@@ -35,6 +35,11 @@ if ! sh /var/lib/githooks/cli.sh list | grep -q "sample"; then
     exit 1
 fi
 
+if ! sh /var/lib/githooks/cli.sh pull help | grep -q "deprecated"; then
+    echo "! Missing deprecation warning"
+    exit 1
+fi
+
 if ! git hooks pull || ! git hooks list; then
     echo "! The Git alias integration failed"
     exit 1

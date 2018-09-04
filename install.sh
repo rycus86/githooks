@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1809.042214-271a8a
+# Version: 1809.042323-f91e34
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1809.042214-271a8a
+# Version: 1809.042323-f91e34
 
 #####################################################
 # Execute the current hook,
@@ -652,7 +652,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.042214-271a8a
+# Version: 1809.042323-f91e34
 
 #####################################################
 # Prints the command line help for usage and
@@ -1411,6 +1411,8 @@ add_shared_hook_repo() {
             exit 1
         fi
 
+        mkdir -p "$(pwd)/.githooks"
+
         [ -f "$(pwd)/.githooks/.shared" ] &&
             echo "" >>"$(pwd)/.githooks/.shared"
 
@@ -1591,8 +1593,9 @@ list_shared_hook_repos() {
         "--local")
             LIST_GLOBAL=
             ;;
-        "--all") ;;
-
+        "--all")
+            # leave both list options on
+            ;;
         "--with-url")
             LIST_WITH_URL=1
             ;;
@@ -1642,6 +1645,7 @@ list_shared_hook_repos() {
 
         if ! is_running_in_git_repo_root; then
             echo "  - Current folder does not seem to be a Git repository"
+            exit 1
         elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
             echo "  - None"
         else
