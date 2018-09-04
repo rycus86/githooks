@@ -5,11 +5,11 @@
 - [accept](#git-hooks-accept)
 - [trust](#git-hooks-trust)
 - [list](#git-hooks-list)
-- [pull](#git-hooks-pull)
+- [shared](#git-hooks-shared)
 - [update](#git-hooks-update)
 - [readme](#git-hooks-readme)
-- [help](#git-hooks-help)
 - [version](#git-hooks-version)
+- [help](#git-hooks-help)
 
 The `git hooks <cmd>` command line helper provides a convenience utility to manage Githooks configuration, hook files and other related functionality. The [cli.sh](https://github.com/rycus86/githooks/blob/master/cli.sh) script should be an alias for `git hooks`, which is done automatically by the install script with the `git config --global alias.hooks "!${SCRIPT_DIR}/githooks"` command.
 
@@ -76,15 +76,25 @@ $ git hooks list [type]
 
 Lists the active hooks in the current repository along with their state. If `type` is given, then it only lists the hooks for that trigger event. This command needs to be run at the root of a repository.
 
-## git hooks pull
+## git hooks shared
 
-Updates the shared repositories.
+Manages the shared hook repositories set either globally, or locally within the repository.
 
 ```shell
-$ git hooks pull
+$ git hooks shared [add|remove] [--global|--local] <git-url>
+$ git hooks shared clear [--global|--local|--all]
+$ git hooks shared purge
+$ git hooks shared list [--global|--local|--all] [--with-url]
+$ git hooks shared [update|pull]
 ```
 
-Updates the shared repositories found either in the global Git configuration, or in the `.githooks/.shared` file in the local repository.
+The `add` or `remove` subcommands adds or removes an item, given as `git-url` from the list. If `--global` is given, then the `githooks.shared` global Git configuration is modified, or if the `--local` option (default) is set, the `.githooks/.shared` file is modified in the local repository.
+
+The `clear` subcommand deletes every item on either the global or the local list, or both when the `--all` option is given. The `purge` subcommand deletes the shared hook repositories already pulled locally.
+
+The `list` subcommand list the global, local or all (default) shared hooks repositories, and optionally prints the Git URL for them, when the `--with-url` option is used.
+
+The `update` or `pull` subcommands update all the shared repositories, both global and local, either by running `git pull` on existing ones or `git clone` on new ones.
 
 ## git hooks update
 
@@ -107,10 +117,10 @@ $ git hooks readme [add|update]
 
 Adds or updates the Githooks README in the `.githooks` folder. If `add` is used, it checks first if there is a README file already. With `update`, the file is always updated, creating it if necessary. This command needs to be run at the root of a repository.
 
-## git hooks help
-
-Prints the help message and the available subcommands. You can also execute `git hooks <cmd> help` for more information on the individual commands.
-
 ## git hooks version
 
 Prints the version number of the command line tool, that should be the same as the last installed Githooks version.
+
+## git hooks help
+
+Prints the help message and the available subcommands. You can also execute `git hooks <cmd> help` for more information on the individual commands.

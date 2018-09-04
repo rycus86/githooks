@@ -1,6 +1,26 @@
 #!/bin/sh
 
+IGNORE="
+pull
+"
+
+CLI_OPTIONS=$(grep -A 10000 'choose_command()' cli.sh | grep -oE '"[a-z-]+")' | grep -oE '[a-z-]+')
+for CLI_OPTION in $CLI_OPTIONS; do
+    if echo "$IGNORE" | grep -q "^${CLI_OPTION}\$"; then
+        continue
+    fi
+
+    if ! sh cli.sh help | grep '^  ' | grep -q " $CLI_OPTION "; then
+        echo "! Help option is missing for \`git hooks $CLI_OPTION\`"
+        MISSING=1
+    fi
+done
+
 for HELP_OPTION in $(sh cli.sh help | grep '^  ' | awk '{ print $1 }'); do
+    if echo "$IGNORE" | grep -q "^${HELP_OPTION}\$"; then
+        continue
+    fi
+
     if ! grep -q "## git hooks $HELP_OPTION" docs/command-line-tool.md; then
         echo "! Documentation is missing for \`git hooks $HELP_OPTION\`"
         MISSING=1

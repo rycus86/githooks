@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1808.311613-aea37f
+# Version: 1809.042214-271a8a
 
 #####################################################
 # Prints the command line help for usage and
@@ -25,14 +25,14 @@ Available commands:
 
     disable     Disables a hook in the current repository
     enable      Enables a previously disabled hook in the current repository
-    accept      Accept the pending changes of a new or modified hook
-    trust       Manage settings related to trusted repositories
+    accept      Accepts the pending changes of a new or modified hook
+    trust       Manages settings related to trusted repositories
     list        Lists the active hooks in the current repository
-    pull        Updates the shared repositories
+    shared      Manages the shared hook repositories
     update      Performs an update check
     readme      Manages the Githooks README in the current repository
-    help        Prints this help message
     version     Prints the version number of this script
+    help        Prints this help message
 
 You can also execute \`git hooks <cmd> help\` for more information on the individual commands.
 "
@@ -642,6 +642,399 @@ list_hooks_in_shared_repos() {
 }
 
 #####################################################
+# Manages the shared hook repositories set either
+#   globally, or locally within the repository.
+# Changes the \`githooks.shared\` global Git
+#   configuration, or the contents of the
+#   \`.githooks/.shared\` file in the local
+#   Git repository.
+#
+# Returns:
+#   0 on success, 1 on failure (exit code)
+#####################################################
+manage_shared_hook_repos() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks shared [add|remove] [--global|--local] <git-url>
+git hooks shared clear [--global|--local|--all]
+git hooks shared purge
+git hooks shared list [--global|--local|--all] [--with-url]
+git hooks shared [update|pull]
+
+    Manages the shared hook repositories set either globally, or locally within the repository.
+    The \`add\` or \`remove\` subcommands adds or removes an item, given as \`git-url\` from the list.
+    If \`--global\` is given, then the \`githooks.shared\` global Git configuration is modified, or if the
+    \`--local\` option (default) is set, the \`.githooks/.shared\` file is modified in the local repository.
+    The \`clear\` subcommand deletes every item on either the global or the local list,
+    or both when the \`--all\` option is given.
+    The \`purge\` subcommand deletes the shared hook repositories already pulled locally.
+    The \`list\` subcommand list the global, local or all (default) shared hooks repositories,
+    and optionally prints the Git URL for them, when the \`--with-url\` option is used.
+    The \`update\` or \`pull\` subcommands update all the shared repositories, both global and local, either by
+    running \`git pull\` on existing ones or \`git clone\` on new ones.
+"
+
+        return
+    fi
+
+    if [ "$1" = "update" ] || [ "$1" = "pull" ]; then
+        update_shared_hook_repos
+        return
+    fi
+
+    if [ "$1" = "clear" ]; then
+        shift
+        clear_shared_hook_repos "$@"
+        return
+    fi
+
+    if [ "$1" = "purge" ]; then
+        [ -w ~/.githooks/shared ] &&
+            rm -rf ~/.githooks/shared &&
+            echo "All existing shared hook repositories have been deleted locally" &&
+            return
+
+        echo "! Cannot delete existing shared hook repositories locally (maybe there is none)"
+        exit 1
+    fi
+
+    if [ "$1" = "list" ]; then
+        shift
+        list_shared_hook_repos "$@"
+        return
+    fi
+
+    if [ "$1" = "add" ]; then
+        shift
+        add_shared_hook_repo "$@"
+        return
+    fi
+
+    if [ "$1" = "remove" ]; then
+        shift
+        remove_shared_hook_repo "$@"
+        return
+    fi
+
+    echo "! Unknown subcommand: \`$1\`"
+    exit 1
+}
+
+#####################################################
+# Adds the URL of a new shared hook repository to
+#   the global or local list.
+#####################################################
+add_shared_hook_repo() {
+    SET_SHARED_GLOBAL=
+    SHARED_REPO_URL=
+
+    case "$1" in
+    "--global")
+        SET_SHARED_GLOBAL=1
+        SHARED_REPO_URL="$2"
+        ;;
+    "--local")
+        SET_SHARED_GLOBAL=
+        SHARED_REPO_URL="$2"
+        ;;
+    *)
+        SHARED_REPO_URL="$1"
+        ;;
+    esac
+
+    if [ -z "$SHARED_REPO_URL" ]; then
+        echo "! Usage: \`git hooks shared add [--global|--local] <git-url>\`"
+        exit 1
+    fi
+
+    if [ -n "$SET_SHARED_GLOBAL" ]; then
+        CURRENT_LIST=$(git config --global --get githooks.shared)
+
+        if [ -n "$CURRENT_LIST" ]; then
+            NEW_LIST="${CURRENT_LIST},${SHARED_REPO_URL}"
+        else
+            NEW_LIST="$SHARED_REPO_URL"
+        fi
+
+        git config --global githooks.shared "$NEW_LIST" &&
+            echo "The new shared hook repository is successfully added" &&
+            return
+
+        echo "! Failed to add the new shared hook repository"
+        exit 1
+
+    else
+        if ! is_running_in_git_repo_root; then
+            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+            exit 1
+        fi
+
+        [ -f "$(pwd)/.githooks/.shared" ] &&
+            echo "" >>"$(pwd)/.githooks/.shared"
+
+        echo "# Added on $(date)" >>"$(pwd)/.githooks/.shared" &&
+            echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
+            echo "The new shared hook repository is successfully added" &&
+            echo "  Do not forget to commit in the change!" &&
+            return
+
+        echo "! Failed to add the new shared hook repository"
+        exit 1
+
+    fi
+}
+
+#####################################################
+# Removes the URL of a new shared hook repository to
+#   the global or local list.
+#####################################################
+remove_shared_hook_repo() {
+    SET_SHARED_GLOBAL=
+    SHARED_REPO_URL=
+
+    case "$1" in
+    "--global")
+        SET_SHARED_GLOBAL=1
+        SHARED_REPO_URL="$2"
+        ;;
+    "--local")
+        SET_SHARED_GLOBAL=
+        SHARED_REPO_URL="$2"
+        ;;
+    *)
+        SHARED_REPO_URL="$1"
+        ;;
+    esac
+
+    if [ -z "$SHARED_REPO_URL" ]; then
+        echo "! Usage: \`git hooks shared remove [--global|--local] <git-url>\`"
+        exit 1
+    fi
+
+    if [ -n "$SET_SHARED_GLOBAL" ]; then
+        CURRENT_LIST=$(git config --global --get githooks.shared)
+        NEW_LIST=""
+
+        IFS=",
+        "
+
+        for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
+                continue
+            fi
+
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        unset IFS
+
+        if [ -z "$NEW_LIST" ]; then
+            clear_shared_hook_repos "--global" && return || exit 1
+        fi
+
+        git config --global githooks.shared "$NEW_LIST" &&
+            echo "The list of shared hook repositories is successfully changed" &&
+            return
+
+        echo "! Failed to remove a shared hook repository"
+        exit 1
+
+    else
+        if ! is_running_in_git_repo_root; then
+            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+            exit 1
+        fi
+
+        CURRENT_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+        NEW_LIST=""
+
+        IFS=",
+        "
+
+        for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
+                continue
+            fi
+
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST}
+${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        unset IFS
+
+        if [ -z "$NEW_LIST" ]; then
+            clear_shared_hook_repos "--local" && return || exit 1
+        fi
+
+        echo "$NEW_LIST" >"$(pwd)/.githooks/.shared" &&
+            echo "The list of shared hook repositories is successfully changed" &&
+            echo "  Do not forget to commit in the change!" &&
+            return
+
+        echo "! Failed to remove a shared hook repository"
+        exit 1
+
+    fi
+}
+
+#####################################################
+# Clears the list of shared hook repositories
+#   from the global or local list, or both.
+#####################################################
+clear_shared_hook_repos() {
+    CLEAR_GLOBAL_REPOS=
+    CLEAR_LOCAL_REPOS=
+
+    case "$1" in
+    "--global")
+        CLEAR_GLOBAL_REPOS=1
+        ;;
+    "--local")
+        CLEAR_LOCAL_REPOS=1
+        ;;
+    "--all")
+        CLEAR_GLOBAL_REPOS=1
+        CLEAR_LOCAL_REPOS=1
+        ;;
+    *)
+        echo "! One of the following must be used:"
+        echo "  git hooks shared clear --global"
+        echo "  git hooks shared clear --local"
+        echo "  git hooks shared clear --all"
+        exit 1
+        ;;
+    esac
+
+    if [ -n "$CLEAR_GLOBAL_REPOS" ] && [ -n "$(git config --global --get githooks.shared)" ]; then
+        git config --global --unset githooks.shared &&
+            echo "Global shared hook repository list cleared" ||
+            CLEAR_REPOS_FAILED=1
+    fi
+
+    if [ -n "$CLEAR_LOCAL_REPOS" ] && [ -f "$(pwd)/.githooks/.shared" ]; then
+        rm -f "$(pwd)/.githooks/.shared" &&
+            echo "Local shared hook repository list cleared" ||
+            CLEAR_REPOS_FAILED=1
+    fi
+
+    if [ -n "$CLEAR_REPOS_FAILED" ]; then
+        echo "! There were some problems clearing the shared hook repository list"
+        exit 1
+    fi
+}
+
+#####################################################
+# Prints the list of shared hook repositories,
+#   along with their Git URLs optionally, from
+#   the global or local list, or both.
+#####################################################
+list_shared_hook_repos() {
+    LIST_GLOBAL=1
+    LIST_LOCAL=1
+    LIST_WITH_URL=
+
+    for ARG in "$@"; do
+        case "$ARG" in
+        "--global")
+            LIST_LOCAL=
+            ;;
+        "--local")
+            LIST_GLOBAL=
+            ;;
+        "--all") ;;
+
+        "--with-url")
+            LIST_WITH_URL=1
+            ;;
+        *)
+            echo "! Unknown list option: $ARG"
+            exit 1
+            ;;
+        esac
+    done
+
+    IFS=",
+    "
+
+    if [ -n "$LIST_GLOBAL" ]; then
+        echo "Global shared hook repositories:"
+
+        if [ -z "$(git config --global --get githooks.shared)" ]; then
+            echo "  - None"
+        else
+            for LIST_ITEM in $(git config --global --get githooks.shared); do
+                NORMALIZED_NAME=$(echo "$LIST_ITEM" |
+                    sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+                    sed -E "s/[^a-zA-Z0-9]/_/g")
+
+                if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
+                    if [ "$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                        LIST_ITEM_STATE="active"
+                    else
+                        LIST_ITEM_STATE="invalid"
+                    fi
+                else
+                    LIST_ITEM_STATE="pending"
+                fi
+
+                if [ -n "$LIST_WITH_URL" ]; then
+                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)
+      url: $LIST_ITEM"
+                else
+                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
+                fi
+            done
+        fi
+    fi
+
+    if [ -n "$LIST_LOCAL" ]; then
+        echo "Local shared hook repositories:"
+
+        if ! is_running_in_git_repo_root; then
+            echo "  - Current folder does not seem to be a Git repository"
+        elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
+            echo "  - None"
+        else
+            SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+
+            echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
+                NORMALIZED_NAME=$(echo "$LIST_ITEM" |
+                    sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+                    sed -E "s/[^a-zA-Z0-9]/_/g")
+
+                if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
+                    if [ "$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                        LIST_ITEM_STATE="active"
+                    else
+                        LIST_ITEM_STATE="invalid"
+                    fi
+                else
+                    LIST_ITEM_STATE="pending"
+                fi
+
+                if [ -n "$LIST_WITH_URL" ]; then
+                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)
+      url: $LIST_ITEM"
+                else
+                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
+                fi
+            done
+        fi
+    fi
+
+    unset IFS
+}
+
+#####################################################
 # Updates the configured shared hook repositories.
 #
 # Returns:
@@ -656,6 +1049,8 @@ git hooks pull
     Updates the shared repositories found either
     in the global Git configuration, or in the
     \`.githooks/.shared\` file in the local repository.
+
+> Please use \`git hooks shared pull\` instead, this version is now deprecated.
 "
         return
     fi
@@ -900,6 +1295,17 @@ execute_update() {
 #   of Githooks in most cases.
 #####################################################
 print_current_version_number() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks version
+
+    Prints the version number of the \`git hooks\` helper and exits.
+"
+
+        return
+    fi
+
     CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
 
     print_help_header
@@ -1021,6 +1427,9 @@ choose_command() {
     "list")
         list_hooks "$@"
         ;;
+    "shared")
+        manage_shared_hook_repos "$@"
+        ;;
     "pull")
         update_shared_hook_repos "$@"
         ;;
@@ -1030,12 +1439,11 @@ choose_command() {
     "readme")
         manage_readme_file "$@"
         ;;
+    "version")
+        print_current_version_number "$@"
+        ;;
     "help")
         print_help
-        exit 0
-        ;;
-    "version")
-        print_current_version_number
         ;;
     *)
         [ -n "$CMD" ] && echo "Unknown command: $CMD"
