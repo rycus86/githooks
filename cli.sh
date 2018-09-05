@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.042323-f91e34
+# Version: 1809.050818-737e6c
 
 #####################################################
 # Prints the command line help for usage and
@@ -31,6 +31,7 @@ Available commands:
     shared      Manages the shared hook repositories
     update      Performs an update check
     readme      Manages the Githooks README in the current repository
+    ignore      Manages Githooks ignore files in the current repository
     version     Prints the version number of this script
     help        Prints this help message
 
@@ -627,6 +628,10 @@ list_hooks_in_shared_repos() {
     SHARED_LIST_TYPE="$1"
 
     for SHARED_ROOT in ~/.githooks/shared/*; do
+        if [ ! -d "$SHARED_ROOT" ]; then
+            continue
+        fi
+
         REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
@@ -674,7 +679,6 @@ git hooks shared [update|pull]
     The \`update\` or \`pull\` subcommands update all the shared repositories, both global and local, either by
     running \`git pull\` on existing ones or \`git clone\` on new ones.
 "
-
         return
     fi
 
@@ -778,7 +782,7 @@ add_shared_hook_repo() {
         echo "# Added on $(date)" >>"$(pwd)/.githooks/.shared" &&
             echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
             echo "The new shared hook repository is successfully added" &&
-            echo "  Do not forget to commit in the change!" &&
+            echo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to add the new shared hook repository"
@@ -879,7 +883,7 @@ ${SHARED_REPO_ITEM}"
 
         echo "$NEW_LIST" >"$(pwd)/.githooks/.shared" &&
             echo "The list of shared hook repositories is successfully changed" &&
-            echo "  Do not forget to commit in the change!" &&
+            echo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to remove a shared hook repository"
@@ -1294,32 +1298,6 @@ execute_update() {
 }
 
 #####################################################
-# Prints the version number of this script,
-#   that would match the latest installed version
-#   of Githooks in most cases.
-#####################################################
-print_current_version_number() {
-    if [ "$1" = "help" ]; then
-        print_help_header
-        echo "
-git hooks version
-
-    Prints the version number of the \`git hooks\` helper and exits.
-"
-
-        return
-    fi
-
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
-
-    print_help_header
-
-    echo
-    echo "Version: $CURRENT_VERSION"
-    echo
-}
-
-#####################################################
 # Adds or updates the Githooks README in
 #   the current local repository.
 #
@@ -1404,6 +1382,102 @@ fetch_latest_readme() {
 }
 
 #####################################################
+# Adds or updates Githooks ignore files in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_ignore_files() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks ignore [pattern...]
+git hooks ignore [trigger] [pattern...]
+
+    Adds new file name patterns to the Githooks \`.ignore\` file, either
+    in the main \`.githooks\` folder, or in the Git event specific one.
+    Note, that it may be required to surround the individual pattern
+    parameters with single quotes to avoid expanding or splitting them.
+    The \`trigger\` parameter should be the name of the Git event if given.
+    This command needs to be run at the root of a repository.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    TRIGGER_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+    TARGET_DIR="$(pwd)/.githooks"
+
+    for TRIGGER_TYPE in $TRIGGER_TYPES; do
+        if [ "$1" = "$TRIGGER_TYPE" ]; then
+            TARGET_DIR="$(pwd)/.githooks/$TRIGGER_TYPE"
+            shift
+            break
+        fi
+    done
+
+    if [ -z "$1" ]; then
+        manage_ignore_files "help"
+        echo "! Missing pattern parameter"
+        exit 1
+    fi
+
+    if ! mkdir -p "$TARGET_DIR" && touch "$TARGET_DIR/.ignore"; then
+        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore"
+        exit 1
+    fi
+
+    [ -f "$TARGET_DIR/.ignore" ] &&
+        echo "" >>"$TARGET_DIR/.ignore"
+
+    for PATTERN in "$@"; do
+        if ! echo "$PATTERN" >>"$TARGET_DIR/.ignore"; then
+            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore"
+            exit 1
+        fi
+    done
+
+    echo "The ignore file at $TARGET_DIR/.ignore is updated"
+    echo "  Do not forget to commit the changes!"
+}
+
+#####################################################
+# Prints the version number of this script,
+#   that would match the latest installed version
+#   of Githooks in most cases.
+#####################################################
+print_current_version_number() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks version
+
+    Prints the version number of the \`git hooks\` helper and exits.
+"
+        return
+    fi
+
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+
+    print_help_header
+
+    echo
+    echo "Version: $CURRENT_VERSION"
+    echo
+}
+
+#####################################################
 # Dispatches the command to the
 #   appropriate helper function to process it.
 #
@@ -1442,6 +1516,9 @@ choose_command() {
         ;;
     "readme")
         manage_readme_file "$@"
+        ;;
+    "ignore")
+        manage_ignore_files "$@"
         ;;
     "version")
         print_current_version_number "$@"

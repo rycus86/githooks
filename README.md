@@ -62,7 +62,7 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 
 ## Ignoring files
 
-The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
+The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
 
 ## Shared hook repositories
 
@@ -76,6 +76,8 @@ git@github.com:shared/hooks-python.git,git@github.com:shared/hooks-maven.git
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+
+You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
 
 ## Opt-in hooks
 

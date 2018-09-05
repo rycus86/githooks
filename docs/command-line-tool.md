@@ -8,6 +8,7 @@
 - [shared](#git-hooks-shared)
 - [update](#git-hooks-update)
 - [readme](#git-hooks-readme)
+- [ignore](#git-hooks-ignore)
 - [version](#git-hooks-version)
 - [help](#git-hooks-help)
 
@@ -116,6 +117,17 @@ $ git hooks readme [add|update]
 ```
 
 Adds or updates the Githooks README in the `.githooks` folder. If `add` is used, it checks first if there is a README file already. With `update`, the file is always updated, creating it if necessary. This command needs to be run at the root of a repository.
+
+## git hooks ignore
+
+Manages Githooks ignore files in the current repository.
+
+```shell
+$ git hooks ignore [pattern...]
+$ git hooks ignore [trigger] [pattern...]
+```
+
+Adds new file name patterns to the Githooks `.ignore` file, either in the main `.githooks` folder, or in the Git event specific one. Note, that it may be required to surround the individual pattern parameters with single quotes to avoid expanding or splitting them. The `trigger` parameter should be the name of the Git event if given. This command needs to be run at the root of a repository.
 
 ## git hooks version
 
