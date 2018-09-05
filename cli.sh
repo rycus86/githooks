@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.050818-737e6c
+# Version: 1809.051840-9263fb
 
 #####################################################
 # Prints the command line help for usage and
@@ -32,6 +32,7 @@ Available commands:
     update      Performs an update check
     readme      Manages the Githooks README in the current repository
     ignore      Manages Githooks ignore files in the current repository
+    config      Manages various Githooks configuration
     version     Prints the version number of this script
     help        Prints this help message
 
@@ -188,7 +189,7 @@ git hooks disable [-r|--reset]
     elif [ "$1" = "-r" ] || [ "$1" = "--reset" ]; then
         git config --unset githooks.disable
 
-        if ! git config --get githooks.single.install; then
+        if ! git config --get githooks.disable; then
             echo "Githooks hook files are not disabled anymore by default" && return
         else
             echo "! Failed to re-enable Githooks hook files"
@@ -1453,6 +1454,87 @@ git hooks ignore [trigger] [pattern...]
 }
 
 #####################################################
+# Manages various Githooks settings,
+#   that is stored in Git configuration.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_configuration() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks config [set|reset|print] single
+
+    Marks the current local repository to be managed as a single Githooks
+    installation, or clears the marker, with \`set\` and \`reset\` respectively.
+    The \`print\` option outputs the current setting of it.
+    This command needs to be run at the root of a repository.
+
+git hooks config [reset|print] update-time
+
+    Resets the last Githooks update time with the \`reset\` option,
+    causing the update check to run next time if it is enabled.
+    Use \`git hooks update [enable|disable]\` to change that setting.
+    The \`print\` option outputs the current value of it.
+"
+        return
+    fi
+
+    CONFIG_OPERATION="$1"
+
+    case "$2" in
+    "single")
+        if ! is_running_in_git_repo_root; then
+            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+            exit 1
+        fi
+
+        if [ "$CONFIG_OPERATION" = "set" ]; then
+            git config githooks.single.install yes
+        elif [ "$CONFIG_OPERATION" = "reset" ]; then
+            git config --unset githooks.single.install
+        elif [ "$CONFIG_OPERATION" = "print" ]; then
+            if read_single_repo_information && is_single_repo; then
+                echo "The current repository is marked as a single installation"
+            else
+                echo "The current repository is NOT marked as a single installation"
+            fi
+        else
+            echo "! Invalid operation: \`$CONFIG_OPERATION\` (use \`set\`, \`reset\` or \`print\`)"
+            exit 1
+        fi
+        ;;
+
+    "update-time")
+        if [ "$CONFIG_OPERATION" = "reset" ]; then
+            git config --global --unset githooks.autoupdate.lastrun
+        elif [ "$CONFIG_OPERATION" = "print" ]; then
+            LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+            if [ -z "$LAST_UPDATE" ]; then
+                echo "The update has never run"
+            else
+                if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
+                    if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
+                        echo "Last update timestamp: $LAST_UPDATE"
+                    fi
+                fi
+            fi
+        else
+            echo "! Invalid operation: \`$CONFIG_OPERATION\` (use \`reset\` or \`print\`)"
+            exit 1
+        fi
+        ;;
+
+    *)
+        manage_configuration "help"
+        echo "! Invalid configuration option: \`$2\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
 # Prints the version number of this script,
 #   that would match the latest installed version
 #   of Githooks in most cases.
@@ -1520,6 +1602,9 @@ choose_command() {
     "ignore")
         manage_ignore_files "$@"
         ;;
+    "config")
+        manage_configuration "$@"
+        ;;
     "version")
         print_current_version_number "$@"
         ;;
@@ -1527,8 +1612,8 @@ choose_command() {
         print_help
         ;;
     *)
-        [ -n "$CMD" ] && echo "Unknown command: $CMD"
         print_help
+        [ -n "$CMD" ] && echo "! Unknown command: $CMD"
         exit 1
         ;;
     esac

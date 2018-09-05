@@ -9,6 +9,7 @@
 - [update](#git-hooks-update)
 - [readme](#git-hooks-readme)
 - [ignore](#git-hooks-ignore)
+- [config](#git-hooks-config)
 - [version](#git-hooks-version)
 - [help](#git-hooks-help)
 
@@ -128,6 +129,22 @@ $ git hooks ignore [trigger] [pattern...]
 ```
 
 Adds new file name patterns to the Githooks `.ignore` file, either in the main `.githooks` folder, or in the Git event specific one. Note, that it may be required to surround the individual pattern parameters with single quotes to avoid expanding or splitting them. The `trigger` parameter should be the name of the Git event if given. This command needs to be run at the root of a repository.
+
+## git hooks config
+
+Manages various Githooks configuration.
+
+```shell
+$ git hooks config [set|reset|print] single
+```
+
+Marks the current local repository to be managed as a single Githooks installation, or clears the marker, with `set` and `reset` respectively. The `print` option outputs the current setting of it. This command needs to be run at the root of a repository.
+
+```shell
+$ git hooks config [reset|print] update-time
+```
+
+Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
 
 ## git hooks version
 

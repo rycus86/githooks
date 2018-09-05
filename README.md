@@ -151,7 +151,9 @@ There is also an option to run the install script for the repository in the curr
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
 
-And if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
+You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
+
+Finally, if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
 
 ```shell
 $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/install.sh)"
