@@ -33,7 +33,7 @@ if [ -z "$LAST_UPDATE" ]; then
     exit 1
 fi
 
-if ! echo "$OUTPUT" | grep -q "git config --global githooks.autoupdate.enabled N"; then
+if ! echo "$OUTPUT" | grep -q "git hooks update disable"; then
     echo "! Expected update output not found"
     echo "$OUTPUT"
     exit 1

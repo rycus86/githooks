@@ -11,6 +11,11 @@ mkdir -p /tmp/test057/.githooks/pre-commit &&
     git init ||
     exit 1
 
+if ! sh /var/lib/githooks/cli.sh enable update | grep 'git hooks update enable'; then
+    echo "! Could not find expected output"
+    exit 1
+fi
+
 if ! sh /var/lib/githooks/cli.sh disable; then
     echo "! Failed to disable all hooks"
     exit 1

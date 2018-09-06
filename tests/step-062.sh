@@ -26,6 +26,11 @@ if ! sh /var/lib/githooks/cli.sh update force; then
     exit 1
 fi
 
+if sh /var/lib/githooks/cli.sh update unknown; then
+    echo "! Expected to fail on unknown operation"
+    exit 1
+fi
+
 if ! git hooks update force; then
     echo "! The Git alias integration failed"
     exit 1

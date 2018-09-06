@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1809.061759-ed86cc
+# Version: 1809.062050-55d5da
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1809.061759-ed86cc
+# Version: 1809.062050-55d5da
 
 #####################################################
 # Execute the current hook,
@@ -623,14 +623,8 @@ execute_update() {
 #   None
 #####################################################
 print_update_disable_info() {
-    if is_single_repo; then
-        GIT_CONFIG_CMD="config"
-    else
-        GIT_CONFIG_CMD="config --global"
-    fi
-
     echo "  If you would like to disable auto-updates, run:"
-    echo "    \$ git ${GIT_CONFIG_CMD} githooks.autoupdate.enabled N"
+    echo "    \$ git hooks update disable"
 }
 
 # Start processing the hooks
@@ -652,7 +646,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.061759-ed86cc
+# Version: 1809.062050-55d5da
 
 #####################################################
 # Prints the command line help for usage and
@@ -715,7 +709,7 @@ is_running_in_git_repo_root() {
 # Sets the ${HOOK_PATH} environment variable.
 #
 # Returns:
-#   None
+#   0 on success, 1 when no hooks found
 #####################################################
 find_hook_path_to_enable_or_disable() {
     if [ -z "$1" ]; then
@@ -766,13 +760,13 @@ find_hook_path_to_enable_or_disable() {
 
     if [ -z "$HOOK_PATH" ]; then
         echo "Sorry, cannot find any hooks that would match that"
-        exit 1
+        return 1
     elif echo "$HOOK_PATH" | grep -qv "/.githooks"; then
         if [ -d "$HOOK_PATH/.githooks" ]; then
             HOOK_PATH="$HOOK_PATH/.githooks"
         else
             echo "Sorry, cannot find any hooks that would match that"
-            exit 1
+            return 1
         fi
     fi
 }
@@ -838,7 +832,14 @@ git hooks disable [-r|--reset]
         fi
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    if ! find_hook_path_to_enable_or_disable "$@"; then
+        if [ "$1" = "update" ]; then
+            echo "  Did you mean \`git hooks update disable\` ?"
+        fi
+
+        exit 1
+    fi
+
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
@@ -881,7 +882,14 @@ git hooks enable [trigger]
         exit 1
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    if ! find_hook_path_to_enable_or_disable "$@"; then
+        if [ "$1" = "update" ]; then
+            echo "  Did you mean \`git hooks update enable\` ?"
+        fi
+
+        exit 1
+    fi
+
     ensure_checksum_file_exists
 
     sed "\\|disabled> $HOOK_PATH|d" .git/.githooks.checksum >.git/.githooks.checksum.tmp &&
@@ -918,7 +926,7 @@ git hooks accept [trigger]
         exit 1
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    find_hook_path_to_enable_or_disable "$@" || exit 1
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
@@ -1814,6 +1822,10 @@ git hooks update [enable|disable]
             return
 
         echo "! Failed to disable automatic updates" && exit 1
+
+    elif [ -n "$1" ] && [ "$1" != "force" ]; then
+        echo "! Invalid operation: \`$1\`" && exit 1
+
     fi
 
     record_update_time
@@ -2541,7 +2553,7 @@ This project uses [Githooks](https://github.com/rycus86/githooks), that allows r
 
 ## Brief summary
 
-The [directories or files](https://github.com/rycus86/githooks#layout-and-options) in this folder tell Git to execute certain scripts on various [trigger events](https://github.com/rycus86/githooks#supported-hooks), before or after a commit, on every checkout, before a push for example - assuming [Githooks](https://github.com/rycus86/githooks) is already [installed](https://github.com/rycus86/githooks#installation) and [enabled](https://github.com/rycus86/githooks#opt-in-hooks) for the repository. The directory or file names refer to these events, like `pre-commit`, `post-commit`, `post-checkout`, `pre-push`, etc. If they are folders, each file inside them is treated as a hook script (unless [ignored](https://github.com/rycus86/githooks#ignoring-files)), and will be executed when Git runs the hooks as part of the command issued by the user.
+The [directories or files](https://github.com/rycus86/githooks#layout-and-options) in this folder tell Git to execute certain scripts on various [trigger events](https://github.com/rycus86/githooks#supported-hooks), before or after a commit, on every checkout, before a push for example - assuming [Githooks](https://github.com/rycus86/githooks) is already [installed](https://github.com/rycus86/githooks#installation) and [enabled](https://github.com/rycus86/githooks#opt-in-hooks) for the repository. The directory or file names refer to these events, like `pre-commit`, `post-commit`, `post-checkout`, `pre-push`, etc. If they are folders, each file inside them is treated as a hook script (unless [ignored](https://github.com/rycus86/githooks#ignoring-files)), and will be executed when Git runs the hooks as part of the command issued by the user. [Githooks](https://github.com/rycus86/githooks) comes with a [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, that allows you to manage its configuration and state with a `git hooks <cmd>` command. See the [documentation](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) or run `git hooks help` for more information and available options.
 
 ### Is this safe?
 
@@ -3022,7 +3034,7 @@ setup_automatic_update_checks() {
         fi
     else
         echo "If you change your mind in the future, you can enable it by running:"
-        echo "  \$ git config --global githooks.autoupdate.enabled Y"
+        echo "  \$ git hooks update enable"
     fi
 }
 

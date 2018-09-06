@@ -34,7 +34,7 @@ Take this snippet of a project layout as an example:
 └── ...
 ```
 
-All hooks to be executed live under the `.githooks` top-level folder, that should be checked into the repository. Inside, we can have directories with the name of the hook (like `commit-msg` and `pre-commit` above), or a file matching the hook name (like `post-checkout` in the example). The filenames in the directory do not matter, but the ones starting with a `.` will be excluded by default. All others are executed in alphabetical order according to the [glob / LC_COLLATE](http://pubs.opengroup.org/onlinepubs/007908775/xsh/glob.html) rules. If a file is executable, it is directly invoked, otherwise it is interpreted with the `sh` shell. All parameters of the hook are passed to each of the scripts.
+All hooks to be executed live under the `.githooks` top-level folder, that should be checked into the repository. Inside, we can have directories with the name of the hook (like `commit-msg` and `pre-commit` above), or a file matching the hook name (like `post-checkout` in the example). The filenames in the directory do not matter, but the ones starting with a `.` will be excluded by default. All others are executed in alphabetical order according to the [glob / LC_COLLATE](http://pubs.opengroup.org/onlinepubs/007908775/xsh/glob.html) rules. If a file is executable, it is directly invoked, otherwise it is interpreted with the `sh` shell. All parameters of the hook are passed to each of the scripts. You can use the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as `git hooks list` to list all the hooks that apply to the current repository and their current state.
 
 ## Supported hooks
 
@@ -62,7 +62,9 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 
 ## Ignoring files
 
-The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
+The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`.
+
+Hooks in individual repositories can be disabled as well, running `git hooks disable ...`, or all of them with `git hooks config set disable`, check their documentation or `help` for more information. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable too.
 
 ## Shared hook repositories
 
@@ -73,6 +75,8 @@ For this reason, you can place a `.shared` file inside the `.githooks` repositor
 ```shell
 $ git config --global --get githooks.shared
 git@github.com:shared/hooks-python.git,git@github.com:shared/hooks-maven.git
+$ git hooks shared list --with-url
+...
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
@@ -83,7 +87,7 @@ You can also manage and update shared hook repositories using the [command line 
 
 To try and make things a little bit more secure, Githooks checks if any new hooks were added we haven't run before, or if any of the existing ones have changed. When they have, it will prompt for confirmation whether you accept those changes or not, and you can also disable specific hooks to skip running them until you decide otherwise. The accepted checksums are maintained in the `.git/.githooks.checksum` file, per local repository.
 
-If the repository contains a `.githooks/trust-all` file, it is marked as a trusted repository. On the first interaction with hooks, Githooks will ask for confirmation that the user trusts all existing and future hooks in the repository, and if she does, no more confirmation prompts will be shown. This can be reverted by running the `git config --unset githooks.trust.all` command. This is a per-repository setting. These can be set up and changed with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as well, run `git hooks trust help` for more information.
+If the repository contains a `.githooks/trust-all` file, it is marked as a trusted repository. On the first interaction with hooks, Githooks will ask for confirmation that the user trusts all existing and future hooks in the repository, and if she does, no more confirmation prompts will be shown. This can be reverted by running either the `git config --unset githooks.trust.all`, or the `git hooks config reset trusted` command. This is a per-repository setting. These can be set up and changed with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as well, run `git hooks trust help` and `git hooks config help` for more information.
 
 There is a caveat worth mentioning: if a terminal *(tty)* can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
 
@@ -95,12 +99,13 @@ In a similar spirit to the opt-in above, you can also opt-out of running the hoo
 
 ```shell
 # Disable in the current repository
-$ git config githooks.disable Y
+$ git hooks config set disable
+$ git config githooks.disable Y  # alternative
 # Disable in all repositories
 $ git config --global githooks.disable Y
 ```
 
-Also, as mentioned above, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable.
+Also, as mentioned above, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable, or per-repository, by running the `git hooks config set disable` command.
 
 You can also selectively disable some or all of the hooks using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks disable <hook>`. See the tool's documentation in the `docs/` folder to see the available options.
 
@@ -187,7 +192,7 @@ $ git config --global githooks.autoupdate.enabled N
 $ git config --global --unset githooks.autoupdate.enabled
 ```
 
-You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool.
+You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
 
 ### Uninstalling
 

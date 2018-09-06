@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.061759-ed86cc
+# Version: 1809.062050-55d5da
 
 #####################################################
 # Prints the command line help for usage and
@@ -74,7 +74,7 @@ is_running_in_git_repo_root() {
 # Sets the ${HOOK_PATH} environment variable.
 #
 # Returns:
-#   None
+#   0 on success, 1 when no hooks found
 #####################################################
 find_hook_path_to_enable_or_disable() {
     if [ -z "$1" ]; then
@@ -125,13 +125,13 @@ find_hook_path_to_enable_or_disable() {
 
     if [ -z "$HOOK_PATH" ]; then
         echo "Sorry, cannot find any hooks that would match that"
-        exit 1
+        return 1
     elif echo "$HOOK_PATH" | grep -qv "/.githooks"; then
         if [ -d "$HOOK_PATH/.githooks" ]; then
             HOOK_PATH="$HOOK_PATH/.githooks"
         else
             echo "Sorry, cannot find any hooks that would match that"
-            exit 1
+            return 1
         fi
     fi
 }
@@ -197,7 +197,14 @@ git hooks disable [-r|--reset]
         fi
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    if ! find_hook_path_to_enable_or_disable "$@"; then
+        if [ "$1" = "update" ]; then
+            echo "  Did you mean \`git hooks update disable\` ?"
+        fi
+
+        exit 1
+    fi
+
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
@@ -240,7 +247,14 @@ git hooks enable [trigger]
         exit 1
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    if ! find_hook_path_to_enable_or_disable "$@"; then
+        if [ "$1" = "update" ]; then
+            echo "  Did you mean \`git hooks update enable\` ?"
+        fi
+
+        exit 1
+    fi
+
     ensure_checksum_file_exists
 
     sed "\\|disabled> $HOOK_PATH|d" .git/.githooks.checksum >.git/.githooks.checksum.tmp &&
@@ -277,7 +291,7 @@ git hooks accept [trigger]
         exit 1
     fi
 
-    find_hook_path_to_enable_or_disable "$@"
+    find_hook_path_to_enable_or_disable "$@" || exit 1
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
@@ -1173,6 +1187,10 @@ git hooks update [enable|disable]
             return
 
         echo "! Failed to disable automatic updates" && exit 1
+
+    elif [ -n "$1" ] && [ "$1" != "force" ]; then
+        echo "! Invalid operation: \`$1\`" && exit 1
+
     fi
 
     record_update_time
