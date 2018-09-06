@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test:
-#   Cli tool: manage Githooks configuration
+#   Cli tool: list Githooks configuration
 
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
@@ -9,45 +9,31 @@ fi
 
 # Unknown configuration
 
-! sh /var/lib/githooks/cli.sh config set unknown || exit 10
+! sh /var/lib/githooks/cli.sh config set unknown || exit 2
 
-# Update time configuration
+# List configuration
 
-! sh /var/lib/githooks/cli.sh config unknown update-time || exit 20
+mkdir -p /tmp/test086 && cd /tmp/test086 || exit 3
 
-sh /var/lib/githooks/cli.sh config print update-time | grep 'never' || exit 21
+! sh /var/lib/githooks/cli.sh config list --local || exit 4 # not a Git repo
 
-git config --global githooks.autoupdate.lastrun 123 &&
-    sh /var/lib/githooks/cli.sh config print update-time | grep -v 'never' || exit 22
+git init || exit 4
 
-sh /var/lib/githooks/cli.sh config reset update-time &&
-    sh /var/lib/githooks/cli.sh config print update-time | grep 'never' || exit 23
-
-# Single repo configuration
-
-mkdir -p /tmp/test086 && cd /tmp/test086 || exit 30
-
-! sh /var/lib/githooks/cli.sh config set single || exit 31
-
-git init || exit 32
-
-! sh /var/lib/githooks/cli.sh config unknown single || exit 33
-
-sh /var/lib/githooks/cli.sh config set single &&
-    sh /var/lib/githooks/cli.sh config print single | grep -v 'NOT' || exit 34
-sh /var/lib/githooks/cli.sh config reset single &&
-    sh /var/lib/githooks/cli.sh config print single | grep 'NOT' || exit 35
+sh /var/lib/githooks/cli.sh config set single || exit 5
+sh /var/lib/githooks/cli.sh config list --local | grep 'githooks.single.install' || exit 6
+sh /var/lib/githooks/cli.sh config enable update || exit 7
+sh /var/lib/githooks/cli.sh config list --global | grep 'githooks.autoupdate.enabled' || exit 8
+sh /var/lib/githooks/cli.sh config list | grep 'githooks.single.install' &&
+    sh /var/lib/githooks/cli.sh config list | grep 'githooks.autoupdate.enabled' ||
+    exit 9
 
 # Check the Git alias
-! git hooks config set unknown || exit 80
-
-git hooks config print update-time | grep 'never' || exit 81
-git config --global githooks.autoupdate.lastrun 123 &&
-    git hooks config print update-time | grep -v 'never' || exit 82
-git hooks config reset update-time &&
-    git hooks config print update-time | grep 'never' || exit 83
+! git hooks config set unknown || exit 10
 
 git hooks config set single &&
-    git hooks config print single | grep -v 'NOT' || exit 84
-git hooks config reset single &&
-    git hooks config print single | grep 'NOT' || exit 85
+    git hooks config list --local | grep 'githooks.single.install' || exit 11
+git hooks config enable update &&
+    git hooks config list --global | grep 'githooks.autoupdate.enabled' || exit 12
+git hooks config list | grep 'githooks.single.install' &&
+    git hooks config list | grep 'githooks.autoupdate.enabled' ||
+    exit 13

@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1809.051840-9263fb
+# Version: 1809.061759-ed86cc
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1809.051840-9263fb
+# Version: 1809.061759-ed86cc
 
 #####################################################
 # Execute the current hook,
@@ -652,7 +652,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.051840-9263fb
+# Version: 1809.061759-ed86cc
 
 #####################################################
 # Prints the command line help for usage and
@@ -1150,12 +1150,30 @@ git hooks list [type]
 #   on the standard output.
 #####################################################
 get_hook_state() {
-    if is_file_ignored "$1"; then
+    if is_repository_disabled; then
+        echo "disabled"
+    elif is_file_ignored "$1"; then
         echo "ignored"
     elif is_trusted_repo; then
         echo "active / trusted"
     else
         get_hook_enabled_or_disabled_state "$1"
+    fi
+}
+
+#####################################################
+# Checks if Githooks is disabled in the
+#   current local repository.
+#
+# Returns:
+#   0 if disabled, 1 otherwise
+#####################################################
+is_repository_disabled() {
+    GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
+    if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -2105,12 +2123,58 @@ manage_configuration() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
+git hooks config list [--global|--local]
+
+    Lists the Githooks related settings of the Githooks configuration.
+    Can be either global or local configuration, or both by default.
+
+git hooks config [set|reset|print] disable
+
+    Disables running any Githooks files in the current repository,
+    when the \`set\` option is used.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
 git hooks config [set|reset|print] single
 
     Marks the current local repository to be managed as a single Githooks
     installation, or clears the marker, with \`set\` and \`reset\` respectively.
     The \`print\` option outputs the current setting of it.
     This command needs to be run at the root of a repository.
+
+git hooks config set search-dir <path>
+git hooks config [reset|print] search-dir
+
+    Changes the previous search directory setting used during installation.
+    The \`set\` option changes the value, and the \`reset\` option clears it.
+    The \`print\` option outputs the current setting of it.
+
+git hooks config set shared <git-url...>
+git hooks config [reset|print] shared
+
+    Updates the list of global shared hook repositories when
+    the \`set\` option is used, which accepts multiple <git-url> arguments,
+    each containing a clone URL of a hook repository.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [accept|deny|reset|print] trusted
+
+    Accepts changes to all existing and new hooks in the current repository
+    when the trust marker is present and the \`set\` option is used.
+    The \`deny\` option marks the repository as
+    it has refused to trust the changes, even if the trust marker is present.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [enable|disable|reset|print] update
+
+    Enables or disables automatic update checks with
+    the \`enable\` and \`disable\` options respectively.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
 
 git hooks config [reset|print] update-time
 
@@ -2124,55 +2188,260 @@ git hooks config [reset|print] update-time
 
     CONFIG_OPERATION="$1"
 
-    case "$2" in
+    if [ "$CONFIG_OPERATION" = "list" ]; then
+        if [ "$2" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! Local configuration can only be printed from a Git repository"
+            exit 1
+        fi
+
+        if [ -z "$2" ]; then
+            git config --get-regexp "(^githooks|alias.hooks)" | sort
+        else
+            git config "$2" --get-regexp "(^githooks|alias.hooks)" | sort
+        fi
+        exit $?
+    fi
+
+    CONFIG_ARGUMENT="$2"
+
+    shift
+    shift
+
+    case "$CONFIG_ARGUMENT" in
+    "disable")
+        config_disable "$CONFIG_OPERATION"
+        ;;
     "single")
-        if ! is_running_in_git_repo_root; then
-            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
-            exit 1
-        fi
-
-        if [ "$CONFIG_OPERATION" = "set" ]; then
-            git config githooks.single.install yes
-        elif [ "$CONFIG_OPERATION" = "reset" ]; then
-            git config --unset githooks.single.install
-        elif [ "$CONFIG_OPERATION" = "print" ]; then
-            if read_single_repo_information && is_single_repo; then
-                echo "The current repository is marked as a single installation"
-            else
-                echo "The current repository is NOT marked as a single installation"
-            fi
-        else
-            echo "! Invalid operation: \`$CONFIG_OPERATION\` (use \`set\`, \`reset\` or \`print\`)"
-            exit 1
-        fi
+        config_single_install "$CONFIG_OPERATION"
         ;;
-
+    "search-dir")
+        config_search_dir "$CONFIG_OPERATION" "$@"
+        ;;
+    "shared")
+        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        ;;
+    "trusted")
+        config_trust_all_hooks "$CONFIG_OPERATION"
+        ;;
+    "update")
+        config_update_state "$CONFIG_OPERATION"
+        ;;
     "update-time")
-        if [ "$CONFIG_OPERATION" = "reset" ]; then
-            git config --global --unset githooks.autoupdate.lastrun
-        elif [ "$CONFIG_OPERATION" = "print" ]; then
-            LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
-            if [ -z "$LAST_UPDATE" ]; then
-                echo "The update has never run"
-            else
-                if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
-                    if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
-                        echo "Last update timestamp: $LAST_UPDATE"
-                    fi
-                fi
-            fi
-        else
-            echo "! Invalid operation: \`$CONFIG_OPERATION\` (use \`reset\` or \`print\`)"
-            exit 1
-        fi
+        config_update_last_run "$CONFIG_OPERATION"
         ;;
-
     *)
         manage_configuration "help"
         echo "! Invalid configuration option: \`$2\`"
         exit 1
         ;;
     esac
+}
+
+#####################################################
+# Manages Githooks disable settings for
+#   the current repository.
+# Prints or modifies the \`githooks.disable\`
+#   local Git configuration.
+#####################################################
+config_disable() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.disable Y
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.disable
+    elif [ "$1" = "print" ]; then
+        if is_repository_disabled; then
+            echo "Githooks is disabled in the current repository"
+        else
+            echo "Githooks is NOT disabled in the current repository"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages Githooks single installation setting
+#   for the current repository.
+# Prints or modifies the \`githooks.single.install\`
+#   local Git configuration.
+#####################################################
+config_single_install() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.single.install yes
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.single.install
+    elif [ "$1" = "print" ]; then
+        if read_single_repo_information && is_single_repo; then
+            echo "The current repository is marked as a single installation"
+        else
+            echo "The current repository is NOT marked as a single installation"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages previous search directory setting
+#   used during Githooks installation.
+# Prints or modifies the
+#   \`githooks.previous.searchdir\`
+#   global Git configuration.
+#####################################################
+config_search_dir() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <path> parameter"
+            exit 1
+        fi
+
+        git config --global githooks.previous.searchdir "$2"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.previous.searchdir
+    elif [ "$1" = "print" ]; then
+        CONFIG_SEARCH_DIR=$(git config --global --get githooks.previous.searchdir)
+        if [ -z "$CONFIG_SEARCH_DIR" ]; then
+            echo "No previous search directory is set"
+        else
+            echo "Search directory is set to: $CONFIG_SEARCH_DIR"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages global shared hook repository list setting.
+# Prints or modifies the \`githooks.shared\`
+#   global Git configuration.
+#####################################################
+config_global_shared_hook_repos() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <git-url> parameter"
+            exit 1
+        fi
+
+        shift
+
+        NEW_LIST=""
+        for SHARED_REPO_ITEM in "$@"; do
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        git config --global githooks.shared "$NEW_LIST"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.shared
+    elif [ "$1" = "print" ]; then
+        list_shared_hook_repos "--global"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the trust-all-hooks setting
+#   for the current repository.
+# Prints or modifies the \`githooks.trust.all\`
+#   local Git configuration.
+#####################################################
+config_trust_all_hooks() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "accept" ]; then
+        git config githooks.trust.all Y
+    elif [ "$1" = "deny" ]; then
+        git config githooks.trust.all N
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.trust.all
+    elif [ "$1" = "print" ]; then
+        CONFIG_TRUST_ALL=$(git config --local --get githooks.trust.all)
+        if [ "$CONFIG_TRUST_ALL" = "Y" ]; then
+            echo "The current repository trusts all hooks automatically"
+        elif [ -z "$CONFIG_TRUST_ALL" ]; then
+            echo "The current repository does NOT have trust settings"
+        else
+            echo "The current repository does NOT trust hooks automatically"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update check setting.
+# Prints or modifies the
+#   \`githooks.autoupdate.enabled\`
+#   global Git configuration.
+#####################################################
+config_update_state() {
+    if [ "$1" = "enable" ]; then
+        git config --global githooks.autoupdate.enabled Y
+    elif [ "$1" = "disable" ]; then
+        git config --global githooks.autoupdate.enabled N
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.enabled
+    elif [ "$1" = "print" ]; then
+        CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
+        if [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
+            echo "Automatic update checks are enabled"
+        else
+            echo "Automatic update checks are NOT enabled"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the timestamp for the last update check.
+# Prints or modifies the
+#   \`githooks.autoupdate.lastrun\`
+#   global Git configuration.
+#####################################################
+config_update_last_run() {
+    if [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.lastrun
+    elif [ "$1" = "print" ]; then
+        LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+        if [ -z "$LAST_UPDATE" ]; then
+            echo "The update has never run"
+        else
+            if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
+                if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
+                    echo "Last update timestamp: $LAST_UPDATE"
+                fi
+            fi
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)"
+        exit 1
+    fi
 }
 
 #####################################################
@@ -2801,6 +3070,7 @@ install_into_existing_repositories() {
         START_DIR="$PRE_START_DIR"
     fi
 
+    RAW_START_DIR="$START_DIR"
     TILDE_REPLACED=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
     if [ -n "$TILDE_REPLACED" ]; then
         START_DIR="$TILDE_REPLACED"
@@ -2811,7 +3081,7 @@ install_into_existing_repositories() {
         return 1
     fi
 
-    git config --global githooks.previous.searchdir "$START_DIR"
+    git config --global githooks.previous.searchdir "$RAW_START_DIR"
 
     LOCAL_REPOSITORY_LIST=$(find "$START_DIR" -type d -name .git 2>/dev/null)
 

@@ -2,6 +2,8 @@
 
 for SCRIPT_FILE in *.sh; do
     IFS='\-'
+
+    # shellcheck disable=SC2013
     for LINES in $(grep -hE -B 1 '^.+\(\) {$' "$SCRIPT_FILE"); do
         if [ -z "$LINES" ]; then
             continue

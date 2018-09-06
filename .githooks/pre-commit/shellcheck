@@ -5,7 +5,7 @@ if ! shellcheck --version >/dev/null 2>&1; then
     exit 0
 fi
 
-if shellcheck ./*.sh ./tests/*.sh; then
+if shellcheck ./*.sh ./tests/*.sh .githooks/*/*; then
     echo "* shellcheck OK"
 else
     echo "! shellcheck problems detected"

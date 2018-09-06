@@ -135,10 +135,48 @@ Adds new file name patterns to the Githooks `.ignore` file, either in the main `
 Manages various Githooks configuration.
 
 ```shell
+$ git hooks config list [--global|--local]
+```
+
+Lists the Githooks related settings of the Githooks configuration. Can be either global or local configuration, or both by default.
+
+```shell
+$ git hooks config [set|reset|print] disable
+```
+
+Disables running any Githooks files in the current repository, when the \`set\` option is used. The \`reset\` option clears this setting. The \`print\` option outputs the current setting. This command needs to be run at the root of a repository.
+
+```shell
 $ git hooks config [set|reset|print] single
 ```
 
 Marks the current local repository to be managed as a single Githooks installation, or clears the marker, with `set` and `reset` respectively. The `print` option outputs the current setting of it. This command needs to be run at the root of a repository.
+
+```shell
+$ git hooks config set search-dir <path>
+$ git hooks config [reset|print] search-dir
+```
+
+Changes the previous search directory setting used during installation. The \`set\` option changes the value, and the \`reset\` option clears it. The \`print\` option outputs the current setting of it.
+
+```shell
+$ git hooks config set shared <git-url...>
+$ git hooks config [reset|print] shared
+```
+
+Updates the list of global shared hook repositories when the \`set\` option is used, which accepts multiple <git-url> arguments, each containing a clone URL of a hook repository. The \`reset\` option clears this setting. The \`print\` option outputs the current setting.
+
+```shell
+$ git hooks config [accept|deny|reset|print] trusted
+```
+
+Accepts changes to all existing and new hooks in the current repository when the trust marker is present and the \`set\` option is used. The \`deny\` option marks the repository as it has refused to trust the changes, even if the trust marker is present. The \`reset\` option clears this setting. The \`print\` option outputs the current setting. This command needs to be run at the root of a repository.
+
+```shell
+$ git hooks config [enable|disable|reset|print] update
+```
+
+Enables or disables automatic update checks with the \`enable\` and \`disable\` options respectively. The \`reset\` option clears this setting. The \`print\` option outputs the current setting.
 
 ```shell
 $ git hooks config [reset|print] update-time
