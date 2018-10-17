@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1809.062050-55d5da
+# Version: 1810.171105-160c4a
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1809.062050-55d5da
+# Version: 1810.171105-160c4a
 
 #####################################################
 # Execute the current hook,
@@ -646,7 +646,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1809.062050-55d5da
+# Version: 1810.171105-160c4a
 
 #####################################################
 # Prints the command line help for usage and
@@ -2613,7 +2613,7 @@ execute_installation() {
     if is_single_repo_install; then
         install_hooks_into_repo "$(pwd)" || return 1
     else
-        install_into_existing_repositories || return 1
+        install_into_existing_repositories
     fi
 
     echo # For visual separation
@@ -3043,7 +3043,7 @@ setup_automatic_update_checks() {
 #   existing local repositories.
 #
 # Returns:
-#   0 on success, 1 on failure
+#   None
 ############################################################
 install_into_existing_repositories() {
     PRE_START_DIR=$(git config --global --get githooks.previous.searchdir)
@@ -3070,7 +3070,7 @@ install_into_existing_repositories() {
 
         if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
             if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
-                return 0
+                return
             fi
         fi
 
@@ -3089,8 +3089,9 @@ install_into_existing_repositories() {
     fi
 
     if [ ! -d "$START_DIR" ]; then
-        echo "'$START_DIR' is not a directory"
-        return 1
+        echo "! '$START_DIR' is not a directory"
+        echo "  Existing repositories won't get the Githooks hooks."
+        return
     fi
 
     git config --global githooks.previous.searchdir "$RAW_START_DIR"
@@ -3107,7 +3108,7 @@ install_into_existing_repositories() {
         install_hooks_into_repo "$EXISTING_REPO_ROOT"
     done
 
-    return 0
+    return
 }
 
 ############################################################
