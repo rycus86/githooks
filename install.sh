@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1810.171105-160c4a
+# Version: 1810.171225-1d5d29
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1810.171105-160c4a
+# Version: 1810.171225-1d5d29
 
 #####################################################
 # Execute the current hook,
@@ -646,7 +646,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1810.171105-160c4a
+# Version: 1810.171225-1d5d29
 
 #####################################################
 # Prints the command line help for usage and
@@ -664,6 +664,7 @@ Available commands:
     trust       Manages settings related to trusted repositories
     list        Lists the active hooks in the current repository
     shared      Manages the shared hook repositories
+    install     Installs the latest Githooks hooks
     update      Performs an update check
     readme      Manages the Githooks README in the current repository
     ignore      Manages Githooks ignore files in the current repository
@@ -1785,6 +1786,53 @@ update_shared_hooks_in() {
 }
 
 #####################################################
+# Executes an ondemand installation
+#   of the latest Githooks version.
+#
+# Returns:
+#   1 if the installation fails,
+#   0 otherwise
+#####################################################
+run_ondemand_installation() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks install [--global]
+
+    Installs the Githooks hooks into the current repository.
+    If the \`--global\` flag is given, it executes the installation
+    globally, including the hook templates for future repositories.
+"
+        return
+    fi
+
+    if [ "$1" = "--global" ]; then
+        IS_SINGLE_REPO="no"
+    else
+        IS_SINGLE_REPO="yes"
+    fi
+
+    echo "Fetching the install script ..."
+
+    if ! fetch_latest_install_script; then
+        echo "! Failed to fetch the latest install script"
+        echo "  You can retry manually using one of the alternative methods,"
+        echo "    see them here: https://github.com/rycus86/githooks#installation"
+        exit 1
+    fi
+
+    read_latest_version_number
+
+    echo "  Githooks install script downloaded: Version $LATEST_VERSION"
+    echo
+
+    if ! execute_install_script; then
+        echo "! Failed to execute the installation"
+        exit 1
+    fi
+}
+
+#####################################################
 # Executes an update check, and potentially
 #   the installation of the latest version.
 #
@@ -1830,12 +1878,14 @@ git hooks update [enable|disable]
 
     record_update_time
 
-    if ! fetch_latest_update_script; then
-        echo "Failed to fetch the update script"
+    echo "Checking for updates ..."
+
+    if ! fetch_latest_install_script; then
+        echo "! Failed to check for updates: cannot fetch updated install script"
         exit 1
     fi
 
-    read_updated_version_number
+    read_latest_version_number
 
     if [ "$1" != "force" ]; then
         if ! is_update_available; then
@@ -1849,7 +1899,7 @@ git hooks update [enable|disable]
 
     read_single_repo_information
 
-    if ! execute_update; then
+    if ! execute_install_script; then
         print_update_disable_info
     fi
 }
@@ -1874,10 +1924,8 @@ record_update_time() {
 # Returns:
 #   1 if failed the load the script, 0 otherwise
 #####################################################
-fetch_latest_update_script() {
+fetch_latest_install_script() {
     DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
-
-    echo "Checking for updates ..."
 
     if curl --version >/dev/null 2>&1; then
         INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
@@ -1886,13 +1934,12 @@ fetch_latest_update_script() {
         INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
 
     else
-        echo "! Cannot check for updates - needs either curl or wget"
+        echo "! Cannot fetch the latest install script - needs either curl or wget"
         return 1
     fi
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
-        echo "! Failed to check for updates"
         return 1
     fi
 }
@@ -1906,7 +1953,7 @@ fetch_latest_update_script() {
 # Returns:
 #   None
 #####################################################
-read_updated_version_number() {
+read_latest_version_number() {
     LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
 }
 
@@ -1950,12 +1997,13 @@ is_single_repo() {
 }
 
 #####################################################
-# Performs the installation of the latest update.
+# Performs the installation of the previously
+#   fetched install script.
 #
 # Returns:
-#   0 if the update was successful, 1 otherwise
+#   0 if the installation was successful, 1 otherwise
 #####################################################
-execute_update() {
+execute_install_script() {
     if is_single_repo; then
         if sh -c "$INSTALL_SCRIPT" -- --single; then
             return 0
@@ -1967,6 +2015,18 @@ execute_update() {
     fi
 
     return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
 }
 
 #####################################################
@@ -2514,6 +2574,9 @@ choose_command() {
         ;;
     "pull")
         update_shared_hook_repos "$@"
+        ;;
+    "install")
+        run_ondemand_installation "$@"
         ;;
     "update")
         run_update_check "$@"

@@ -6,6 +6,7 @@
 - [trust](#git-hooks-trust)
 - [list](#git-hooks-list)
 - [shared](#git-hooks-shared)
+- [install](#git-hooks-install)
 - [update](#git-hooks-update)
 - [readme](#git-hooks-readme)
 - [ignore](#git-hooks-ignore)
@@ -97,6 +98,16 @@ The `clear` subcommand deletes every item on either the global or the local list
 The `list` subcommand list the global, local or all (default) shared hooks repositories, and optionally prints the Git URL for them, when the `--with-url` option is used.
 
 The `update` or `pull` subcommands update all the shared repositories, both global and local, either by running `git pull` on existing ones or `git clone` on new ones.
+
+## git hooks install
+
+Installs the latest Githooks hooks.
+
+```shell
+$ git hooks install [--global]
+```
+
+Installs the Githooks hooks into the current repository. If the `--global` flag is given, it executes the installation globally, including the hook templates for future repositories.
 
 ## git hooks update
 

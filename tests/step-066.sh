@@ -12,8 +12,7 @@ y
 )
 
 if ! echo "$OUTPUT" | grep "Existing repositories won't get the Githooks hooks"; then
-    echo "! Expected error message not found"
-    echo "Output:"
     echo "$OUTPUT"
+    echo "! Expected error message not found"
     exit 1
 fi
