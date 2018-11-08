@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1810.171225-1d5d29
+# Version: 1811.081158-1d386f
 
 #####################################################
 # Execute the current hook,
@@ -16,6 +16,7 @@
 process_git_hook() {
     are_githooks_disabled && return 0
     set_main_variables
+    export_staged_files
     check_for_updates_if_needed
     execute_old_hook_if_available "$@" || return 1
     execute_global_shared_hooks "$@" || return 1
@@ -58,6 +59,29 @@ set_main_variables() {
     HOOK_NAME=$(basename "$0")
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
+}
+
+#####################################################
+# Exports the list of staged, changed files
+#   when available, so hooks can use it if
+#   they want to.
+#
+# Sets the ${STAGED_FILES} variable
+#
+# Returns:
+#   None
+#####################################################
+export_staged_files() {
+    if ! echo "pre-commit prepare-commit-msg commit-msg" | grep -q "$HOOK_NAME" 2>/dev/null; then
+        return # we only want to do this for commit related events
+    fi
+
+    CHANGED_FILES=$(git diff --cached --diff-filter=ACMR --name-only)
+
+    # shellcheck disable=2181
+    if [ $? -eq 0 ]; then
+        export STAGED_FILES="$CHANGED_FILES"
+    fi
 }
 
 #####################################################

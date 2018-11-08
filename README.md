@@ -34,7 +34,24 @@ Take this snippet of a project layout as an example:
 └── ...
 ```
 
-All hooks to be executed live under the `.githooks` top-level folder, that should be checked into the repository. Inside, we can have directories with the name of the hook (like `commit-msg` and `pre-commit` above), or a file matching the hook name (like `post-checkout` in the example). The filenames in the directory do not matter, but the ones starting with a `.` will be excluded by default. All others are executed in alphabetical order according to the [glob / LC_COLLATE](http://pubs.opengroup.org/onlinepubs/007908775/xsh/glob.html) rules. If a file is executable, it is directly invoked, otherwise it is interpreted with the `sh` shell. All parameters of the hook are passed to each of the scripts. You can use the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as `git hooks list` to list all the hooks that apply to the current repository and their current state.
+All hooks to be executed live under the `.githooks` top-level folder, that should be checked into the repository. Inside, we can have directories with the name of the hook (like `commit-msg` and `pre-commit` above), or a file matching the hook name (like `post-checkout` in the example). The filenames in the directory do not matter, but the ones starting with a `.` will be excluded by default. All others are executed in alphabetical order according to the [glob / LC_COLLATE](http://pubs.opengroup.org/onlinepubs/007908775/xsh/glob.html) rules. You can use the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as `git hooks list` to list all the hooks that apply to the current repository and their current state.
+
+## Execution
+
+If a file is executable, it is directly invoked, otherwise it is interpreted with the `sh` shell. All parameters of the hook are passed to each of the scripts.
+
+Hooks related to `commit` events will also have a `${STAGED_FILES}` environment variable set, that is the list of staged and changed files (according to `git diff --cached --diff-filter=ACMR --name-only`), one per line and where it makes sense (not `post-commit`). If you want to iterate over them, and expect spaces in paths, you might want to set `IFS` like this.
+
+```shell
+IFS="
+"
+
+for STAGED in ${STAGED_FILES}; do
+    ...
+done
+```
+
+The `ACMR` filter in the `git diff` will include staged files that are added, copied, modified or renamed.
 
 ## Supported hooks
 
