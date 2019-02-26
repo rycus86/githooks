@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1811.081158-1d386f
+# Version: 1902.262355-1dead6
 
 #####################################################
 # Prints the command line help for usage and
@@ -52,6 +52,22 @@ print_help_header() {
 }
 
 #####################################################
+# Set up the main variables that
+#   we will throughout the hook.
+#
+# Sets the ${CURRENT_GIT_DIR} variable
+#
+# Returns:
+#   None
+#####################################################
+set_main_variables() {
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
+    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
+        CURRENT_GIT_DIR=".git"
+    fi
+}
+
+#####################################################
 # Checks if the current directory is
 #   a Git repository or not.
 #
@@ -64,7 +80,7 @@ is_running_in_git_repo_root() {
         return 1
     fi
 
-    [ -d .git ] || return 1
+    [ -d "${CURRENT_GIT_DIR}" ] || return 1
 }
 
 #####################################################
@@ -142,7 +158,7 @@ find_hook_path_to_enable_or_disable() {
 #   for the repository if it does not exist yet.
 #####################################################
 ensure_checksum_file_exists() {
-    touch .git/.githooks.checksum
+    touch "${CURRENT_GIT_DIR}/.githooks.checksum"
 }
 
 #####################################################
@@ -209,12 +225,12 @@ git hooks disable [-r|--reset]
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
-        if grep -q "disabled> $HOOK_FILE" .git/.githooks.checksum 2>/dev/null; then
+        if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null; then
             echo "Hook file is already disabled at $HOOK_FILE"
             continue
         fi
 
-        echo "disabled> $HOOK_FILE" >>.git/.githooks.checksum
+        echo "disabled> $HOOK_FILE" >>"${CURRENT_GIT_DIR}/.githooks.checksum"
         echo "Hook file disabled at $HOOK_FILE"
     done
 }
@@ -258,8 +274,8 @@ git hooks enable [trigger]
 
     ensure_checksum_file_exists
 
-    sed "\\|disabled> $HOOK_PATH|d" .git/.githooks.checksum >.git/.githooks.checksum.tmp &&
-        mv .git/.githooks.checksum.tmp .git/.githooks.checksum &&
+    sed "\\|disabled> $HOOK_PATH|d" "${CURRENT_GIT_DIR}/.githooks.checksum" >"${CURRENT_GIT_DIR}/.githooks.checksum.tmp" &&
+        mv "${CURRENT_GIT_DIR}/.githooks.checksum.tmp" "${CURRENT_GIT_DIR}/.githooks.checksum" &&
         echo "Hook file(s) enabled at $HOOK_PATH"
 }
 
@@ -296,14 +312,14 @@ git hooks accept [trigger]
     ensure_checksum_file_exists
 
     for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
-        if grep -q "disabled> $HOOK_FILE" .git/.githooks.checksum; then
+        if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum"; then
             echo "Hook file is currently disabled at $HOOK_FILE"
             continue
         fi
 
         CHECKSUM=$(get_hook_checksum "$HOOK_FILE")
 
-        echo "$CHECKSUM $HOOK_FILE" >>.git/.githooks.checksum &&
+        echo "$CHECKSUM $HOOK_FILE" >>"${CURRENT_GIT_DIR}/.githooks.checksum" &&
             echo "Changes accepted for $HOOK_FILE"
     done
 }
@@ -447,8 +463,8 @@ git hooks list [type]
         LIST_OUTPUT=""
 
         # non-Githooks hook file
-        if [ -x ".git/hooks/${LIST_TYPE}.replaced.githook" ]; then
-            ITEM_STATE=$(get_hook_state "$(pwd)/.git/hooks/${LIST_TYPE}.replaced.githook")
+        if [ -x "${CURRENT_GIT_DIR}/hooks/${LIST_TYPE}.replaced.githook" ]; then
+            ITEM_STATE=$(get_hook_state "${CURRENT_GIT_DIR}/hooks/${LIST_TYPE}.replaced.githook")
             LIST_OUTPUT="$LIST_OUTPUT
   - $LIST_TYPE (previous / file / ${ITEM_STATE})"
         fi
@@ -631,7 +647,7 @@ get_hook_enabled_or_disabled_state() {
         MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
     fi
     MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
-    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+    CURRENT_HASHES=$(grep "$HOOK_PATH" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null)
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
@@ -1969,5 +1985,7 @@ choose_command() {
     esac
 }
 
+# Set the main variables we will need
+set_main_variables
 # Choose and execute the command
 choose_command "$@"

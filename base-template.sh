@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1811.081158-1d386f
+# Version: 1902.262355-1dead6
 
 #####################################################
 # Execute the current hook,
@@ -51,6 +51,7 @@ are_githooks_disabled() {
 # Sets the ${HOOK_NAME} variable
 # Sets the ${HOOK_FOLDER} variable
 # Resets the ${ACCEPT_CHANGES} variable
+# Sets the ${CURRENT_GIT_DIR} variable
 #
 # Returns:
 #   None
@@ -59,6 +60,11 @@ set_main_variables() {
     HOOK_NAME=$(basename "$0")
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
+
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
+    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
+        CURRENT_GIT_DIR=".git" # reset to a sensible default
+    fi
 }
 
 #####################################################
@@ -281,13 +287,13 @@ execute_opt_in_checks() {
         MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
     fi
     MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
-    CURRENT_HASHES=$(grep "$HOOK_PATH" .git/.githooks.checksum 2>/dev/null)
+    CURRENT_HASHES=$(grep "$HOOK_PATH" "$CURRENT_GIT_DIR/.githooks.checksum" 2>/dev/null)
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
         echo "* Skipping disabled $HOOK_PATH"
         echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
-        echo "  Alternatively, edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+        echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
         return 1
 
     elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
@@ -313,15 +319,15 @@ execute_opt_in_checks() {
             if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
                 echo "* Disabled $HOOK_PATH"
                 echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
-                echo "  Alternatively, edit or delete the $(pwd)/.git/.githooks.checksum file to enable it again"
+                echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
 
-                echo "disabled> $HOOK_PATH" >>.git/.githooks.checksum
+                echo "disabled> $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
                 return 1
             fi
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>.git/.githooks.checksum
+        echo "$MD5_HASH $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
     fi
 }
 

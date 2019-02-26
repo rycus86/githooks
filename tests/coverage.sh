@@ -1,5 +1,7 @@
 #!/bin/sh
 
+RUN_DIR="${RUN_DIR:-"$PWD"}"
+
 if [ -z "$1" ]; then
     TESTS_TO_RUN="/var/lib/tests/exec-steps.sh"
 else
@@ -8,7 +10,11 @@ fi
 
 # Build a Docker image on top of kcov with our scripts
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
-FROM ragnaroek/kcov:v33
+FROM kcov/kcov:v33
+
+RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y git
 
 ADD base-template.sh install.sh uninstall.sh cli.sh .githooks/README.md /var/lib/githooks/
 
@@ -43,14 +49,14 @@ fi
 
 # Make sure we delete the previous run results
 docker run --rm --security-opt seccomp=unconfined \
-    -v "$PWD/cover":/cover \
+    -v "${RUN_DIR}/cover":/cover \
     --entrypoint sh \
     githooks:coverage \
     -c 'rm -rf /cover/*'
 
 # Run the actual tests and collect the coverage info
 docker run --rm --security-opt seccomp=unconfined \
-    -v "$PWD/cover":/cover \
+    -v "${RUN_DIR}/cover":/cover \
     githooks:coverage \
     --coveralls-id="$TRAVIS_JOB_ID" \
     --include-pattern="/var/lib/githooks/" \
