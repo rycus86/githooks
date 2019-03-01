@@ -9,6 +9,11 @@ mkdir -p /tmp/test098/.git/hooks &&
     git config githooks.autoupdate.enabled N ||
     exit 1
 
+if ! git worktree list >/dev/null 2>/dev/null; then
+    echo "Git worktree support is missing"
+    exit 249
+fi
+
 # shellcheck disable=SC2016
 mkdir -p .githooks/pre-commit &&
     echo 'echo p:${PWD} > /tmp/test098.out' >.githooks/pre-commit/test &&
