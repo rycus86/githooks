@@ -13,7 +13,7 @@ cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
 FROM kcov/kcov:v33
 
 RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.list \
-    && apt-get update \
+    && (apt-get update || true) \
     && apt-get install -y git
 
 ADD base-template.sh install.sh uninstall.sh cli.sh .githooks/README.md /var/lib/githooks/
