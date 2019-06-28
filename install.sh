@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.280827-f96785
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.280827-f96785
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.280827-f96785
 
 #####################################################
 # Prints the command line help for usage and
@@ -2721,12 +2721,13 @@ execute_installation() {
     fi
 
     # Install the hooks into existing local repositories
-    if is_single_repo_install; then
-        install_hooks_into_repo "$(pwd)" || return 1
-    else
-        install_into_existing_repositories
+    if ! is_skip_install_into_existing_repositories; then
+        if is_single_repo_install; then
+            install_hooks_into_repo "$(pwd)" || return 1
+        else
+            install_into_existing_repositories
+        fi
     fi
-
     echo # For visual separation
 
     # Set up shared hook repositories if needed
@@ -2742,6 +2743,7 @@ execute_installation() {
 # Sets ${DRY_RUN} for --dry-run
 # Sets ${NON_INTERACTIVE} for --non-interactive
 # Sets ${SINGLE_REPO_INSTALL} for --single
+# Sets ${SKIP_INSTALL_INTO_EXISTING} for --skip-install-into-existing
 #
 # Returns:
 #   None
@@ -2754,6 +2756,8 @@ parse_command_line_arguments() {
             NON_INTERACTIVE="yes"
         elif [ "$p" = "--single" ]; then
             SINGLE_REPO_INSTALL="yes"
+        elif [ "p" = "--skip-install-into-existing" ]; then
+            SKIP_INSTALL_INTO_EXISTING="yes"
         fi
     done
 }
@@ -2782,6 +2786,22 @@ is_dry_run() {
 ############################################################
 is_non_interactive() {
     if [ "$NON_INTERACTIVE" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+############################################################
+# Check if the install script is
+#   skipping the install of hooks into 
+#   existing repositories.
+#
+# Returns:
+#   0 if skipping, 1 otherwise
+############################################################
+is_skip_install_into_existing_repositories() {
+    if [ "$SKIP_INSTALL_INTO_EXISTING" = "yes" ]; then
         return 0
     else
         return 1
