@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.280827-f96785
+# Version: 1906.280832-bf9d0c
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.280827-f96785
+# Version: 1906.280832-bf9d0c
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.280827-f96785
+# Version: 1906.280832-bf9d0c
 
 #####################################################
 # Prints the command line help for usage and
@@ -2756,7 +2756,7 @@ parse_command_line_arguments() {
             NON_INTERACTIVE="yes"
         elif [ "$p" = "--single" ]; then
             SINGLE_REPO_INSTALL="yes"
-        elif [ "p" = "--skip-install-into-existing" ]; then
+        elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
         fi
     done
