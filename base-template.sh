@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.281553-c52cc3
+# Version: 1906.281628-f7bad0
 
 #####################################################
 # Execute the current hook,
@@ -15,7 +15,7 @@
 #####################################################
 process_git_hook() {
     are_githooks_disabled && return 0
-    set_main_variables
+    set_main_variables "$@" ; shift # First variable is the hook type, discard it.
     export_staged_files
     check_for_updates_if_needed
     execute_old_hook_if_available "$@" || return 1
@@ -60,7 +60,6 @@ set_main_variables() {
     HOOK_NAME=$(basename "$1")
     HOOK_FOLDER=$(dirname "$1")
     ACCEPT_CHANGES=
-    shift
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
