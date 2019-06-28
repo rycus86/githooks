@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.281505-0363b4
+# Version: 1906.281513-1d8ef9
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.281505-0363b4
+# Version: 1906.281513-1d8ef9
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.281505-0363b4
+# Version: 1906.281513-1d8ef9
 
 #####################################################
 # Prints the command line help for usage and
@@ -2688,7 +2688,7 @@ If you find it useful, please show your support by starring the project in GitHu
 HOOKS_CONTENT='#!/bin/sh
 # Base Git hook template from https://github.com/rycus86/githooks
 DIR="$( cd "$( dirname "$0" )" && pwd )"
-${DIR}/dispatch "$@"'
+${DIR}/githooks-dispatch "$@"'
 
 ############################################################
 # Execute the full installation process.
@@ -3059,7 +3059,7 @@ setup_hook_templates() {
     fi
 
     
-    echo "$BASE_TEMPLATE_CONTENT" > ${TARGET_TEMPLATE_DIR}/dispatch
+    echo "$BASE_TEMPLATE_CONTENT" > ${TARGET_TEMPLATE_DIR}/githooks-dispatch
     
 
     for HOOK in $MANAGED_HOOK_NAMES; do
@@ -3253,7 +3253,7 @@ install_hooks_into_repo() {
     INSTALLED="no"
 
     if ! is_dry_run; then
-        echo "$BASE_TEMPLATE_CONTENT" > ${TARGET}/hooks/dispatch
+        echo "$BASE_TEMPLATE_CONTENT" > ${TARGET}/hooks/githooks-dispatch
     fi
 
     for HOOK_NAME in $MANAGED_HOOK_NAMES; do
