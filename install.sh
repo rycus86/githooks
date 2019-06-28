@@ -3059,7 +3059,8 @@ setup_hook_templates() {
     fi
 
     
-    echo "$BASE_TEMPLATE_CONTENT" > ${TARGET_TEMPLATE_DIR}/githooks-dispatch
+    echo "$BASE_TEMPLATE_CONTENT" > "${TARGET_TEMPLATE_DIR}/githooks-dispatch" \
+        && chmod +x "${TARGET_TEMPLATE_DIR}/githooks-dispatch";
     
 
     for HOOK in $MANAGED_HOOK_NAMES; do
@@ -3253,7 +3254,8 @@ install_hooks_into_repo() {
     INSTALLED="no"
 
     if ! is_dry_run; then
-        echo "$BASE_TEMPLATE_CONTENT" > ${TARGET}/hooks/githooks-dispatch
+        echo "$BASE_TEMPLATE_CONTENT" > ${TARGET}/hooks/githooks-dispatch && \
+            chmod +x "${TARGET}/hooks/githooks-dispatch"
     fi
 
     for HOOK_NAME in $MANAGED_HOOK_NAMES; do
