@@ -144,7 +144,7 @@ The commands below fetch and execute the [install.sh](install.sh) script from th
     5. Offer to set up a new one, and make it `init.templateDir`
 2. Set up the hook templates for the supported hooks - the templates are basically a copy of the `base-template.sh` file content
 3. Offer to enable automatic update checks
-4. Offer to find existing Git repositories on the filesystem
+4. Offer to find existing Git repositories on the filesystem [disable with `--skip-install-into-existing`]
     1. Install the hooks into them
     2. Offer to add an intro README in their `.githooks` folder
 5. Offer to set up shared hook repositories
