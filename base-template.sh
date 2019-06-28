@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.281446-176a55
+# Version: 1906.281505-0363b4
 
 #####################################################
 # Execute the current hook,

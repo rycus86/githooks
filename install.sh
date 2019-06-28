@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.281446-176a55
+# Version: 1906.281505-0363b4
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.281446-176a55
+# Version: 1906.281505-0363b4
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.281446-176a55
+# Version: 1906.281505-0363b4
 
 #####################################################
 # Prints the command line help for usage and
@@ -2687,7 +2687,7 @@ If you find it useful, please show your support by starring the project in GitHu
 # The content for each hook
 HOOKS_CONTENT='#!/bin/sh
 # Base Git hook template from https://github.com/rycus86/githooks
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIR="$( cd "$( dirname "$0" )" && pwd )"
 ${DIR}/dispatch "$@"'
 
 ############################################################
