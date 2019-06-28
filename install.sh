@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.281446-176a55
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.281446-176a55
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.281446-176a55
 
 #####################################################
 # Prints the command line help for usage and
@@ -2684,6 +2684,12 @@ You can find more information about how this all works in the [README](https://g
 
 If you find it useful, please show your support by starring the project in GitHub!'
 
+# The content for each hook
+HOOKS_CONTENT='#!/bin/sh
+# Base Git hook template from https://github.com/rycus86/githooks
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+${DIR}/dispatch "$@"'
+
 ############################################################
 # Execute the full installation process.
 #
@@ -3052,6 +3058,10 @@ setup_hook_templates() {
         return 0
     fi
 
+    
+    echo "$BASE_TEMPLATE_CONTENT" > ${TARGET_TEMPLATE_DIR}/dispatch
+    
+
     for HOOK in $MANAGED_HOOK_NAMES; do
         HOOK_TEMPLATE="${TARGET_TEMPLATE_DIR}/${HOOK}"
 
@@ -3065,7 +3075,7 @@ setup_hook_templates() {
             fi
         fi
 
-        if echo "$BASE_TEMPLATE_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
+        if echo "$HOOKS_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
             echo "Git hook template ready: $HOOK_TEMPLATE"
         else
             echo "! Failed to setup the $HOOK template at $HOOK_TEMPLATE"
@@ -3242,6 +3252,10 @@ install_hooks_into_repo() {
 
     INSTALLED="no"
 
+    if ! is_dry_run; then
+        echo "$BASE_TEMPLATE_CONTENT" > ${TARGET}/hooks/dispatch
+    fi
+
     for HOOK_NAME in $MANAGED_HOOK_NAMES; do
         if is_dry_run; then
             INSTALLED="yes"
@@ -3264,7 +3278,7 @@ install_hooks_into_repo() {
             fi
         fi
 
-        if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
+        if echo "$HOOKS_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="yes"
         else
             HAD_FAILURE=Y
