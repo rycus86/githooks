@@ -11,7 +11,15 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.290156-fabea1
+
+# The main update url.
+MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+# If the update url needs credentials, use `git credential fill` to
+# get this information.
+DOWNLOAD_USE_CREDENTIALS="N"
+DOWNLOAD_PROTOCOL="https"
+DOWNLOAD_HOST="github.com"
 
 #####################################################
 # Prints the command line help for usage and
@@ -1297,6 +1305,54 @@ record_update_time() {
 }
 
 #####################################################
+# Checks if the download_file command needs 
+#   credentials over `git crendentials fill`.
+#
+# Returns:
+#   0 if it should use credentials, 1 otherwise
+#####################################################
+use_credentials(){
+    [ "$DOWNLOAD_USE_CREDENTIALS" == "Y" ] || return 1
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file(){
+
+    if use_credentials ; then
+        CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
+        if [ $? -ne 0 ]; then
+            echo "! Getting download credential failed."
+        fi
+        USER=$(echo $CREDENTIALS | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file \"$1\" - needs either curl or wget"
+        return 1
+    fi
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -1306,18 +1362,10 @@ record_update_time() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
 
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
 
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot fetch the latest install script - needs either curl or wget"
-        return 1
-    fi
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
@@ -1474,18 +1522,9 @@ git hooks readme [add|update]
 #   1 if failed the load the contents, 0 otherwise
 #####################################################
 fetch_latest_readme() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/.githooks/README.md"
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
 
-    if curl --version >/dev/null 2>&1; then
-        README_CONTENTS=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
-
-    elif wget --version >/dev/null 2>&1; then
-        README_CONTENTS=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Failed to fetch the latest README - needs either curl or wget"
-        return 1
-    fi
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then

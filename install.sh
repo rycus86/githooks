@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.290156-fabea1
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,15 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.290156-fabea1
+
+# The main update url.
+MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+# If the update url needs credentials, use `git credential fill` to
+# get this information.
+DOWNLOAD_USE_CREDENTIALS="N"
+DOWNLOAD_PROTOCOL="https"
+DOWNLOAD_HOST="github.com"
 
 #####################################################
 # Execute the current hook,
@@ -523,6 +531,54 @@ should_run_update_checks() {
 }
 
 #####################################################
+# Checks if the download_file command needs 
+#   credentials over `git crendentials fill`.
+#
+# Returns:
+#   0 if it should use credentials, 1 otherwise
+#####################################################
+use_credentials(){
+    [ "$DOWNLOAD_USE_CREDENTIALS" == "Y" ] || return 1
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file(){
+
+    if use_credentials ; then
+        CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
+        if [ $? -ne 0 ]; then
+            echo "! Getting download credential failed."
+        fi
+        USER=$(echo $CREDENTIALS | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file \"$1\" - needs either curl or wget"
+        return 1 
+    fi
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -532,20 +588,448 @@ should_run_update_checks() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
 
     echo "^ Checking for updates ..."
 
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot check for updates - needs either curl or wget"
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to check for updates"
         return 1
     fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_updated_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   0 if they were, 1 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Prompts the user whether the new update
+#   should be installed or not.
+#
+# Returns:
+#   0 if it should be, 1 otherwise
+#####################################################
+should_run_update() {
+    echo "* There is a new Githooks update available: Version $LATEST_VERSION"
+    printf "    Would you like to install it now? [Y/n] "
+    read -r EXECUTE_UPDATE </dev/tty
+
+    if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+#####################################################
+# Performs the installation of the latest update.
+#
+# Returns:
+#   0 if the update was successful, 1 otherwise
+#####################################################
+execute_update() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+# Start processing the hooks
+process_git_hook "$@" || exit 1
+'$1\' - needs either curl or wget"
+        return 1 
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_update_script() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    echo "^ Checking for updates ..."
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to check for updates"
+        return 1
+    fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_updated_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   0 if they were, 1 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Prompts the user whether the new update
+#   should be installed or not.
+#
+# Returns:
+#   0 if it should be, 1 otherwise
+#####################################################
+should_run_update() {
+    echo "* There is a new Githooks update available: Version $LATEST_VERSION"
+    printf "    Would you like to install it now? [Y/n] "
+    read -r EXECUTE_UPDATE </dev/tty
+
+    if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+#####################################################
+# Performs the installation of the latest update.
+#
+# Returns:
+#   0 if the update was successful, 1 otherwise
+#####################################################
+execute_update() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+# Start processing the hooks
+process_git_hook "$@" || exit 1
+'username=.*$' | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 'password=.*$' | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file \'$1\' - needs either curl or wget"
+        return 1 
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_update_script() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    echo "^ Checking for updates ..."
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to check for updates"
+        return 1
+    fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_updated_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   0 if they were, 1 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Prompts the user whether the new update
+#   should be installed or not.
+#
+# Returns:
+#   0 if it should be, 1 otherwise
+#####################################################
+should_run_update() {
+    echo "* There is a new Githooks update available: Version $LATEST_VERSION"
+    printf "    Would you like to install it now? [Y/n] "
+    read -r EXECUTE_UPDATE </dev/tty
+
+    if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+#####################################################
+# Performs the installation of the latest update.
+#
+# Returns:
+#   0 if the update was successful, 1 otherwise
+#####################################################
+execute_update() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+# Start processing the hooks
+process_git_hook "$@" || exit 1
+'username=.*$' | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 'password=.*$' | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file '$1' - needs either curl or wget"
+        return 1 
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_update_script() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    echo "^ Checking for updates ..."
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
@@ -676,7 +1160,15 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1904.072126-304d96
+# Version: 1906.290156-fabea1
+
+# The main update url.
+MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+# If the update url needs credentials, use `git credential fill` to
+# get this information.
+DOWNLOAD_USE_CREDENTIALS="N"
+DOWNLOAD_PROTOCOL="https"
+DOWNLOAD_HOST="github.com"
 
 #####################################################
 # Prints the command line help for usage and
@@ -1962,6 +2454,54 @@ record_update_time() {
 }
 
 #####################################################
+# Checks if the download_file command needs 
+#   credentials over `git crendentials fill`.
+#
+# Returns:
+#   0 if it should use credentials, 1 otherwise
+#####################################################
+use_credentials(){
+    [ "$DOWNLOAD_USE_CREDENTIALS" == "Y" ] || return 1
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file(){
+
+    if use_credentials ; then
+        CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
+        if [ $? -ne 0 ]; then
+            echo "! Getting download credential failed."
+        fi
+        USER=$(echo $CREDENTIALS | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file \"$1\" - needs either curl or wget"
+        return 1
+    fi
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -1971,18 +2511,10 @@ record_update_time() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
 
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
 
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot fetch the latest install script - needs either curl or wget"
-        return 1
-    fi
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
@@ -2139,18 +2671,2090 @@ git hooks readme [add|update]
 #   1 if failed the load the contents, 0 otherwise
 #####################################################
 fetch_latest_readme() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/.githooks/README.md"
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
 
-    if curl --version >/dev/null 2>&1; then
-        README_CONTENTS=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
-    elif wget --version >/dev/null 2>&1; then
-        README_CONTENTS=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Failed to fetch the latest README - needs either curl or wget"
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to fetch the latest README"
         return 1
     fi
+}
+
+#####################################################
+# Adds or updates Githooks ignore files in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_ignore_files() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks ignore [pattern...]
+git hooks ignore [trigger] [pattern...]
+
+    Adds new file name patterns to the Githooks \`.ignore\` file, either
+    in the main \`.githooks\` folder, or in the Git event specific one.
+    Note, that it may be required to surround the individual pattern
+    parameters with single quotes to avoid expanding or splitting them.
+    The \`trigger\` parameter should be the name of the Git event if given.
+    This command needs to be run at the root of a repository.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    TRIGGER_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+    TARGET_DIR="$(pwd)/.githooks"
+
+    for TRIGGER_TYPE in $TRIGGER_TYPES; do
+        if [ "$1" = "$TRIGGER_TYPE" ]; then
+            TARGET_DIR="$(pwd)/.githooks/$TRIGGER_TYPE"
+            shift
+            break
+        fi
+    done
+
+    if [ -z "$1" ]; then
+        manage_ignore_files "help"
+        echo "! Missing pattern parameter"
+        exit 1
+    fi
+
+    if ! mkdir -p "$TARGET_DIR" && touch "$TARGET_DIR/.ignore"; then
+        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore"
+        exit 1
+    fi
+
+    [ -f "$TARGET_DIR/.ignore" ] &&
+        echo "" >>"$TARGET_DIR/.ignore"
+
+    for PATTERN in "$@"; do
+        if ! echo "$PATTERN" >>"$TARGET_DIR/.ignore"; then
+            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore"
+            exit 1
+        fi
+    done
+
+    echo "The ignore file at $TARGET_DIR/.ignore is updated"
+    echo "  Do not forget to commit the changes!"
+}
+
+#####################################################
+# Manages various Githooks settings,
+#   that is stored in Git configuration.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_configuration() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks config list [--global|--local]
+
+    Lists the Githooks related settings of the Githooks configuration.
+    Can be either global or local configuration, or both by default.
+
+git hooks config [set|reset|print] disable
+
+    Disables running any Githooks files in the current repository,
+    when the \`set\` option is used.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [set|reset|print] single
+
+    Marks the current local repository to be managed as a single Githooks
+    installation, or clears the marker, with \`set\` and \`reset\` respectively.
+    The \`print\` option outputs the current setting of it.
+    This command needs to be run at the root of a repository.
+
+git hooks config set search-dir <path>
+git hooks config [reset|print] search-dir
+
+    Changes the previous search directory setting used during installation.
+    The \`set\` option changes the value, and the \`reset\` option clears it.
+    The \`print\` option outputs the current setting of it.
+
+git hooks config set shared <git-url...>
+git hooks config [reset|print] shared
+
+    Updates the list of global shared hook repositories when
+    the \`set\` option is used, which accepts multiple <git-url> arguments,
+    each containing a clone URL of a hook repository.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [accept|deny|reset|print] trusted
+
+    Accepts changes to all existing and new hooks in the current repository
+    when the trust marker is present and the \`set\` option is used.
+    The \`deny\` option marks the repository as
+    it has refused to trust the changes, even if the trust marker is present.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [enable|disable|reset|print] update
+
+    Enables or disables automatic update checks with
+    the \`enable\` and \`disable\` options respectively.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [reset|print] update-time
+
+    Resets the last Githooks update time with the \`reset\` option,
+    causing the update check to run next time if it is enabled.
+    Use \`git hooks update [enable|disable]\` to change that setting.
+    The \`print\` option outputs the current value of it.
+"
+        return
+    fi
+
+    CONFIG_OPERATION="$1"
+
+    if [ "$CONFIG_OPERATION" = "list" ]; then
+        if [ "$2" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! Local configuration can only be printed from a Git repository"
+            exit 1
+        fi
+
+        if [ -z "$2" ]; then
+            git config --get-regexp "(^githooks|alias.hooks)" | sort
+        else
+            git config "$2" --get-regexp "(^githooks|alias.hooks)" | sort
+        fi
+        exit $?
+    fi
+
+    CONFIG_ARGUMENT="$2"
+
+    shift
+    shift
+
+    case "$CONFIG_ARGUMENT" in
+    "disable")
+        config_disable "$CONFIG_OPERATION"
+        ;;
+    "single")
+        config_single_install "$CONFIG_OPERATION"
+        ;;
+    "search-dir")
+        config_search_dir "$CONFIG_OPERATION" "$@"
+        ;;
+    "shared")
+        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        ;;
+    "trusted")
+        config_trust_all_hooks "$CONFIG_OPERATION"
+        ;;
+    "update")
+        config_update_state "$CONFIG_OPERATION"
+        ;;
+    "update-time")
+        config_update_last_run "$CONFIG_OPERATION"
+        ;;
+    *)
+        manage_configuration "help"
+        echo "! Invalid configuration option: \`$2\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
+# Manages Githooks disable settings for
+#   the current repository.
+# Prints or modifies the \`githooks.disable\`
+#   local Git configuration.
+#####################################################
+config_disable() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.disable Y
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.disable
+    elif [ "$1" = "print" ]; then
+        if is_repository_disabled; then
+            echo "Githooks is disabled in the current repository"
+        else
+            echo "Githooks is NOT disabled in the current repository"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages Githooks single installation setting
+#   for the current repository.
+# Prints or modifies the \`githooks.single.install\`
+#   local Git configuration.
+#####################################################
+config_single_install() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.single.install yes
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.single.install
+    elif [ "$1" = "print" ]; then
+        if read_single_repo_information && is_single_repo; then
+            echo "The current repository is marked as a single installation"
+        else
+            echo "The current repository is NOT marked as a single installation"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages previous search directory setting
+#   used during Githooks installation.
+# Prints or modifies the
+#   \`githooks.previous.searchdir\`
+#   global Git configuration.
+#####################################################
+config_search_dir() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <path> parameter"
+            exit 1
+        fi
+
+        git config --global githooks.previous.searchdir "$2"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.previous.searchdir
+    elif [ "$1" = "print" ]; then
+        CONFIG_SEARCH_DIR=$(git config --global --get githooks.previous.searchdir)
+        if [ -z "$CONFIG_SEARCH_DIR" ]; then
+            echo "No previous search directory is set"
+        else
+            echo "Search directory is set to: $CONFIG_SEARCH_DIR"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages global shared hook repository list setting.
+# Prints or modifies the \`githooks.shared\`
+#   global Git configuration.
+#####################################################
+config_global_shared_hook_repos() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <git-url> parameter"
+            exit 1
+        fi
+
+        shift
+
+        NEW_LIST=""
+        for SHARED_REPO_ITEM in "$@"; do
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        git config --global githooks.shared "$NEW_LIST"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.shared
+    elif [ "$1" = "print" ]; then
+        list_shared_hook_repos "--global"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the trust-all-hooks setting
+#   for the current repository.
+# Prints or modifies the \`githooks.trust.all\`
+#   local Git configuration.
+#####################################################
+config_trust_all_hooks() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "accept" ]; then
+        git config githooks.trust.all Y
+    elif [ "$1" = "deny" ]; then
+        git config githooks.trust.all N
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.trust.all
+    elif [ "$1" = "print" ]; then
+        CONFIG_TRUST_ALL=$(git config --local --get githooks.trust.all)
+        if [ "$CONFIG_TRUST_ALL" = "Y" ]; then
+            echo "The current repository trusts all hooks automatically"
+        elif [ -z "$CONFIG_TRUST_ALL" ]; then
+            echo "The current repository does NOT have trust settings"
+        else
+            echo "The current repository does NOT trust hooks automatically"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update check setting.
+# Prints or modifies the
+#   \`githooks.autoupdate.enabled\`
+#   global Git configuration.
+#####################################################
+config_update_state() {
+    if [ "$1" = "enable" ]; then
+        git config --global githooks.autoupdate.enabled Y
+    elif [ "$1" = "disable" ]; then
+        git config --global githooks.autoupdate.enabled N
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.enabled
+    elif [ "$1" = "print" ]; then
+        CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
+        if [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
+            echo "Automatic update checks are enabled"
+        else
+            echo "Automatic update checks are NOT enabled"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the timestamp for the last update check.
+# Prints or modifies the
+#   \`githooks.autoupdate.lastrun\`
+#   global Git configuration.
+#####################################################
+config_update_last_run() {
+    if [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.lastrun
+    elif [ "$1" = "print" ]; then
+        LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+        if [ -z "$LAST_UPDATE" ]; then
+            echo "The update has never run"
+        else
+            if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
+                if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
+                    echo "Last update timestamp: $LAST_UPDATE"
+                fi
+            fi
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Prints the version number of this script,
+#   that would match the latest installed version
+#   of Githooks in most cases.
+#####################################################
+print_current_version_number() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks version
+
+    Prints the version number of the \`git hooks\` helper and exits.
+"
+        return
+    fi
+
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+
+    print_help_header
+
+    echo
+    echo "Version: $CURRENT_VERSION"
+    echo
+}
+
+#####################################################
+# Dispatches the command to the
+#   appropriate helper function to process it.
+#
+# Returns:
+#   1 if an unknown command was given,
+#   the exit code of the command otherwise
+#####################################################
+choose_command() {
+    CMD="$1"
+    [ -n "$CMD" ] && shift
+
+    case "$CMD" in
+    "disable")
+        disable_hook "$@"
+        ;;
+    "enable")
+        enable_hook "$@"
+        ;;
+    "accept")
+        accept_changes "$@"
+        ;;
+    "trust")
+        manage_trusted_repo "$@"
+        ;;
+    "list")
+        list_hooks "$@"
+        ;;
+    "shared")
+        manage_shared_hook_repos "$@"
+        ;;
+    "pull")
+        update_shared_hook_repos "$@"
+        ;;
+    "install")
+        run_ondemand_installation "$@"
+        ;;
+    "update")
+        run_update_check "$@"
+        ;;
+    "readme")
+        manage_readme_file "$@"
+        ;;
+    "ignore")
+        manage_ignore_files "$@"
+        ;;
+    "config")
+        manage_configuration "$@"
+        ;;
+    "version")
+        print_current_version_number "$@"
+        ;;
+    "help")
+        print_help
+        ;;
+    *)
+        print_help
+        [ -n "$CMD" ] && echo "! Unknown command: $CMD"
+        exit 1
+        ;;
+    esac
+}
+
+# Set the main variables we will need
+set_main_variables
+# Choose and execute the command
+choose_command "$@"
+'$1' - needs either curl or wget"
+        return 1
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_install_script() {
+
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_latest_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   1 if they were, 0 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Performs the installation of the previously
+#   fetched install script.
+#
+# Returns:
+#   0 if the installation was successful, 1 otherwise
+#####################################################
+execute_install_script() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+#####################################################
+# Adds or updates the Githooks README in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_readme_file() {
+    case "$1" in
+    "add")
+        FORCE_README=""
+        ;;
+    "update")
+        FORCE_README="y"
+        ;;
+    *)
+        print_help_header
+        echo "
+git hooks readme [add|update]
+
+    Adds or updates the Githooks README in the \`.githooks\` folder.
+    If \`add\` is used, it checks first if there is a README file already.
+    With \`update\`, the file is always updated, creating it if necessary.
+    This command needs to be run at the root of a repository.
+"
+        if [ "$1" = "help" ]; then
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    esac
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
+        echo "! This repository already seems to have a Githooks README."
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`"
+        exit 1
+    fi
+
+    if ! fetch_latest_readme; then
+        exit 1
+    fi
+
+    mkdir -p "$(pwd)/.githooks" &&
+        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "! Failed to update the README file in the current repository"
+}
+
+#####################################################
+# Loads the contents of the latest Githooks README
+#   into a variable.
+#
+# Sets the ${README_CONTENTS} variable
+#
+# Returns:
+#   1 if failed the load the contents, 0 otherwise
+#####################################################
+fetch_latest_readme() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to fetch the latest README"
+        return 1
+    fi
+}
+
+#####################################################
+# Adds or updates Githooks ignore files in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_ignore_files() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks ignore [pattern...]
+git hooks ignore [trigger] [pattern...]
+
+    Adds new file name patterns to the Githooks \`.ignore\` file, either
+    in the main \`.githooks\` folder, or in the Git event specific one.
+    Note, that it may be required to surround the individual pattern
+    parameters with single quotes to avoid expanding or splitting them.
+    The \`trigger\` parameter should be the name of the Git event if given.
+    This command needs to be run at the root of a repository.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    TRIGGER_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+    TARGET_DIR="$(pwd)/.githooks"
+
+    for TRIGGER_TYPE in $TRIGGER_TYPES; do
+        if [ "$1" = "$TRIGGER_TYPE" ]; then
+            TARGET_DIR="$(pwd)/.githooks/$TRIGGER_TYPE"
+            shift
+            break
+        fi
+    done
+
+    if [ -z "$1" ]; then
+        manage_ignore_files "help"
+        echo "! Missing pattern parameter"
+        exit 1
+    fi
+
+    if ! mkdir -p "$TARGET_DIR" && touch "$TARGET_DIR/.ignore"; then
+        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore"
+        exit 1
+    fi
+
+    [ -f "$TARGET_DIR/.ignore" ] &&
+        echo "" >>"$TARGET_DIR/.ignore"
+
+    for PATTERN in "$@"; do
+        if ! echo "$PATTERN" >>"$TARGET_DIR/.ignore"; then
+            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore"
+            exit 1
+        fi
+    done
+
+    echo "The ignore file at $TARGET_DIR/.ignore is updated"
+    echo "  Do not forget to commit the changes!"
+}
+
+#####################################################
+# Manages various Githooks settings,
+#   that is stored in Git configuration.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_configuration() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks config list [--global|--local]
+
+    Lists the Githooks related settings of the Githooks configuration.
+    Can be either global or local configuration, or both by default.
+
+git hooks config [set|reset|print] disable
+
+    Disables running any Githooks files in the current repository,
+    when the \`set\` option is used.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [set|reset|print] single
+
+    Marks the current local repository to be managed as a single Githooks
+    installation, or clears the marker, with \`set\` and \`reset\` respectively.
+    The \`print\` option outputs the current setting of it.
+    This command needs to be run at the root of a repository.
+
+git hooks config set search-dir <path>
+git hooks config [reset|print] search-dir
+
+    Changes the previous search directory setting used during installation.
+    The \`set\` option changes the value, and the \`reset\` option clears it.
+    The \`print\` option outputs the current setting of it.
+
+git hooks config set shared <git-url...>
+git hooks config [reset|print] shared
+
+    Updates the list of global shared hook repositories when
+    the \`set\` option is used, which accepts multiple <git-url> arguments,
+    each containing a clone URL of a hook repository.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [accept|deny|reset|print] trusted
+
+    Accepts changes to all existing and new hooks in the current repository
+    when the trust marker is present and the \`set\` option is used.
+    The \`deny\` option marks the repository as
+    it has refused to trust the changes, even if the trust marker is present.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [enable|disable|reset|print] update
+
+    Enables or disables automatic update checks with
+    the \`enable\` and \`disable\` options respectively.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [reset|print] update-time
+
+    Resets the last Githooks update time with the \`reset\` option,
+    causing the update check to run next time if it is enabled.
+    Use \`git hooks update [enable|disable]\` to change that setting.
+    The \`print\` option outputs the current value of it.
+"
+        return
+    fi
+
+    CONFIG_OPERATION="$1"
+
+    if [ "$CONFIG_OPERATION" = "list" ]; then
+        if [ "$2" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! Local configuration can only be printed from a Git repository"
+            exit 1
+        fi
+
+        if [ -z "$2" ]; then
+            git config --get-regexp "(^githooks|alias.hooks)" | sort
+        else
+            git config "$2" --get-regexp "(^githooks|alias.hooks)" | sort
+        fi
+        exit $?
+    fi
+
+    CONFIG_ARGUMENT="$2"
+
+    shift
+    shift
+
+    case "$CONFIG_ARGUMENT" in
+    "disable")
+        config_disable "$CONFIG_OPERATION"
+        ;;
+    "single")
+        config_single_install "$CONFIG_OPERATION"
+        ;;
+    "search-dir")
+        config_search_dir "$CONFIG_OPERATION" "$@"
+        ;;
+    "shared")
+        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        ;;
+    "trusted")
+        config_trust_all_hooks "$CONFIG_OPERATION"
+        ;;
+    "update")
+        config_update_state "$CONFIG_OPERATION"
+        ;;
+    "update-time")
+        config_update_last_run "$CONFIG_OPERATION"
+        ;;
+    *)
+        manage_configuration "help"
+        echo "! Invalid configuration option: \`$2\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
+# Manages Githooks disable settings for
+#   the current repository.
+# Prints or modifies the \`githooks.disable\`
+#   local Git configuration.
+#####################################################
+config_disable() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.disable Y
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.disable
+    elif [ "$1" = "print" ]; then
+        if is_repository_disabled; then
+            echo "Githooks is disabled in the current repository"
+        else
+            echo "Githooks is NOT disabled in the current repository"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages Githooks single installation setting
+#   for the current repository.
+# Prints or modifies the \`githooks.single.install\`
+#   local Git configuration.
+#####################################################
+config_single_install() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.single.install yes
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.single.install
+    elif [ "$1" = "print" ]; then
+        if read_single_repo_information && is_single_repo; then
+            echo "The current repository is marked as a single installation"
+        else
+            echo "The current repository is NOT marked as a single installation"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages previous search directory setting
+#   used during Githooks installation.
+# Prints or modifies the
+#   \`githooks.previous.searchdir\`
+#   global Git configuration.
+#####################################################
+config_search_dir() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <path> parameter"
+            exit 1
+        fi
+
+        git config --global githooks.previous.searchdir "$2"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.previous.searchdir
+    elif [ "$1" = "print" ]; then
+        CONFIG_SEARCH_DIR=$(git config --global --get githooks.previous.searchdir)
+        if [ -z "$CONFIG_SEARCH_DIR" ]; then
+            echo "No previous search directory is set"
+        else
+            echo "Search directory is set to: $CONFIG_SEARCH_DIR"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages global shared hook repository list setting.
+# Prints or modifies the \`githooks.shared\`
+#   global Git configuration.
+#####################################################
+config_global_shared_hook_repos() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <git-url> parameter"
+            exit 1
+        fi
+
+        shift
+
+        NEW_LIST=""
+        for SHARED_REPO_ITEM in "$@"; do
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        git config --global githooks.shared "$NEW_LIST"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.shared
+    elif [ "$1" = "print" ]; then
+        list_shared_hook_repos "--global"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the trust-all-hooks setting
+#   for the current repository.
+# Prints or modifies the \`githooks.trust.all\`
+#   local Git configuration.
+#####################################################
+config_trust_all_hooks() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "accept" ]; then
+        git config githooks.trust.all Y
+    elif [ "$1" = "deny" ]; then
+        git config githooks.trust.all N
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.trust.all
+    elif [ "$1" = "print" ]; then
+        CONFIG_TRUST_ALL=$(git config --local --get githooks.trust.all)
+        if [ "$CONFIG_TRUST_ALL" = "Y" ]; then
+            echo "The current repository trusts all hooks automatically"
+        elif [ -z "$CONFIG_TRUST_ALL" ]; then
+            echo "The current repository does NOT have trust settings"
+        else
+            echo "The current repository does NOT trust hooks automatically"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update check setting.
+# Prints or modifies the
+#   \`githooks.autoupdate.enabled\`
+#   global Git configuration.
+#####################################################
+config_update_state() {
+    if [ "$1" = "enable" ]; then
+        git config --global githooks.autoupdate.enabled Y
+    elif [ "$1" = "disable" ]; then
+        git config --global githooks.autoupdate.enabled N
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.enabled
+    elif [ "$1" = "print" ]; then
+        CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
+        if [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
+            echo "Automatic update checks are enabled"
+        else
+            echo "Automatic update checks are NOT enabled"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the timestamp for the last update check.
+# Prints or modifies the
+#   \`githooks.autoupdate.lastrun\`
+#   global Git configuration.
+#####################################################
+config_update_last_run() {
+    if [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.lastrun
+    elif [ "$1" = "print" ]; then
+        LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+        if [ -z "$LAST_UPDATE" ]; then
+            echo "The update has never run"
+        else
+            if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
+                if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
+                    echo "Last update timestamp: $LAST_UPDATE"
+                fi
+            fi
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Prints the version number of this script,
+#   that would match the latest installed version
+#   of Githooks in most cases.
+#####################################################
+print_current_version_number() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks version
+
+    Prints the version number of the \`git hooks\` helper and exits.
+"
+        return
+    fi
+
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+
+    print_help_header
+
+    echo
+    echo "Version: $CURRENT_VERSION"
+    echo
+}
+
+#####################################################
+# Dispatches the command to the
+#   appropriate helper function to process it.
+#
+# Returns:
+#   1 if an unknown command was given,
+#   the exit code of the command otherwise
+#####################################################
+choose_command() {
+    CMD="$1"
+    [ -n "$CMD" ] && shift
+
+    case "$CMD" in
+    "disable")
+        disable_hook "$@"
+        ;;
+    "enable")
+        enable_hook "$@"
+        ;;
+    "accept")
+        accept_changes "$@"
+        ;;
+    "trust")
+        manage_trusted_repo "$@"
+        ;;
+    "list")
+        list_hooks "$@"
+        ;;
+    "shared")
+        manage_shared_hook_repos "$@"
+        ;;
+    "pull")
+        update_shared_hook_repos "$@"
+        ;;
+    "install")
+        run_ondemand_installation "$@"
+        ;;
+    "update")
+        run_update_check "$@"
+        ;;
+    "readme")
+        manage_readme_file "$@"
+        ;;
+    "ignore")
+        manage_ignore_files "$@"
+        ;;
+    "config")
+        manage_configuration "$@"
+        ;;
+    "version")
+        print_current_version_number "$@"
+        ;;
+    "help")
+        print_help
+        ;;
+    *)
+        print_help
+        [ -n "$CMD" ] && echo "! Unknown command: $CMD"
+        exit 1
+        ;;
+    esac
+}
+
+# Set the main variables we will need
+set_main_variables
+# Choose and execute the command
+choose_command "$@"
+'username=.*$\' | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 \'password=.*$\' | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file '$1' - needs either curl or wget"
+        return 1
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_install_script() {
+
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_latest_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   1 if they were, 0 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Performs the installation of the previously
+#   fetched install script.
+#
+# Returns:
+#   0 if the installation was successful, 1 otherwise
+#####################################################
+execute_install_script() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+#####################################################
+# Adds or updates the Githooks README in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_readme_file() {
+    case "$1" in
+    "add")
+        FORCE_README=""
+        ;;
+    "update")
+        FORCE_README="y"
+        ;;
+    *)
+        print_help_header
+        echo "
+git hooks readme [add|update]
+
+    Adds or updates the Githooks README in the \`.githooks\` folder.
+    If \`add\` is used, it checks first if there is a README file already.
+    With \`update\`, the file is always updated, creating it if necessary.
+    This command needs to be run at the root of a repository.
+"
+        if [ "$1" = "help" ]; then
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    esac
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
+        echo "! This repository already seems to have a Githooks README."
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`"
+        exit 1
+    fi
+
+    if ! fetch_latest_readme; then
+        exit 1
+    fi
+
+    mkdir -p "$(pwd)/.githooks" &&
+        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "! Failed to update the README file in the current repository"
+}
+
+#####################################################
+# Loads the contents of the latest Githooks README
+#   into a variable.
+#
+# Sets the ${README_CONTENTS} variable
+#
+# Returns:
+#   1 if failed the load the contents, 0 otherwise
+#####################################################
+fetch_latest_readme() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Failed to fetch the latest README"
+        return 1
+    fi
+}
+
+#####################################################
+# Adds or updates Githooks ignore files in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_ignore_files() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks ignore [pattern...]
+git hooks ignore [trigger] [pattern...]
+
+    Adds new file name patterns to the Githooks \`.ignore\` file, either
+    in the main \`.githooks\` folder, or in the Git event specific one.
+    Note, that it may be required to surround the individual pattern
+    parameters with single quotes to avoid expanding or splitting them.
+    The \`trigger\` parameter should be the name of the Git event if given.
+    This command needs to be run at the root of a repository.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    TRIGGER_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+    TARGET_DIR="$(pwd)/.githooks"
+
+    for TRIGGER_TYPE in $TRIGGER_TYPES; do
+        if [ "$1" = "$TRIGGER_TYPE" ]; then
+            TARGET_DIR="$(pwd)/.githooks/$TRIGGER_TYPE"
+            shift
+            break
+        fi
+    done
+
+    if [ -z "$1" ]; then
+        manage_ignore_files "help"
+        echo "! Missing pattern parameter"
+        exit 1
+    fi
+
+    if ! mkdir -p "$TARGET_DIR" && touch "$TARGET_DIR/.ignore"; then
+        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore"
+        exit 1
+    fi
+
+    [ -f "$TARGET_DIR/.ignore" ] &&
+        echo "" >>"$TARGET_DIR/.ignore"
+
+    for PATTERN in "$@"; do
+        if ! echo "$PATTERN" >>"$TARGET_DIR/.ignore"; then
+            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore"
+            exit 1
+        fi
+    done
+
+    echo "The ignore file at $TARGET_DIR/.ignore is updated"
+    echo "  Do not forget to commit the changes!"
+}
+
+#####################################################
+# Manages various Githooks settings,
+#   that is stored in Git configuration.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_configuration() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks config list [--global|--local]
+
+    Lists the Githooks related settings of the Githooks configuration.
+    Can be either global or local configuration, or both by default.
+
+git hooks config [set|reset|print] disable
+
+    Disables running any Githooks files in the current repository,
+    when the \`set\` option is used.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [set|reset|print] single
+
+    Marks the current local repository to be managed as a single Githooks
+    installation, or clears the marker, with \`set\` and \`reset\` respectively.
+    The \`print\` option outputs the current setting of it.
+    This command needs to be run at the root of a repository.
+
+git hooks config set search-dir <path>
+git hooks config [reset|print] search-dir
+
+    Changes the previous search directory setting used during installation.
+    The \`set\` option changes the value, and the \`reset\` option clears it.
+    The \`print\` option outputs the current setting of it.
+
+git hooks config set shared <git-url...>
+git hooks config [reset|print] shared
+
+    Updates the list of global shared hook repositories when
+    the \`set\` option is used, which accepts multiple <git-url> arguments,
+    each containing a clone URL of a hook repository.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [accept|deny|reset|print] trusted
+
+    Accepts changes to all existing and new hooks in the current repository
+    when the trust marker is present and the \`set\` option is used.
+    The \`deny\` option marks the repository as
+    it has refused to trust the changes, even if the trust marker is present.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+    This command needs to be run at the root of a repository.
+
+git hooks config [enable|disable|reset|print] update
+
+    Enables or disables automatic update checks with
+    the \`enable\` and \`disable\` options respectively.
+    The \`reset\` option clears this setting.
+    The \`print\` option outputs the current setting.
+
+git hooks config [reset|print] update-time
+
+    Resets the last Githooks update time with the \`reset\` option,
+    causing the update check to run next time if it is enabled.
+    Use \`git hooks update [enable|disable]\` to change that setting.
+    The \`print\` option outputs the current value of it.
+"
+        return
+    fi
+
+    CONFIG_OPERATION="$1"
+
+    if [ "$CONFIG_OPERATION" = "list" ]; then
+        if [ "$2" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! Local configuration can only be printed from a Git repository"
+            exit 1
+        fi
+
+        if [ -z "$2" ]; then
+            git config --get-regexp "(^githooks|alias.hooks)" | sort
+        else
+            git config "$2" --get-regexp "(^githooks|alias.hooks)" | sort
+        fi
+        exit $?
+    fi
+
+    CONFIG_ARGUMENT="$2"
+
+    shift
+    shift
+
+    case "$CONFIG_ARGUMENT" in
+    "disable")
+        config_disable "$CONFIG_OPERATION"
+        ;;
+    "single")
+        config_single_install "$CONFIG_OPERATION"
+        ;;
+    "search-dir")
+        config_search_dir "$CONFIG_OPERATION" "$@"
+        ;;
+    "shared")
+        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        ;;
+    "trusted")
+        config_trust_all_hooks "$CONFIG_OPERATION"
+        ;;
+    "update")
+        config_update_state "$CONFIG_OPERATION"
+        ;;
+    "update-time")
+        config_update_last_run "$CONFIG_OPERATION"
+        ;;
+    *)
+        manage_configuration "help"
+        echo "! Invalid configuration option: \`$2\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
+# Manages Githooks disable settings for
+#   the current repository.
+# Prints or modifies the \`githooks.disable\`
+#   local Git configuration.
+#####################################################
+config_disable() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.disable Y
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.disable
+    elif [ "$1" = "print" ]; then
+        if is_repository_disabled; then
+            echo "Githooks is disabled in the current repository"
+        else
+            echo "Githooks is NOT disabled in the current repository"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages Githooks single installation setting
+#   for the current repository.
+# Prints or modifies the \`githooks.single.install\`
+#   local Git configuration.
+#####################################################
+config_single_install() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "set" ]; then
+        git config githooks.single.install yes
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.single.install
+    elif [ "$1" = "print" ]; then
+        if read_single_repo_information && is_single_repo; then
+            echo "The current repository is marked as a single installation"
+        else
+            echo "The current repository is NOT marked as a single installation"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages previous search directory setting
+#   used during Githooks installation.
+# Prints or modifies the
+#   \`githooks.previous.searchdir\`
+#   global Git configuration.
+#####################################################
+config_search_dir() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <path> parameter"
+            exit 1
+        fi
+
+        git config --global githooks.previous.searchdir "$2"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.previous.searchdir
+    elif [ "$1" = "print" ]; then
+        CONFIG_SEARCH_DIR=$(git config --global --get githooks.previous.searchdir)
+        if [ -z "$CONFIG_SEARCH_DIR" ]; then
+            echo "No previous search directory is set"
+        else
+            echo "Search directory is set to: $CONFIG_SEARCH_DIR"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages global shared hook repository list setting.
+# Prints or modifies the \`githooks.shared\`
+#   global Git configuration.
+#####################################################
+config_global_shared_hook_repos() {
+    if [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            manage_configuration "help"
+            echo "! Missing <git-url> parameter"
+            exit 1
+        fi
+
+        shift
+
+        NEW_LIST=""
+        for SHARED_REPO_ITEM in "$@"; do
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$SHARED_REPO_ITEM"
+            else
+                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
+            fi
+        done
+
+        git config --global githooks.shared "$NEW_LIST"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.shared
+    elif [ "$1" = "print" ]; then
+        list_shared_hook_repos "--global"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the trust-all-hooks setting
+#   for the current repository.
+# Prints or modifies the \`githooks.trust.all\`
+#   local Git configuration.
+#####################################################
+config_trust_all_hooks() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ "$1" = "accept" ]; then
+        git config githooks.trust.all Y
+    elif [ "$1" = "deny" ]; then
+        git config githooks.trust.all N
+    elif [ "$1" = "reset" ]; then
+        git config --unset githooks.trust.all
+    elif [ "$1" = "print" ]; then
+        CONFIG_TRUST_ALL=$(git config --local --get githooks.trust.all)
+        if [ "$CONFIG_TRUST_ALL" = "Y" ]; then
+            echo "The current repository trusts all hooks automatically"
+        elif [ -z "$CONFIG_TRUST_ALL" ]; then
+            echo "The current repository does NOT have trust settings"
+        else
+            echo "The current repository does NOT trust hooks automatically"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update check setting.
+# Prints or modifies the
+#   \`githooks.autoupdate.enabled\`
+#   global Git configuration.
+#####################################################
+config_update_state() {
+    if [ "$1" = "enable" ]; then
+        git config --global githooks.autoupdate.enabled Y
+    elif [ "$1" = "disable" ]; then
+        git config --global githooks.autoupdate.enabled N
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.enabled
+    elif [ "$1" = "print" ]; then
+        CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
+        if [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
+            echo "Automatic update checks are enabled"
+        else
+            echo "Automatic update checks are NOT enabled"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the timestamp for the last update check.
+# Prints or modifies the
+#   \`githooks.autoupdate.lastrun\`
+#   global Git configuration.
+#####################################################
+config_update_last_run() {
+    if [ "$1" = "reset" ]; then
+        git config --global --unset githooks.autoupdate.lastrun
+    elif [ "$1" = "print" ]; then
+        LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+        if [ -z "$LAST_UPDATE" ]; then
+            echo "The update has never run"
+        else
+            if ! date --date="@${LAST_UPDATE}" 2>/dev/null; then
+                if ! date -j -f "%s" "$LAST_UPDATE" 2>/dev/null; then
+                    echo "Last update timestamp: $LAST_UPDATE"
+                fi
+            fi
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Prints the version number of this script,
+#   that would match the latest installed version
+#   of Githooks in most cases.
+#####################################################
+print_current_version_number() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks version
+
+    Prints the version number of the \`git hooks\` helper and exits.
+"
+        return
+    fi
+
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+
+    print_help_header
+
+    echo
+    echo "Version: $CURRENT_VERSION"
+    echo
+}
+
+#####################################################
+# Dispatches the command to the
+#   appropriate helper function to process it.
+#
+# Returns:
+#   1 if an unknown command was given,
+#   the exit code of the command otherwise
+#####################################################
+choose_command() {
+    CMD="$1"
+    [ -n "$CMD" ] && shift
+
+    case "$CMD" in
+    "disable")
+        disable_hook "$@"
+        ;;
+    "enable")
+        enable_hook "$@"
+        ;;
+    "accept")
+        accept_changes "$@"
+        ;;
+    "trust")
+        manage_trusted_repo "$@"
+        ;;
+    "list")
+        list_hooks "$@"
+        ;;
+    "shared")
+        manage_shared_hook_repos "$@"
+        ;;
+    "pull")
+        update_shared_hook_repos "$@"
+        ;;
+    "install")
+        run_ondemand_installation "$@"
+        ;;
+    "update")
+        run_update_check "$@"
+        ;;
+    "readme")
+        manage_readme_file "$@"
+        ;;
+    "ignore")
+        manage_ignore_files "$@"
+        ;;
+    "config")
+        manage_configuration "$@"
+        ;;
+    "version")
+        print_current_version_number "$@"
+        ;;
+    "help")
+        print_help
+        ;;
+    *)
+        print_help
+        [ -n "$CMD" ] && echo "! Unknown command: $CMD"
+        exit 1
+        ;;
+    esac
+}
+
+# Set the main variables we will need
+set_main_variables
+# Choose and execute the command
+choose_command "$@"
+'username=.*$' | cut -d "=" -f2-)
+        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 'password=.*$' | cut -d "=" -f2-)
+    fi
+
+    if curl --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+        else
+            curl -fsSL "$1" 2>/dev/null
+        fi
+        return $?
+    elif wget --version >/dev/null 2>&1; then
+        if use_credentials ; then
+            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+        else
+            wget -O- "$1" 2>/dev/null
+        fi
+        return $?
+    else
+        echo "! Cannot download file '$1' - needs either curl or wget"
+        return 1
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest install
+#   script into a variable.
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_install_script() {
+
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+#####################################################
+# Reads the version number of the latest
+#   install script into a variable.
+#
+# Sets the ${LATEST_VERSION} variable
+#
+# Returns:
+#   None
+#####################################################
+read_latest_version_number() {
+    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+}
+
+#####################################################
+# Checks if the latest install script is
+#   newer than what we have installed already.
+#
+# Returns:
+#   0 if the script is newer, 1 otherwise
+#####################################################
+is_update_available() {
+    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
+    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
+}
+
+#####################################################
+# Reads whether the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Sets the ${IS_SINGLE_REPO} variable
+#
+# Returns:
+#   None
+#####################################################
+read_single_repo_information() {
+    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+}
+
+#####################################################
+# Checks if the hooks in the current
+#   local repository were installed in
+#   single repository install mode.
+#
+# Returns:
+#   1 if they were, 0 otherwise
+#####################################################
+is_single_repo() {
+    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+}
+
+#####################################################
+# Performs the installation of the previously
+#   fetched install script.
+#
+# Returns:
+#   0 if the installation was successful, 1 otherwise
+#####################################################
+execute_install_script() {
+    if is_single_repo; then
+        if sh -c "$INSTALL_SCRIPT" -- --single; then
+            return 0
+        fi
+    else
+        if sh -c "$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Prints some information on how to disable
+#   automatic update checks.
+#
+# Returns:
+#   None
+#####################################################
+print_update_disable_info() {
+    echo "  If you would like to disable auto-updates, run:"
+    echo "    \$ git hooks update disable"
+}
+
+#####################################################
+# Adds or updates the Githooks README in
+#   the current local repository.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_readme_file() {
+    case "$1" in
+    "add")
+        FORCE_README=""
+        ;;
+    "update")
+        FORCE_README="y"
+        ;;
+    *)
+        print_help_header
+        echo "
+git hooks readme [add|update]
+
+    Adds or updates the Githooks README in the \`.githooks\` folder.
+    If \`add\` is used, it checks first if there is a README file already.
+    With \`update\`, the file is always updated, creating it if necessary.
+    This command needs to be run at the root of a repository.
+"
+        if [ "$1" = "help" ]; then
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    esac
+
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        exit 1
+    fi
+
+    if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
+        echo "! This repository already seems to have a Githooks README."
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`"
+        exit 1
+    fi
+
+    if ! fetch_latest_readme; then
+        exit 1
+    fi
+
+    mkdir -p "$(pwd)/.githooks" &&
+        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "! Failed to update the README file in the current repository"
+}
+
+#####################################################
+# Loads the contents of the latest Githooks README
+#   into a variable.
+#
+# Sets the ${README_CONTENTS} variable
+#
+# Returns:
+#   1 if failed the load the contents, 0 otherwise
+#####################################################
+fetch_latest_readme() {
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
+
+    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
