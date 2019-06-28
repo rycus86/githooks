@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.281513-1d8ef9
+# Version: 1906.281537-2cd298
 
 #####################################################
 # Execute the current hook,
@@ -60,6 +60,7 @@ set_main_variables() {
     HOOK_NAME=$(basename "$0")
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
+    shift
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
