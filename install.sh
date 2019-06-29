@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.291552-991fb9
+# Version: 1906.291552-992a77
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291552-991fb9
+# Version: 1906.291552-992a77
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -730,7 +730,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291552-991fb9
+# Version: 1906.291552-992a77
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -2041,7 +2041,8 @@ use_credentials(){
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file(){
-    OUTPUT=
+    
+    OUTPUT=""
     if use_credentials ; then
         CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then

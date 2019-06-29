@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291552-991fb9
+# Version: 1906.291552-992a77
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -1322,7 +1322,8 @@ use_credentials(){
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file(){
-    OUTPUT=
+    
+    OUTPUT=""
     if use_credentials ; then
         CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
