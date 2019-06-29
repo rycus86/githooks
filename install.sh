@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.291257-51a66e
+# Version: 1906.291432-4d61b8
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -18,14 +18,14 @@ MANAGED_HOOK_NAMES="
 # A copy of the base-template.sh file's contents
 # shellcheck disable=SC2016
 #BASE_TEMPLATE_CONTENT_S
-read -r -d '' BASE_TEMPLATE_CONTENT <<'EOF'
+BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 #!/bin/sh
 # Base Git hook template from https://github.com/rycus86/githooks
 #
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291257-51a66e
+# Version: 1906.291432-4d61b8
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -715,7 +715,7 @@ EOF
 # A copy of the cli.sh file's contents
 # shellcheck disable=SC2016
 #CLI_TOOL_CONTENT_S
-read -r -d '' CLI_TOOL_CONTENT << 'EOF'
+CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 #!/bin/sh
 #
 # Command line helper for https://github.com/rycus86/githooks
@@ -729,7 +729,7 @@ read -r -d '' CLI_TOOL_CONTENT << 'EOF'
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291257-51a66e
+# Version: 1906.291432-4d61b8
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -2753,7 +2753,7 @@ EOF
 # A copy of the .githooks/README.md file's contents
 # shellcheck disable=SC2016
 #INCLUDED_README_CONTENT_S
-read -r -d '' INCLUDED_README_CONTENT << 'EOF'
+INCLUDED_README_CONTENT="$(mktemp)"; cat <<'EOF' > "$INCLUDED_README_CONTENT"
 # Githooks
 
 This project uses [Githooks](https://github.com/rycus86/githooks), that allows running [Git hooks](https://git-scm.com/docs/githooks) checked into this repository. This folder contains hooks that should be executed by everyone who interacts with this source repository. For a documentation on how this works and how to get it [installed](https://github.com/rycus86/githooks#installation), check the project [README](https://github.com/rycus86/githooks/blob/master/README.md) in the [rycus86/githooks](https://github.com/rycus86/githooks) GitHub repository.
@@ -3163,7 +3163,7 @@ setup_hook_templates() {
             fi
         fi
 
-        if echo "$BASE_TEMPLATE_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
+        if cat "$BASE_TEMPLATE_CONTENT" >"$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
             echo "Git hook template ready: $HOOK_TEMPLATE"
         else
             echo "! Failed to setup the $HOOK template at $HOOK_TEMPLATE"
@@ -3183,7 +3183,7 @@ setup_hook_templates() {
 ############################################################
 install_command_line_tool() {
     mkdir -p "$HOME/.githooks/bin" &&
-        echo "$CLI_TOOL_CONTENT" >"$HOME/.githooks/bin/githooks" &&
+        cat "$CLI_TOOL_CONTENT" >"$HOME/.githooks/bin/githooks" &&
         chmod +x "$HOME/.githooks/bin/githooks" &&
         git config --global alias.hooks "!$HOME/.githooks/bin/githooks" &&
         echo "The command line helper tool is installed at ${HOME}/.githooks/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
@@ -3362,7 +3362,7 @@ install_hooks_into_repo() {
             fi
         fi
 
-        if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
+        if cat "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="yes"
         else
             HAD_FAILURE=Y
@@ -3380,7 +3380,7 @@ install_hooks_into_repo() {
 
         elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
             mkdir -p "${TARGET_ROOT}/.githooks" &&
-                echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+                cat "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
 
         else
             if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
@@ -3399,7 +3399,7 @@ install_hooks_into_repo() {
                 [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
 
                 mkdir -p "${TARGET_ROOT}/.githooks" &&
-                    echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+                    cat "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
             fi
         fi
     fi
@@ -3458,7 +3458,7 @@ setup_shared_hook_repositories() {
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
         # Trigger the shared hook repository checkout manually
-        echo "$BASE_TEMPLATE_CONTENT" >".githooks.shared.trigger" &&
+        cat "$BASE_TEMPLATE_CONTENT" >".githooks.shared.trigger" &&
             chmod +x ".githooks.shared.trigger" &&
             ./.githooks.shared.trigger
         rm -f .githooks.shared.trigger

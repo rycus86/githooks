@@ -30,22 +30,22 @@ if __name__ == '__main__':
     match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%s\nread -r -d '' %s <<'EOF'\n%s\nEOF\n%s" % (
-        before, "BASE_TEMPLATE_CONTENT", template_contents, after
+    contents = "{1}\n{0}=\"\$(mktemp)\"; cat <<'EOF' > \"\${0}\"\n{2}\nEOF\n{3}".format(
+        "BASE_TEMPLATE_CONTENT", before, template_contents, after
     )
 
     match = re.match(CLI_TOOL_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%s\nread -r -d '' %s << 'EOF'\n%s\nEOF\n%s" % (
-        before, "CLI_TOOL_CONTENT", cli_tool_contents, after
+    contents = "{1}\n{0}=\"\$(mktemp)\"; cat <<'EOF' > \"\${0}\"\n{2}\nEOF\n{3}".format(
+        "CLI_TOOL_CONTENT", before, cli_tool_contents, after
     )
 
     match = re.match(README_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%s\nread -r -d '' %s << 'EOF'\n%s\nEOF\n%s" % (
-        before, "INCLUDED_README_CONTENT", readme_contents, after
+    contents = "{1}\n{0}=\"\$(mktemp)\"; cat <<'EOF' > \"\${0}\"\n{2}\nEOF\n{3}".format(
+        "INCLUDED_README_CONTENT", before, readme_contents, after
     )
     
     with open('install.sh', 'w') as target:
