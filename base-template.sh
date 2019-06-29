@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.290156-fabea1
+# Version: 1906.291202-f47cdd
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -535,8 +535,8 @@ download_file(){
         if [ $? -ne 0 ]; then
             echo "! Getting download credential failed."
         fi
-        USER=$(echo $CREDENTIALS | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
-        PASSWORD=$(echo $CREDENTIALS | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
+        USER=$(echo "$CREDENTIALS" | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
+        PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
     fi
 
     if curl --version >/dev/null 2>&1; then
