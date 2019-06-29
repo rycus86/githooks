@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.291432-4d61b8
+# Version: 1906.291549-612efc
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291432-4d61b8
+# Version: 1906.291549-612efc
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -590,10 +590,11 @@ download_file(){
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
-    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
-
     echo "^ Checking for updates ..."
 
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+    echo "  Downlad $DOWNLOAD_URL ..."
+    
     INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
@@ -729,7 +730,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291432-4d61b8
+# Version: 1906.291549-612efc
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -2040,7 +2041,7 @@ use_credentials(){
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file(){
-
+    OUTPUT=
     if use_credentials ; then
         CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
@@ -2052,22 +2053,29 @@ download_file(){
 
     if curl --version >/dev/null 2>&1; then
         if use_credentials ; then
-            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+            OUTPUT=$(curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null)
         else
-            curl -fsSL "$1" 2>/dev/null
+            OUTPUT=$(curl -fsSL "$1" 2>/dev/null)
         fi
-        return $?
     elif wget --version >/dev/null 2>&1; then
         if use_credentials ; then
-            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+            OUTPUT=$(wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null)
         else
-            wget -O- "$1" 2>/dev/null
+            OUTPUT=$(wget -O- "$1" 2>/dev/null)
         fi
-        return $?
     else
         echo "! Cannot download file '$1' - needs either curl or wget"
         return 1
     fi
+
+    # Check that its not a HTML file, then something is wrong!
+    # We cannot really detect when it failed, curl returns anything 
+    # (login page, status code is not reliable?)
+    if [ $? -ne 0 ] || (echo "$OUTPUT" | grep -q "<html") ; then
+        return 1
+    fi
+
+    return 0
 }
 
 #####################################################
@@ -2082,6 +2090,7 @@ download_file(){
 fetch_latest_install_script() {
 
     DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+    echo "  Downlad $DOWNLOAD_URL ..."
 
     INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
@@ -2241,6 +2250,7 @@ git hooks readme [add|update]
 #####################################################
 fetch_latest_readme() {
     DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
+    echo "  Downlad $DOWNLOAD_URL ..."
 
     INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 

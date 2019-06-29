@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291432-4d61b8
+# Version: 1906.291549-612efc
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -569,10 +569,11 @@ download_file(){
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
-    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
-
     echo "^ Checking for updates ..."
 
+    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
+    echo "  Downlad $DOWNLOAD_URL ..."
+    
     INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
 
     # shellcheck disable=SC2181
