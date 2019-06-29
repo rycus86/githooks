@@ -8,9 +8,9 @@ fi
 cat <<EOF | python -
 import re
 
-TEMPLATE_PATTERN="(.+)(BASE_TEMPLATE_CONTENT='[^']+')(.+)"
-CLI_TOOL_PATTERN="(.+)(CLI_TOOL_CONTENT='[^']+')(.+)"
-README_PATTERN="(.+)(INCLUDED_README_CONTENT='[^']+')(.+)"
+TEMPLATE_PATTERN="(.+#BASE_TEMPLATE_CONTENT_S)(.*)(#BASE_TEMPLATE_CONTENT_E.+)"
+CLI_TOOL_PATTERN="(.+#CLI_TOOL_CONTENT_S)(.*)(#CLI_TOOL_CONTENT_E.+)"
+README_PATTERN="(.+#INCLUDED_README_CONTENT_S)(.*)(#INCLUDED_README_CONTENT_E.+)"
 
 if __name__ == '__main__':
     with open('base-template.sh', 'r') as template_file:
@@ -30,22 +30,22 @@ if __name__ == '__main__':
     match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%sBASE_TEMPLATE_CONTENT='%s'%s" % (
-        before, template_contents, after
+    contents = "%s\nread -r -d '' %s <<'EOF'\n%s\nEOF\n%s" % (
+        before, "BASE_TEMPLATE_CONTENT", template_contents, after
     )
 
     match = re.match(CLI_TOOL_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%sCLI_TOOL_CONTENT='%s'%s" % (
-        before, cli_tool_contents, after
+    contents = "%s\nread -r -d '' %s << 'EOF'\n%s\nEOF\n%s" % (
+        before, "CLI_TOOL_CONTENT", cli_tool_contents, after
     )
 
     match = re.match(README_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = "%sINCLUDED_README_CONTENT='%s'%s" % (
-        before, readme_contents, after
+    contents = "%s\nread -r -d '' %s << 'EOF'\n%s\nEOF\n%s" % (
+        before, "INCLUDED_README_CONTENT", readme_contents, after
     )
     
     with open('install.sh', 'w') as target:

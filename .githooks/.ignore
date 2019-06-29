@@ -1,4 +1,5 @@
 # Example .ignore file that contains
 #   filename patterns to exclude (not paths).
 
+no-single-quote
 *.md

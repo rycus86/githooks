@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291202-f47cdd
+# Version: 1906.291257-51a66e
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -1278,7 +1278,7 @@ git hooks update [enable|disable]
 
     if [ "$1" != "force" ]; then
         if ! is_update_available; then
-            echo "  Githooks is already on the latest version"
+            echo "  Githooks is already on the latest version $LATEST_VERSION"
             return
         fi
     fi
@@ -1347,7 +1347,7 @@ download_file(){
         fi
         return $?
     else
-        echo "! Cannot download file \"$1\" - needs either curl or wget"
+        echo "! Cannot download file '$1' - needs either curl or wget"
         return 1
     fi
 }

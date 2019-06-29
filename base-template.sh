@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291202-f47cdd
+# Version: 1906.291257-51a66e
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -554,7 +554,7 @@ download_file(){
         fi
         return $?
     else
-        echo "! Cannot download file \"$1\" - needs either curl or wget"
+        echo "! Cannot download file '$1' - needs either curl or wget"
         return 1 
     fi
 }
