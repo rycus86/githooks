@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.291549-612efc
+# Version: 1906.291552-991fb9
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -1356,6 +1356,7 @@ download_file(){
         return 1
     fi
 
+    echo "$OUTPUT"
     return 0
 }
 

@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291549-612efc
+# Version: 1906.291552-991fb9
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
