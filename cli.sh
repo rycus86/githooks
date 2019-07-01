@@ -11,15 +11,13 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.011001-a28a11
+# Version: 1907.011026-169699
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
 # If the update url needs credentials, use `git credential fill` to
 # get this information.
-DOWNLOAD_USE_CREDENTIALS="N"
-DOWNLOAD_PROTOCOL="https"
-DOWNLOAD_HOST="github.com"
+DOWNLOAD_USE_CREDENTIALS="Y"
 
 #####################################################
 # Prints the command line help for usage and
@@ -1316,6 +1314,30 @@ use_credentials(){
 }
 
 #####################################################
+# Parse an url into parts
+#   https://stackoverflow.com/a/6174447/293195
+# Returns:
+#   parsed parts of the url
+#####################################################
+parse_url(){
+    # extract the protocol
+    PARSED_PROTOCOL="$(echo $1 | grep :// | sed -e's,^\(.*://\).*,\1,g')"
+    # remove the protocol
+    PARSED_URL="$(echo ${1/$PARSED_PROTOCOL/})"
+    # extract the user (if any)
+    PARSED_USER="$(echo $PARSED_URL | grep @ | cut -d@ -f1)"
+    # extract the host and PARSED_PORT
+    local hostport
+    hostport="$(echo ${PARSED_URL/$PARSED_USER@/} | cut -d/ -f1)"
+    # by request host without port    
+    PARSED_HOST="$(echo $hostport | sed -e 's,:.*,,g')"
+    # by request - try to extract the port
+    PARSED_PORT="$(echo $hostport | sed -e 's,^.*:,:,g' -e 's,.*:\([0-9]*\).*,\1,g' -e 's,[^0-9],,g')"
+    # extract the path (if any)
+    PARSED_PATH="$(echo $PARSED_URL | grep / | cut -d/ -f2-)"
+}
+
+#####################################################
 # Downloads a file "$1" with `wget` or `curl`
 #
 # Returns:
@@ -1325,7 +1347,8 @@ download_file(){
     
     OUTPUT=""
     if use_credentials ; then
-        CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
+        parse_url "$1"
+        CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
             echo "! Getting download credential failed." >&2
             return 1
