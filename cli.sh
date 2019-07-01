@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.011035-80ee43
+# Version: 1907.011347-d42ea9
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -1310,7 +1310,7 @@ record_update_time() {
 #   0 if it should use credentials, 1 otherwise
 #####################################################
 use_credentials(){
-    [ "$DOWNLOAD_USE_CREDENTIALS" == "Y" ] || return 1
+    [ "$DOWNLOAD_USE_CREDENTIALS" = "Y" ] || return 1
 }
 
 #####################################################
