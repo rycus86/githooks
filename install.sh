@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1906.280832-bf9d0c
+# Version: 1907.012314-545d1b
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.280832-bf9d0c
+# Version: 1907.012314-545d1b
 
 #####################################################
 # Execute the current hook,
@@ -676,7 +676,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1906.280832-bf9d0c
+# Version: 1907.012314-545d1b
 
 #####################################################
 # Prints the command line help for usage and
@@ -2721,13 +2721,14 @@ execute_installation() {
     fi
 
     # Install the hooks into existing local repositories
-    if ! is_skip_install_into_existing_repositories; then
+    if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
             install_hooks_into_repo "$(pwd)" || return 1
         else
             install_into_existing_repositories
         fi
     fi
+
     echo # For visual separation
 
     # Set up shared hook repositories if needed
@@ -2793,14 +2794,13 @@ is_non_interactive() {
 }
 
 ############################################################
-# Check if the install script is
-#   skipping the install of hooks into 
-#   existing repositories.
+# Check if we should skip installing hooks
+#   into existing repositories.
 #
 # Returns:
-#   0 if skipping, 1 otherwise
+#   0 if we should skip, 1 otherwise
 ############################################################
-is_skip_install_into_existing_repositories() {
+should_skip_install_into_existing_repositories() {
     if [ "$SKIP_INSTALL_INTO_EXISTING" = "yes" ]; then
         return 0
     else
