@@ -7,12 +7,12 @@ while keeping all lines at the same position.
 import re
 import sys
 
-TEMPLATE_PATTERN="(.+#BASE_TEMPLATE_CONTENT_S)(.*)(#BASE_TEMPLATE_CONTENT_E.+)"
-TEMPLATE_REPLACEMENT="BASE_TEMPLATE_CONTENT=%s/base-template.sh"
-CLI_TOOL_PATTERN="(.+#CLI_TOOL_CONTENT_S)(.*)(#CLI_TOOL_CONTENT_E.+)"
-CLI_TOOL_REPLACEMENT="CLI_TOOL_CONTENT=%s/cli.sh"
-README_PATTERN="(.+#INCLUDED_README_CONTENT_S)(.*)(#INCLUDED_README_CONTENT_E.+)"
-README_REPLACEMENT="INCLUDED_README_CONTENT=%s/README.md"
+TEMPLATE_PATTERN="(.+#BASE_TEMPLATE_CONTENT_S\n)(.*)(#BASE_TEMPLATE_CONTENT_E.+)"
+TEMPLATE_REPLACEMENT="BASE_TEMPLATE_CONTENT='%s/base-template.sh'"
+CLI_TOOL_PATTERN="(.+#CLI_TOOL_CONTENT_S\n)(.*)(#CLI_TOOL_CONTENT_E.+)"
+CLI_TOOL_REPLACEMENT="CLI_TOOL_CONTENT='%s/cli.sh'"
+README_PATTERN="(.+#INCLUDED_README_CONTENT_S\n)(.*)(#INCLUDED_README_CONTENT_E.+)"
+README_REPLACEMENT="INCLUDED_README_CONTENT='%s/README.md'"
 CLI_HELP_PATTERN="(^ *echo \"$.+?^\")"
 
 def process_install_script():
@@ -27,7 +27,7 @@ def process_install_script():
     match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = '%s%s %s%s' % (
+    contents = '%s%s\n%s\n%s' % (
         before, 
         (TEMPLATE_REPLACEMENT % base_folder),
         '\n'.join(['#> %s' % line for line in template.splitlines()]),
@@ -37,7 +37,7 @@ def process_install_script():
     match = re.match(CLI_TOOL_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = '%s%s %s%s' % (
+    contents = '%s%s\n%s\n%s' % (
         before, 
         (CLI_TOOL_REPLACEMENT % base_folder),
         '\n'.join(['#> %s' % line for line in template.splitlines()]),
@@ -47,7 +47,7 @@ def process_install_script():
     match = re.match(README_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
     before, template, after = match.groups()
 
-    contents = '%s%s %s%s' % (
+    contents = '%s%s\n%s\n%s' % (
         before, 
         (README_REPLACEMENT % base_folder),
         '\n'.join(['#> %s' % line for line in template.splitlines()]),
