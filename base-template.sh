@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.011347-d42ea9
+# Version: 1907.012241-ccf0d6
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -590,9 +590,8 @@ download_file(){
     # Check that its not a HTML file, then something is wrong!
     # We cannot really detect when it failed, curl returns anything 
     # (login page, status code is not reliable?)
-    # We search for a Unicode Character since if we would  use '<' + 'html'
-    # it would detect the install.sh as well :-)
-    if ( echo "$OUTPUT" | grep -qP '\x3C]html' ) ; then
+    # We use '<''html' to not match the install.sh
+    if ( echo "$OUTPUT" | grep -q '<''html' ) ; then
         echo "! Cannot download file '$1' - wrong format!" >&2
         return 1
     fi
