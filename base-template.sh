@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.011026-169699
+# Version: 1907.011034-fe12fe
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -555,6 +555,7 @@ download_file(){
     OUTPUT=""
     if use_credentials ; then
         parse_url "$1"
+        PARSED_PROTOCOL=$(echo "$PARSED_PROTOCOL" | sed -e 's@://@@')
         CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
             echo "! Getting download credential failed." >&2
