@@ -11,13 +11,13 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.011034-fe12fe
+# Version: 1907.011035-80ee43
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
 # If the update url needs credentials, use `git credential fill` to
 # get this information.
-DOWNLOAD_USE_CREDENTIALS="Y"
+DOWNLOAD_USE_CREDENTIALS="N"
 
 #####################################################
 # Prints the command line help for usage and

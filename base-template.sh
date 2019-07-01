@@ -4,13 +4,13 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.011034-fe12fe
+# Version: 1907.011035-80ee43
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
 # If the update url needs credentials, use `git credential fill` to
 # get this information.
-DOWNLOAD_USE_CREDENTIALS="Y"
+DOWNLOAD_USE_CREDENTIALS="N"
 
 #####################################################
 # Execute the current hook,
