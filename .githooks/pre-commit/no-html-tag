@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for EMBEDDED_FILE in base-template.sh cli.sh .githooks/README.md; do
+    if grep -q "<html" "$EMBEDDED_FILE"; then
+        echo "! '<html' detected in $EMBEDDED_FILE"
+        exit 1
+    else
+        echo "* No '<html' detected in $EMBEDDED_FILE"
+    fi
+done

@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.010852-2f8475
+# Version: 1907.011001-a28a11
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -1327,7 +1327,8 @@ download_file(){
     if use_credentials ; then
         CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
-            echo "! Getting download credential failed."
+            echo "! Getting download credential failed." >&2
+            return 1
         fi
         USER=$(echo "$CREDENTIALS" | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
         PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
@@ -1346,14 +1347,22 @@ download_file(){
             OUTPUT=$(wget -O- "$1" 2>/dev/null)
         fi
     else
-        echo "! Cannot download file '$1' - needs either curl or wget"
+        echo "! Cannot download file '$1' - needs either curl or wget" >&2
+        return 1 
+    fi
+
+    if [ $? -ne 0 ]  ; then
+        echo "! Cannot download file '$1' - command failed" >&2
         return 1
     fi
 
     # Check that its not a HTML file, then something is wrong!
     # We cannot really detect when it failed, curl returns anything 
     # (login page, status code is not reliable?)
-    if [ $? -ne 0 ] || (echo "$OUTPUT" | grep -q "<html") ; then
+    # We search for a Unicode Character since if we would  use '<' + 'html'
+    # it would detect the install.sh as well :-)
+    if ( echo "$OUTPUT" | grep -qP '[\x3C]html' ) ; then
+        echo "! Cannot download file '$1' - wrong format" >&2
         return 1
     fi
 
