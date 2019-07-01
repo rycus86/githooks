@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1906.291552-992a77
+# Version: 1907.010852-2f8475
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -530,6 +530,7 @@ use_credentials(){
 #####################################################
 download_file(){
 
+    OUTPUT=""
     if use_credentials ; then
         CREDENTIALS=$(echo -e "protocol=$DOWNLOAD_PROTOCOL\nhost=$DOWNLOAD_HOST\n\n" | git credential fill)
         if [ $? -ne 0 ]; then
@@ -541,22 +542,30 @@ download_file(){
 
     if curl --version >/dev/null 2>&1; then
         if use_credentials ; then
-            curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null
+            OUTPUT=$(curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null)
         else
-            curl -fsSL "$1" 2>/dev/null
+            OUTPUT=$(curl -fsSL "$1" 2>/dev/null)
         fi
-        return $?
     elif wget --version >/dev/null 2>&1; then
         if use_credentials ; then
-            wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null
+            OUTPUT=$(wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null)
         else
-            wget -O- "$1" 2>/dev/null
+            OUTPUT=$(wget -O- "$1" 2>/dev/null)
         fi
-        return $?
     else
         echo "! Cannot download file '$1' - needs either curl or wget"
         return 1 
     fi
+
+    # Check that its not a HTML file, then something is wrong!
+    # We cannot really detect when it failed, curl returns anything 
+    # (login page, status code is not reliable?)
+    if [ $? -ne 0 ] || (echo "$OUTPUT" | grep -q "<html") ; then
+        return 1
+    fi
+
+    echo "$OUTPUT"
+    return 0
 }
 
 #####################################################
