@@ -92,6 +92,10 @@ remove_existing_hook_templates() {
 #   0 on success, 1 on failure
 ############################################################
 uninstall_from_existing_repositories() {
+    # Don't offer to remove from repo's if we were using the hooksPath implementation
+    if using_hooks_path; then
+        return 0
+    fi
     printf 'Do you want to uninstall the hooks from existing repositories? [yN] '
     read -r DO_UNINSTALL
     if [ "$DO_UNINSTALL" != "y" ] && [ "$DO_UNINSTALL" != "Y" ]; then return 0; fi
@@ -166,6 +170,22 @@ uninstall_hooks_from_repo() {
     fi
 }
 
+############################################################
+# Checks if we're using the hooksPath
+#   or templateDir implementation.
+#
+# Returns:
+#   0 on true, 1 on false
+############################################################
+using_hooks_path(){
+    USE_HOOKS_PATH=`git config --global githooks.use.hookspath`
+    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Find the current Git hook templates directory
 TARGET_TEMPLATE_DIR=""
 
@@ -191,7 +211,11 @@ git config --global --unset githooks.autoupdate.enabled
 git config --global --unset githooks.autoupdate.lastrun
 git config --global --unset githooks.previous.searchdir
 git config --global --unset githooks.disable
-git config --global --unset githooks.use.hookspath
+
+if using_hooks_path; then
+    git config --global --unset githooks.use.hookspath
+    git config --global --unset core.hooksPath
+fi
 
 # Finished
 echo "All done!"
