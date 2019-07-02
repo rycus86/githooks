@@ -17,11 +17,15 @@ find_git_hook_templates() {
     mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-    # 2. from git config
+    # 2. from git config for templateDir
     mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-    # 3. from the default location
+    # 3. from git config for hooksPath
+    mark_directory_as_target "$(git config --get core.hooksPath)" "hooks"
+    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+
+    # 4. from the default location
     mark_directory_as_target "/usr/share/git-core/templates/hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 }
@@ -187,6 +191,7 @@ git config --global --unset githooks.autoupdate.enabled
 git config --global --unset githooks.autoupdate.lastrun
 git config --global --unset githooks.previous.searchdir
 git config --global --unset githooks.disable
+git config --global --unset githooks.use.hookspath
 
 # Finished
 echo "All done!"
