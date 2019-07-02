@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.020052-e620e8
+# Version: 1907.021201-7e6e11
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.020052-e620e8
+# Version: 1907.021201-7e6e11
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -771,7 +771,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.020052-e620e8
+# Version: 1907.021201-7e6e11
 
 # The main update url.
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -3289,7 +3289,11 @@ setup_hook_templates() {
 ############################################################
 install_command_line_tool() {
     mkdir -p "$HOME/.githooks/bin" &&
+        echo "FILE: $CLI_TOOL_CONTENT"
         cat "$CLI_TOOL_CONTENT" >"$HOME/.githooks/bin/githooks" &&
+        echo "File Start"
+        cat "$HOME/.githooks/bin/githooks"
+        echo "File End"
         chmod +x "$HOME/.githooks/bin/githooks" &&
         git config --global alias.hooks "!$HOME/.githooks/bin/githooks" &&
         echo "The command line helper tool is installed at ${HOME}/.githooks/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
