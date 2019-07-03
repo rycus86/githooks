@@ -22,7 +22,7 @@ find_git_hook_templates() {
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 3. from git config for hooksPath
-    mark_directory_as_target "$(git config --get core.hooksPath)" "hooks"
+    mark_directory_as_target "$(git config --get core.hooksPath)"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 4. from the default location

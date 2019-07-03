@@ -3173,7 +3173,7 @@ find_git_hook_templates() {
 
     # 2. from git config
     if [ "$USE_HOOKS_PATH" = "yes" ]; then
-        mark_directory_as_target "$(git config --global core.hooksPath)" "hooks"
+        mark_directory_as_target "$(git config --global core.hooksPath)"
     else
         mark_directory_as_target "$(git config --global init.templateDir)" "hooks"
     fi
@@ -3333,7 +3333,7 @@ setup_new_templates_folder() {
     if ! is_dry_run; then
         if mkdir -p "${TILDE_REPLACED}/hooks"; then
             # Let this one go with or without a tilde
-            set_githooks_directory "$USER_TEMPLATES"
+            set_githooks_directory "$USER_TEMPLATES/hooks"
         else
             echo "! Failed to set up the new Git templates folder"
             return
@@ -3694,7 +3694,7 @@ setup_shared_hook_repositories() {
 
 set_githooks_directory(){
     if should_use_hooksPath; then
-        mark_as_hookspath_global
+        mark_as_hookspath_global   
         git config --global core.hooksPath "$1"
         git config --global --unset init.templateDir
     else
