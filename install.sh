@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.042358-ef03e7
+# Version: 1907.050032-6b6828
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.042358-ef03e7
+# Version: 1907.050032-6b6828
 
 #####################################################
 # Execute the current hook,
@@ -584,7 +584,7 @@ download_file(){
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
 
-        echo "  Download  $DOWNLOAD_URL ..."
+        echo "  Download $DOWNLOAD_URL ..."
         if curl --version &>/dev/null ; then
             curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" &>/dev/null
         elif wget --version &>/dev/null ; then
@@ -615,10 +615,8 @@ fetch_latest_update_script() {
     echo "^ Checking for updates ..."
     
     INSTALL_SCRIPT="$(mktemp)"
-    download_file "install.sh" "$INSTALL_SCRIPT"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         echo "! Failed to check for updates"
         return 1
     fi
@@ -750,7 +748,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.042358-ef03e7
+# Version: 1907.050032-6b6828
 
 #####################################################
 # Prints the command line help for usage and
@@ -2152,12 +2150,9 @@ download_file(){
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-
     INSTALL_SCRIPT="$(mktemp)"
-    download_file "install.sh" "$INSTALL_SCRIPT"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         return 1
     fi
 }
@@ -2312,10 +2307,8 @@ git hooks readme [add|update]
 #####################################################
 fetch_latest_readme() {
     README_FILE="$(mktemp)"
-    download_file "README.md" "$README_FILE"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "README.md" "$README_FILE"; then
         echo "! Failed to fetch the latest README"
         return 1
     fi

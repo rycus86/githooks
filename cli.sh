@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.042358-ef03e7
+# Version: 1907.050032-6b6828
 
 #####################################################
 # Prints the command line help for usage and
@@ -1413,12 +1413,9 @@ download_file(){
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-
     INSTALL_SCRIPT="$(mktemp)"
-    download_file "install.sh" "$INSTALL_SCRIPT"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         return 1
     fi
 }
@@ -1573,10 +1570,8 @@ git hooks readme [add|update]
 #####################################################
 fetch_latest_readme() {
     README_FILE="$(mktemp)"
-    download_file "README.md" "$README_FILE"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "README.md" "$README_FILE"; then
         echo "! Failed to fetch the latest README"
         return 1
     fi
