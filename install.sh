@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.021201-7e6e11
+# Version: 1907.041126-057fa7
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,13 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.021201-7e6e11
-
-# The main update url.
-MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
-# If the update url needs credentials, use `git credential fill` to
-# get this information.
-DOWNLOAD_USE_CREDENTIALS="N"
+# Version: 1907.041126-057fa7
 
 #####################################################
 # Execute the current hook,
@@ -531,38 +525,20 @@ should_run_update_checks() {
 }
 
 #####################################################
-# Checks if the download_file command needs 
-#   credentials over `git crendentials fill`.
+# Returns the download script path e.g. `script.sh` 
+#   setup under `githooks.download.app` in
+#   the global git config to dispatch the download
+#   as following:
+#   `script.sh <downloadFileName> <outputPath>`
+#    which returns 0 if success and 1 if not.
+#   `<outputPath>` might not exist.
 #
 # Returns:
-#   0 if it should use credentials, 1 otherwise
+#   0 if there is a settings `githooks.download.app`, 
+#   1 otherwise
 #####################################################
-use_credentials(){
-    [ "$DOWNLOAD_USE_CREDENTIALS" == "Y" ] || return 1
-}
-
-#####################################################
-# Parse an url into parts
-#   https://stackoverflow.com/a/6174447/293195
-# Returns:
-#   parsed parts of the url
-#####################################################
-parse_url(){
-    # extract the protocol
-    PARSED_PROTOCOL="$(echo $1 | grep :// | sed -e's,^\(.*://\).*,\1,g')"
-    # remove the protocol
-    PARSED_URL="$(echo ${1/$PARSED_PROTOCOL/})"
-    # extract the user (if any)
-    PARSED_USER="$(echo $PARSED_URL | grep @ | cut -d@ -f1)"
-    # extract the host and PARSED_PORT
-    local hostport
-    hostport="$(echo ${PARSED_URL/$PARSED_USER@/} | cut -d/ -f1)"
-    # by request host without port    
-    PARSED_HOST="$(echo $hostport | sed -e 's,:.*,,g')"
-    # by request - try to extract the port
-    PARSED_PORT="$(echo $hostport | sed -e 's,^.*:,:,g' -e 's,.*:\([0-9]*\).*,\1,g' -e 's,[^0-9],,g')"
-    # extract the path (if any)
-    PARSED_PATH="$(echo $PARSED_URL | grep / | cut -d/ -f2-)"
+get_download_app(){
+    git config --global "githooks.download.app"
 }
 
 #####################################################
@@ -573,51 +549,37 @@ parse_url(){
 #####################################################
 download_file(){
 
-    OUTPUT=""
-    if use_credentials ; then
-        parse_url "$1"
-        PARSED_PROTOCOL=$(echo "$PARSED_PROTOCOL" | sed -e 's@://@@')
-        CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
-        if [ $? -ne 0 ]; then
-            echo "! Getting download credential failed." >&2
-            return 1
-        fi
-        USER=$(echo "$CREDENTIALS" | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
-        PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
-    fi
+    DOWNLOAD_FILE="$1"
+    OUTPUT_FILE="$(mktemp)"
+    DOWNLOAD_APP=$(get_download_app)
 
-    if curl --version >/dev/null 2>&1; then
-        if use_credentials ; then
-            OUTPUT=$(curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null)
-        else
-            OUTPUT=$(curl -fsSL "$1" 2>/dev/null)
-        fi
-    elif wget --version >/dev/null 2>&1; then
-        if use_credentials ; then
-            OUTPUT=$(wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null)
-        else
-            OUTPUT=$(wget -O- "$1" 2>/dev/null)
-        fi
+    if [ $DOWNLOAD_APP != "" ] ; then
+        # Use the external download app for downloading the file
+        "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else
-        echo "! Cannot download file '$1' - needs either curl or wget" >&2
-        return 1 
+        # The main update url.
+        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+
+        # Default implementation
+        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
+        echo "  Downlad $DOWNLOAD_URL ..."
+
+        if curl --version >/dev/null 2>&1; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" 2>/dev/null
+        elif wget --version >/dev/null 2>&1; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" 2>/dev/null
+        else
+            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget" >&2
+            return 1 
+        fi
     fi
 
     if [ $? -ne 0 ]  ; then
-        echo "! Cannot download file '$1' - command failed" >&2
+        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed" >&2
         return 1
     fi
 
-    # Check that its not a HTML file, then something is wrong!
-    # We cannot really detect when it failed, curl returns anything 
-    # (login page, status code is not reliable?)
-    # We use '<''html' to not match the install.sh
-    if ( echo "$OUTPUT" | grep -q '<''html' ) ; then
-        echo "! Cannot download file '$1' - wrong format!" >&2
-        return 1
-    fi
-
-    echo "$OUTPUT"
+    echo "$OUTPUT_FILE"
     return 0
 }
 
@@ -632,11 +594,8 @@ download_file(){
 #####################################################
 fetch_latest_update_script() {
     echo "^ Checking for updates ..."
-
-    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
-    echo "  Downlad $DOWNLOAD_URL ..."
     
-    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+    INSTALL_SCRIPT=$(download_file "install.sh")
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
@@ -655,7 +614,7 @@ fetch_latest_update_script() {
 #   None
 #####################################################
 read_updated_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(cat "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
 }
 
 #####################################################
@@ -771,13 +730,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.021201-7e6e11
-
-# The main update url.
-MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
-# If the update url needs credentials, use `git credential fill` to
-# get this information.
-DOWNLOAD_USE_CREDENTIALS="N"
+# Version: 1907.041126-057fa7
 
 #####################################################
 # Prints the command line help for usage and
@@ -2064,38 +2017,20 @@ record_update_time() {
 }
 
 #####################################################
-# Checks if the download_file command needs 
-#   credentials over `git crendentials fill`.
+# Returns the download script path e.g. `script.sh` 
+#   setup under `githooks.download.app` in
+#   the global git config to dispatch the download
+#   as following:
+#   `script.sh <downloadFileName> <outputPath>`
+#    which returns 0 if success and 1 if not.
+#   `<outputPath>` might not exist.
 #
 # Returns:
-#   0 if it should use credentials, 1 otherwise
+#   0 if there is a settings `githooks.download.app`, 
+#   1 otherwise
 #####################################################
-use_credentials(){
-    [ "$DOWNLOAD_USE_CREDENTIALS" = "Y" ] || return 1
-}
-
-#####################################################
-# Parse an url into parts
-#   https://stackoverflow.com/a/6174447/293195
-# Returns:
-#   parsed parts of the url
-#####################################################
-parse_url(){
-    # extract the protocol
-    PARSED_PROTOCOL="$(echo $1 | grep :// | sed -e's,^\(.*://\).*,\1,g')"
-    # remove the protocol
-    PARSED_URL="$(echo ${1/$PARSED_PROTOCOL/})"
-    # extract the user (if any)
-    PARSED_USER="$(echo $PARSED_URL | grep @ | cut -d@ -f1)"
-    # extract the host and PARSED_PORT
-    local hostport
-    hostport="$(echo ${PARSED_URL/$PARSED_USER@/} | cut -d/ -f1)"
-    # by request host without port    
-    PARSED_HOST="$(echo $hostport | sed -e 's,:.*,,g')"
-    # by request - try to extract the port
-    PARSED_PORT="$(echo $hostport | sed -e 's,^.*:,:,g' -e 's,.*:\([0-9]*\).*,\1,g' -e 's,[^0-9],,g')"
-    # extract the path (if any)
-    PARSED_PATH="$(echo $PARSED_URL | grep / | cut -d/ -f2-)"
+get_download_app(){
+    git config --global "githooks.download.app"
 }
 
 #####################################################
@@ -2105,52 +2040,38 @@ parse_url(){
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file(){
-    
-    OUTPUT=""
-    if use_credentials ; then
-        parse_url "$1"
-        PARSED_PROTOCOL=$(echo "$PARSED_PROTOCOL" | sed -e 's@://@@')
-        CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
-        if [ $? -ne 0 ]; then
-            echo "! Getting download credential failed." >&2
-            return 1
-        fi
-        USER=$(echo "$CREDENTIALS" | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
-        PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
-    fi
 
-    if curl --version >/dev/null 2>&1; then
-        if use_credentials ; then
-            OUTPUT=$(curl -fsSL "$1" -u "$USER:$PASSWORD" 2>/dev/null)
-        else
-            OUTPUT=$(curl -fsSL "$1" 2>/dev/null)
-        fi
-    elif wget --version >/dev/null 2>&1; then
-        if use_credentials ; then
-            OUTPUT=$(wget -O- --user="$USER" --password="$PASSWORD" "$1" 2>/dev/null)
-        else
-            OUTPUT=$(wget -O- "$1" 2>/dev/null)
-        fi
+    DOWNLOAD_FILE="$1"
+    OUTPUT_FILE="$(mktemp)"
+    DOWNLOAD_APP=$(get_download_app)
+
+    if [ $DOWNLOAD_APP != "" ] ; then
+        # Use the external download app for downloading the file
+        "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else
-        echo "! Cannot download file '$1' - needs either curl or wget" >&2
-        return 1 
+        # The main update url.
+        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+
+        # Default implementation
+        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
+        echo "  Downlad $DOWNLOAD_URL ..."
+
+        if curl --version >/dev/null 2>&1; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" 2>/dev/null
+        elif wget --version >/dev/null 2>&1; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" 2>/dev/null
+        else
+            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget" >&2
+            return 1 
+        fi
     fi
 
     if [ $? -ne 0 ]  ; then
-        echo "! Cannot download file '$1' - command failed" >&2
+        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed" >&2
         return 1
     fi
 
-    # Check that its not a HTML file, then something is wrong!
-    # We cannot really detect when it failed, curl returns anything 
-    # (login page, status code is not reliable?)
-    # We use '<''html' to not match the install.sh
-    if ( echo "$OUTPUT" | grep -q '<''html' ) ; then
-        echo "! Cannot download file '$1' - wrong format" >&2
-        return 1
-    fi
-
-    echo "$OUTPUT"
+    echo "$OUTPUT_FILE"
     return 0
 }
 
