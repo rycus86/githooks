@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: choose to ignore the update (single)
 
-if ! curl --version && ! wget --version; then
+if ! curl --version &>/dev/null && ! wget --version &>/dev/null; then
     echo "Neither curl nor wget is available"
     exit 249
 fi
