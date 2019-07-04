@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.041126-057fa7
+# Version: 1907.041218-fcb0a0
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041126-057fa7
+# Version: 1907.041218-fcb0a0
 
 #####################################################
 # Execute the current hook,
@@ -730,7 +730,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041126-057fa7
+# Version: 1907.041218-fcb0a0
 
 #####################################################
 # Prints the command line help for usage and
@@ -2107,7 +2107,7 @@ fetch_latest_install_script() {
 #   None
 #####################################################
 read_latest_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(cat "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
 }
 
 #####################################################

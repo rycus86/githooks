@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041126-057fa7
+# Version: 1907.041218-fcb0a0
 
 #####################################################
 # Prints the command line help for usage and
@@ -1388,7 +1388,7 @@ fetch_latest_install_script() {
 #   None
 #####################################################
 read_latest_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(cat "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
 }
 
 #####################################################
