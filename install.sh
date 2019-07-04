@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.041506-31307b
+# Version: 1907.042358-ef03e7
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -25,7 +25,7 @@ BASE_TEMPLATE_CONTENT="$(mktemp)"; cat <<'EOF' > "$BASE_TEMPLATE_CONTENT"
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041506-31307b
+# Version: 1907.042358-ef03e7
 
 #####################################################
 # Execute the current hook,
@@ -703,11 +703,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if cat $INSTALL_SCRIPT | sh -s --single; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if cat $INSTALL_SCRIPT | sh; then
             return 0
         fi
     fi
@@ -750,7 +750,7 @@ CLI_TOOL_CONTENT="$(mktemp)"; cat <<'EOF' > "$CLI_TOOL_CONTENT"
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041506-31307b
+# Version: 1907.042358-ef03e7
 
 #####################################################
 # Prints the command line help for usage and
@@ -2223,11 +2223,11 @@ is_single_repo() {
 #####################################################
 execute_install_script() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if cat "$INSTALL_SCRIPT" | sh -s --single; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if cat "$INSTALL_SCRIPT" | sh; then
             return 0
         fi
     fi

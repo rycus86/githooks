@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041506-31307b
+# Version: 1907.042358-ef03e7
 
 #####################################################
 # Prints the command line help for usage and
@@ -1484,11 +1484,11 @@ is_single_repo() {
 #####################################################
 execute_install_script() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if cat "$INSTALL_SCRIPT" | sh -s --single; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if cat "$INSTALL_SCRIPT" | sh; then
             return 0
         fi
     fi
