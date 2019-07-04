@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.050033-a409c7
+# Version: 1907.050041-afa0df
 
 #####################################################
 # Prints the command line help for usage and
@@ -1372,7 +1372,6 @@ download_file(){
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
     DOWNLOAD_APP=$(get_app_run_script "download")
-    echo "APP: $DOWNLOAD_APP"
 
     if [ "$DOWNLOAD_APP" != "" ] ; then
         # Use the external download app for downloading the file
