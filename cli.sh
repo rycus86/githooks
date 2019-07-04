@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041428-59eedb
+# Version: 1907.041506-31307b
 
 #####################################################
 # Prints the command line help for usage and
@@ -53,6 +53,29 @@ print_help_header() {
 }
 
 #####################################################
+# Check if a path is an absolute path
+# Returns:
+#   0 if absolute, 1 if not
+#####################################################
+is_abs_path(){
+    [ "$1" != "${1#/}" ] || return 1
+}
+
+#####################################################
+# Gets the absolute path of a path
+#####################################################
+make_abs_path(){
+    if ! is_abs_path "$1"; then
+        if [ -d "$1" ]; then f=$1/.; fi
+        absolute=$(cd "$(dirname -- "$1")"; printf %s. "$(pwd)")
+        absolute="${absolute%?}"
+        echo "$absolute/${1##*/}"
+    else
+        echo "$1"
+    fi
+}
+
+#####################################################
 # Set the current install dir.
 # This script location determines it.
 #
@@ -64,7 +87,8 @@ print_help_header() {
 set_install_dir()
 {
     # $0 := ".githooks/bin/githooks"
-    INSTALL_DIR="$0/../"
+    INSTALL_DIR=$(dirname "$0")
+    INSTALL_DIR="$INSTALL_DIR/../"
     if [ -d "$INSTALL_DIR" ]; then
         return 0
     fi
@@ -1322,20 +1346,18 @@ record_update_time() {
 }
 
 #####################################################
-# Returns the download script path e.g. `script.sh` 
-#   setup under `githooks.apps.download` in
-#   the global git config to dispatch the download
-#   as following:
-#   `script.sh <downloadFileName> <outputPath>`
-#    which returns 0 if success and 1 if not.
-#   `<outputPath>` might not exist.
+# Returns the script path e.g. `run.sh` for the app
+#   `$1`
 #
 # Returns:
-#   0 if there is a settings `githooks.apps.download`, 
-#   1 otherwise
+#   0 and "$INSTALL_DIR/apps/$1/run.sh"
+#   1 and "" otherwise
 #####################################################
-get_download_app(){
-    git config --global "githooks.apps.download"
+get_app_run_script(){
+    if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/apps/$1/run.sh" ]; then
+        echo "$INSTALL_DIR/apps/$1/run.sh" && return 0
+    fi
+    return 1
 }
 
 
@@ -1349,7 +1371,8 @@ download_file(){
 
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
-    DOWNLOAD_APP=$(get_download_app)
+    DOWNLOAD_APP=$(get_app_run_script "download")
+    echo "APP: $DOWNLOAD_APP"
 
     if [ "$DOWNLOAD_APP" != "" ] ; then
         # Use the external download app for downloading the file
@@ -2026,21 +2049,30 @@ apps_install()
             exit 1
         fi
 
-        if [ -d "$2" ]; then
+        SCRIPT_FOLDER=$(make_abs_path "$2")
+        
+        if [ -d "$SCRIPT_FOLDER" ]; then
 
-            if [ -f "$2/run.sh" ]; then
-                echo "! run.sh does not exist in '$2'"
+            if [ ! -f "$SCRIPT_FOLDER/run.sh" ]; then
+                echo "! run.sh does not exist in '$SCRIPT_FOLDER'"
                 exit 1
             fi
 
-            apps_uninstall "$1"
+            if ! apps_uninstall "$1" &> /dev/null; then
+                echo "! Uninstall failed!"
+                exit 1
+            fi
 
             f="$INSTALL_DIR/apps/$1"
+
             mkdir -p "$f" &> /dev/null # Install new
-            cp -r "$2"/* "$f" || (echo "! Installation failed" && exit 1)
-            echo "Installed '$2' for app '$1'."
+            if ! cp -r "$SCRIPT_FOLDER"/* "$f" ; then
+                echo "! Installation failed"
+                exit 1
+            fi
+            echo "Installed '$SCRIPT_FOLDER' for app '$1'."
         else
-            echo "! File '$2' does not exist!"
+            echo "! File '$SCRIPT_FOLDER' does not exist!"
             exit 1
         fi
     else

@@ -32,6 +32,7 @@ OUTPUT_FILE="$2"
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
 
 # Download with credentials over `git credential fill`
+FILE="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILENAME"
 parse_url "$FILE"
 PARSED_PROTOCOL=$(echo "$PARSED_PROTOCOL" | sed -e 's@://@@')
 CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
