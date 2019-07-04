@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041221-b7631d
+# Version: 1907.041231-75502a
 
 #####################################################
 # Execute the current hook,
@@ -529,7 +529,7 @@ get_download_app(){
 download_file(){
 
     DOWNLOAD_FILE="$1"
-    OUTPUT_FILE="$(mktemp)"
+    OUTPUT_FILE="$2"
     DOWNLOAD_APP=$(get_download_app)
 
     if [ "$DOWNLOAD_APP" != "" ] ; then
@@ -541,24 +541,22 @@ download_file(){
 
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
-        echo "  Downlad $DOWNLOAD_URL ..."
 
-        if curl --version >/dev/null 2>&1; then
-            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" 2>/dev/null
-        elif wget --version >/dev/null 2>&1; then
-            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" 2>/dev/null
+        echo "  Download  $DOWNLOAD_URL ..."
+        if curl --version &>/dev/null ; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" &>/dev/null
+        elif wget --version &>/dev/null ; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" &>/dev/null
         else
-            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget" >&2
+            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget"
             return 1 
         fi
     fi
 
     if [ $? -ne 0 ]  ; then
-        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed" >&2
+        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed"
         return 1
     fi
-
-    echo "$OUTPUT_FILE"
     return 0
 }
 
@@ -574,7 +572,8 @@ download_file(){
 fetch_latest_update_script() {
     echo "^ Checking for updates ..."
     
-    INSTALL_SCRIPT=$(download_file "install.sh")
+    INSTALL_SCRIPT="$(mktemp)"
+    download_file "install.sh" "$INSTALL_SCRIPT"
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then

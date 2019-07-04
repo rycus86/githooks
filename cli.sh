@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041221-b7631d
+# Version: 1907.041231-75502a
 
 #####################################################
 # Prints the command line help for usage and
@@ -1314,6 +1314,7 @@ get_download_app(){
     git config --global "githooks.download.app"
 }
 
+
 #####################################################
 # Downloads a file "$1" with `wget` or `curl`
 #
@@ -1323,7 +1324,7 @@ get_download_app(){
 download_file(){
 
     DOWNLOAD_FILE="$1"
-    OUTPUT_FILE="$(mktemp)"
+    OUTPUT_FILE="$2"
     DOWNLOAD_APP=$(get_download_app)
 
     if [ "$DOWNLOAD_APP" != "" ] ; then
@@ -1335,26 +1336,25 @@ download_file(){
 
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
-        echo "  Downlad $DOWNLOAD_URL ..."
 
-        if curl --version >/dev/null 2>&1; then
-            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" 2>/dev/null
-        elif wget --version >/dev/null 2>&1; then
-            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" 2>/dev/null
+        echo "  Download  $DOWNLOAD_URL ..."
+        if curl --version &>/dev/null ; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" &>/dev/null
+        elif wget --version &>/dev/null ; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" &>/dev/null
         else
-            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget" >&2
+            echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget"
             return 1 
         fi
     fi
 
     if [ $? -ne 0 ]  ; then
-        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed" >&2
+        echo "! Cannot download file '$DOWNLOAD_FILE' - command failed"
         return 1
     fi
-
-    echo "$OUTPUT_FILE"
     return 0
 }
+
 
 #####################################################
 # Loads the contents of the latest install
@@ -1367,10 +1367,8 @@ download_file(){
 #####################################################
 fetch_latest_install_script() {
 
-    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/install.sh"
-    echo "  Downlad $DOWNLOAD_URL ..."
-
-    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+    INSTALL_SCRIPT="$(mktemp)"
+    download_file "install.sh" "$INSTALL_SCRIPT"
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
@@ -1512,7 +1510,7 @@ git hooks readme [add|update]
     fi
 
     mkdir -p "$(pwd)/.githooks" &&
-        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        cat "$README_FILE" > "$(pwd)/.githooks/README.md" &&
         echo "The README file is updated, do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository"
 }
@@ -1521,16 +1519,14 @@ git hooks readme [add|update]
 # Loads the contents of the latest Githooks README
 #   into a variable.
 #
-# Sets the ${README_CONTENTS} variable
+# Sets the ${README_FILE} variable
 #
 # Returns:
 #   1 if failed the load the contents, 0 otherwise
 #####################################################
 fetch_latest_readme() {
-    DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/.githooks/README.md"
-    echo "  Downlad $DOWNLOAD_URL ..."
-
-    INSTALL_SCRIPT=$(download_file "$DOWNLOAD_URL")
+    README_FILE="$(mktemp)"
+    download_file "README.md" "$README_FILE"
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
