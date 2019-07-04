@@ -37,7 +37,7 @@ PARSED_PROTOCOL=$(echo "$PARSED_PROTOCOL" | sed -e 's@://@@')
 CREDENTIALS=$(echo -e "protocol=$PARSED_PROTOCOL\nhost=$PARSED_HOST\n\n" | git credential fill)
 if [ $? -ne 0 ]; then
     echo "! Getting download credential failed."
-    return 1
+    exit 1
 fi
 USER=$(echo "$CREDENTIALS" | grep -Eo0 "username=.*$" | cut -d "=" -f2-)
 PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
@@ -45,13 +45,13 @@ PASSWORD=$(echo "$CREDENTIALS" | grep -Eo0 "password=.*$" | cut -d "=" -f2-)
 DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILENAME"
 echo "  Downlad $DOWNLOAD_URL ..."
 
-if curl --version >/dev/null 2>&1; then
-    curl -fsSL -o "$OUTPUT_FILE" -u "$USER:$PASSWORD" "$DOWNLOAD_URL" 2>/dev/null
-elif wget --version >/dev/null 2>&1; then
-    wget -O "$OUTPUT_FILE" -user="$USER" --password="$PASSWORD" "$DOWNLOAD_URL" 2>/dev/null
+if curl --version &>/dev/null ; then
+    curl -fsSL -o "$OUTPUT_FILE" -u "$USER:$PASSWORD" "$DOWNLOAD_URL" &>/dev/null
+elif wget --version &>/dev/null ; then
+    wget -O "$OUTPUT_FILE" -user="$USER" --password="$PASSWORD" "$DOWNLOAD_URL" &>/dev/null
 else
     echo "! Cannot download file '$DOWNLOAD_URL' - needs either curl or wget"
-    return 1 
+    exit 1 
 fi
 
 # Check that its not a HTML file, then something is wrong!
@@ -60,5 +60,7 @@ fi
 # We use '<''html' to not match the install.sh
 if ( cat "$OUTPUT_FILE" | grep -q '<''html' ) ; then
     echo "! Cannot download file '$1' - wrong format!"
-    return 1
+    exit 1
 fi
+
+exit 0
