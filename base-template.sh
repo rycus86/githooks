@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041245-5fe923
+# Version: 1907.041300-d5c4eb
 
 #####################################################
 # Execute the current hook,
@@ -505,7 +505,7 @@ should_run_update_checks() {
 
 #####################################################
 # Returns the download script path e.g. `script.sh` 
-#   setup under `githooks.download.app` in
+#   setup under `githooks.apps.download` in
 #   the global git config to dispatch the download
 #   as following:
 #   `script.sh <downloadFileName> <outputPath>`
@@ -513,11 +513,11 @@ should_run_update_checks() {
 #   `<outputPath>` might not exist.
 #
 # Returns:
-#   0 if there is a settings `githooks.download.app`, 
+#   0 if there is a settings `githooks.apps.download`, 
 #   1 otherwise
 #####################################################
 get_download_app(){
-    git config --global "githooks.download.app"
+    git config --global "githooks.apps.download"
 }
 
 #####################################################

@@ -211,6 +211,28 @@ $ git config --global --unset githooks.autoupdate.enabled
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
 
+#### Custom Download
+If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can
+manually setup a download script.
+
+The example script `apps/download.sh` contains a download procedure by using `git credential fill` to retrive login and password.
+The setup would look like:
+
+```shell
+# Move it to the install directory
+$ cp "apps/download.sh" "$HOME/.githooks/apps/download.sh"
+# Setup githooks to use it
+$ git config --global githooks.apps.download "$HOME/.githooks/apps/download.sh"
+```
+The interface is:
+```sh
+apps/download.sh <relativeFilePath> <outputFile>
+```
+where
+- `<relativeFilePath>` is the file relative to the githooks repository directory.
+- `<outputFile>` is the file where you save the download content into.
+
+
 ### Uninstalling
 
 If you want to get rid of these hooks and templates, you can execute the `uninstall.sh` script similarly to the install scripts.

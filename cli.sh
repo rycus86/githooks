@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041245-5fe923
+# Version: 1907.041300-d5c4eb
 
 #####################################################
 # Prints the command line help for usage and
@@ -1299,7 +1299,7 @@ record_update_time() {
 
 #####################################################
 # Returns the download script path e.g. `script.sh` 
-#   setup under `githooks.download.app` in
+#   setup under `githooks.apps.download` in
 #   the global git config to dispatch the download
 #   as following:
 #   `script.sh <downloadFileName> <outputPath>`
@@ -1307,11 +1307,11 @@ record_update_time() {
 #   `<outputPath>` might not exist.
 #
 # Returns:
-#   0 if there is a settings `githooks.download.app`, 
+#   0 if there is a settings `githooks.apps.download`, 
 #   1 otherwise
 #####################################################
 get_download_app(){
-    git config --global "githooks.download.app"
+    git config --global "githooks.apps.download"
 }
 
 

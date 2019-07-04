@@ -1,6 +1,6 @@
 #!/bin/sh
 # Download script for use with 
-#`git config --global --set githooks.download.app`
+#`git config --global --set githooks.apps.download`
 
 #####################################################
 # Parse an url into parts
