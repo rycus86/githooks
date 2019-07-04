@@ -39,7 +39,9 @@ for STEP in /var/lib/tests/step-*.sh; do
     elif [ $TEST_RESULT -ne 0 ]; then
         FAILURE=$(echo "$TEST_OUTPUT" | tail -1)
         echo "! $STEP has failed with code $TEST_RESULT ($FAILURE), output:"
+        echo "--------"
         echo "$TEST_OUTPUT"
+        echo "--------"
         FAILED=$((FAILED + 1))
 
     fi
