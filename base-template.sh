@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041302-2c735a
+# Version: 1907.041428-59eedb
 
 #####################################################
 # Execute the current hook,
@@ -45,6 +45,27 @@ are_githooks_disabled() {
 }
 
 #####################################################
+# Set the current install dir.
+# Determined over the installed CLI script.
+#
+# Sets the ${INSTALL_DIR} variable.
+#
+# Returns:
+#   0 if success, 1 otherwise
+#####################################################
+set_install_dir() {
+    CLI_PATH=$(git config --global --get alias.hooks | sed -e 's/!//')
+    INSTALL_DIR="$CLI_PATH/../"
+   
+    if [ -d "$INSTALL_DIR" ]; then
+        return 0
+    fi
+
+    INSTALL_DIR=""
+    return 1
+}
+
+#####################################################
 # Set up the main variables that
 #   we will throughout the hook.
 #
@@ -65,6 +86,8 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git" # reset to a sensible default
     fi
+
+    set_install_dir
 }
 
 #####################################################
@@ -513,11 +536,14 @@ should_run_update_checks() {
 #   `<outputPath>` might not exist.
 #
 # Returns:
-#   0 if there is a settings `githooks.apps.download`, 
-#   1 otherwise
+#   0 and "$INSTALL_DIR/apps/$1/run.sh"
+#   1 and "" otherwise
 #####################################################
-get_download_app(){
-    git config --global "githooks.apps.download"
+get_app_run_script(){
+    if [ -d "$INSTALL_DIR" ] && [ -d "$INSTALL_DIR/apps/$1/run.sh" ]; then
+        echo "$INSTALL_DIR/apps/$1" && return 0
+    fi
+    return 1
 }
 
 #####################################################
@@ -530,7 +556,7 @@ download_file(){
 
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
-    DOWNLOAD_APP=$(get_download_app)
+    DOWNLOAD_APP=$(get_app_run_script "download")
 
     if [ "$DOWNLOAD_APP" != "" ] ; then
         # Use the external download app for downloading the file

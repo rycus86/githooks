@@ -11,6 +11,7 @@
 - [readme](#git-hooks-readme)
 - [ignore](#git-hooks-ignore)
 - [config](#git-hooks-config)
+- [apps](#git-hooks-apps)
 - [version](#git-hooks-version)
 - [help](#git-hooks-help)
 
@@ -194,6 +195,20 @@ $ git hooks config [reset|print] update-time
 ```
 
 Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
+
+## git hooks apps
+
+Manages script folders for different apps. Currently supported is `<appName>=download`.
+
+```shell
+$ git hooks apps install [download] <scriptFolder>
+```
+Installs the script folder `<scriptFolder>` in the installation directory under `apps/<appName>`.
+
+```shell
+$ git hooks apps uninstall [download] <scriptFolder>
+```
+Installs the script folder `<scriptFolder>` in the installation directory under `apps/<appName>`.
 
 ## git hooks version
 

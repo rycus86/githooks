@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041302-2c735a
+# Version: 1907.041428-59eedb
 
 #####################################################
 # Prints the command line help for usage and
@@ -34,6 +34,7 @@ Available commands:
     readme      Manages the Githooks README in the current repository
     ignore      Manages Githooks ignore files in the current repository
     config      Manages various Githooks configuration
+    apps        Manages script folders for apps
     version     Prints the version number of this script
     help        Prints this help message
 
@@ -52,6 +53,27 @@ print_help_header() {
 }
 
 #####################################################
+# Set the current install dir.
+# This script location determines it.
+#
+# Sets the ${INSTALL_DIR} variable.
+#
+# Returns:
+#   0 if suncessful, 1 if not
+#####################################################
+set_install_dir()
+{
+    # $0 := ".githooks/bin/githooks"
+    INSTALL_DIR="$0/../"
+    if [ -d "$INSTALL_DIR" ]; then
+        return 0
+    fi
+
+    INSTALL_DIR=""
+    return 1
+}
+
+#####################################################
 # Set up the main variables that
 #   we will throughout the hook.
 #
@@ -65,6 +87,8 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
+
+    set_install_dir
 }
 
 #####################################################
@@ -1725,7 +1749,7 @@ git hooks config [reset|print] update-time
         ;;
     *)
         manage_configuration "help"
-        echo "! Invalid configuration option: \`$2\`"
+        echo "! Invalid configuration option: \`$CONFIG_ARGUMENT\`"
         exit 1
         ;;
     esac
@@ -1939,6 +1963,119 @@ config_update_last_run() {
 }
 
 #####################################################
+# Manages the app script folders.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_apps() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks apps install download
+
+    Installs a script folder (needs a `run.sh` script) for
+    the download mechanism of the update procedure. The 
+    'run.sh' has the the interface:
+
+    $ run.sh <downloadFileName> <outputPath>
+
+    where <relativeFilePath> is the file relative to the githooks 
+    repository directory.
+    <outputFile> is the file where you save the 
+    downloaded content into (<outputFile> might not exist!)
+
+git hooks apps uninstall download
+
+   Uninstalls the script folder for the download mechanism 
+   of the update procedure.
+"
+        return
+    fi
+
+    APPS_OPERATION="$1"
+
+    shift
+
+    case "$APPS_OPERATION" in
+    "install")
+        apps_install "$@"
+        ;;
+    "uninstall")
+        apps_uninstall "$@"
+        ;;
+    *)
+        manage_configuration "help"
+        echo "! Invalid configuration option: \`$CONFIG_ARGUMENT\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
+# Installes a script folder for the apps mechanism.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+apps_install()
+{
+    if [ "$1" == "download" ]; then
+        if [ "$INSTALL_DIR" = "" ]; then
+            echo "! Could not determine install directory!"
+            exit 1
+        fi
+
+        if [ -d "$2" ]; then
+
+            if [ -f "$2/run.sh" ]; then
+                echo "! run.sh does not exist in '$2'"
+                exit 1
+            fi
+
+            apps_uninstall "$1"
+
+            f="$INSTALL_DIR/apps/$1"
+            mkdir -p "$f" &> /dev/null # Install new
+            cp -r "$2"/* "$f" || (echo "! Installation failed" && exit 1)
+            echo "Installed '$2' for app '$1'."
+        else
+            echo "! File '$2' does not exist!"
+            exit 1
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Uninstalles a script folder for the apps mechanism.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+apps_uninstall()
+{
+    if [ "$1" == "download" ]; then
+        if [ "$INSTALL_DIR" = "" ]; then
+            echo "! Could not determine install directory!"
+            exit 1
+        fi
+
+        if [ -d "$INSTALL_DIR/apps/$1" ]; then
+            rm -r "$INSTALL_DIR/apps/$1"
+            echo "App '$1' uninstalled."
+        else
+            echo "! App '$1' is not installed"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
+        exit 1
+    fi
+}
+
+#####################################################
 # Prints the version number of this script,
 #   that would match the latest installed version
 #   of Githooks in most cases.
@@ -2011,6 +2148,9 @@ choose_command() {
         ;;
     "config")
         manage_configuration "$@"
+        ;;
+    "apps")
+        manage_apps "$@"
         ;;
     "version")
         print_current_version_number "$@"
