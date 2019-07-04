@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041219-033853
+# Version: 1907.041221-b7631d
 
 #####################################################
 # Execute the current hook,
@@ -532,7 +532,7 @@ download_file(){
     OUTPUT_FILE="$(mktemp)"
     DOWNLOAD_APP=$(get_download_app)
 
-    if [ $DOWNLOAD_APP != "" ] ; then
+    if [ "$DOWNLOAD_APP" != "" ] ; then
         # Use the external download app for downloading the file
         "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else

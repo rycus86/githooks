@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.041219-033853
+# Version: 1907.041221-b7631d
 
 #####################################################
 # Prints the command line help for usage and
@@ -1326,7 +1326,7 @@ download_file(){
     OUTPUT_FILE="$(mktemp)"
     DOWNLOAD_APP=$(get_download_app)
 
-    if [ $DOWNLOAD_APP != "" ] ; then
+    if [ "$DOWNLOAD_APP" != "" ] ; then
         # Use the external download app for downloading the file
         "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else
