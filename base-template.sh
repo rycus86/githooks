@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.041606-faf26a
+# Version: 1907.051012-ec18cf
 
 #####################################################
 # Execute the current hook,
@@ -563,7 +563,7 @@ download_file(){
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
 
-        echo "  Download  $DOWNLOAD_URL ..."
+        echo "  Download $DOWNLOAD_URL ..."
         if curl --version &>/dev/null ; then
             curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" &>/dev/null
         elif wget --version &>/dev/null ; then
@@ -594,10 +594,8 @@ fetch_latest_update_script() {
     echo "^ Checking for updates ..."
     
     INSTALL_SCRIPT="$(mktemp)"
-    download_file "install.sh" "$INSTALL_SCRIPT"
-
     # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         echo "! Failed to check for updates"
         return 1
     fi
@@ -682,11 +680,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if cat "$INSTALL_SCRIPT" | sh -s -- --single; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if cat "$INSTALL_SCRIPT" | sh; then
             return 0
         fi
     fi
