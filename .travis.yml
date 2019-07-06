@@ -19,4 +19,5 @@ env:
   - TEST_INSTANCE=test-arch
   - TEST_INSTANCE=test-fedora
   - TEST_INSTANCE=test-opensuse
+  - TEST_INSTANCE=test-rules
   - TEST_INSTANCE=coverage

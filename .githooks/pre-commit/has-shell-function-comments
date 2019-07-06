@@ -4,14 +4,14 @@ for SCRIPT_FILE in *.sh; do
     IFS='\-'
 
     # shellcheck disable=SC2013
-    for LINES in $(grep -hE -B 1 '^.+\(\) {$' "$SCRIPT_FILE"); do
+    for LINES in $(grep -hE -B 1 '^.+\(\) \{$' "$SCRIPT_FILE"); do
         if [ -z "$LINES" ]; then
             continue
         fi
 
         if ! echo "$LINES" | grep -q '^#'; then
             echo "! Missing function header in ${SCRIPT_FILE}:" \
-                "$(echo "$LINES" | grep -vE '^\s*$' | sed 's/ {//')"
+                "$(echo "$LINES" | grep -vE '^\s*$' | sed 's/ \{//')"
 
             HAS_MISSING_HEADERS=1
         fi
