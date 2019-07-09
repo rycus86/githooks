@@ -2928,6 +2928,9 @@ If you find it useful, please show your support by starring the project in GitHu
 #   0 when successfully finished, 1 if failed
 ############################################################
 execute_installation() {
+    # Clear the ${TARGET_TEMPLATE_DIR} variable to allow it being passed as a parameter
+    TARGET_TEMPLATE_DIR=""
+
     parse_command_line_arguments "$@"
 
     if is_non_interactive; then
@@ -3141,7 +3144,7 @@ mark_as_hookspath_global() {
 # Prepare the target template directory variable,
 #   and make sure it points to a directory when set.
 #
-# Resets and sets the ${TARGET_TEMPLATE_DIR} variable.
+# Sets the ${TARGET_TEMPLATE_DIR} variable.
 #
 # Returns:
 #   1 if failed, 0 otherwise
@@ -3203,7 +3206,7 @@ find_git_hook_templates() {
 
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
                 TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
-                if ! set_githooks_directory $TEMPLATE_DIR; then
+                if ! set_githooks_directory "$TEMPLATE_DIR"; then
                     echo "! Failed to set it up as Git template directory"
                 fi
             fi

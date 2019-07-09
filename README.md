@@ -197,6 +197,8 @@ There is also an option to run the install script for the repository in the curr
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
 
+You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
+
 Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [here](#Templates-vs-global-hooks). For this, run the command below.
 
 ```shell
@@ -208,8 +210,6 @@ By default the script will install the hooks into `~/.githooks/templates/`, opti
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-hookspath /home/public/.githooks
 ```
-
-You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` paramter, where `<dir>` is the directory where you wish the templated be installed.
 
