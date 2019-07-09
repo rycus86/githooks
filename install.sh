@@ -3219,7 +3219,7 @@ find_git_hook_templates() {
     printf "Do you want to set up a new Git templates folder? [y/N] "
     read -r SETUP_NEW_FOLDER
 
-    if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ] || is_non_interactive; then
+    if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ]; then
         setup_new_templates_folder
         if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
     fi
