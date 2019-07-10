@@ -19,6 +19,11 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
     sed -i 's|ACCEPT_CHANGES=.*|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|read -r ACCEPT_CHANGES|echo "Accepted: \$ACCEPT_CHANGES" # disabled for tests: read -r ACCEPT_CHANGES|' /var/lib/githooks/base-template.sh
 
+RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
+        sed -i "s|sh /var/lib/githooks/install.sh|sh /var/lib/githooks/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
+        sed -i -E "s|sh -c (.*) -- |sh -c \\1 -- \${EXTRA_INSTALL_ARGS} |g" /var/lib/tests/step-* ; \\
+    fi
+
 RUN sh /var/lib/tests/exec-steps.sh
 EOF
 
