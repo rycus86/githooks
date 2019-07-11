@@ -211,25 +211,31 @@ $ git config --global --unset githooks.autoupdate.enabled
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
 
-#### Custom Download Tool [experimental]
-If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can
-manually setup a download script.
+### Custom download tool [experimental]
 
-The example app script folder `examples/tools/download` contains a download procedure `run` which uses `git credential fill` to retrive login and password.
-The setup of this script folder would look like:
+If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can manually setup a download script.
+You can use any executable or script file to perform the download.
+The example in the `examples/tools/download` folder contains a download script `run` which uses `git credential fill` to retrieve login and password.
 
 ```shell
-# Setup githooks to use the script folder `./apps/download` for the download app.
-$ git hooks apps install download "./apps/download"
+# install the example download tool from this repository
+$ git hooks tools register download "./examples/tools/download"
 ```
-The download `run.sh` interface is:
-```sh
-run.sh <relativeFilePath> <outputFile>
-```
-where
-- `<relativeFilePath>` is the file relative to the githooks repository directory.
-- `<outputFile>` is the file where you save the download content into.
 
+This will copy the tool to a centrally managed folder to execute when downloading files.
+The tool's interface is as follows.
+
+```shell
+$ run <relativeFilePath> <outputFile>     # if `run` is executable
+$ sh run <relativeFilePath> <outputFile>  # otherwise, assuming `run` is a shell script
+```
+
+The arguments for the download tool are:
+
+- `<relativeFilePath>` is the file relative to the repository root directory
+- `<outputFile>` temporary file save the downloaded content to
+
+Read more about this command on the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) documentation page.
 
 ### Uninstalling
 

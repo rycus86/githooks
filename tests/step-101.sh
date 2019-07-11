@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test:
-#   Cli tool: manage app install/uninstall
+#   Cli tool: manage download tool install/uninstall
 
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"

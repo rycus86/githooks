@@ -1,5 +1,5 @@
 #!/bin/sh
-if ! python --version 2>/dev/null; then
+if ! python --version >/dev/null 2>/dev/null; then
     echo "_ Skipping automatic inline content update: Python is not available"
     exit 0
 fi
