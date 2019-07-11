@@ -11,6 +11,7 @@
 - [readme](#git-hooks-readme)
 - [ignore](#git-hooks-ignore)
 - [config](#git-hooks-config)
+- [tools](#git-hooks-tools)
 - [version](#git-hooks-version)
 - [help](#git-hooks-help)
 
@@ -194,6 +195,20 @@ $ git hooks config [reset|print] update-time
 ```
 
 Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
+
+## git hooks tools
+
+Manages script folders for different tools. Currently supported is `<toolName>=download`.
+
+```shell
+$ git hooks tools install [download] <scriptFolder>
+```
+Installs the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
+
+```shell
+$ git hooks tools uninstall [download] <scriptFolder>
+```
+Uninstalls the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
 
 ## git hooks version
 

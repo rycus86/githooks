@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.012314-545d1b
+# Version: 1907.101735-f0248b
 
 #####################################################
 # Execute the current hook,
@@ -504,6 +504,80 @@ should_run_update_checks() {
 }
 
 #####################################################
+# Returns the script path e.g. `run` for the app
+#   `$1`
+#
+# Returns:
+#   0 and "~/.githooks/tools/$1/run"
+#   1 and "" otherwise
+#####################################################
+get_tool_script() {
+    if [ -f ~/".githooks/tools/$1/run" ]; then
+        echo ~/".githooks/tools/$1/run" && return 0
+    fi
+    return 1
+}
+
+#####################################################
+# Call a script "$1". If it is not executable call
+# call it as a shell script.
+#
+# Returns:
+#   Error code of the script.
+#####################################################
+call_script() {
+    SCRIPT="$1"
+    shift
+    if [ -x "$SCRIPT" ]; then
+        "$SCRIPT" "$@"
+    else
+        sh "$SCRIPT" "$@"
+    fi
+    return $?
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file() {
+
+    DOWNLOAD_FILE="$1"
+    OUTPUT_FILE="$2"
+    DOWNLOAD_APP=$(get_tool_script "download")
+
+    if [ "$DOWNLOAD_APP" != "" ]; then
+        # Use the external download app for downloading the file
+        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
+    else
+        # The main update url.
+        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+
+        # Default implementation
+        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
+
+        echo "  Download $DOWNLOAD_URL ..."
+        if curl --version >/dev/null 2>&1; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
+        elif wget --version >/dev/null 2>&1; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
+        else
+            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget"
+            return 1
+        fi
+    fi
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed"
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -513,23 +587,10 @@ should_run_update_checks() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
-
     echo "^ Checking for updates ..."
 
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
-
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot check for updates - needs either curl or wget"
-        return 1
-    fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    INSTALL_SCRIPT="$(mktemp)"
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         echo "! Failed to check for updates"
         return 1
     fi
@@ -545,7 +606,7 @@ fetch_latest_update_script() {
 #   None
 #####################################################
 read_updated_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
 }
 
 #####################################################
@@ -556,7 +617,7 @@ read_updated_version_number() {
 #   0 if the script is newer, 1 otherwise
 #####################################################
 is_update_available() {
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
     UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
     [ "$UPDATE_AVAILABLE" = "0" ] || return 1
 }
@@ -614,11 +675,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if sh -s -- --single <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if sh <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi

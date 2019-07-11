@@ -24,7 +24,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     rm -rf /tmp/*
 
     mkdir -p /var/backup/githooks &&
-        cp /var/lib/githooks/* /var/backup/githooks/.
+        cp -r /var/lib/githooks/* /var/backup/githooks/.
 
     TEST_RUNS=$((TEST_RUNS + 1))
 
@@ -64,7 +64,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.disable
     git config --global --unset alias.hooks
 
-    cp /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
+    cp -r /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
 
     echo
 

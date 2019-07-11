@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.012314-545d1b
+# Version: 1907.101735-f0248b
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.012314-545d1b
+# Version: 1907.101735-f0248b
 
 #####################################################
 # Execute the current hook,
@@ -523,6 +523,80 @@ should_run_update_checks() {
 }
 
 #####################################################
+# Returns the script path e.g. `run` for the app
+#   `$1`
+#
+# Returns:
+#   0 and "~/.githooks/tools/$1/run"
+#   1 and "" otherwise
+#####################################################
+get_tool_script() {
+    if [ -f ~/".githooks/tools/$1/run" ]; then
+        echo ~/".githooks/tools/$1/run" && return 0
+    fi
+    return 1
+}
+
+#####################################################
+# Call a script "$1". If it is not executable call
+# call it as a shell script.
+#
+# Returns:
+#   Error code of the script.
+#####################################################
+call_script() {
+    SCRIPT="$1"
+    shift
+    if [ -x "$SCRIPT" ]; then
+        "$SCRIPT" "$@"
+    else
+        sh "$SCRIPT" "$@"
+    fi
+    return $?
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file() {
+
+    DOWNLOAD_FILE="$1"
+    OUTPUT_FILE="$2"
+    DOWNLOAD_APP=$(get_tool_script "download")
+
+    if [ "$DOWNLOAD_APP" != "" ]; then
+        # Use the external download app for downloading the file
+        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
+    else
+        # The main update url.
+        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+
+        # Default implementation
+        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
+
+        echo "  Download $DOWNLOAD_URL ..."
+        if curl --version >/dev/null 2>&1; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
+        elif wget --version >/dev/null 2>&1; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
+        else
+            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget"
+            return 1
+        fi
+    fi
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed"
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -532,23 +606,10 @@ should_run_update_checks() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
-
     echo "^ Checking for updates ..."
 
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
-
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot check for updates - needs either curl or wget"
-        return 1
-    fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    INSTALL_SCRIPT="$(mktemp)"
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         echo "! Failed to check for updates"
         return 1
     fi
@@ -564,7 +625,7 @@ fetch_latest_update_script() {
 #   None
 #####################################################
 read_updated_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
 }
 
 #####################################################
@@ -575,7 +636,7 @@ read_updated_version_number() {
 #   0 if the script is newer, 1 otherwise
 #####################################################
 is_update_available() {
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
     UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
     [ "$UPDATE_AVAILABLE" = "0" ] || return 1
 }
@@ -633,11 +694,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if sh -s -- --single <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if sh <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi
@@ -676,7 +737,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.012314-545d1b
+# Version: 1907.101735-f0248b
 
 #####################################################
 # Prints the command line help for usage and
@@ -699,6 +760,7 @@ Available commands:
     readme      Manages the Githooks README in the current repository
     ignore      Manages Githooks ignore files in the current repository
     config      Manages various Githooks configuration
+    tools       Manages script folders for tools
     version     Prints the version number of this script
     help        Prints this help message
 
@@ -714,6 +776,35 @@ print_help_header() {
     echo
     echo "Githooks - https://github.com/rycus86/githooks"
     echo "----------------------------------------------"
+}
+
+#####################################################
+# Check if a path is an absolute path
+# Returns:
+#   0 if absolute, 1 if not
+#####################################################
+is_abs_path() {
+    [ "$1" != "${1#/}" ] || return 1
+}
+
+#####################################################
+# Gets the absolute path of a path
+#   reference:
+#   https://unix.stackexchange.com/a/24342/63957
+#####################################################
+make_abs_path() {
+    if ! is_abs_path "$1"; then
+        if [ -d "$1" ]; then f="$1/."; fi
+        # shellcheck disable=SC2164
+        absolute=$(
+            cd "$(dirname -- "$f")"
+            printf %s. "$(pwd)"
+        )
+        absolute="${absolute%?}"
+        echo "$absolute/${f##*/}"
+    else
+        echo "$1"
+    fi
 }
 
 #####################################################
@@ -1946,6 +2037,7 @@ git hooks update [enable|disable]
     read_single_repo_information
 
     if ! execute_install_script; then
+        echo "! Failed to execute the installation"
         print_update_disable_info
     fi
 }
@@ -1962,6 +2054,81 @@ record_update_time() {
 }
 
 #####################################################
+# Returns the script path e.g. `run` for the app
+#   `$1`
+#
+# Returns:
+#   0 and "~/.githooks/tools/$1/run"
+#   1 and "" otherwise
+#####################################################
+get_tool_script() {
+    if [ -f ~/".githooks/tools/$1/run" ]; then
+        echo ~/".githooks/tools/$1/run" && return 0
+    fi
+    return 1
+}
+
+#####################################################
+# Call a script "$1". If it is not executable
+# call it as a shell script.
+#
+# Returns:
+#   Error code of the script.
+#####################################################
+call_script() {
+    SCRIPT="$1"
+    shift
+    if [ -x "$SCRIPT" ]; then
+        "$SCRIPT" "$@"
+    else
+        sh "$SCRIPT" "$@"
+    fi
+    return $?
+}
+
+#####################################################
+# Downloads a file "$1" with `wget` or `curl`
+#
+# Returns:
+#   0 if download succeeded, 1 otherwise
+#####################################################
+download_file() {
+
+    DOWNLOAD_FILE="$1"
+    OUTPUT_FILE="$2"
+    DOWNLOAD_APP=$(get_tool_script "download")
+
+    if [ "$DOWNLOAD_APP" != "" ]; then
+        echo "  Using App at \`$DOWNLOAD_APP\`"
+        # Use the external download app for downloading the file
+        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
+    else
+        # The main update url.
+        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
+
+        # Default implementation
+        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
+
+        echo "  Download  $DOWNLOAD_URL ..."
+        if curl --version >/dev/null 2>&1; then
+            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
+        elif wget --version >/dev/null 2>&1; then
+            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
+        else
+            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget"
+            return 1
+        fi
+    fi
+
+    # shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed"
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
@@ -1971,21 +2138,8 @@ record_update_time() {
 #   1 if failed the load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/install.sh"
-
-    if curl --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
-
-    elif wget --version >/dev/null 2>&1; then
-        INSTALL_SCRIPT=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Cannot fetch the latest install script - needs either curl or wget"
-        return 1
-    fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    INSTALL_SCRIPT="$(mktemp)"
+    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
         return 1
     fi
 }
@@ -2000,7 +2154,7 @@ fetch_latest_install_script() {
 #   None
 #####################################################
 read_latest_version_number() {
-    LATEST_VERSION=$(echo "$INSTALL_SCRIPT" | grep "^# Version: .*" | head -1 | sed "s/^# Version: //")
+    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
 }
 
 #####################################################
@@ -2011,7 +2165,7 @@ read_latest_version_number() {
 #   0 if the script is newer, 1 otherwise
 #####################################################
 is_update_available() {
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
     UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
     [ "$UPDATE_AVAILABLE" = "0" ] || return 1
 }
@@ -2051,11 +2205,11 @@ is_single_repo() {
 #####################################################
 execute_install_script() {
     if is_single_repo; then
-        if sh -c "$INSTALL_SCRIPT" -- --single; then
+        if sh -s -- --single <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if sh -c "$INSTALL_SCRIPT"; then
+        if sh <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi
@@ -2124,7 +2278,7 @@ git hooks readme [add|update]
     fi
 
     mkdir -p "$(pwd)/.githooks" &&
-        printf "%s" "$README_CONTENTS" >"$(pwd)/.githooks/README.md" &&
+        cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
         echo "The README file is updated, do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository"
 }
@@ -2133,27 +2287,14 @@ git hooks readme [add|update]
 # Loads the contents of the latest Githooks README
 #   into a variable.
 #
-# Sets the ${README_CONTENTS} variable
+# Sets the ${README_FILE} variable
 #
 # Returns:
 #   1 if failed the load the contents, 0 otherwise
 #####################################################
 fetch_latest_readme() {
-    DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master/.githooks/README.md"
-
-    if curl --version >/dev/null 2>&1; then
-        README_CONTENTS=$(curl -fsSL "$DOWNLOAD_URL" 2>/dev/null)
-
-    elif wget --version >/dev/null 2>&1; then
-        README_CONTENTS=$(wget -O- "$DOWNLOAD_URL" 2>/dev/null)
-
-    else
-        echo "! Failed to fetch the latest README - needs either curl or wget"
-        return 1
-    fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    README_FILE="$(mktemp)"
+    if ! download_file ".githooks/README.md" "$README_FILE"; then
         echo "! Failed to fetch the latest README"
         return 1
     fi
@@ -2349,7 +2490,7 @@ git hooks config [reset|print] update-time
         ;;
     *)
         manage_configuration "help"
-        echo "! Invalid configuration option: \`$2\`"
+        echo "! Invalid configuration option: \`$CONFIG_ARGUMENT\`"
         exit 1
         ;;
     esac
@@ -2563,6 +2704,117 @@ config_update_last_run() {
 }
 
 #####################################################
+# Manages the app script folders.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+manage_tools() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks tools register download
+
+    Installs a script folder (needs a \`run\` script) for
+    the download mechanism of the update procedure. The 
+    \`run\` executable has the interface:
+
+    $ run <downloadFileName> <outputPath>
+
+    where <relativeFilePath> is the file relative to the githooks 
+    repository directory.
+    <outputFile> is the file where you save the 
+    downloaded content into (<outputFile> might not exist!)
+
+git hooks tools unregister download
+
+   Uninstalls the script folder for the download mechanism 
+   of the update procedure.
+"
+        return
+    fi
+
+    TOOLS_OPERATION="$1"
+
+    shift
+
+    case "$TOOLS_OPERATION" in
+    "register")
+        tools_install "$@"
+        ;;
+    "unregister")
+        tools_uninstall "$@"
+        ;;
+    *)
+        manage_tools "help"
+        echo "! Invalid tools option: \`$TOOLS_OPERATION\`"
+        exit 1
+        ;;
+    esac
+}
+
+#####################################################
+# Installes a script folder for the tools mechanism.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+tools_install() {
+    if [ "$1" = "download" ]; then
+
+        SCRIPT_FOLDER=$(make_abs_path "$2")
+
+        if [ -d "$SCRIPT_FOLDER" ]; then
+
+            if [ ! -f "$SCRIPT_FOLDER/run" ]; then
+                echo "! \`run\` does not exist in \`$SCRIPT_FOLDER\`"
+                exit 1
+            fi
+
+            if ! tools_uninstall "$1"; then
+                echo "! Unregister failed!"
+                exit 1
+            fi
+
+            f=~/".githooks/tools/$1"
+
+            mkdir -p "$f" >/dev/null 2>&1 # Install new
+            if ! cp -r "$SCRIPT_FOLDER"/* "$f"; then
+                echo "! Registration failed"
+                exit 1
+            fi
+            echo "Registered \`$SCRIPT_FOLDER\` for tool \`$1\`."
+        else
+            echo "! File \`$SCRIPT_FOLDER\` does not exist!"
+            exit 1
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
+        exit 1
+    fi
+}
+
+#####################################################
+# Uninstalles a script folder for the tools mechanism.
+#
+# Returns:
+#   1 on failure, 0 otherwise
+#####################################################
+tools_uninstall() {
+    if [ "$1" = "download" ]; then
+        if [ -d ~/".githooks/tools/$1" ]; then
+            rm -r ~/".githooks/tools/$1"
+            echo "Uninstalled app \`$1\`"
+        else
+            echo "! App \`$1\` is not installed"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
+        exit 1
+    fi
+}
+
+#####################################################
 # Prints the version number of this script,
 #   that would match the latest installed version
 #   of Githooks in most cases.
@@ -2578,7 +2830,7 @@ git hooks version
         return
     fi
 
-    CURRENT_VERSION=$(grep "^# Version: .*" "$0" | head -1 | sed "s/^# Version: //")
+    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
 
     print_help_header
 
@@ -2635,6 +2887,9 @@ choose_command() {
         ;;
     "config")
         manage_configuration "$@"
+        ;;
+    "tools")
+        manage_tools "$@"
         ;;
     "version")
         print_current_version_number "$@"
