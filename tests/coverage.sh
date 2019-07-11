@@ -17,6 +17,7 @@ RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.lis
     && apt-get install -y git
 
 ADD base-template.sh install.sh uninstall.sh cli.sh .githooks/README.md /var/lib/githooks/
+ADD examples /var/lib/githooks/examples
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"

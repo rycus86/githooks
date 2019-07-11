@@ -23,7 +23,7 @@ if grep -r 'github.com/rycus86/githooks' ~/test100/; then
     exit 1
 fi
 
-# run the install, and let it intall into existing repos
+# run the install, and let it install into existing repos
 echo 'n
 y
 

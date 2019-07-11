@@ -5,6 +5,7 @@ cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
 ADD base-template.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+ADD examples /var/lib/githooks/examples
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
