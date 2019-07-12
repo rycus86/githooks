@@ -156,7 +156,7 @@ Lists the Githooks related settings of the Githooks configuration. Can be either
 $ git hooks config [set|reset|print] disable
 ```
 
-Disables running any Githooks files in the current repository, when the \`set\` option is used. The \`reset\` option clears this setting. The \`print\` option outputs the current setting. This command needs to be run at the root of a repository.
+Disables running any Githooks files in the current repository, when the `set` option is used. The `reset` option clears this setting. The `print` option outputs the current setting. This command needs to be run at the root of a repository.
 
 ```shell
 $ git hooks config [set|reset|print] single
@@ -169,26 +169,26 @@ $ git hooks config set search-dir <path>
 $ git hooks config [reset|print] search-dir
 ```
 
-Changes the previous search directory setting used during installation. The \`set\` option changes the value, and the \`reset\` option clears it. The \`print\` option outputs the current setting of it.
+Changes the previous search directory setting used during installation. The `set` option changes the value, and the `reset` option clears it. The `print` option outputs the current setting of it.
 
 ```shell
 $ git hooks config set shared <git-url...>
 $ git hooks config [reset|print] shared
 ```
 
-Updates the list of global shared hook repositories when the \`set\` option is used, which accepts multiple <git-url> arguments, each containing a clone URL of a hook repository. The \`reset\` option clears this setting. The \`print\` option outputs the current setting.
+Updates the list of global shared hook repositories when the `set` option is used, which accepts multiple `<git-url>` arguments, each containing a clone URL of a hook repository. The `reset` option clears this setting. The `print` option outputs the current setting.
 
 ```shell
 $ git hooks config [accept|deny|reset|print] trusted
 ```
 
-Accepts changes to all existing and new hooks in the current repository when the trust marker is present and the \`set\` option is used. The \`deny\` option marks the repository as it has refused to trust the changes, even if the trust marker is present. The \`reset\` option clears this setting. The \`print\` option outputs the current setting. This command needs to be run at the root of a repository.
+Accepts changes to all existing and new hooks in the current repository when the trust marker is present and the `set` option is used. The `deny` option marks the repository as it has refused to trust the changes, even if the trust marker is present. The `reset` option clears this setting. The `print` option outputs the current setting. This command needs to be run at the root of a repository.
 
 ```shell
 $ git hooks config [enable|disable|reset|print] update
 ```
 
-Enables or disables automatic update checks with the \`enable\` and \`disable\` options respectively. The \`reset\` option clears this setting. The \`print\` option outputs the current setting.
+Enables or disables automatic update checks with the `enable` and `disable` options respectively. The `reset` option clears this setting. The `print` option outputs the current setting.
 
 ```shell
 $ git hooks config [reset|print] update-time
@@ -198,17 +198,33 @@ Resets the last Githooks update time with the `reset` option, causing the update
 
 ## git hooks tools
 
-Manages script folders for different tools. Currently supported is `<toolName>=download`.
+> Experimental feature
+
+Manages script folders for different tools. The only supported `<toolName>` is `download` tool currently.
 
 ```shell
-$ git hooks tools install [download] <scriptFolder>
+$ git hooks tools register [download] <scriptFolder>
 ```
-Installs the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
+
+Install the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
+This folder need to contain a file called `run` that is either executable, or will be invoked as a shell script.
+The interface of the tool is as follows.
 
 ```shell
-$ git hooks tools uninstall [download] <scriptFolder>
+$ run <relativeFilePath> <outputFile>     # if `run` is executable
+$ sh run <relativeFilePath> <outputFile>  # otherwise, assuming `run` is a shell script
 ```
-Uninstalls the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
+
+The arguments for the download tool are:
+
+- `<relativeFilePath>` is the file relative to the repository root
+- `<outputFile>` temporary file save the downloaded content to (note that this may not exist yet)
+
+```shell
+$ git hooks tools unregister [download]
+```
+
+Uninstall the script folder in the installation directory under `tools/<toolName>`.
 
 ## git hooks version
 

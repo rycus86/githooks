@@ -1,6 +1,6 @@
 #!/bin/bash
 # Download script for use with
-#`git hooks tools register download "examples/tools/download"`
+#   `git hooks tools register download "examples/tools/download"`
 
 # Change this URL for your own setup:
 MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -8,6 +8,7 @@ MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
 #####################################################
 # Parse an url into parts
 #   https://stackoverflow.com/a/6174447/293195
+#
 # Returns:
 #   parsed parts of the url
 #####################################################

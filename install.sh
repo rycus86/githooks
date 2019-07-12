@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.101735-f0248b
+# Version: 1907.112341-2dca47
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.101735-f0248b
+# Version: 1907.112341-2dca47
 
 #####################################################
 # Execute the current hook,
@@ -538,20 +538,23 @@ get_tool_script() {
 }
 
 #####################################################
-# Call a script "$1". If it is not executable call
-# call it as a shell script.
+# Execute the script at "$1".
+#   If it is not executable then
+#   call it as a shell script.
 #
 # Returns:
-#   Error code of the script.
+#   The error code of the script
 #####################################################
 call_script() {
     SCRIPT="$1"
     shift
+
     if [ -x "$SCRIPT" ]; then
         "$SCRIPT" "$@"
     else
         sh "$SCRIPT" "$@"
     fi
+
     return $?
 }
 
@@ -562,14 +565,13 @@ call_script() {
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file() {
-
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
-    DOWNLOAD_APP=$(get_tool_script "download")
+    DOWNLOAD_TOOL="$(get_tool_script "download")"
 
-    if [ "$DOWNLOAD_APP" != "" ]; then
-        # Use the external download app for downloading the file
-        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
+    if [ "$DOWNLOAD_TOOL" != "" ]; then
+        # Use the external download tool for downloading the file
+        call_script "$DOWNLOAD_TOOL" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else
         # The main update url.
         MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
@@ -737,7 +739,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.101735-f0248b
+# Version: 1907.112341-2dca47
 
 #####################################################
 # Prints the command line help for usage and
@@ -776,35 +778,6 @@ print_help_header() {
     echo
     echo "Githooks - https://github.com/rycus86/githooks"
     echo "----------------------------------------------"
-}
-
-#####################################################
-# Check if a path is an absolute path
-# Returns:
-#   0 if absolute, 1 if not
-#####################################################
-is_abs_path() {
-    [ "$1" != "${1#/}" ] || return 1
-}
-
-#####################################################
-# Gets the absolute path of a path
-#   reference:
-#   https://unix.stackexchange.com/a/24342/63957
-#####################################################
-make_abs_path() {
-    if ! is_abs_path "$1"; then
-        if [ -d "$1" ]; then f="$1/."; fi
-        # shellcheck disable=SC2164
-        absolute=$(
-            cd "$(dirname -- "$f")"
-            printf %s. "$(pwd)"
-        )
-        absolute="${absolute%?}"
-        echo "$absolute/${f##*/}"
-    else
-        echo "$1"
-    fi
 }
 
 #####################################################
@@ -2078,10 +2051,12 @@ get_tool_script() {
 call_script() {
     SCRIPT="$1"
     shift
+
     if [ -x "$SCRIPT" ]; then
         "$SCRIPT" "$@"
     else
         sh "$SCRIPT" "$@"
+
     fi
     return $?
 }
@@ -2093,7 +2068,6 @@ call_script() {
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file() {
-
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
     DOWNLOAD_APP=$(get_tool_script "download")
@@ -2109,7 +2083,7 @@ download_file() {
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
 
-        echo "  Download  $DOWNLOAD_URL ..."
+        echo "  Download $DOWNLOAD_URL ..."
         if curl --version >/dev/null 2>&1; then
             curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
         elif wget --version >/dev/null 2>&1; then
@@ -2713,23 +2687,29 @@ manage_tools() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks tools register download
+git hooks tools register [download] <scriptFolder>
 
-    Installs a script folder (needs a \`run\` script) for
-    the download mechanism of the update procedure. The 
-    \`run\` executable has the interface:
+    ( experimental feature )
 
-    $ run <downloadFileName> <outputPath>
+    Install the script folder \`<scriptFolder>\` in 
+    the installation directory under \`tools/<toolName>\`.
+    The interface of the tool is as follows.
+    
+    # if \`run\` is executable
+    \$ run <relativeFilePath> <outputFile>
+    # otherwise, assuming \`run\` is a shell script
+    \$ sh run <relativeFilePath> <outputFile>
+    
+    The arguments for the download tool are:
+    - \`<relativeFilePath>\` is the file relative to the repository root
+    - \`<outputFile>\` file to write the results to (may not exist yet)
 
-    where <relativeFilePath> is the file relative to the githooks 
-    repository directory.
-    <outputFile> is the file where you save the 
-    downloaded content into (<outputFile> might not exist!)
+git hooks tools unregister [download]
 
-git hooks tools unregister download
+    ( experimental feature )
 
-   Uninstalls the script folder for the download mechanism 
-   of the update procedure.
+    Uninstall the script folder in the installation 
+    directory under \`tools/<toolName>\`.
 "
         return
     fi
@@ -2754,38 +2734,38 @@ git hooks tools unregister download
 }
 
 #####################################################
-# Installes a script folder for the tools mechanism.
+# Installs a script folder of a tool.
 #
 # Returns:
 #   1 on failure, 0 otherwise
 #####################################################
 tools_install() {
     if [ "$1" = "download" ]; then
-
-        SCRIPT_FOLDER=$(make_abs_path "$2")
+        SCRIPT_FOLDER="$2"
 
         if [ -d "$SCRIPT_FOLDER" ]; then
+            SCRIPT_FOLDER=$(cd "$SCRIPT_FOLDER" && pwd)
 
             if [ ! -f "$SCRIPT_FOLDER/run" ]; then
-                echo "! \`run\` does not exist in \`$SCRIPT_FOLDER\`"
+                echo "! File \`run\` does not exist in \`$SCRIPT_FOLDER\`"
                 exit 1
             fi
 
-            if ! tools_uninstall "$1"; then
+            if ! tools_uninstall "$1" --quiet; then
                 echo "! Unregister failed!"
                 exit 1
             fi
 
-            f=~/".githooks/tools/$1"
+            TARGET_FOLDER=~/".githooks/tools/$1"
 
-            mkdir -p "$f" >/dev/null 2>&1 # Install new
-            if ! cp -r "$SCRIPT_FOLDER"/* "$f"; then
+            mkdir -p "$TARGET_FOLDER" >/dev/null 2>&1 # Install new
+            if ! cp -r "$SCRIPT_FOLDER"/* "$TARGET_FOLDER"/; then
                 echo "! Registration failed"
                 exit 1
             fi
-            echo "Registered \`$SCRIPT_FOLDER\` for tool \`$1\`."
+            echo "Registered \`$SCRIPT_FOLDER\` as \`$1\` tool"
         else
-            echo "! File \`$SCRIPT_FOLDER\` does not exist!"
+            echo "! The \`$SCRIPT_FOLDER\` directory does not exist!"
             exit 1
         fi
     else
@@ -2795,21 +2775,23 @@ tools_install() {
 }
 
 #####################################################
-# Uninstalles a script folder for the tools mechanism.
+# Uninstalls a script folder of a tool.
 #
 # Returns:
 #   1 on failure, 0 otherwise
 #####################################################
 tools_uninstall() {
+    [ "$2" = "--quiet" ] && QUIET="Y"
+
     if [ "$1" = "download" ]; then
         if [ -d ~/".githooks/tools/$1" ]; then
             rm -r ~/".githooks/tools/$1"
-            echo "Uninstalled app \`$1\`"
+            [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
         else
-            echo "! App \`$1\` is not installed"
+            [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`download\`)"
+        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\`)"
         exit 1
     fi
 }

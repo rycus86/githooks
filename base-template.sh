@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.101735-f0248b
+# Version: 1907.112341-2dca47
 
 #####################################################
 # Execute the current hook,
@@ -519,20 +519,23 @@ get_tool_script() {
 }
 
 #####################################################
-# Call a script "$1". If it is not executable call
-# call it as a shell script.
+# Execute the script at "$1".
+#   If it is not executable then
+#   call it as a shell script.
 #
 # Returns:
-#   Error code of the script.
+#   The error code of the script
 #####################################################
 call_script() {
     SCRIPT="$1"
     shift
+
     if [ -x "$SCRIPT" ]; then
         "$SCRIPT" "$@"
     else
         sh "$SCRIPT" "$@"
     fi
+
     return $?
 }
 
@@ -543,14 +546,13 @@ call_script() {
 #   0 if download succeeded, 1 otherwise
 #####################################################
 download_file() {
-
     DOWNLOAD_FILE="$1"
     OUTPUT_FILE="$2"
-    DOWNLOAD_APP=$(get_tool_script "download")
+    DOWNLOAD_TOOL="$(get_tool_script "download")"
 
-    if [ "$DOWNLOAD_APP" != "" ]; then
-        # Use the external download app for downloading the file
-        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
+    if [ "$DOWNLOAD_TOOL" != "" ]; then
+        # Use the external download tool for downloading the file
+        call_script "$DOWNLOAD_TOOL" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
     else
         # The main update url.
         MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
