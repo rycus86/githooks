@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.112341-2dca47
+# Version: 1907.171015-6a0766
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.112341-2dca47
+# Version: 1907.171015-6a0766
 
 #####################################################
 # Execute the current hook,
@@ -739,7 +739,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.112341-2dca47
+# Version: 1907.171015-6a0766
 
 #####################################################
 # Prints the command line help for usage and
@@ -790,7 +790,7 @@ print_help_header() {
 #   None
 #####################################################
 set_main_variables() {
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
