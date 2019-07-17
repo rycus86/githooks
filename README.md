@@ -12,7 +12,7 @@ A simple Shell script to support per-repository [Git hooks](https://git-scm.com/
 This script can work in one of 2 ways:
 
 - Using the git template folder (default behaviour)
-- Using the git `core.hooksPath` variable (set by passing the `--use-hookspath` parameter to the install script)
+- Using the git `core.hooksPath` variable (set by passing the `--use-core-hookspath` parameter to the install script)
 
 Read about the differences between these 2 approaches below
 
@@ -202,13 +202,13 @@ You can change this setting later with the [command line helper](https://github.
 Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [here](#Templates-vs-global-hooks). For this, run the command below.
 
 ```shell
-$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-hookspath
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath
 ```
 
 By default the script will install the hooks into `~/.githooks/templates/`, optionally, you can also pass the path to which you want to install the centralized hooks by appending `<path>` to the command above, for example:
 
 ```shell
-$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-hookspath /home/public/.githooks
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath /home/public/.githooks
 ```
 
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` paramter, where `<dir>` is the directory where you wish the templated be installed.
