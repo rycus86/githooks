@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.110919-c0438b
+# Version: 1907.171303-359da1
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.110919-c0438b
+# Version: 1907.171303-359da1
 
 #####################################################
 # Execute the current hook,
@@ -739,7 +739,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.110919-c0438b
+# Version: 1907.171303-359da1
 
 #####################################################
 # Prints the command line help for usage and
@@ -3003,7 +3003,7 @@ parse_command_line_arguments() {
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
-        elif [ "$p" = "--use-hookspath" ]; then
+        elif [ "$p" = "--use-core-hookspath" ]; then
             USE_HOOKS_PATH="yes"
             # No point in installing into existing when using core.hooksPath
             SKIP_INSTALL_INTO_EXISTING="yes"
