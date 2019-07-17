@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.171015-6a0766
+# Version: 1907.110919-c0438b
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.171015-6a0766
+# Version: 1907.110919-c0438b
 
 #####################################################
 # Execute the current hook,
@@ -739,7 +739,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.171015-6a0766
+# Version: 1907.110919-c0438b
 
 #####################################################
 # Prints the command line help for usage and
@@ -2987,6 +2987,7 @@ execute_installation() {
 #   None
 ############################################################
 parse_command_line_arguments() {
+    TARGET_TEMPLATE_DIR=""
     for p in "$@"; do
         if [ "$p" = "--dry-run" ]; then
             DRY_RUN="yes"
@@ -2996,7 +2997,11 @@ parse_command_line_arguments() {
             SINGLE_REPO_INSTALL="yes"
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
+        elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+            # Allow user to pass prefered template dir
+            TARGET_TEMPLATE_DIR="$p"
         fi
+        prev_p="$p"
     done
 }
 
@@ -3109,9 +3114,9 @@ mark_as_single_install_repo() {
 #   1 if failed, 0 otherwise
 ############################################################
 prepare_target_template_directory() {
-    TARGET_TEMPLATE_DIR=""
-
-    find_git_hook_templates
+    if [ -z "$TARGET_TEMPLATE_DIR" ]; then
+        find_git_hook_templates
+    fi
 
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
         echo "Git hook templates directory not found"
@@ -3141,7 +3146,13 @@ find_git_hook_templates() {
     mark_directory_as_target "/usr/share/git-core/templates/hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-    # 4. try to search for it on disk
+    # 4. Setup new folder if running interactively and no folder is found by now
+    if is_non_interactive; then
+        setup_new_templates_folder
+        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    fi
+
+    # 5. try to search for it on disk
     printf 'Could not find the Git hook template directory. '
     printf 'Do you want to search for it? [y/N] '
     read -r DO_SEARCH
@@ -3164,7 +3175,7 @@ find_git_hook_templates() {
         fi
     fi
 
-    # 5. set up as new
+    # 6. set up as new
     printf "Do you want to set up a new Git templates folder? [y/N] "
     read -r SETUP_NEW_FOLDER
 
