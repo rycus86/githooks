@@ -36,7 +36,7 @@ sh /var/lib/githooks/cli.sh shared add --local /tmp/shared/first-shared.git &&
     ! sh /var/lib/githooks/cli.sh shared list | grep "first_shared" &&
     sh /var/lib/githooks/cli.sh shared remove --local /tmp/shared/second-shared.git &&
     sh /var/lib/githooks/cli.sh shared remove /tmp/shared/third-shared.git &&
-    [ ! -f "$(pwd/.githooks/.shared)" ] ||
+    [ ! -f "$(pwd)/.githooks/.shared" ] ||
     exit 2
 
 sh /var/lib/githooks/cli.sh shared clear --all &&
@@ -59,6 +59,6 @@ git hooks shared add --local /tmp/shared/first-shared.git &&
     git hooks shared remove --local /tmp/shared/first-shared.git &&
     ! git hooks shared list | grep "first_shared" &&
     git hooks shared remove --local /tmp/shared/second-shared.git &&
-    git hooks shared remove /tmp/shared/second-third.git &&
-    [ ! -f "$(pwd/.githooks/.shared)" ] ||
+    git hooks shared remove /tmp/shared/third-shared.git &&
+    [ ! -f "$(pwd)/.githooks/.shared" ] ||
     exit 9

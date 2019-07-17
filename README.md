@@ -171,7 +171,7 @@ The commands below fetch and execute the [install.sh](install.sh) script from th
 4. Offer to find existing Git repositories on the filesystem (disable with `--skip-install-into-existing`)
     1. Install the hooks into them
     2. Offer to add an intro README in their `.githooks` folder
-5.  Offer to set up shared hook repositories
+5. Offer to set up shared hook repositories
 
 To install the templates, just execute the command below, and follow the instructions in the terminal.
 
@@ -185,7 +185,7 @@ If you want, you can try out what the script would do first, without changing an
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --dry-run
 ```
 
-You can also run the installation in non-interactive mode with the command below. This will determine an appropriate template directory (detect and existing one, use the one passed by `--template-dir`, or use a default one), install the hooks automatically into the determined directory, and enable periodic update checks.
+You can also run the installation in non-interactive mode with the command below. This will determine an appropriate template directory (detect and use the existing one, or use the one passed by `--template-dir`, or use a default one), install the hooks automatically into this directory, and enable periodic update checks.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --non-interactive
@@ -211,7 +211,7 @@ By default the script will install the hooks into `~/.githooks/templates/`, opti
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath /home/public/.githooks
 ```
 
-It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` paramter, where `<dir>` is the directory where you wish the templated be installed.
+It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --template-dir /home/public/.githooks
