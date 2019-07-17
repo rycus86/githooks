@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.112341-2dca47
+# Version: 1907.171015-6a0766
 
 #####################################################
 # Prints the command line help for usage and
@@ -62,7 +62,7 @@ print_help_header() {
 #   None
 #####################################################
 set_main_variables() {
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
