@@ -13,18 +13,18 @@ CLI_TOOL_PATTERN="(.+)(CLI_TOOL_CONTENT='[^']+')(.+)"
 README_PATTERN="(.+)(INCLUDED_README_CONTENT='[^']+')(.+)"
 
 if __name__ == '__main__':
-    with open('base-template.sh', 'r') as template_file:
+    with open('base-template.sh', 'r', newline="\n") as template_file:
         template_contents = template_file.read()
     
-    with open('cli.sh', 'r') as cli_tool_file:
+    with open('cli.sh', 'r', newline="\n") as cli_tool_file:
         cli_tool_contents = cli_tool_file.read()
     
-    with open('.githooks/README.md', 'r') as readme_file:
+    with open('.githooks/README.md', 'r', newline="\n") as readme_file:
         readme_contents = readme_file.read()
 
     contents = ''
 
-    with open('install.sh', 'r') as source:
+    with open('install.sh', 'r', newline="\n") as source:
         contents = source.read()
 
     match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         before, readme_contents, after
     )
     
-    with open('install.sh', 'w') as target:
+    with open('install.sh', 'w', newline="\n") as target:
         target.write(contents)
 EOF
 

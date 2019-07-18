@@ -162,6 +162,36 @@ uninstall_hooks_from_repo() {
     fi
 }
 
+############################################################
+# Uninstall shared hooks.
+#
+# Returns:
+#   None
+############################################################
+uninstall_shared_hooks() {
+    if [ -d ~/.githooks/shared ]; then
+        if ! rm -rf ~/.githooks/shared >/dev/null 2>&1; then
+            echo "! Failed to delete shared hook repository folders"
+            exit 1
+        fi
+    fi
+}
+
+############################################################
+# Uninstall the cli tool.
+#
+# Returns:
+#   None
+############################################################
+uninstall_cli() {
+    if [ -d ~/.githooks/bin ]; then
+        if ! rm -rf ~/.githooks/bin >/dev/null 2>&1; then
+            echo "! Failed to delete the githook command-line tool"
+            exit 1
+        fi
+    fi
+}
+
 # Find the current Git hook templates directory
 TARGET_TEMPLATE_DIR=""
 
@@ -181,12 +211,19 @@ if ! uninstall_from_existing_repositories; then
     exit 1
 fi
 
+# Uninstall all shared hooks
+uninstall_shared_hooks
+
+# Uninstall all cli
+uninstall_cli
+
 # Unset global Githooks variables
 git config --global --unset githooks.shared
 git config --global --unset githooks.autoupdate.enabled
 git config --global --unset githooks.autoupdate.lastrun
 git config --global --unset githooks.previous.searchdir
 git config --global --unset githooks.disable
+git config --global --unset alias.hooks
 
 # Finished
 echo "All done!"

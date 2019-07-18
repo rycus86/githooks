@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.110919-c0438b
+# Version: 1907.181628-ac2e27
 
 #####################################################
 # Prints the command line help for usage and
@@ -1030,12 +1030,10 @@ list_shared_hook_repos() {
             echo "  - None"
         else
             for LIST_ITEM in $(git config --global --get githooks.shared); do
-                NORMALIZED_NAME=$(echo "$LIST_ITEM" |
-                    sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-                    sed -E "s/[^a-zA-Z0-9]/_/g")
 
-                if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
-                    if [ "$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                set_shared_root "$LIST_ITEM"
+                if [ -d "$SHARED_ROOT/.git" ]; then
+                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -1066,12 +1064,11 @@ list_shared_hook_repos() {
             SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
 
             echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
-                NORMALIZED_NAME=$(echo "$LIST_ITEM" |
-                    sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-                    sed -E "s/[^a-zA-Z0-9]/_/g")
 
-                if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
-                    if [ "$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                set_shared_root "$LIST_ITEM"
+
+                if [ -d "$SHARED_ROOT/.git" ]; then
+                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -1128,6 +1125,20 @@ git hooks pull
 }
 
 #####################################################
+# Sets the SHARED_ROOT and NORMALIZED_NAME
+#   for the shared hook repo url `$1`.
+#
+# Returns:
+#   0 when successfully finished, 1 otherwise
+#####################################################
+set_shared_root() {
+    NORMALIZED_NAME=$(echo "$1" |
+        sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+        sed -E "s/[^a-zA-Z0-9]/_/g")
+    SHARED_ROOT=~/.githooks/shared/"$NORMALIZED_NAME"
+}
+
+#####################################################
 # Updates the shared hooks repositories
 #   on the list passed in on the first argument.
 #####################################################
@@ -1141,13 +1152,11 @@ update_shared_hooks_in() {
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         mkdir -p ~/.githooks/shared
 
-        NORMALIZED_NAME=$(echo "$SHARED_REPO" |
-            sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-            sed -E "s/[^a-zA-Z0-9]/_/g")
+        set_shared_root "$SHARED_REPO"
 
-        if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
+        if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT=$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git pull 2>&1)
+            PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:"
@@ -1155,7 +1164,8 @@ update_shared_hooks_in() {
             fi
         else
             echo "* Retrieving shared hooks from: $SHARED_REPO"
-            CLONE_OUTPUT=$(cd ~/.githooks/shared && git clone "$SHARED_REPO" "$NORMALIZED_NAME" 2>&1)
+            [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
+            CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Clone failed, git clone output:"
