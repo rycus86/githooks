@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.110919-c0438b
+# Version: 1907.181401-933c16
 
 #####################################################
 # Execute the current hook,
@@ -256,8 +256,7 @@ is_trusted_repo() {
         # shellcheck disable=SC2181
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
             echo "! This repository wants you to trust all current and future hooks without prompting"
-            printf "  Do you want to allow running every current and future hooks? [y/N] "
-            read -r TRUST_ALL_HOOKS </dev/tty
+            show_prompt TRUST_ALL_HOOKS "  Do you want to allow running every current and future hooks?" "" "y/N" "Yes" "No"
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
@@ -308,8 +307,7 @@ execute_opt_in_checks() {
         if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
             echo "  Already accepted"
         else
-            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
-            read -r ACCEPT_CHANGES </dev/tty
+            show_prompt ACCEPT_CHANGES "  Do you you accept the changes?" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
 
             if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
                 echo "* Not running $HOOK_FILE"
@@ -540,6 +538,48 @@ call_script() {
 }
 
 #####################################################
+# Show a prompt with the text `$2` with
+#   hint text `$3` with
+#   options `$4` in form of e.g. `Y/a/n/d` and
+#   optional long options [optional]:
+#   e.g.
+#    `$5-$8` : "Yes" "All" "None" "Disable"
+#   First capital short option character is treated
+#   as default.
+#
+#####################################################
+show_prompt() {
+    DIALOG_TOOL="$(get_tool_script "dialog")"
+    VARIABLE="$1"
+    shift
+    TEXT="$1"
+    shift
+    HINT_TEXT="$1"
+    shift
+    SHORT_OPTIONS="$1"
+    shift
+
+    if [ "$DIALOG_TOOL" != "" ]; then
+        ANSWER=$(call_script "$DIALOG_TOOL" "githook::" "$TEXT" "$SHORT_OPTIONS" "$@")
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! Dialog tool did not succeed -> Abort."
+            exit 1
+        fi
+        if ! echo "$SHORT_OPTIONS" | grep -q "$ANSWER"; then
+            echo "! Dialog tool did return wrong answer $ANSWER -> Abort."
+            exit 1
+        fi
+        eval "$VARIABLE"="$ANSWER"
+    else
+        # Read from stdin (because its connected)
+        # shellcheck disable=SC2059
+        printf "$TEXT $HINT_TEXT [$SHORT_OPTIONS]: "
+        read -r VARIABLE
+    fi
+}
+
+#####################################################
 # Downloads a file "$1" with `wget` or `curl`
 #
 # Returns:
@@ -659,8 +699,7 @@ is_single_repo() {
 #####################################################
 should_run_update() {
     echo "* There is a new Githooks update available: Version $LATEST_VERSION"
-    printf "    Would you like to install it now? [Y/n] "
-    read -r EXECUTE_UPDATE </dev/tty
+    show_prompt EXECUTE_UPDATE "    Would you like to install it now?" "" "Y/n" "Yes" "no"
 
     if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
         return 0
