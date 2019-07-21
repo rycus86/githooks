@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.181401-933c16
+# Version: 1907.110919-c0438b
 
 #####################################################
 # Prints the command line help for usage and
@@ -1959,14 +1959,12 @@ manage_tools() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks tools register [download|dialog] <scriptFolder>
+git hooks tools register [download] <scriptFolder>
 
     ( experimental feature )
 
     Install the script folder \`<scriptFolder>\` in 
     the installation directory under \`tools/<toolName>\`.
-
-    Download Tool:
     The interface of the tool is as follows.
     
     # if \`run\` is executable
@@ -1974,30 +1972,11 @@ git hooks tools register [download|dialog] <scriptFolder>
     # otherwise, assuming \`run\` is a shell script
     \$ sh run <relativeFilePath> <outputFile>
     
-    The arguments are:
+    The arguments for the download tool are:
     - \`<relativeFilePath>\` is the file relative to the repository root
     - \`<outputFile>\` file to write the results to (may not exist yet)
 
-    Dialog Tool:
-    The interface of the tool is as follows.
-    
-    # if \`run\` is executable
-    \$ run <title> <text> <options> <long-options>
-    # otherwise, assuming \`run\` is a shell script
-    \$ sh run <title> <text> <options> <long-options>
-
-    The arguments for are:
-    - \`<title>\` the title for the user gui dialog
-    - \`<text>\` the text for the user gui dialog
-    - \`<short-options>\` the button return values, slash-delimited, 
-        e.g. \`Y/n/d\`.
-        The default button is the first capital character found.
-    - \`<long-options>\` the button texts in the gui,
-        e.g. \`Yes/no/disable\`
-
-    The script needs to return one of the short-options on \`stdout\`.
-
-git hooks tools unregister [download|dialog]
+git hooks tools unregister [download]
 
     ( experimental feature )
 
@@ -2033,7 +2012,7 @@ git hooks tools unregister [download|dialog]
 #   1 on failure, 0 otherwise
 #####################################################
 tools_install() {
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "download" ]; then
         SCRIPT_FOLDER="$2"
 
         if [ -d "$SCRIPT_FOLDER" ]; then
@@ -2062,7 +2041,7 @@ tools_install() {
             exit 1
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`download\` or  \`dialog\`)"
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
         exit 1
     fi
 }
@@ -2076,7 +2055,7 @@ tools_install() {
 tools_uninstall() {
     [ "$2" = "--quiet" ] && QUIET="Y"
 
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "download" ]; then
         if [ -d ~/".githooks/tools/$1" ]; then
             rm -r ~/".githooks/tools/$1"
             [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
@@ -2084,7 +2063,7 @@ tools_uninstall() {
             [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed"
         fi
     else
-        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\` or \`dailog\`)"
+        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\`)"
         exit 1
     fi
 }

@@ -203,44 +203,25 @@ Resets the last Githooks update time with the `reset` option, causing the update
 Manages script folders for different tools. The only supported `<toolName>` is `download` tool currently.
 
 ```shell
-$ git hooks tools register [download|dialog] <scriptFolder>
+$ git hooks tools register [download] <scriptFolder>
 ```
 
 Install the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
 This folder need to contain a file called `run` that is either executable, or will be invoked as a shell script.
-If `run` is an executable its called as executable otherwise its assumbed to be a shell script and run by `sh run "$@"`.
-
-### Download Tool:
 The interface of the tool is as follows.
 
 ```shell
-$ run <relativeFilePath> <outputFile>
+$ run <relativeFilePath> <outputFile>     # if `run` is executable
+$ sh run <relativeFilePath> <outputFile>  # otherwise, assuming `run` is a shell script
 ```
 
-The arguments are:
+The arguments for the download tool are:
+
 - `<relativeFilePath>` is the file relative to the repository root
-- `<outputFile>` file to write the results to (may not exist yet)
-
-### Dialog Tool:
-The interface of the tool is as follows.
+- `<outputFile>` temporary file save the downloaded content to (note that this may not exist yet)
 
 ```shell
-$ run <title> <text> <options> <long-options>
-```
-
-The arguments for are:
-- `<title>` the title for the user gui dialog
-- `<text>` the text for the user gui dialog
-- `<short-options>` the button return values, slash-delimited, 
-    e.g. `Y/n/d`.
-    The default button is the first capital character found.
-- `<long-options>` the button texts in the gui,
-    e.g. `Yes/no/disable`
-
-The script needs to return one of the short-options on `stdout`.
-
-```shell
-$ git hooks tools unregister [download|dialog]
+$ git hooks tools unregister [download]
 ```
 
 Uninstall the script folder in the installation directory under `tools/<toolName>`.

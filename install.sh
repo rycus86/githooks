@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.181401-933c16
+# Version: 1907.110919-c0438b
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.181401-933c16
+# Version: 1907.110919-c0438b
 
 #####################################################
 # Execute the current hook,
@@ -275,7 +275,8 @@ is_trusted_repo() {
         # shellcheck disable=SC2181
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
             echo "! This repository wants you to trust all current and future hooks without prompting"
-            show_prompt TRUST_ALL_HOOKS "  Do you want to allow running every current and future hooks?" "" "y/N" "Yes" "No"
+            printf "  Do you want to allow running every current and future hooks? [y/N] "
+            read -r TRUST_ALL_HOOKS </dev/tty
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
@@ -326,7 +327,8 @@ execute_opt_in_checks() {
         if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
             echo "  Already accepted"
         else
-            show_prompt ACCEPT_CHANGES "  Do you you accept the changes?" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
+            printf "  Do you you accept the changes? (Yes, all, no, disable) [Y/a/n/d] "
+            read -r ACCEPT_CHANGES </dev/tty
 
             if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
                 echo "* Not running $HOOK_FILE"
@@ -557,48 +559,6 @@ call_script() {
 }
 
 #####################################################
-# Show a prompt with the text `$2` with
-#   hint text `$3` with
-#   options `$4` in form of e.g. `Y/a/n/d` and
-#   optional long options [optional]:
-#   e.g.
-#    `$5-$8` : "Yes" "All" "None" "Disable"
-#   First capital short option character is treated
-#   as default.
-#
-#####################################################
-show_prompt() {
-    DIALOG_TOOL="$(get_tool_script "dialog")"
-    VARIABLE="$1"
-    shift
-    TEXT="$1"
-    shift
-    HINT_TEXT="$1"
-    shift
-    SHORT_OPTIONS="$1"
-    shift
-
-    if [ "$DIALOG_TOOL" != "" ]; then
-        ANSWER=$(call_script "$DIALOG_TOOL" "githook::" "$TEXT" "$SHORT_OPTIONS" "$@")
-        # shellcheck disable=SC2181
-        if [ $? -ne 0 ]; then
-            echo "! Dialog tool did not succeed -> Abort."
-            exit 1
-        fi
-        if ! echo "$SHORT_OPTIONS" | grep -q "$ANSWER"; then
-            echo "! Dialog tool did return wrong answer $ANSWER -> Abort."
-            exit 1
-        fi
-        eval "$VARIABLE"="$ANSWER"
-    else
-        # Read from stdin (because its connected)
-        # shellcheck disable=SC2059
-        printf "$TEXT $HINT_TEXT [$SHORT_OPTIONS]: "
-        read -r VARIABLE
-    fi
-}
-
-#####################################################
 # Downloads a file "$1" with `wget` or `curl`
 #
 # Returns:
@@ -718,7 +678,8 @@ is_single_repo() {
 #####################################################
 should_run_update() {
     echo "* There is a new Githooks update available: Version $LATEST_VERSION"
-    show_prompt EXECUTE_UPDATE "    Would you like to install it now?" "" "Y/n" "Yes" "no"
+    printf "    Would you like to install it now? [Y/n] "
+    read -r EXECUTE_UPDATE </dev/tty
 
     if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
         return 0
@@ -778,7 +739,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.181401-933c16
+# Version: 1907.110919-c0438b
 
 #####################################################
 # Prints the command line help for usage and
@@ -2726,14 +2687,12 @@ manage_tools() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks tools register [download|dialog] <scriptFolder>
+git hooks tools register [download] <scriptFolder>
 
     ( experimental feature )
 
     Install the script folder \`<scriptFolder>\` in 
     the installation directory under \`tools/<toolName>\`.
-
-    Download Tool:
     The interface of the tool is as follows.
     
     # if \`run\` is executable
@@ -2741,30 +2700,11 @@ git hooks tools register [download|dialog] <scriptFolder>
     # otherwise, assuming \`run\` is a shell script
     \$ sh run <relativeFilePath> <outputFile>
     
-    The arguments are:
+    The arguments for the download tool are:
     - \`<relativeFilePath>\` is the file relative to the repository root
     - \`<outputFile>\` file to write the results to (may not exist yet)
 
-    Dialog Tool:
-    The interface of the tool is as follows.
-    
-    # if \`run\` is executable
-    \$ run <title> <text> <options> <long-options>
-    # otherwise, assuming \`run\` is a shell script
-    \$ sh run <title> <text> <options> <long-options>
-
-    The arguments for are:
-    - \`<title>\` the title for the user gui dialog
-    - \`<text>\` the text for the user gui dialog
-    - \`<short-options>\` the button return values, slash-delimited, 
-        e.g. \`Y/n/d\`.
-        The default button is the first capital character found.
-    - \`<long-options>\` the button texts in the gui,
-        e.g. \`Yes/no/disable\`
-
-    The script needs to return one of the short-options on \`stdout\`.
-
-git hooks tools unregister [download|dialog]
+git hooks tools unregister [download]
 
     ( experimental feature )
 
@@ -2800,7 +2740,7 @@ git hooks tools unregister [download|dialog]
 #   1 on failure, 0 otherwise
 #####################################################
 tools_install() {
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "download" ]; then
         SCRIPT_FOLDER="$2"
 
         if [ -d "$SCRIPT_FOLDER" ]; then
@@ -2829,7 +2769,7 @@ tools_install() {
             exit 1
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`download\` or  \`dialog\`)"
+        echo "! Invalid operation: \`$1\` (use \`download\`)"
         exit 1
     fi
 }
@@ -2843,7 +2783,7 @@ tools_install() {
 tools_uninstall() {
     [ "$2" = "--quiet" ] && QUIET="Y"
 
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "download" ]; then
         if [ -d ~/".githooks/tools/$1" ]; then
             rm -r ~/".githooks/tools/$1"
             [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
@@ -2851,7 +2791,7 @@ tools_uninstall() {
             [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed"
         fi
     else
-        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\` or \`dailog\`)"
+        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\`)"
         exit 1
     fi
 }
