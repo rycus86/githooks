@@ -243,33 +243,6 @@ The arguments for the download tool are:
 
 Read more about this command on the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) documentation page.
 
-### Custom User Prompt [experimental]
-If you want to use your dialog implementation, e.g. to show a GUI when githooks ask for user input.
-you can use any executable or script file to show the prompt.
-The example in the `examples/tools/dialog` folder contains a python script `run` which uses the python provided `tkinter` to show a dialog.
-
-```shell
-# install the example dialog tool from this repository
-$ git hooks tools register download "./examples/tools/dialog"
-```
-The interface of the tool is as follows.
-
-```shell
-$ run <title> <text> <options> <long-options>    # if `run` is executable
-$ sh run <title> <text> <options> <long-options> # otherwise, assuming `run` is a shell script
-```
-
-The arguments for are:
-- `<title>` the title for the user gui dialog
-- `<text>` the text for the user gui dialog
-- `<short-options>` the button return values, slash-delimited, 
-    e.g. `Y/n/d`.
-    The default button is the first capital character found.
-- `<long-options>` the button texts in the gui,
-    e.g. `Yes/no/disable`
-
-The script needs to return one of the short-options on `stdout`.
-
 ### Uninstalling
 
 If you want to get rid of these hooks and templates, you can execute the `uninstall.sh` script similarly to the install scripts.
