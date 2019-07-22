@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.181628-ac2e27
+# Version: 1907.221206-176cca
 
 #####################################################
 # Execute the current hook,
@@ -449,12 +449,12 @@ execute_shared_hooks() {
         set_shared_root "$SHARED_REPO"
 
         # Fail if the shared root is not available (if enabled)
-        FAIL_ON_NOT_EXISTING=$(git config --global --get githooks.failOnNotExistingSharedHooks)
+        FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
 
-        if [ "$FAIL_ON_NOT_EXISTING" = "true"]; then
-            if [ ! -d "$SHARED_ROOT/.git" ]; then
-                echo "! Failed to execute shared hook: $SHARED_REPO"
-                echo "! Its is not available. Do run:"
+        if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+            if [ ! -f "$SHARED_ROOT/.git/config" ]; then
+                echo "! Failed to execute shared hooks in $SHARED_REPO"
+                echo "! It is not available. To fix, run:"
                 echo "!   \$ git hooks shared update"
                 return 1
             fi
@@ -465,16 +465,16 @@ execute_shared_hooks() {
         REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
-            echo "! Failed to execute shared hook: $SHARED_REPO"
-            echo "! Shared root url \`$REMOTE_URL\` is not the same as "
-            echo "! the requested url \`$SHARED_REPO\`. Do run:"
+            echo "! Failed to execute shared hooks in $SHARED_REPO"
+            echo "! The URL \`$REMOTE_URL\` is different."
+            echo "! To fix it, run:"
             echo "!   \$ git hooks shared purge"
             echo "!   \$ git hooks shared update"
 
-            if [ "$FAIL_ON_NOT_EXISTING" = "true"]; then
+            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
                 return 1
             else
-                echo "!   Continue..."
+                echo "!   Continuing..."
                 continue
             fi
         fi
