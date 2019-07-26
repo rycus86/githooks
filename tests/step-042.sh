@@ -51,9 +51,8 @@ sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh ||
     exit 1
 
 OUTPUT=$(
-    sed -i 's|read -r EXECUTE_UPDATE </dev/tty|EXECUTE_UPDATE="Y"|' /var/lib/githooks/base-template.sh &&
-        HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-            sh /var/lib/githooks/base-template.sh
+    HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
+        sh /var/lib/githooks/base-template.sh
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then
