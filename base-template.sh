@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.171303-359da1
+# Version: 1907.291704-13a8cb
 
 #####################################################
 # Execute the current hook,
@@ -365,8 +365,22 @@ process_shared_hooks() {
     SHARED_REPOS_LIST="$1"
     shift
 
-    update_shared_hooks_if_appropriate
+    update_shared_hooks_if_appropriate "$@"
     execute_shared_hooks "$@" || return 1
+}
+
+#####################################################
+# Sets the SHARED_ROOT and NORMALIZED_NAME
+#   for the shared hook repo url `$1`.
+#
+# Returns:
+#   none
+#####################################################
+set_shared_root() {
+    NORMALIZED_NAME=$(echo "$1" |
+        sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+        sed -E "s/[^a-zA-Z0-9]/_/g")
+    SHARED_ROOT=~/.githooks/shared/"$NORMALIZED_NAME"
 }
 
 #####################################################
@@ -378,7 +392,14 @@ process_shared_hooks() {
 #####################################################
 update_shared_hooks_if_appropriate() {
     # run an init/update if we are after a "git pull" or triggered manually
-    if [ "$HOOK_NAME" = "post-merge" ] || [ "$HOOK_NAME" = ".githooks.shared.trigger" ]; then
+    GIT_NULL_REF="0000000000000000000000000000000000000000"
+
+    RUN_UPDATE="false"
+    [ "$HOOK_NAME" = "post-merge" ] && RUN_UPDATE="true"
+    [ "$HOOK_NAME" = ".githooks.shared.trigger" ] && RUN_UPDATE="true"
+    [ "$HOOK_NAME" = "post-checkout" ] && [ "$1" = "$GIT_NULL_REF" ] && RUN_UPDATE="true"
+
+    if [ "$RUN_UPDATE" = "true" ]; then
         # split on comma and newline
         IFS=",
         "
@@ -386,13 +407,11 @@ update_shared_hooks_if_appropriate() {
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             mkdir -p ~/.githooks/shared
 
-            NORMALIZED_NAME=$(echo "$SHARED_REPO" |
-                sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-                sed -E "s/[^a-zA-Z0-9]/_/g")
+            set_shared_root "$SHARED_REPO"
 
-            if [ -d ~/.githooks/shared/"$NORMALIZED_NAME"/.git ]; then
+            if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd ~/.githooks/shared/"$NORMALIZED_NAME" && git pull 2>&1)
+                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:"
@@ -400,7 +419,8 @@ update_shared_hooks_if_appropriate() {
                 fi
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO"
-                CLONE_OUTPUT=$(cd ~/.githooks/shared && git clone "$SHARED_REPO" "$NORMALIZED_NAME" 2>&1)
+                [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
+                CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Clone failed, git clone output:"
@@ -421,11 +441,42 @@ update_shared_hooks_if_appropriate() {
 #   1 in case a hook fails, 0 otherwise
 #####################################################
 execute_shared_hooks() {
-    for SHARED_ROOT in ~/.githooks/shared/*; do
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+    # split on comma and newline
+    IFS=",
+    "
+    for SHARED_REPO in $SHARED_REPOS_LIST; do
+
+        set_shared_root "$SHARED_REPO"
+
+        # Fail if the shared root is not available (if enabled)
+        FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
+
+        if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+            if [ ! -f "$SHARED_ROOT/.git/config" ]; then
+                echo "! Failed to execute shared hooks in $SHARED_REPO"
+                echo "! It is not available. To fix, run:"
+                echo "!   \$ git hooks shared update"
+                return 1
+            fi
+        fi
+
+        # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
+        # which means we really need a `-f` to sepcify the actual config!
+        REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
-            continue
+            echo "! Failed to execute shared hooks in $SHARED_REPO"
+            echo "! The URL \`$REMOTE_URL\` is different."
+            echo "! To fix it, run:"
+            echo "!   \$ git hooks shared purge"
+            echo "!   \$ git hooks shared update"
+
+            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+                return 1
+            else
+                echo "!   Continuing..."
+                continue
+            fi
         fi
 
         if [ -d "${SHARED_ROOT}/.githooks" ]; then
@@ -433,7 +484,9 @@ execute_shared_hooks() {
         elif [ -d "$SHARED_ROOT" ]; then
             execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
+
     done
+    unset IFS
 }
 
 #####################################################
