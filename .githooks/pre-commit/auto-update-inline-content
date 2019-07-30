@@ -7,24 +7,32 @@ fi
 # shellcheck disable=SC1117
 cat <<EOF | python -
 import re
+import sys
 
 TEMPLATE_PATTERN="(.+)(BASE_TEMPLATE_CONTENT='[^']+')(.+)"
 CLI_TOOL_PATTERN="(.+)(CLI_TOOL_CONTENT='[^']+')(.+)"
 README_PATTERN="(.+)(INCLUDED_README_CONTENT='[^']+')(.+)"
 
+def open_file(path, mode='r'):
+    if sys.version_info.major < 3:
+        return open(path, mode)
+    else:
+        return open(path, mode, newline='\n')
+
+
 if __name__ == '__main__':
-    with open('base-template.sh', 'r', newline="\n") as template_file:
+    with open_file('base-template.sh') as template_file:
         template_contents = template_file.read()
     
-    with open('cli.sh', 'r', newline="\n") as cli_tool_file:
+    with open_file('cli.sh') as cli_tool_file:
         cli_tool_contents = cli_tool_file.read()
     
-    with open('.githooks/README.md', 'r', newline="\n") as readme_file:
+    with open_file('.githooks/README.md') as readme_file:
         readme_contents = readme_file.read()
 
     contents = ''
 
-    with open('install.sh', 'r', newline="\n") as source:
+    with open_file('install.sh') as source:
         contents = source.read()
 
     match = re.match(TEMPLATE_PATTERN, contents, flags=re.MULTILINE | re.DOTALL)
@@ -48,7 +56,7 @@ if __name__ == '__main__':
         before, readme_contents, after
     )
     
-    with open('install.sh', 'w', newline="\n") as target:
+    with open_file('install.sh', mode='w') as target:
         target.write(contents)
 EOF
 

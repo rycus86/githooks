@@ -200,7 +200,7 @@ Resets the last Githooks update time with the `reset` option, causing the update
 
 > Experimental feature
 
-Manages script folders for different tools. The only supported `<toolName>` is `download` tool currently.
+Manages script folders for different tools. The supported `<toolName>` are `download` and `dialog` currently.
 
 ```shell
 $ git hooks tools register [download|dialog] <scriptFolder>
@@ -208,9 +208,10 @@ $ git hooks tools register [download|dialog] <scriptFolder>
 
 Install the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
 This folder need to contain a file called `run` that is either executable, or will be invoked as a shell script.
-If `run` is an executable its called as executable otherwise its assumbed to be a shell script and run by `sh run "$@"`.
+If `run` is an executable it is called as executable, otherwise it is assumed to be a shell script and run by `sh run "$@"`.
 
-### Download Tool:
+### Download tool
+
 The interface of the tool is as follows.
 
 ```shell
@@ -218,10 +219,12 @@ $ run <relativeFilePath> <outputFile>
 ```
 
 The arguments are:
+
 - `<relativeFilePath>` is the file relative to the repository root
 - `<outputFile>` file to write the results to (may not exist yet)
 
-### Dialog Tool:
+### Dialog tool
+
 The interface of the tool is as follows.
 
 ```shell

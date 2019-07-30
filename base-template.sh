@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.261441-38baa8
+# Version: 1907.302109-df1e4b
 
 #####################################################
 # Execute the current hook,
@@ -595,10 +595,10 @@ call_script() {
 #   hint text `$3` with
 #   options `$4` in form of e.g. `Y/a/n/d` and
 #   optional long options [optional]:
-#   e.g.
-#    `$5-$8` : "Yes" "All" "None" "Disable"
+#     e.g. `$5-$8` : "Yes" "All" "None" "Disable"
 #   First capital short option character is treated
 #   as default.
+#   The result is set in the variable named in `$1`.
 #
 #####################################################
 show_prompt() {
@@ -616,7 +616,6 @@ show_prompt() {
         ANSWER=$(call_script "$DIALOG_TOOL" "githook::" "$TEXT" "$SHORT_OPTIONS" "$@")
         # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
-
             if ! echo "$SHORT_OPTIONS" | grep -q "$ANSWER"; then
                 echo "! Dialog tool did return wrong answer $ANSWER -> Abort."
                 exit 1
@@ -631,14 +630,14 @@ show_prompt() {
             eval "$VARIABLE"="$ANSWER"
             return
         fi
-        # Running fallback...
+
+        # else: Running fallback...
     fi
 
-    # Read from stdin (because its connected)
+    # Read from stdin
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
     # shellcheck disable=SC2229
     read -r "$VARIABLE"
-
 }
 
 #####################################################

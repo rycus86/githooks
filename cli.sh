@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.261441-38baa8
+# Version: 1907.302109-df1e4b
 
 #####################################################
 # Prints the command line help for usage and
@@ -1976,36 +1976,39 @@ git hooks tools register [download|dialog] <scriptFolder>
     Install the script folder \`<scriptFolder>\` in 
     the installation directory under \`tools/<toolName>\`.
 
-    Download Tool:
-    The interface of the tool is as follows.
+    >> Download Tool
+
+    The interface of the download tool is as follows.
     
     # if \`run\` is executable
     \$ run <relativeFilePath> <outputFile>
     # otherwise, assuming \`run\` is a shell script
     \$ sh run <relativeFilePath> <outputFile>
     
-    The arguments are:
+    The arguments of the download tool are:
     - \`<relativeFilePath>\` is the file relative to the repository root
     - \`<outputFile>\` file to write the results to (may not exist yet)
 
-    Dialog Tool:
-    The interface of the tool is as follows.
+    >> Dialog Tool
+
+    The interface of the dialog tool is as follows.
     
     # if \`run\` is executable
     \$ run <title> <text> <options> <long-options>
     # otherwise, assuming \`run\` is a shell script
     \$ sh run <title> <text> <options> <long-options>
 
-    The arguments for are:
-    - \`<title>\` the title for the user gui dialog
-    - \`<text>\` the text for the user gui dialog
+    The arguments of the dialog tool are:
+    - \`<title>\` the title for the GUI dialog
+    - \`<text>\` the text for the GUI dialog
     - \`<short-options>\` the button return values, slash-delimited, 
         e.g. \`Y/n/d\`.
         The default button is the first capital character found.
-    - \`<long-options>\` the button texts in the gui,
+    - \`<long-options>\` the button texts in the GUI,
         e.g. \`Yes/no/disable\`
 
     The script needs to return one of the short-options on \`stdout\`.
+    Non-zero exit code triggers the fallback of reading from \`stdin\`.
 
 git hooks tools unregister [download|dialog]
 
