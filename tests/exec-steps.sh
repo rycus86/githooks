@@ -20,6 +20,8 @@ for STEP in /var/lib/tests/step-*.sh; do
         mkdir -p /usr/share/git-core/templates/hooks
         rm -rf /usr/share/git-core/templates/hooks/*
     fi
+
+    rm -rf ~/test*
     rm -rf ~/.githooks
     rm -rf /tmp/*
 

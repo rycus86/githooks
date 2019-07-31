@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.302109-df1e4b
+# Version: 1907.311448-fee6c0
 
 #####################################################
 # Prints the command line help for usage and
@@ -66,6 +66,10 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
+
+    # Global IFS for loops
+    IFS_COMMA_NEWLINE=",
+"
 }
 
 #####################################################
@@ -225,7 +229,7 @@ git hooks disable [-r|--reset]
 
     ensure_checksum_file_exists
 
-    for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
+    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
         if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null; then
             echo "Hook file is already disabled at $HOOK_FILE"
             continue
@@ -312,7 +316,7 @@ git hooks accept [trigger]
     find_hook_path_to_enable_or_disable "$@" || exit 1
     ensure_checksum_file_exists
 
-    for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
+    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
         if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum"; then
             echo "Hook file is currently disabled at $HOOK_FILE"
             continue
@@ -873,10 +877,10 @@ remove_shared_hook_repo() {
         CURRENT_LIST=$(git config --global --get githooks.shared)
         NEW_LIST=""
 
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
@@ -886,6 +890,7 @@ remove_shared_hook_repo() {
             else
                 NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -910,10 +915,10 @@ remove_shared_hook_repo() {
         CURRENT_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
         NEW_LIST=""
 
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
@@ -924,6 +929,7 @@ remove_shared_hook_repo() {
                 NEW_LIST="${NEW_LIST}
 ${SHARED_REPO_ITEM}"
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -1020,16 +1026,16 @@ list_shared_hook_repos() {
         esac
     done
 
-    IFS=",
-    "
-
     if [ -n "$LIST_GLOBAL" ]; then
         echo "Global shared hook repositories:"
 
         if [ -z "$(git config --global --get githooks.shared)" ]; then
             echo "  - None"
         else
+
+            IFS="$IFS_COMMA_NEWLINE"
             for LIST_ITEM in $(git config --global --get githooks.shared); do
+                unset IFS
 
                 set_shared_root "$LIST_ITEM"
                 if [ -d "$SHARED_ROOT/.git" ]; then
@@ -1048,7 +1054,10 @@ list_shared_hook_repos() {
                 else
                     echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
                 fi
+
+                IFS="$IFS_COMMA_NEWLINE"
             done
+            unset IFS
         fi
     fi
 
@@ -1063,7 +1072,9 @@ list_shared_hook_repos() {
         else
             SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
 
+            IFS="$IFS_COMMA_NEWLINE"
             echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
+                unset IFS
 
                 set_shared_root "$LIST_ITEM"
 
@@ -1083,11 +1094,13 @@ list_shared_hook_repos() {
                 else
                     echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
                 fi
+
+                IFS="$IFS_COMMA_NEWLINE"
             done
+            unset IFS
         fi
     fi
 
-    unset IFS
 }
 
 #####################################################
@@ -1146,10 +1159,11 @@ update_shared_hooks_in() {
     SHARED_REPOS_LIST="$1"
 
     # split on comma and newline
-    IFS=",
-    "
+    IFS="$IFS_COMMA_NEWLINE"
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
+        unset IFS
+
         mkdir -p ~/.githooks/shared
 
         set_shared_root "$SHARED_REPO"
@@ -1172,6 +1186,8 @@ update_shared_hooks_in() {
                 echo "$CLONE_OUTPUT"
             fi
         fi
+
+        IFS="$IFS_COMMA_NEWLINE"
     done
 
     unset IFS

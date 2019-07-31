@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.302109-df1e4b
+# Version: 1907.311448-fee6c0
 
 #####################################################
 # Execute the current hook,
@@ -65,6 +65,10 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git" # reset to a sensible default
     fi
+
+    # Global IFS for loops
+    IFS_COMMA_NEWLINE=",
+"
 }
 
 #####################################################
@@ -399,10 +403,10 @@ update_shared_hooks_if_appropriate() {
 
     if [ "$RUN_UPDATE" = "true" ]; then
         # split on comma and newline
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
+            unset IFS
             mkdir -p ~/.githooks/shared
 
             set_shared_root "$SHARED_REPO"
@@ -425,6 +429,7 @@ update_shared_hooks_if_appropriate() {
                     echo "$CLONE_OUTPUT"
                 fi
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -440,9 +445,10 @@ update_shared_hooks_if_appropriate() {
 #####################################################
 execute_shared_hooks() {
     # split on comma and newline
-    IFS=",
-    "
+    IFS="$IFS_COMMA_NEWLINE"
+
     for SHARED_REPO in $SHARED_REPOS_LIST; do
+        unset IFS
 
         set_shared_root "$SHARED_REPO"
 
@@ -483,6 +489,7 @@ execute_shared_hooks() {
             execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
 
+        IFS="$IFS_COMMA_NEWLINE"
     done
     unset IFS
 }
