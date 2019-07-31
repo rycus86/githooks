@@ -26,13 +26,13 @@ echo "test" >testing.txt &&
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 
-if ! grep -q 'p:/tmp/test098' /tmp/test098.out; then
+if ! grep -q 'p:/tmp/test *098' /tmp/test098.out; then
     echo "! Unexpected target content"
     cat /tmp/test098.out
     exit 1
 fi
 
-git worktree add -b example-a ../test098-A master || exit 2
+git worktree add -b example-a /tmp/test098-A master || exit 2
 
 cd /tmp/test098-A &&
     echo "test: A" >testing.txt &&
@@ -41,13 +41,13 @@ cd /tmp/test098-A &&
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks (from A)' || exit 3
 
-if ! grep -q 'p:/tmp/test098-A' /tmp/test098.out; then
+if ! grep -q 'p:/tmp/test *098-A' /tmp/test098.out; then
     echo "! Unexpected target content"
     cat /tmp/test098.out
     exit 3
 fi
 
-git worktree add -b example-b ../test098-B master || exit 2
+git worktree add -b example-b /tmp/test098-B master || exit 2
 
 cd /tmp/test098-B &&
     echo "test: B" >testing.txt &&
@@ -56,7 +56,7 @@ cd /tmp/test098-B &&
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks (from B)' || exit 4
 
-if ! grep -q 'p:/tmp/test098-B' /tmp/test098.out; then
+if ! grep -q 'p:/tmp/test *098-B' /tmp/test098.out; then
     echo "! Unexpected target content"
     cat /tmp/test098.out
     exit 4

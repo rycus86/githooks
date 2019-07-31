@@ -25,6 +25,8 @@ RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
         sed -i -E "s|sh -c (.*) -- |sh -c \\1 -- \${EXTRA_INSTALL_ARGS} |g" /var/lib/tests/step-* ; \\
     fi
 
+${ADDITIONAL_INSTALL_STEPS:-}
+
 RUN sh /var/lib/tests/exec-steps.sh
 EOF
 

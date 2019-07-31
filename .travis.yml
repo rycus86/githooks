@@ -20,5 +20,6 @@ env:
   - TEST_INSTANCE=test-fedora
   - TEST_INSTANCE=test-opensuse
   - TEST_INSTANCE=test-corehookspath
+  - TEST_INSTANCE=test-whitespace
   - TEST_INSTANCE=test-rules
   - TEST_INSTANCE=coverage
