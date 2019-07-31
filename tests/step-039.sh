@@ -16,11 +16,3 @@ if ! grep -r 'github.com/rycus86/githooks' /tmp/start/dir/.git/hooks; then
     echo "! Hooks were not installed"
     exit 1
 fi
-
-rm -rf .git/ && git init || exit 1
-
-# Run it once more for coverage
-if ! sh -c "$(cat /var/lib/githooks/install.sh)" -- --single; then
-    echo "! Installation failed"
-    exit 1
-fi
