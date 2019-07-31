@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1907.302109-df1e4b
+# Version: 1907.311448-fee6c0
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.302109-df1e4b
+# Version: 1907.311448-fee6c0
 
 #####################################################
 # Execute the current hook,
@@ -84,6 +84,10 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git" # reset to a sensible default
     fi
+
+    # Global IFS for loops
+    IFS_COMMA_NEWLINE=",
+"
 }
 
 #####################################################
@@ -418,10 +422,10 @@ update_shared_hooks_if_appropriate() {
 
     if [ "$RUN_UPDATE" = "true" ]; then
         # split on comma and newline
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
+            unset IFS
             mkdir -p ~/.githooks/shared
 
             set_shared_root "$SHARED_REPO"
@@ -444,6 +448,7 @@ update_shared_hooks_if_appropriate() {
                     echo "$CLONE_OUTPUT"
                 fi
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -459,9 +464,10 @@ update_shared_hooks_if_appropriate() {
 #####################################################
 execute_shared_hooks() {
     # split on comma and newline
-    IFS=",
-    "
+    IFS="$IFS_COMMA_NEWLINE"
+
     for SHARED_REPO in $SHARED_REPOS_LIST; do
+        unset IFS
 
         set_shared_root "$SHARED_REPO"
 
@@ -502,6 +508,7 @@ execute_shared_hooks() {
             execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
 
+        IFS="$IFS_COMMA_NEWLINE"
     done
     unset IFS
 }
@@ -839,7 +846,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1907.302109-df1e4b
+# Version: 1907.311448-fee6c0
 
 #####################################################
 # Prints the command line help for usage and
@@ -894,6 +901,10 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
+
+    # Global IFS for loops
+    IFS_COMMA_NEWLINE=",
+"
 }
 
 #####################################################
@@ -1053,7 +1064,7 @@ git hooks disable [-r|--reset]
 
     ensure_checksum_file_exists
 
-    for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
+    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
         if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null; then
             echo "Hook file is already disabled at $HOOK_FILE"
             continue
@@ -1140,7 +1151,7 @@ git hooks accept [trigger]
     find_hook_path_to_enable_or_disable "$@" || exit 1
     ensure_checksum_file_exists
 
-    for HOOK_FILE in $(find "$HOOK_PATH" -type f | grep "/.githooks/"); do
+    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
         if grep -q "disabled> $HOOK_FILE" "${CURRENT_GIT_DIR}/.githooks.checksum"; then
             echo "Hook file is currently disabled at $HOOK_FILE"
             continue
@@ -1701,10 +1712,10 @@ remove_shared_hook_repo() {
         CURRENT_LIST=$(git config --global --get githooks.shared)
         NEW_LIST=""
 
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
@@ -1714,6 +1725,7 @@ remove_shared_hook_repo() {
             else
                 NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -1738,10 +1750,10 @@ remove_shared_hook_repo() {
         CURRENT_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
         NEW_LIST=""
 
-        IFS=",
-        "
+        IFS="$IFS_COMMA_NEWLINE"
 
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
+            unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
@@ -1752,6 +1764,7 @@ remove_shared_hook_repo() {
                 NEW_LIST="${NEW_LIST}
 ${SHARED_REPO_ITEM}"
             fi
+            IFS="$IFS_COMMA_NEWLINE"
         done
 
         unset IFS
@@ -1848,16 +1861,16 @@ list_shared_hook_repos() {
         esac
     done
 
-    IFS=",
-    "
-
     if [ -n "$LIST_GLOBAL" ]; then
         echo "Global shared hook repositories:"
 
         if [ -z "$(git config --global --get githooks.shared)" ]; then
             echo "  - None"
         else
+
+            IFS="$IFS_COMMA_NEWLINE"
             for LIST_ITEM in $(git config --global --get githooks.shared); do
+                unset IFS
 
                 set_shared_root "$LIST_ITEM"
                 if [ -d "$SHARED_ROOT/.git" ]; then
@@ -1876,7 +1889,10 @@ list_shared_hook_repos() {
                 else
                     echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
                 fi
+
+                IFS="$IFS_COMMA_NEWLINE"
             done
+            unset IFS
         fi
     fi
 
@@ -1891,7 +1907,9 @@ list_shared_hook_repos() {
         else
             SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
 
+            IFS="$IFS_COMMA_NEWLINE"
             echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
+                unset IFS
 
                 set_shared_root "$LIST_ITEM"
 
@@ -1911,11 +1929,13 @@ list_shared_hook_repos() {
                 else
                     echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
                 fi
+
+                IFS="$IFS_COMMA_NEWLINE"
             done
+            unset IFS
         fi
     fi
 
-    unset IFS
 }
 
 #####################################################
@@ -1974,10 +1994,11 @@ update_shared_hooks_in() {
     SHARED_REPOS_LIST="$1"
 
     # split on comma and newline
-    IFS=",
-    "
+    IFS="$IFS_COMMA_NEWLINE"
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
+        unset IFS
+
         mkdir -p ~/.githooks/shared
 
         set_shared_root "$SHARED_REPO"
@@ -2000,6 +2021,8 @@ update_shared_hooks_in() {
                 echo "$CLONE_OUTPUT"
             fi
         fi
+
+        IFS="$IFS_COMMA_NEWLINE"
     done
 
     unset IFS
@@ -3062,6 +3085,11 @@ If you find it useful, please show your support by starring the project in GitHu
 #   0 when successfully finished, 1 if failed
 ############################################################
 execute_installation() {
+
+    # Global IFS for loops
+    IFS_NEWLINE="
+"
+
     parse_command_line_arguments "$@"
 
     if is_non_interactive; then
@@ -3388,7 +3416,11 @@ search_for_templates_dir() {
 search_pre_commit_sample_file() {
     START_DIR="$1"
 
-    for HIT in $(find "$START_DIR" 2>/dev/null | grep "templates/hooks/pre-commit.sample"); do
+    IFS="$IFS_NEWLINE"
+    # shellcheck disable=SC2044
+    for HIT in $(find "$START_DIR" -path "*templates/hooks/pre-commit.sample" 2>/dev/null); do
+        unset IFS
+
         HIT=$(dirname "$HIT")
 
         if [ ! -w "$HIT" ]; then
@@ -3403,7 +3435,9 @@ search_pre_commit_sample_file() {
             TARGET_TEMPLATE_DIR="$HIT"
             return
         fi
+        IFS="$IFS_NEWLINE"
     done
+    unset IFS
 }
 
 ############################################################
@@ -3616,10 +3650,16 @@ install_into_existing_repositories() {
         LOCAL_REPOSITORY_LIST=$(echo "$LOCAL_REPOSITORY_LIST" | sort)
     fi
 
+    IFS="$IFS_NEWLINE"
     for EXISTING in $LOCAL_REPOSITORY_LIST; do
+        unset IFS
+
         EXISTING_REPO_ROOT=$(dirname "$EXISTING")
         install_hooks_into_repo "$EXISTING_REPO_ROOT"
+
+        IFS="$IFS_NEWLINE"
     done
+    unset IFS
 
     return
 }
