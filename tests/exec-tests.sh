@@ -1,5 +1,10 @@
 #!/bin/sh
 IMAGE_TYPE="$1"
+if [ -n "$TEST_STEP" ]; then
+    STEPS_TO_RUN="step-${TEST_STEP}.sh"
+else
+    STEPS_TO_RUN="step-*"
+fi
 
 cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
@@ -10,7 +15,7 @@ ADD examples /var/lib/githooks/examples
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/exec-steps.sh tests/step-* /var/lib/tests/
+ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 
 # Do not use the terminal in tests
 RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\

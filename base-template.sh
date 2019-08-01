@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1907.311448-fee6c0
+# Version: 1908.012129-2e301c
 
 #####################################################
 # Execute the current hook,
@@ -19,6 +19,7 @@ process_git_hook() {
     export_staged_files
     check_for_updates_if_needed
     execute_old_hook_if_available "$@" || return 1
+    execute_lfs_hook_if_appropriate "$@" || return 1
     execute_global_shared_hooks "$@" || return 1
     execute_local_shared_hooks "$@" || return 1
     execute_all_hooks_in "$(pwd)/.githooks" "$@" || return 1
@@ -105,6 +106,41 @@ execute_old_hook_if_available() {
     if [ -x "${HOOK_FOLDER}/${HOOK_NAME}.replaced.githook" ]; then
         ABSOLUTE_FOLDER=$(cd "${HOOK_FOLDER}" && pwd)
         execute_hook "${ABSOLUTE_FOLDER}/${HOOK_NAME}.replaced.githook" "$@" || return 1
+    fi
+}
+
+#####################################################
+# Executes a Git LFS hook if `git-lfs`
+#   is available and the hook type is one that
+#   Git LFS is known to handle.
+#
+# Returns:
+#   1 if the old hook failed, 0 otherwise
+#####################################################
+execute_lfs_hook_if_appropriate() {
+    CAN_RUN_LFS_HOOK="false"
+    [ "$HOOK_NAME" = "post-checkout" ] && CAN_RUN_LFS_HOOK="true"
+    [ "$HOOK_NAME" = "post-commit" ] && CAN_RUN_LFS_HOOK="true"
+    [ "$HOOK_NAME" = "post-merge" ] && CAN_RUN_LFS_HOOK="true"
+    [ "$HOOK_NAME" = "pre-push" ] && CAN_RUN_LFS_HOOK="true"
+
+    # not an event LFS would care about
+    [ "$CAN_RUN_LFS_HOOK" = "false" ] && return
+
+    # do we have Git LFS installed
+    GIT_LFS_AVAILABLE="false"
+    git-lfs --version >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
+
+    # do we require LFS support in this repository
+    REQUIRES_LFS_SUPPORT="false"
+    [ -f "$(pwd)/.githooks/.lfs-required" ] && REQUIRES_LFS_SUPPORT="true"
+
+    if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
+        git lfs "$HOOK_NAME" "$@" || return 1
+    elif [ "$REQUIRES_LFS_SUPPORT" = "true" ]; then
+        echo "This repository requires Git LFS, but \`git-lfs\` was not found on your PATH."
+        echo "If you no longer want to use Git LFS, remove the \`.githooks/.lfs-required\` file."
+        return 1
     fi
 }
 

@@ -8,9 +8,3 @@ if sh /var/lib/githooks/install.sh --single; then
     echo "! Expected to fail"
     exit 1
 fi
-
-# Run it once more for coverage
-if sh -c "$(cat /var/lib/githooks/install.sh)" -- --single; then
-    echo "! Expected to fail"
-    exit 1
-fi
