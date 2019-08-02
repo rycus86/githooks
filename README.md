@@ -27,8 +27,9 @@ Take this snippet of a project layout as an example:
         └── .ignore
     └── post-checkout
     └── ...
-    └── .ignore
-    └── .shared
+    └── .ignore 
+    └── .shared 
+    └── .lfs-required
 ├── README.md
 ├── LICENSE
 └── ...
@@ -43,12 +44,13 @@ If a file is executable, it is directly invoked, otherwise it is interpreted wit
 Hooks related to `commit` events will also have a `${STAGED_FILES}` environment variable set, that is the list of staged and changed files (according to `git diff --cached --diff-filter=ACMR --name-only`), one per line and where it makes sense (not `post-commit`). If you want to iterate over them, and expect spaces in paths, you might want to set `IFS` like this.
 
 ```shell
-IFS="
-"
-
+IFS="$IFS_NEWLINE"
 for STAGED in ${STAGED_FILES}; do
+    unset IFS
     ...
+    IFS="$IFS_NEWLINE"
 done
+unset IFS
 ```
 
 The `ACMR` filter in the `git diff` will include staged files that are added, copied, modified or renamed.
@@ -77,6 +79,22 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `post-rewrite`
 - `sendemail-validate`
 
+## GIT Large File System Support
+If the user has installed [Git Large File System](https://git-lfs.github.com/) (LFS) `git-lfs` by calling 
+`git lfs install` globally or locally for a repository only, `git-lfs` installes 4 hooks when initializing `(git init)` or cloning `(git clone)` a repository:
+
+- `post-checkout`
+- `post-commit`
+- `post-merge`
+- `pre-push`
+
+Since `githooks` overwrites the hooks in `.git/hooks`, it is **crucial** that the original LFS hooks are still run.
+This hook manager runs all Git LFS hooks internally if the executbale `git-lfs` is found on the system path. If `git-lfs` is missing, a warning and a failure is reported (exit code `1`) for any of the above hooks if a file `./githooks/.lfs-required` is placed under the project root. For all `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`. 
+A clone of a repository containing this file will still work but issue a warning and exit with code `1`.
+A push, however, will fail if `git-lfs` is missing and return exit code `1`.
+
+It is advicable for repositories using Git LFS to also have a pre-commit hook (e.g. `exampled/lfs/pre-commit`) checked in which enforces a correct installation of Git LFS.
+
 ## Ignoring files
 
 The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`.
@@ -97,6 +115,13 @@ $ git hooks shared list --with-url
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+The additional global configuration parameter `githooks.failOnNotExistingSharedHooks`:
+```ini
+[githooks]
+    failOnNotExistingSharedHooks = true
+```
+lets any hook fail with a warning if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called.
+Note that shared hooks are automatically updated on clone.
 
 You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
 

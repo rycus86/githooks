@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.022224-419ff4
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.022224-419ff4
 
 #####################################################
 # Execute the current hook,
@@ -148,7 +148,7 @@ execute_lfs_hook_if_appropriate() {
 
     # do we have Git LFS installed
     GIT_LFS_AVAILABLE="false"
-    git-lfs --version >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
+    command -v git-lfs >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
 
     # do we require LFS support in this repository
     REQUIRES_LFS_SUPPORT="false"
@@ -882,7 +882,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.022224-419ff4
 
 #####################################################
 # Prints the command line help for usage and

@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.022224-419ff4
 
 #####################################################
 # Execute the current hook,
@@ -129,7 +129,7 @@ execute_lfs_hook_if_appropriate() {
 
     # do we have Git LFS installed
     GIT_LFS_AVAILABLE="false"
-    git-lfs --version >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
+    command -v git-lfs >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
 
     # do we require LFS support in this repository
     REQUIRES_LFS_SUPPORT="false"
