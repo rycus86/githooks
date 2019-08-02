@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.012129-2e301c
+# Version: 1908.021942-0c8b56
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.012129-2e301c
+# Version: 1908.021942-0c8b56
 
 #####################################################
 # Execute the current hook,
@@ -699,7 +699,7 @@ show_prompt() {
     # Read from stdin
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
     # shellcheck disable=SC2229
-    read -r "$VARIABLE"
+    read -r "$VARIABLE" </dev/tty
 }
 
 #####################################################
@@ -882,7 +882,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.012129-2e301c
+# Version: 1908.021942-0c8b56
 
 #####################################################
 # Prints the command line help for usage and
@@ -3347,20 +3347,20 @@ find_git_hook_templates() {
     # 4. Setup new folder if running interactively and no folder is found by now
     if is_non_interactive; then
         setup_new_templates_folder
-        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+        return # we are finished either way here
     fi
 
     # 5. try to search for it on disk
     printf 'Could not find the Git hook template directory. '
     printf 'Do you want to search for it? [y/N] '
-    read -r DO_SEARCH
+    read -r DO_SEARCH </dev/tty
 
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
         search_for_templates_dir
 
         if [ "$TARGET_TEMPLATE_DIR" != "" ]; then
             printf 'Do you want to set this up as the Git template directory for future use? [y/N] '
-            read -r MARK_AS_TEMPLATES
+            read -r MARK_AS_TEMPLATES </dev/tty
 
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
                 TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
@@ -3375,7 +3375,7 @@ find_git_hook_templates() {
 
     # 6. set up as new
     printf "Do you want to set up a new Git templates folder? [y/N] "
-    read -r SETUP_NEW_FOLDER
+    read -r SETUP_NEW_FOLDER </dev/tty
 
     if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ]; then
         setup_new_templates_folder
@@ -3429,9 +3429,13 @@ search_for_templates_dir() {
         if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
     fi
 
+    if is_non_interactive; then
+        return
+    fi
+
     printf 'Git hook template directory not found in /usr. '
     printf 'Do you want to keep searching? [y/N] '
-    read -r DO_SEARCH
+    read -r DO_SEARCH </dev/tty
 
     if [ "${DO_SEARCH}" = "y" ] || [ "${DO_SEARCH}" = "Y" ]; then
         echo "Searching for potential locations everywhere ..."
@@ -3465,7 +3469,7 @@ search_pre_commit_sample_file() {
         fi
 
         printf -- "- Is it %s ? [y/N] " "$HIT"
-        read -r ACCEPT
+        read -r ACCEPT </dev/tty
 
         if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
             TARGET_TEMPLATE_DIR="$HIT"
@@ -3485,8 +3489,13 @@ search_pre_commit_sample_file() {
 setup_new_templates_folder() {
     # shellcheck disable=SC2088
     DEFAULT_TARGET="~/.githooks/templates"
-    printf "Enter the target folder: [%s] " "$DEFAULT_TARGET"
-    read -r USER_TEMPLATES
+
+    if is_non_interactive; then
+        USER_TEMPLATES="$DEFAULT_TARGET"
+    else
+        printf "Enter the target folder: [%s] " "$DEFAULT_TARGET"
+        read -r USER_TEMPLATES </dev/tty
+    fi
 
     if [ "$USER_TEMPLATES" = "" ]; then
         USER_TEMPLATES="$DEFAULT_TARGET"
@@ -3815,7 +3824,7 @@ setup_shared_hook_repositories() {
         printf "Would you like to set up shared hook repos now? [y/N] "
     fi
 
-    read -r DO_SETUP
+    read -r DO_SETUP </dev/tty
     if [ "$DO_SETUP" != "y" ] && [ "$DO_SETUP" != "Y" ]; then return; fi
 
     echo "OK, let's input them one-by-one and leave the input empty to stop."
@@ -3823,7 +3832,7 @@ setup_shared_hook_repositories() {
     SHARED_REPOS_LIST=""
     while true; do
         printf "Enter the clone URL of a shared repository: "
-        read -r SHARED_REPO
+        read -r SHARED_REPO </dev/tty
         if [ -z "$SHARED_REPO" ]; then break; fi
 
         if [ -n "$SHARED_REPOS_LIST" ]; then

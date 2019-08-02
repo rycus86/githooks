@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.012129-2e301c
+# Version: 1908.021942-0c8b56
 
 #####################################################
 # Execute the current hook,
@@ -680,7 +680,7 @@ show_prompt() {
     # Read from stdin
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
     # shellcheck disable=SC2229
-    read -r "$VARIABLE"
+    read -r "$VARIABLE" </dev/tty
 }
 
 #####################################################
