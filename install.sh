@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.022224-419ff4
+# Version: 1908.031127-cba0c1
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.022224-419ff4
+# Version: 1908.031127-cba0c1
 
 #####################################################
 # Execute the current hook,
@@ -502,13 +502,13 @@ execute_shared_hooks() {
     # split on comma and newline
     IFS="$IFS_COMMA_NEWLINE"
 
+    # Fail if the shared root is not available (if enabled)
+    FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
+
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
         set_shared_root "$SHARED_REPO"
-
-        # Fail if the shared root is not available (if enabled)
-        FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
 
         if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
             if [ ! -f "$SHARED_ROOT/.git/config" ]; then
@@ -882,7 +882,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.022224-419ff4
+# Version: 1908.031127-cba0c1
 
 #####################################################
 # Prints the command line help for usage and
