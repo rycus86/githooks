@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.031150-04363e
 
 #####################################################
 # Execute the current hook,
@@ -138,8 +138,8 @@ execute_lfs_hook_if_appropriate() {
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
         git lfs "$HOOK_NAME" "$@" || return 1
     elif [ "$REQUIRES_LFS_SUPPORT" = "true" ]; then
-        echo "This repository requires Git LFS, but \`git-lfs\` was not found on your PATH."
-        echo "If you no longer want to use Git LFS, remove the \`.githooks/.lfs-required\` file."
+        echo "! This repository requires Git LFS, but \`git-lfs\` was not found on your PATH." >&2
+        echo "!  If you no longer want to use Git LFS, remove the \`.githooks/.lfs-required\` file." >&2
         return 1
     fi
 }
@@ -295,7 +295,7 @@ is_trusted_repo() {
 
         # shellcheck disable=SC2181
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
-            echo "! This repository wants you to trust all current and future hooks without prompting"
+            echo "! This repository wants you to trust all current and future hooks without prompting" >&2
             show_prompt TRUST_ALL_HOOKS "  Do you want to allow running every current and future hooks?" "" "y/N" "Yes" "No"
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
@@ -452,7 +452,7 @@ update_shared_hooks_if_appropriate() {
                 PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
-                    echo "! Update failed, git pull output:"
+                    echo "! Update failed, git pull output:" >&2
                     echo "$PULL_OUTPUT"
                 fi
             else
@@ -461,7 +461,7 @@ update_shared_hooks_if_appropriate() {
                 CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
-                    echo "! Clone failed, git clone output:"
+                    echo "! Clone failed, git clone output:" >&2
                     echo "$CLONE_OUTPUT"
                 fi
             fi
@@ -493,9 +493,9 @@ execute_shared_hooks() {
 
         if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
             if [ ! -f "$SHARED_ROOT/.git/config" ]; then
-                echo "! Failed to execute shared hooks in $SHARED_REPO"
-                echo "! It is not available. To fix, run:"
-                echo "!   \$ git hooks shared update"
+                echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+                echo "!  It is not available. To fix, run:" >&2
+                echo "!    \$ git hooks shared update" >&2
                 return 1
             fi
         fi
@@ -505,16 +505,16 @@ execute_shared_hooks() {
         REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
-            echo "! Failed to execute shared hooks in $SHARED_REPO"
-            echo "! The URL \`$REMOTE_URL\` is different."
-            echo "! To fix it, run:"
-            echo "!   \$ git hooks shared purge"
-            echo "!   \$ git hooks shared update"
+            echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+            echo "!  The URL \`$REMOTE_URL\` is different." >&2
+            echo "!  To fix it, run:" >&2
+            echo "!    \$ git hooks shared purge" >&2
+            echo "!    \$ git hooks shared update" >&2
 
             if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
                 return 1
             else
-                echo "!   Continuing..."
+                echo "!  Continuing..." >&2
                 continue
             fi
         fi
@@ -660,13 +660,13 @@ show_prompt() {
         # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             if ! echo "$SHORT_OPTIONS" | grep -q "$ANSWER"; then
-                echo "! Dialog tool did return wrong answer $ANSWER -> Abort."
+                echo "! Dialog tool did return wrong answer $ANSWER -> Abort." >&2
                 exit 1
             fi
 
             # Safeguard `eval`
             if ! echo "$VARIABLE" | grep -qE "^[A-Z_]+\$"; then
-                echo "! Invalid variable name: $VARIABLE"
+                echo "! Invalid variable name: $VARIABLE" >&2
                 exit 1
             fi
 
@@ -710,14 +710,14 @@ download_file() {
         elif wget --version >/dev/null 2>&1; then
             wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
         else
-            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget"
+            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget" >&2
             return 1
         fi
     fi
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
-        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed"
+        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed" >&2
         return 1
     fi
     return 0
@@ -737,7 +737,7 @@ fetch_latest_update_script() {
 
     INSTALL_SCRIPT="$(mktemp)"
     if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
-        echo "! Failed to check for updates"
+        echo "! Failed to check for updates" >&2
         return 1
     fi
 }

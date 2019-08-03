@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.021942-0c8b56
+# Version: 1908.031150-04363e
 
 #####################################################
 # Prints the command line help for usage and
@@ -205,7 +205,7 @@ git hooks disable [-r|--reset]
             echo "All existing and future hooks are disabled in the current repository" &&
             return
 
-        echo "! Failed to disable hooks in the current repository"
+        echo "! Failed to disable hooks in the current repository" >&2
         exit 1
 
     elif [ "$1" = "-r" ] || [ "$1" = "--reset" ]; then
@@ -214,7 +214,7 @@ git hooks disable [-r|--reset]
         if ! git config --get githooks.disable; then
             echo "Githooks hook files are not disabled anymore by default" && return
         else
-            echo "! Failed to re-enable Githooks hook files"
+            echo "! Failed to re-enable Githooks hook files" >&2
             exit 1
         fi
     fi
@@ -382,7 +382,7 @@ git hooks trust [forget]
             echo "  Do not forget to commit and push the trust marker!" &&
             return
 
-        echo "! Failed to mark the current repository as trusted"
+        echo "! Failed to mark the current repository as trusted" >&2
         exit 1
     fi
 
@@ -394,7 +394,7 @@ git hooks trust [forget]
             echo "The current repository is no longer trusted."
             return
         else
-            echo "! Failed to revoke the trusted setting"
+            echo "! Failed to revoke the trusted setting" >&2
             exit 1
         fi
 
@@ -402,7 +402,7 @@ git hooks trust [forget]
         if git config githooks.trust.all N; then
             echo "The current repository is no longer trusted."
         else
-            echo "! Failed to revoke the trusted setting"
+            echo "! Failed to revoke the trusted setting" >&2
             exit 1
         fi
 
@@ -417,12 +417,12 @@ git hooks trust [forget]
             echo "  Do not forget to commit and push the change!" &&
             return
 
-        echo "! Failed to delete the trust marker"
+        echo "! Failed to delete the trust marker" >&2
         exit 1
     fi
 
-    echo "! Unknown subcommand: $1"
-    echo "  Run \`git hooks trust help\` to see the available options."
+    echo "! Unknown subcommand: $1" >&2
+    echo "   Run \`git hooks trust help\` to see the available options." >&2
     exit 1
 }
 
@@ -754,7 +754,7 @@ git hooks shared [update|pull]
             echo "All existing shared hook repositories have been deleted locally" &&
             return
 
-        echo "! Cannot delete existing shared hook repositories locally (maybe there is none)"
+        echo "! Cannot delete existing shared hook repositories locally (maybe there is none)" >&2
         exit 1
     fi
 
@@ -776,7 +776,7 @@ git hooks shared [update|pull]
         return
     fi
 
-    echo "! Unknown subcommand: \`$1\`"
+    echo "! Unknown subcommand: \`$1\`" >&2
     exit 1
 }
 
@@ -803,7 +803,7 @@ add_shared_hook_repo() {
     esac
 
     if [ -z "$SHARED_REPO_URL" ]; then
-        echo "! Usage: \`git hooks shared add [--global|--local] <git-url>\`"
+        echo "! Usage: \`git hooks shared add [--global|--local] <git-url>\`" >&2
         exit 1
     fi
 
@@ -820,7 +820,7 @@ add_shared_hook_repo() {
             echo "The new shared hook repository is successfully added" &&
             return
 
-        echo "! Failed to add the new shared hook repository"
+        echo "! Failed to add the new shared hook repository" >&2
         exit 1
 
     else
@@ -840,7 +840,7 @@ add_shared_hook_repo() {
             echo "  Do not forget to commit the change!" &&
             return
 
-        echo "! Failed to add the new shared hook repository"
+        echo "! Failed to add the new shared hook repository" >&2
         exit 1
 
     fi
@@ -869,7 +869,7 @@ remove_shared_hook_repo() {
     esac
 
     if [ -z "$SHARED_REPO_URL" ]; then
-        echo "! Usage: \`git hooks shared remove [--global|--local] <git-url>\`"
+        echo "! Usage: \`git hooks shared remove [--global|--local] <git-url>\`" >&2
         exit 1
     fi
 
@@ -903,7 +903,7 @@ remove_shared_hook_repo() {
             echo "The list of shared hook repositories is successfully changed" &&
             return
 
-        echo "! Failed to remove a shared hook repository"
+        echo "! Failed to remove a shared hook repository" >&2
         exit 1
 
     else
@@ -943,7 +943,7 @@ ${SHARED_REPO_ITEM}"
             echo "  Do not forget to commit the change!" &&
             return
 
-        echo "! Failed to remove a shared hook repository"
+        echo "! Failed to remove a shared hook repository" >&2
         exit 1
 
     fi
@@ -969,10 +969,10 @@ clear_shared_hook_repos() {
         CLEAR_LOCAL_REPOS=1
         ;;
     *)
-        echo "! One of the following must be used:"
-        echo "  git hooks shared clear --global"
-        echo "  git hooks shared clear --local"
-        echo "  git hooks shared clear --all"
+        echo "! One of the following must be used:" >&2
+        echo "!  \$ git hooks shared clear --global" >&2
+        echo "!  \$ git hooks shared clear --local" >&2
+        echo "!  \$ git hooks shared clear --all" >&2
         exit 1
         ;;
     esac
@@ -990,7 +990,7 @@ clear_shared_hook_repos() {
     fi
 
     if [ -n "$CLEAR_REPOS_FAILED" ]; then
-        echo "! There were some problems clearing the shared hook repository list"
+        echo "! There were some problems clearing the shared hook repository list" >&2
         exit 1
     fi
 }
@@ -1020,7 +1020,7 @@ list_shared_hook_repos() {
             LIST_WITH_URL=1
             ;;
         *)
-            echo "! Unknown list option: $ARG"
+            echo "! Unknown list option: $ARG" >&2
             exit 1
             ;;
         esac
@@ -1173,8 +1173,8 @@ update_shared_hooks_in() {
             PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
-                echo "! Update failed, git pull output:"
-                echo "$PULL_OUTPUT"
+                echo "! Update failed, git pull output:" >&2
+                echo "$PULL_OUTPUT" >&2
             fi
         else
             echo "* Retrieving shared hooks from: $SHARED_REPO"
@@ -1182,8 +1182,8 @@ update_shared_hooks_in() {
             CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
-                echo "! Clone failed, git clone output:"
-                echo "$CLONE_OUTPUT"
+                echo "! Clone failed, git clone output:" >&2
+                echo "$CLONE_OUTPUT" >&2
             fi
         fi
 
@@ -1223,9 +1223,9 @@ git hooks install [--global]
     echo "Fetching the install script ..."
 
     if ! fetch_latest_install_script; then
-        echo "! Failed to fetch the latest install script"
-        echo "  You can retry manually using one of the alternative methods,"
-        echo "    see them here: https://github.com/rycus86/githooks#installation"
+        echo "! Failed to fetch the latest install script" >&2
+        echo "!  You can retry manually using one of the alternative methods," >&2
+        echo "!    see them here: https://github.com/rycus86/githooks#installation" >&2
         exit 1
     fi
 
@@ -1235,7 +1235,7 @@ git hooks install [--global]
     echo
 
     if ! execute_install_script; then
-        echo "! Failed to execute the installation"
+        echo "! Failed to execute the installation" >&2
         exit 1
     fi
 }
@@ -1270,17 +1270,17 @@ git hooks update [enable|disable]
             echo "Automatic update checks have been enabled" &&
             return
 
-        echo "! Failed to enable automatic updates" && exit 1
+        echo "! Failed to enable automatic updates" >&2 && exit 1
 
     elif [ "$1" = "disable" ]; then
         git config --global githooks.autoupdate.enabled N &&
             echo "Automatic update checks have been disabled" &&
             return
 
-        echo "! Failed to disable automatic updates" && exit 1
+        echo "! Failed to disable automatic updates" >&2 && exit 1
 
     elif [ -n "$1" ] && [ "$1" != "force" ]; then
-        echo "! Invalid operation: \`$1\`" && exit 1
+        echo "! Invalid operation: \`$1\`" >&2 && exit 1
 
     fi
 
@@ -1540,8 +1540,8 @@ git hooks readme [add|update]
     fi
 
     if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
-        echo "! This repository already seems to have a Githooks README."
-        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`"
+        echo "! This repository already seems to have a Githooks README." >&2
+        echo "! If you would like to replace it with the latest one, please run \`git hooks readme update\`" >&2
         exit 1
     fi
 
@@ -1552,7 +1552,7 @@ git hooks readme [add|update]
     mkdir -p "$(pwd)/.githooks" &&
         cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
         echo "The README file is updated, do not forget to commit and push it!" ||
-        echo "! Failed to update the README file in the current repository"
+        echo "! Failed to update the README file in the current repository" >&2
 }
 
 #####################################################
@@ -1567,7 +1567,7 @@ git hooks readme [add|update]
 fetch_latest_readme() {
     README_FILE="$(mktemp)"
     if ! download_file ".githooks/README.md" "$README_FILE"; then
-        echo "! Failed to fetch the latest README"
+        echo "! Failed to fetch the latest README" >&2
         return 1
     fi
 }
@@ -1620,12 +1620,12 @@ git hooks ignore [trigger] [pattern...]
 
     if [ -z "$1" ]; then
         manage_ignore_files "help"
-        echo "! Missing pattern parameter"
+        echo "! Missing pattern parameter" >&2
         exit 1
     fi
 
     if ! mkdir -p "$TARGET_DIR" && touch "$TARGET_DIR/.ignore"; then
-        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore"
+        echo "! Failed to prepare the ignore file at $TARGET_DIR/.ignore" >&2
         exit 1
     fi
 
@@ -1634,7 +1634,7 @@ git hooks ignore [trigger] [pattern...]
 
     for PATTERN in "$@"; do
         if ! echo "$PATTERN" >>"$TARGET_DIR/.ignore"; then
-            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore"
+            echo "! Failed to update the ignore file at $TARGET_DIR/.ignore" >&2
             exit 1
         fi
     done
@@ -1721,7 +1721,7 @@ git hooks config [reset|print] update-time
 
     if [ "$CONFIG_OPERATION" = "list" ]; then
         if [ "$2" = "--local" ] && ! is_running_in_git_repo_root; then
-            echo "! Local configuration can only be printed from a Git repository"
+            echo "! Local configuration can only be printed from a Git repository" >&2
             exit 1
         fi
 
@@ -1762,7 +1762,7 @@ git hooks config [reset|print] update-time
         ;;
     *)
         manage_configuration "help"
-        echo "! Invalid configuration option: \`$CONFIG_ARGUMENT\`"
+        echo "! Invalid configuration option: \`$CONFIG_ARGUMENT\`" >&2
         exit 1
         ;;
     esac
@@ -1791,7 +1791,7 @@ config_disable() {
             echo "Githooks is NOT disabled in the current repository"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1819,7 +1819,7 @@ config_single_install() {
             echo "The current repository is NOT marked as a single installation"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1835,7 +1835,7 @@ config_search_dir() {
     if [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             manage_configuration "help"
-            echo "! Missing <path> parameter"
+            echo "! Missing <path> parameter" >&2
             exit 1
         fi
 
@@ -1850,7 +1850,7 @@ config_search_dir() {
             echo "Search directory is set to: $CONFIG_SEARCH_DIR"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1864,7 +1864,7 @@ config_global_shared_hook_repos() {
     if [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             manage_configuration "help"
-            echo "! Missing <git-url> parameter"
+            echo "! Missing <git-url> parameter" >&2
             exit 1
         fi
 
@@ -1885,7 +1885,7 @@ config_global_shared_hook_repos() {
     elif [ "$1" = "print" ]; then
         list_shared_hook_repos "--global"
     else
-        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1918,7 +1918,7 @@ config_trust_all_hooks() {
             echo "The current repository does NOT trust hooks automatically"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`accept\`, \`deny\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1944,7 +1944,7 @@ config_update_state() {
             echo "Automatic update checks are NOT enabled"
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -1970,7 +1970,7 @@ config_update_last_run() {
             fi
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)"
+        echo "! Invalid operation: \`$1\` (use \`reset\` or \`print\`)" >&2
         exit 1
     fi
 }
@@ -2049,7 +2049,7 @@ git hooks tools unregister [download|dialog]
         ;;
     *)
         manage_tools "help"
-        echo "! Invalid tools option: \`$TOOLS_OPERATION\`"
+        echo "! Invalid tools option: \`$TOOLS_OPERATION\`" >&2
         exit 1
         ;;
     esac
@@ -2069,12 +2069,12 @@ tools_install() {
             SCRIPT_FOLDER=$(cd "$SCRIPT_FOLDER" && pwd)
 
             if [ ! -f "$SCRIPT_FOLDER/run" ]; then
-                echo "! File \`run\` does not exist in \`$SCRIPT_FOLDER\`"
+                echo "! File \`run\` does not exist in \`$SCRIPT_FOLDER\`" >&2
                 exit 1
             fi
 
             if ! tools_uninstall "$1" --quiet; then
-                echo "! Unregister failed!"
+                echo "! Unregister failed!" >&2
                 exit 1
             fi
 
@@ -2082,16 +2082,16 @@ tools_install() {
 
             mkdir -p "$TARGET_FOLDER" >/dev/null 2>&1 # Install new
             if ! cp -r "$SCRIPT_FOLDER"/* "$TARGET_FOLDER"/; then
-                echo "! Registration failed"
+                echo "! Registration failed" >&2
                 exit 1
             fi
             echo "Registered \`$SCRIPT_FOLDER\` as \`$1\` tool"
         else
-            echo "! The \`$SCRIPT_FOLDER\` directory does not exist!"
+            echo "! The \`$SCRIPT_FOLDER\` directory does not exist!" >&2
             exit 1
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`download\` or  \`dialog\`)"
+        echo "! Invalid operation: \`$1\` (use \`download\` or  \`dialog\`)" >&2
         exit 1
     fi
 }
@@ -2110,10 +2110,10 @@ tools_uninstall() {
             rm -r ~/".githooks/tools/$1"
             [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
         else
-            [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed"
+            [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed" >&2
         fi
     else
-        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\` or \`dialog\`)"
+        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\` or \`dialog\`)" >&2
         exit 1
     fi
 }
@@ -2203,7 +2203,7 @@ choose_command() {
         ;;
     *)
         print_help
-        [ -n "$CMD" ] && echo "! Unknown command: $CMD"
+        [ -n "$CMD" ] && echo "! Unknown command: $CMD" >&2
         exit 1
         ;;
     esac
