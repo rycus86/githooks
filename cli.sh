@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.031445-0429b7
+# Version: 1908.031505-450472
 
 #####################################################
 # Prints the command line help for usage and
@@ -2003,13 +2003,13 @@ config_fail_on_not_existing_shared_hooks() {
     fi
 
     if [ "$1" = "enable" ]; then
-        if ! git config "$CONFIG" --set githooks.failOnNotExistingSharedHooks "true"; then
+        if ! git config "$CONFIG" githooks.failOnNotExistingSharedHooks "true"; then
             echo "! Failed to enable \`fail-on-not-existing-shared-hooks\`"
             exit 1
         fi
         echo "Failing on not existing shared hooks is enabled"
     elif [ "$1" = "disable" ]; then
-        if ! git config "$CONFIG" --set githooks.failOnNotExistingSharedHooks "false"; then
+        if ! git config "$CONFIG" githooks.failOnNotExistingSharedHooks "false"; then
             echo "! Failed to disable \`fail-on-not-existing-shared-hooks\`"
             exit 1
         fi
