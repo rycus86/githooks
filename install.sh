@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.031150-04363e
+# Version: 1908.031453-c914f4
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.031150-04363e
+# Version: 1908.031453-c914f4
 
 #####################################################
 # Execute the current hook,
@@ -158,7 +158,7 @@ execute_lfs_hook_if_appropriate() {
         git lfs "$HOOK_NAME" "$@" || return 1
     elif [ "$REQUIRES_LFS_SUPPORT" = "true" ]; then
         echo "! This repository requires Git LFS, but \`git-lfs\` was not found on your PATH." >&2
-        echo "!  If you no longer want to use Git LFS, remove the \`.githooks/.lfs-required\` file." >&2
+        echo "  If you no longer want to use Git LFS, remove the \`.githooks/.lfs-required\` file." >&2
         return 1
     fi
 }
@@ -314,7 +314,7 @@ is_trusted_repo() {
 
         # shellcheck disable=SC2181
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
-            echo "! This repository wants you to trust all current and future hooks without prompting" >&2
+            echo "! This repository wants you to trust all current and future hooks without prompting"
             show_prompt TRUST_ALL_HOOKS "  Do you want to allow running every current and future hooks?" "" "y/N" "Yes" "No"
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
@@ -472,7 +472,7 @@ update_shared_hooks_if_appropriate() {
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
-                    echo "$PULL_OUTPUT"
+                    echo "$PULL_OUTPUT" >&2
                 fi
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO"
@@ -481,7 +481,7 @@ update_shared_hooks_if_appropriate() {
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Clone failed, git clone output:" >&2
-                    echo "$CLONE_OUTPUT"
+                    echo "$CLONE_OUTPUT" >&2
                 fi
             fi
             IFS="$IFS_COMMA_NEWLINE"
@@ -513,8 +513,8 @@ execute_shared_hooks() {
         if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
             if [ ! -f "$SHARED_ROOT/.git/config" ]; then
                 echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
-                echo "!  It is not available. To fix, run:" >&2
-                echo "!    \$ git hooks shared update" >&2
+                echo "  It is not available. To fix, run:" >&2
+                echo "    \$ git hooks shared update" >&2
                 return 1
             fi
         fi
@@ -525,15 +525,15 @@ execute_shared_hooks() {
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
-            echo "!  The URL \`$REMOTE_URL\` is different." >&2
-            echo "!  To fix it, run:" >&2
-            echo "!    \$ git hooks shared purge" >&2
-            echo "!    \$ git hooks shared update" >&2
+            echo "  The URL \`$REMOTE_URL\` is different." >&2
+            echo "  To fix it, run:" >&2
+            echo "    \$ git hooks shared purge" >&2
+            echo "    \$ git hooks shared update" >&2
 
             if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
                 return 1
             else
-                echo "!  Continuing..." >&2
+                echo "  Continuing..." >&2
                 continue
             fi
         fi
@@ -882,7 +882,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.031150-04363e
+# Version: 1908.031453-c914f4
 
 #####################################################
 # Prints the command line help for usage and
@@ -1841,9 +1841,9 @@ clear_shared_hook_repos() {
         ;;
     *)
         echo "! One of the following must be used:" >&2
-        echo "!  \$ git hooks shared clear --global" >&2
-        echo "!  \$ git hooks shared clear --local" >&2
-        echo "!  \$ git hooks shared clear --all" >&2
+        echo "    \$ git hooks shared clear --global" >&2
+        echo "    \$ git hooks shared clear --local" >&2
+        echo "    \$ git hooks shared clear --all" >&2
         exit 1
         ;;
     esac
@@ -2095,8 +2095,8 @@ git hooks install [--global]
 
     if ! fetch_latest_install_script; then
         echo "! Failed to fetch the latest install script" >&2
-        echo "!  You can retry manually using one of the alternative methods," >&2
-        echo "!    see them here: https://github.com/rycus86/githooks#installation" >&2
+        echo "  You can retry manually using one of the alternative methods," >&2
+        echo "  see them here: https://github.com/rycus86/githooks#installation" >&2
         exit 1
     fi
 
@@ -2412,7 +2412,7 @@ git hooks readme [add|update]
 
     if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
         echo "! This repository already seems to have a Githooks README." >&2
-        echo "! If you would like to replace it with the latest one, please run \`git hooks readme update\`" >&2
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`" >&2
         exit 1
     fi
 

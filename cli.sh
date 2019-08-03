@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.031150-04363e
+# Version: 1908.031453-c914f4
 
 #####################################################
 # Prints the command line help for usage and
@@ -970,9 +970,9 @@ clear_shared_hook_repos() {
         ;;
     *)
         echo "! One of the following must be used:" >&2
-        echo "!  \$ git hooks shared clear --global" >&2
-        echo "!  \$ git hooks shared clear --local" >&2
-        echo "!  \$ git hooks shared clear --all" >&2
+        echo "    \$ git hooks shared clear --global" >&2
+        echo "    \$ git hooks shared clear --local" >&2
+        echo "    \$ git hooks shared clear --all" >&2
         exit 1
         ;;
     esac
@@ -1224,8 +1224,8 @@ git hooks install [--global]
 
     if ! fetch_latest_install_script; then
         echo "! Failed to fetch the latest install script" >&2
-        echo "!  You can retry manually using one of the alternative methods," >&2
-        echo "!    see them here: https://github.com/rycus86/githooks#installation" >&2
+        echo "  You can retry manually using one of the alternative methods," >&2
+        echo "  see them here: https://github.com/rycus86/githooks#installation" >&2
         exit 1
     fi
 
@@ -1541,7 +1541,7 @@ git hooks readme [add|update]
 
     if [ -f .githooks/README.md ] && [ "$FORCE_README" != "y" ]; then
         echo "! This repository already seems to have a Githooks README." >&2
-        echo "! If you would like to replace it with the latest one, please run \`git hooks readme update\`" >&2
+        echo "  If you would like to replace it with the latest one, please run \`git hooks readme update\`" >&2
         exit 1
     fi
 
