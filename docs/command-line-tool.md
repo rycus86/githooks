@@ -196,6 +196,13 @@ $ git hooks config [reset|print] update-time
 
 Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
 
+```shell
+git hooks config [enable|disable] fail-on-non-existing-shared-hooks
+```
+
+Enable or disable the switch making hooks fail with an error if any shared hook configured in 
+`.shared` is missing, meaning `git hooks update` has not yet been called.
+
 ## git hooks tools
 
 > Experimental feature

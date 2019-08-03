@@ -88,12 +88,19 @@ If the user has installed [Git Large File System](https://git-lfs.github.com/) (
 - `post-merge`
 - `pre-push`
 
-Since `githooks` overwrites the hooks in `.git/hooks`, it is **crucial** that the original LFS hooks are still run.
-This hook manager runs all Git LFS hooks internally if the executbale `git-lfs` is found on the system path. If `git-lfs` is missing, a warning and a failure is reported (exit code `1`) for any of the above hooks if a file `./githooks/.lfs-required` is placed under the project root. For all `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`. 
-A clone of a repository containing this file will still work but issue a warning and exit with code `1`.
-A push, however, will fail if `git-lfs` is missing and return exit code `1`.
+## Git Large File Storage support
 
-It is advicable for repositories using Git LFS to also have a pre-commit hook (e.g. `exampled/lfs/pre-commit`) checked in which enforces a correct installation of Git LFS.
+If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling 
+`git lfs install` globally or locally for a repository only, `git-lfs` installs 4 hooks when initializing (`git init`) or cloning (`git clone`) a repository:
+
+- `post-checkout`
+- `post-commit`
+- `post-merge`
+- `pre-push`
+
+Since `githooks` overwrites the hooks in `.git/hooks`, it will also run all *Git LFS* hooks internally if the `git-lfs` executable is found on the system path. You can enforce having `git-lfs` installed on the system by placing a `./githooks/.lfs-required` file inside the repository, then if `git-lfs` is missing, a warning is shown and the hook will exit with code `1`. For some `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`, for example `post-commit` hooks can't fail commits. A clone of a repository containing this file might still work but would issue a warning and exit with code `1`, a push - however - will fail if `git-lfs` is missing.
+
+It is advisable for repositories using *Git LFS* to also have a pre-commit hook (e.g. `examples/lfs/pre-commit`) checked in which enforces a correct installation of *Git LFS*.
 
 ## Ignoring files
 
@@ -115,12 +122,7 @@ $ git hooks shared list --with-url
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
-The additional global configuration parameter `githooks.failOnNotExistingSharedHooks`:
-```ini
-[githooks]
-    failOnNotExistingSharedHooks = true
-```
-lets any hook fail with a warning if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called.
+An additional global configuration parameter `githooks.failOnNotExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called.
 Note that shared hooks are automatically updated on clone.
 
 You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
