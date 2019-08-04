@@ -200,8 +200,7 @@ Resets the last Githooks update time with the `reset` option, causing the update
 git hooks config [enable|disable] fail-on-non-existing-shared-hooks
 ```
 
-Enable or disable the switch making hooks fail with an error if any shared hook configured in 
-`.shared` is missing, meaning `git hooks update` has not yet been called.
+Enable or disable failing hooks with an error when any shared hooks configured in `.shared` are missing, which usually means `git hooks update` has not been called yet.
 
 ## git hooks tools
 

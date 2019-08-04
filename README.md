@@ -44,13 +44,11 @@ If a file is executable, it is directly invoked, otherwise it is interpreted wit
 Hooks related to `commit` events will also have a `${STAGED_FILES}` environment variable set, that is the list of staged and changed files (according to `git diff --cached --diff-filter=ACMR --name-only`), one per line and where it makes sense (not `post-commit`). If you want to iterate over them, and expect spaces in paths, you might want to set `IFS` like this.
 
 ```shell
-IFS="$IFS_NEWLINE"
+IFS="
+"
 for STAGED in ${STAGED_FILES}; do
-    unset IFS
     ...
-    IFS="$IFS_NEWLINE"
 done
-unset IFS
 ```
 
 The `ACMR` filter in the `git diff` will include staged files that are added, copied, modified or renamed.
@@ -79,15 +77,6 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `post-rewrite`
 - `sendemail-validate`
 
-## GIT Large File System Support
-If the user has installed [Git Large File System](https://git-lfs.github.com/) (LFS) `git-lfs` by calling 
-`git lfs install` globally or locally for a repository only, `git-lfs` installes 4 hooks when initializing `(git init)` or cloning `(git clone)` a repository:
-
-- `post-checkout`
-- `post-commit`
-- `post-merge`
-- `pre-push`
-
 ## Git Large File Storage support
 
 If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling 
@@ -98,7 +87,7 @@ If the user has installed [Git Large File Storage](https://git-lfs.github.com/) 
 - `post-merge`
 - `pre-push`
 
-Since `githooks` overwrites the hooks in `.git/hooks`, it will also run all *Git LFS* hooks internally if the `git-lfs` executable is found on the system path. You can enforce having `git-lfs` installed on the system by placing a `./githooks/.lfs-required` file inside the repository, then if `git-lfs` is missing, a warning is shown and the hook will exit with code `1`. For some `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`, for example `post-commit` hooks can't fail commits. A clone of a repository containing this file might still work but would issue a warning and exit with code `1`, a push - however - will fail if `git-lfs` is missing.
+Since Githooks overwrites the hooks in `.git/hooks`, it will also run all *Git LFS* hooks internally if the `git-lfs` executable is found on the system path. You can enforce having `git-lfs` installed on the system by placing a `./githooks/.lfs-required` file inside the repository, then if `git-lfs` is missing, a warning is shown and the hook will exit with code `1`. For some `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`, for example `post-commit` hooks can't fail commits. A clone of a repository containing this file might still work but would issue a warning and exit with code `1`, a push - however - will fail if `git-lfs` is missing.
 
 It is advisable for repositories using *Git LFS* to also have a pre-commit hook (e.g. `examples/lfs/pre-commit`) checked in which enforces a correct installation of *Git LFS*.
 
@@ -122,7 +111,7 @@ $ git hooks shared list --with-url
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
-An additional global configuration parameter `githooks.failOnNotExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called.
+An additional global configuration parameter `githooks.failOnNotExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called. See `git hooks config [enable|disable] fail-on-non-existing-shared-hooks` in the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool documentation for more information.
 Note that shared hooks are automatically updated on clone.
 
 You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
@@ -244,7 +233,7 @@ $ git config --global --unset githooks.autoupdate.enabled
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
 
-### Custom download tool
+### Custom download tool [experimental]
 
 If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can manually setup a download script.
 You can use any executable or script file to perform the download.
@@ -270,7 +259,7 @@ The arguments for the download tool are:
 
 Read more about this command on the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) documentation page.
 
-### Custom user prompt
+### Custom user prompt [experimental]
 
 If you want to use a GUI dialog when Githooks asks for user input, you can use an executable or script file to display it.
 The example in the `examples/tools/dialog` folder contains a Python script `run` which uses the Python provided `tkinter` to show a dialog.

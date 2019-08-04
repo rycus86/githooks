@@ -68,7 +68,7 @@ if [ ! "$(git config --local --get githooks.failOnNotExistingSharedHooks)" = "tr
     echo "! Expected githooks.failOnNotExistingSharedHooks to be still enabled locally"
     exit 1
 fi
-if [ "$(git config --global --get githooks.failOnNotExistingSharedHooks)" = "true" ]; then
+if [ ! "$(git config --global --get githooks.failOnNotExistingSharedHooks)" = "true" ]; then
     echo "! Expected githooks.failOnNotExistingSharedHooks to be set globally"
     exit 1
 fi
