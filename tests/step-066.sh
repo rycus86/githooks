@@ -8,7 +8,7 @@ OUTPUT=$(
     echo 'n
 y
 /does/not/exist
-' | sh /var/lib/githooks/install.sh
+' | sh /var/lib/githooks/install.sh 2>&1
 )
 
 if ! echo "$OUTPUT" | grep "Existing repositories won't get the Githooks hooks"; then
