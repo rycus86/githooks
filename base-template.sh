@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.042000-20e7f3
+# Version: 1908.042003-d11cfa
 
 #####################################################
 # Execute the current hook,
@@ -129,7 +129,7 @@ execute_lfs_hook_if_appropriate() {
 
     # do we have Git LFS installed
     GIT_LFS_AVAILABLE="false"
-    git-lfs --version >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
+    command -v git-lfs >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
 
     # do we require LFS support in this repository
     REQUIRES_LFS_SUPPORT="false"
@@ -483,13 +483,13 @@ execute_shared_hooks() {
     # split on comma and newline
     IFS="$IFS_COMMA_NEWLINE"
 
+    # Fail if the shared root is not available (if enabled)
+    FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
+
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
         set_shared_root "$SHARED_REPO"
-
-        # Fail if the shared root is not available (if enabled)
-        FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
 
         if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
             if [ ! -f "$SHARED_ROOT/.git/config" ]; then

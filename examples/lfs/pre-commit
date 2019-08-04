@@ -1,0 +1,17 @@
+#!/bin/sh
+# LFS Pre-commit hook to test for a properly working Git LFS.
+
+command -v git-lfs >/dev/null 2>&1 ||
+    echo "This repository needs Git LFS but \`git-lfs\` was not found on your path." &&
+    exit 1
+
+lfs_config_check_failed() {
+    echo "! Git LFS filter are not installed properly!"
+    echo "  Run: \`git lfs install\` to correct this."
+    exit 1
+}
+
+[ "$(git config --get filter.lfs.required)" = "true" ] || lfs_config_check_failed
+git config --get filter.lfs.clean | grep -q "git-lfs" || lfs_config_check_failed
+git config --get filter.lfs.smudge | grep -q "git-lfs" || lfs_config_check_failed
+git config --get filter.lfs.process | grep -q "git-lfs" || lfs_config_check_failed
