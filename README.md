@@ -27,8 +27,9 @@ Take this snippet of a project layout as an example:
         └── .ignore
     └── post-checkout
     └── ...
-    └── .ignore
-    └── .shared
+    └── .ignore 
+    └── .shared 
+    └── .lfs-required
 ├── README.md
 ├── LICENSE
 └── ...
@@ -45,7 +46,6 @@ Hooks related to `commit` events will also have a `${STAGED_FILES}` environment 
 ```shell
 IFS="
 "
-
 for STAGED in ${STAGED_FILES}; do
     ...
 done
@@ -77,6 +77,20 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `post-rewrite`
 - `sendemail-validate`
 
+## Git Large File Storage support
+
+If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling 
+`git lfs install` globally or locally for a repository only, `git-lfs` installs 4 hooks when initializing (`git init`) or cloning (`git clone`) a repository:
+
+- `post-checkout`
+- `post-commit`
+- `post-merge`
+- `pre-push`
+
+Since Githooks overwrites the hooks in `.git/hooks`, it will also run all *Git LFS* hooks internally if the `git-lfs` executable is found on the system path. You can enforce having `git-lfs` installed on the system by placing a `./githooks/.lfs-required` file inside the repository, then if `git-lfs` is missing, a warning is shown and the hook will exit with code `1`. For some `post-*` hooks this does not mean that the outcome of the git command can be influenced even tough the exit code is `1`, for example `post-commit` hooks can't fail commits. A clone of a repository containing this file might still work but would issue a warning and exit with code `1`, a push - however - will fail if `git-lfs` is missing.
+
+It is advisable for repositories using *Git LFS* to also have a pre-commit hook (e.g. `examples/lfs/pre-commit`) checked in which enforces a correct installation of *Git LFS*.
+
 ## Ignoring files
 
 The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`.
@@ -97,6 +111,8 @@ $ git hooks shared list --with-url
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+An additional global configuration parameter `githooks.failOnNotExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called. See `git hooks config [enable|disable] fail-on-non-existing-shared-hooks` in the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool documentation for more information.
+Note that shared hooks are automatically updated on clone.
 
 You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
 
