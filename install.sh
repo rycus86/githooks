@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.031455-bc27e9
+# Version: 1908.042000-20e7f3
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.031455-bc27e9
+# Version: 1908.042000-20e7f3
 
 #####################################################
 # Execute the current hook,
@@ -882,7 +882,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.031455-bc27e9
+# Version: 1908.042000-20e7f3
 
 #####################################################
 # Prints the command line help for usage and
@@ -1293,7 +1293,7 @@ git hooks trust [forget]
     fi
 
     echo "! Unknown subcommand: $1" >&2
-    echo "   Run \`git hooks trust help\` to see the available options." >&2
+    echo "  Run \`git hooks trust help\` to see the available options." >&2
     exit 1
 }
 
@@ -3317,7 +3317,7 @@ prepare_target_template_directory() {
     fi
 
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-        echo "Git hook templates directory not found"
+        echo "Git hook templates directory not found" >&2
         return 1
     fi
 }
@@ -3572,8 +3572,8 @@ install_command_line_tool() {
         echo "The command line helper tool is installed at ${HOME}/.githooks/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
         return
 
-    echo "Failed to setup the command line helper automatically. If you'd like to do it manually, install the 'cli.sh' file from the repository into a folder on your PATH environment variable, and make it executable."
-    echo "Direct link to the script: https://raw.githubusercontent.com/rycus86/githooks/master/cli.sh"
+    echo "! Failed to setup the command line helper automatically. If you'd like to do it manually, install the 'cli.sh' file from the repository into a folder on your PATH environment variable, and make it executable." >&2
+    echo "  Direct link to the script: https://raw.githubusercontent.com/rycus86/githooks/master/cli.sh" >&2
 }
 
 ############################################################
@@ -3682,7 +3682,7 @@ install_into_existing_repositories() {
 
     if [ ! -d "$START_DIR" ]; then
         echo "! '$START_DIR' is not a directory" >&2
-        echo "!  Existing repositories won't get the Githooks hooks." >&2
+        echo "  Existing repositories won't get the Githooks hooks." >&2
         return
     fi
 
@@ -3745,7 +3745,7 @@ install_hooks_into_repo() {
                 # Save the existing Git hook so that we'll continue to execute it
                 if ! mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"; then
                     HAD_FAILURE=Y
-                    echo "! Failed to save the existing hook at $TARGET_HOOK"
+                    echo "! Failed to save the existing hook at $TARGET_HOOK" >&2
                     continue
                 fi
             fi
@@ -3755,7 +3755,7 @@ install_hooks_into_repo() {
             INSTALLED="yes"
         else
             HAD_FAILURE=Y
-            echo "! Failed to install $TARGET_HOOK"
+            echo "! Failed to install $TARGET_HOOK" >&2
         fi
     done
 
@@ -3855,7 +3855,7 @@ setup_shared_hook_repositories() {
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
-        echo "! Failed to set up the shared hook repositories"
+        echo "! Failed to set up the shared hook repositories" >&2
     fi
 }
 

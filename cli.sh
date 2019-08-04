@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.031455-bc27e9
+# Version: 1908.042000-20e7f3
 
 #####################################################
 # Prints the command line help for usage and
@@ -422,7 +422,7 @@ git hooks trust [forget]
     fi
 
     echo "! Unknown subcommand: $1" >&2
-    echo "   Run \`git hooks trust help\` to see the available options." >&2
+    echo "  Run \`git hooks trust help\` to see the available options." >&2
     exit 1
 }
 
