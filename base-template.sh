@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.042022-f2d5a3
+# Version: 1908.051251-3be5f5
 
 #####################################################
 # Execute the current hook,
@@ -491,12 +491,16 @@ execute_shared_hooks() {
 
         set_shared_root "$SHARED_REPO"
 
-        if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
-            if [ ! -f "$SHARED_ROOT/.git/config" ]; then
-                echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
-                echo "  It is not available. To fix, run:" >&2
-                echo "    \$ git hooks shared update" >&2
+        if [ ! -f "$SHARED_ROOT/.git/config" ]; then
+            echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+            echo "  It is not available. To fix, run:" >&2
+            echo "    \$ git hooks shared update" >&2
+
+            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
                 return 1
+            else
+                echo "  Continuing..." >&2
+                continue
             fi
         fi
 

@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.042022-f2d5a3
+# Version: 1908.051251-3be5f5
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.042022-f2d5a3
+# Version: 1908.051251-3be5f5
 
 #####################################################
 # Execute the current hook,
@@ -510,12 +510,16 @@ execute_shared_hooks() {
 
         set_shared_root "$SHARED_REPO"
 
-        if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
-            if [ ! -f "$SHARED_ROOT/.git/config" ]; then
-                echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
-                echo "  It is not available. To fix, run:" >&2
-                echo "    \$ git hooks shared update" >&2
+        if [ ! -f "$SHARED_ROOT/.git/config" ]; then
+            echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+            echo "  It is not available. To fix, run:" >&2
+            echo "    \$ git hooks shared update" >&2
+
+            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
                 return 1
+            else
+                echo "  Continuing..." >&2
+                continue
             fi
         fi
 
@@ -882,7 +886,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.042022-f2d5a3
+# Version: 1908.051251-3be5f5
 
 #####################################################
 # Prints the command line help for usage and
