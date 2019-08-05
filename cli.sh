@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.051251-3be5f5
+# Version: 1908.051412-df7ab9
 
 #####################################################
 # Prints the command line help for usage and
@@ -1766,7 +1766,7 @@ which usually means \`git hooks update\` has not been called yet.
     "update-time")
         config_update_last_run "$CONFIG_OPERATION"
         ;;
-    "fail-on-not-existing-shared-hooks")
+    "fail-on-non-existing-shared-hooks")
         config_fail_on_not_existing_shared_hooks "$CONFIG_OPERATION" "$@"
         ;;
     *)
@@ -1987,7 +1987,7 @@ config_update_last_run() {
 #####################################################
 # Manages the failOnNonExistingSharedHook switch.
 # Prints or modifies the
-#   `githooks.failOnNotExistingSharedHooks`
+#   `githooks.failOnNonExistingSharedHooks`
 #   local or global Git configuration.
 #####################################################
 config_fail_on_not_existing_shared_hooks() {
@@ -2002,23 +2002,23 @@ config_fail_on_not_existing_shared_hooks() {
     fi
 
     if [ "$1" = "enable" ]; then
-        if ! git config "$CONFIG" githooks.failOnNotExistingSharedHooks "true"; then
-            echo "! Failed to enable \`fail-on-not-existing-shared-hooks\`" >&2
+        if ! git config "$CONFIG" githooks.failOnNonExistingSharedHooks "true"; then
+            echo "! Failed to enable \`fail-on-non-existing-shared-hooks\`" >&2
             exit 1
         fi
 
         echo "Failing on not existing shared hooks is enabled"
 
     elif [ "$1" = "disable" ]; then
-        if ! git config "$CONFIG" githooks.failOnNotExistingSharedHooks "false"; then
-            echo "! Failed to disable \`fail-on-not-existing-shared-hooks\`" >&2
+        if ! git config "$CONFIG" githooks.failOnNonExistingSharedHooks "false"; then
+            echo "! Failed to disable \`fail-on-non-existing-shared-hooks\`" >&2
             exit 1
         fi
 
         echo "Failing on not existing shared hooks is disabled"
 
     elif [ "$1" = "print" ]; then
-        FAIL_ON_NOT_EXISTING=$(git config "$CONFIG" --get githooks.failOnNotExistingSharedHooks)
+        FAIL_ON_NOT_EXISTING=$(git config "$CONFIG" --get githooks.failOnNonExistingSharedHooks)
         if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
             echo "Failing on not existing shared hooks is enabled"
         else

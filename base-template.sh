@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.051251-3be5f5
+# Version: 1908.051412-df7ab9
 
 #####################################################
 # Execute the current hook,
@@ -484,7 +484,7 @@ execute_shared_hooks() {
     IFS="$IFS_COMMA_NEWLINE"
 
     # Fail if the shared root is not available (if enabled)
-    FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNotExistingSharedHooks)
+    FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNonExistingSharedHooks)
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS

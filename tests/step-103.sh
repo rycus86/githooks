@@ -34,42 +34,42 @@ git hooks shared purge || exit 1
 
 # Fail on not existing hooks
 # Local on/ global off
-if ! git hooks config enable fail-on-not-existing-shared-hooks; then
-    echo "! Enabling fail-on-not-existing-shared-hooks failed"
+if ! git hooks config enable fail-on-non-existing-shared-hooks; then
+    echo "! Enabling fail-on-non-existing-shared-hooks failed"
     exit 1
 fi
-if ! git hooks config print fail-on-not-existing-shared-hooks --local | grep -q "enabled"; then
-    echo "! Expected fail-on-not-existing-shared-hooks to be enabled locally"
+if ! git hooks config print fail-on-non-existing-shared-hooks --local | grep -q "enabled"; then
+    echo "! Expected fail-on-non-existing-shared-hooks to be enabled locally"
     exit 1
 fi
-if ! git hooks config print fail-on-not-existing-shared-hooks --global | grep -q "disabled"; then
-    echo "! Expected fail-on-not-existing-shared-hooks to be disabled globally"
+if ! git hooks config print fail-on-non-existing-shared-hooks --global | grep -q "disabled"; then
+    echo "! Expected fail-on-non-existing-shared-hooks to be disabled globally"
     exit 1
 fi
-if [ ! "$(git config --local --get githooks.failOnNotExistingSharedHooks)" = "true" ]; then
-    echo "! Expected githooks.failOnNotExistingSharedHooks to be enabled locally"
+if [ ! "$(git config --local --get githooks.failOnNonExistingSharedHooks)" = "true" ]; then
+    echo "! Expected githooks.failOnNonExistingSharedHooks to be enabled locally"
     exit 1
 fi
-if git config --global --get githooks.failOnNotExistingSharedHooks; then
-    echo "! Expected githooks.failOnNotExistingSharedHooks to be unset globally"
+if git config --global --get githooks.failOnNonExistingSharedHooks; then
+    echo "! Expected githooks.failOnNonExistingSharedHooks to be unset globally"
     exit 1
 fi
 
 # Local on / global on
-if ! git hooks config enable fail-on-not-existing-shared-hooks --global; then
-    echo "! Enabling fail-on-not-existing-shared-hooks globally failed"
+if ! git hooks config enable fail-on-non-existing-shared-hooks --global; then
+    echo "! Enabling fail-on-non-existing-shared-hooks globally failed"
     exit 1
 fi
-if ! git hooks config print fail-on-not-existing-shared-hooks --global | grep -q "enabled"; then
-    echo "! Expected fail-on-not-existing-shared-hooks to be enabled globally"
+if ! git hooks config print fail-on-non-existing-shared-hooks --global | grep -q "enabled"; then
+    echo "! Expected fail-on-non-existing-shared-hooks to be enabled globally"
     exit 1
 fi
-if [ ! "$(git config --local --get githooks.failOnNotExistingSharedHooks)" = "true" ]; then
-    echo "! Expected githooks.failOnNotExistingSharedHooks to be still enabled locally"
+if [ ! "$(git config --local --get githooks.failOnNonExistingSharedHooks)" = "true" ]; then
+    echo "! Expected githooks.failOnNonExistingSharedHooks to be still enabled locally"
     exit 1
 fi
-if [ ! "$(git config --global --get githooks.failOnNotExistingSharedHooks)" = "true" ]; then
-    echo "! Expected githooks.failOnNotExistingSharedHooks to be set globally"
+if [ ! "$(git config --global --get githooks.failOnNonExistingSharedHooks)" = "true" ]; then
+    echo "! Expected githooks.failOnNonExistingSharedHooks to be set globally"
     exit 1
 fi
 

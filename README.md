@@ -111,7 +111,7 @@ $ git hooks shared list --with-url
 ```
 
 The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `~/.githooks.shared` folder, and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
-An additional global configuration parameter `githooks.failOnNotExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called. See `git hooks config [enable|disable] fail-on-non-existing-shared-hooks` in the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool documentation for more information.
+An additional global configuration parameter `githooks.failOnNonExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called. See `git hooks config [enable|disable] fail-on-non-existing-shared-hooks` in the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool documentation for more information.
 Note that shared hooks are automatically updated on clone.
 
 You can also manage and update shared hook repositories using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. Run `git hooks shared help` or see the tool's documentation in the `docs/` folder to see the available options.
