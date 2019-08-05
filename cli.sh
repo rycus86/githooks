@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.051412-df7ab9
+# Version: 1908.051555-a42781
 
 #####################################################
 # Prints the command line help for usage and

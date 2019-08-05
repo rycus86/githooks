@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.051412-df7ab9
+# Version: 1908.051555-a42781
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.051412-df7ab9
+# Version: 1908.051555-a42781
 
 #####################################################
 # Execute the current hook,
@@ -314,8 +314,9 @@ is_trusted_repo() {
 
         # shellcheck disable=SC2181
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
-            echo "! This repository wants you to trust all current and future hooks without prompting"
-            show_prompt TRUST_ALL_HOOKS "  Do you want to allow running every current and future hooks?" "" "y/N" "Yes" "No"
+            MESSAGE="$(printf "%s\n%s" "! This repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
+
+            show_prompt TRUST_ALL_HOOKS "$MESSAGE" "y/N" "Yes" "No"
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
@@ -361,12 +362,12 @@ execute_opt_in_checks() {
             MESSAGE="Hook file changed"
         fi
 
-        echo "? $MESSAGE: $HOOK_PATH"
-
         if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+            echo "? $MESSAGE: $HOOK_PATH"
             echo "  Already accepted"
         else
-            show_prompt ACCEPT_CHANGES "  Do you accept the changes?" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
+            MESSAGE="$(printf "%s\n%s" "$MESSAGE: $HOOK_PATH" "  Do you accept the changes?")"
+            show_prompt ACCEPT_CHANGES "? $MESSAGE" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
 
             if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
                 echo "* Not running $HOOK_FILE"
@@ -825,8 +826,8 @@ is_single_repo() {
 #   0 if it should be, 1 otherwise
 #####################################################
 should_run_update() {
-    echo "* There is a new Githooks update available: Version $LATEST_VERSION"
-    show_prompt EXECUTE_UPDATE "    Would you like to install it now?" "" "Y/n" "Yes" "no"
+    MESSAGE="$(printf "%s\n%s" "* There is a new Githooks update available: Version $LATEST_VERSION" "Would you like to install it now?")"
+    show_prompt EXECUTE_UPDATE "$MESSAGE" "Y/n" "Yes" "no"
 
     if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
         return 0
@@ -886,7 +887,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.051412-df7ab9
+# Version: 1908.051555-a42781
 
 #####################################################
 # Prints the command line help for usage and
