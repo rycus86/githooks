@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.051555-a42781
+# Version: 1908.082043-b503e9
 
 #####################################################
 # Execute the current hook,
@@ -709,7 +709,6 @@ download_file() {
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
 
-        echo "  Download $DOWNLOAD_URL ..."
         if curl --version >/dev/null 2>&1; then
             curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
         elif wget --version >/dev/null 2>&1; then

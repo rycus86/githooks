@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.051555-a42781
+# Version: 1908.082043-b503e9
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.051555-a42781
+# Version: 1908.082043-b503e9
 
 #####################################################
 # Execute the current hook,
@@ -728,7 +728,6 @@ download_file() {
         # Default implementation
         DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
 
-        echo "  Download $DOWNLOAD_URL ..."
         if curl --version >/dev/null 2>&1; then
             curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
         elif wget --version >/dev/null 2>&1; then
@@ -887,7 +886,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.051555-a42781
+# Version: 1908.082043-b503e9
 
 #####################################################
 # Prints the command line help for usage and
