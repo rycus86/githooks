@@ -7,6 +7,7 @@
 - [list](#git-hooks-list)
 - [shared](#git-hooks-shared)
 - [install](#git-hooks-install)
+- [uninstall](#git-hooks-uninstall)
 - [update](#git-hooks-update)
 - [readme](#git-hooks-readme)
 - [ignore](#git-hooks-ignore)
@@ -109,6 +110,16 @@ $ git hooks install [--global]
 ```
 
 Installs the Githooks hooks into the current repository. If the `--global` flag is given, it executes the installation globally, including the hook templates for future repositories.
+
+## git hooks uninstall
+
+Uninstalls the Githooks hooks.
+
+```shell
+$ git hooks uninstall [--global]
+```
+
+Uninstalls the Githooks hooks into the current repository. If the `--global` flag is given, it executes the uninstallation globally.
 
 ## git hooks update
 
