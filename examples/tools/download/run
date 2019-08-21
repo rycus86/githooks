@@ -62,7 +62,7 @@ fi
 # We cannot really detect when it failed, curl returns anything
 # (login page, status code is not reliable?)
 # We use '<''html' to not match the install.sh
-if (cat "$OUTPUT_FILE" | grep -q '<''html'); then
+if [ ! -s "$OUTPUT_FILE" ] || grep -q '<''html' <"$OUTPUT_FILE" ; then
     echo "! Cannot download file '$1' - wrong format!"
     exit 1
 fi
