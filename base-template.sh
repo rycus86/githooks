@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.082043-b503e9
+# Version: 1908.220946-65f51e
 
 #####################################################
 # Execute the current hook,
@@ -46,6 +46,28 @@ are_githooks_disabled() {
 }
 
 #####################################################
+# Sets the ${INSTALL_DIR} variable
+
+# Returns: 0 if success, 1 otherwise
+#####################################################
+load_install_dir() {
+
+    INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+    #shellcheck disable=SC2181
+    if [ -z "${INSTALL_DIR}" ]; then
+        # install dir not defined, use default
+        INSTALL_DIR=~/".githooks"
+    elif [ ! -d "$INSTALL_DIR" ]; then
+        echo "! Githooks installation is corrupt! " >&2
+        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        INSTALL_DIR=~/".githooks"
+        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Please run the Githooks install script again to fix it." >&2
+    fi
+}
+
+#####################################################
 # Set up the main variables that
 #   we will throughout the hook.
 #
@@ -54,8 +76,7 @@ are_githooks_disabled() {
 # Resets the ${ACCEPT_CHANGES} variable
 # Sets the ${CURRENT_GIT_DIR} variable
 #
-# Returns:
-#   None
+# Returns: None
 #####################################################
 set_main_variables() {
     HOOK_NAME=$(basename "$0")
@@ -66,6 +87,8 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git" # reset to a sensible default
     fi
+
+    load_install_dir
 
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
@@ -419,7 +442,7 @@ set_shared_root() {
     NORMALIZED_NAME=$(echo "$1" |
         sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
         sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT=~/.githooks/shared/"$NORMALIZED_NAME"
+    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
 }
 
 #####################################################
@@ -444,7 +467,7 @@ update_shared_hooks_if_appropriate() {
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
-            mkdir -p ~/.githooks/shared
+            mkdir -p "$INSTALL_DIR/shared"
 
             set_shared_root "$SHARED_REPO"
 
@@ -475,7 +498,7 @@ update_shared_hooks_if_appropriate() {
 
 #####################################################
 # Execute the shared hooks in the
-#   ~/.githooks/shared directory.
+#   $INSTALL_DIR/shared directory.
 #
 # Returns:
 #   1 in case a hook fails, 0 otherwise
@@ -607,12 +630,12 @@ should_run_update_checks() {
 #   `$1`
 #
 # Returns:
-#   0 and "~/.githooks/tools/$1/run"
+#   0 and "$INSTALL_DIR/tools/$1/run"
 #   1 and "" otherwise
 #####################################################
 get_tool_script() {
-    if [ -f ~/".githooks/tools/$1/run" ]; then
-        echo ~/".githooks/tools/$1/run" && return 0
+    if [ -f "$INSTALL_DIR/tools/$1/run" ]; then
+        echo "$INSTALL_DIR/tools/$1/run" && return 0
     fi
     return 1
 }

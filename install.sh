@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.082043-b503e9
+# Version: 1908.220946-65f51e
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.082043-b503e9
+# Version: 1908.220946-65f51e
 
 #####################################################
 # Execute the current hook,
@@ -65,6 +65,28 @@ are_githooks_disabled() {
 }
 
 #####################################################
+# Sets the ${INSTALL_DIR} variable
+
+# Returns: 0 if success, 1 otherwise
+#####################################################
+load_install_dir() {
+
+    INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+    #shellcheck disable=SC2181
+    if [ -z "${INSTALL_DIR}" ]; then
+        # install dir not defined, use default
+        INSTALL_DIR=~/".githooks"
+    elif [ ! -d "$INSTALL_DIR" ]; then
+        echo "! Githooks installation is corrupt! " >&2
+        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        INSTALL_DIR=~/".githooks"
+        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Please run the Githooks install script again to fix it." >&2
+    fi
+}
+
+#####################################################
 # Set up the main variables that
 #   we will throughout the hook.
 #
@@ -73,8 +95,7 @@ are_githooks_disabled() {
 # Resets the ${ACCEPT_CHANGES} variable
 # Sets the ${CURRENT_GIT_DIR} variable
 #
-# Returns:
-#   None
+# Returns: None
 #####################################################
 set_main_variables() {
     HOOK_NAME=$(basename "$0")
@@ -85,6 +106,8 @@ set_main_variables() {
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git" # reset to a sensible default
     fi
+
+    load_install_dir
 
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
@@ -438,7 +461,7 @@ set_shared_root() {
     NORMALIZED_NAME=$(echo "$1" |
         sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
         sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT=~/.githooks/shared/"$NORMALIZED_NAME"
+    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
 }
 
 #####################################################
@@ -463,7 +486,7 @@ update_shared_hooks_if_appropriate() {
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
-            mkdir -p ~/.githooks/shared
+            mkdir -p "$INSTALL_DIR/shared"
 
             set_shared_root "$SHARED_REPO"
 
@@ -494,7 +517,7 @@ update_shared_hooks_if_appropriate() {
 
 #####################################################
 # Execute the shared hooks in the
-#   ~/.githooks/shared directory.
+#   $INSTALL_DIR/shared directory.
 #
 # Returns:
 #   1 in case a hook fails, 0 otherwise
@@ -626,12 +649,12 @@ should_run_update_checks() {
 #   `$1`
 #
 # Returns:
-#   0 and "~/.githooks/tools/$1/run"
+#   0 and "$INSTALL_DIR/tools/$1/run"
 #   1 and "" otherwise
 #####################################################
 get_tool_script() {
-    if [ -f ~/".githooks/tools/$1/run" ]; then
-        echo ~/".githooks/tools/$1/run" && return 0
+    if [ -f "$INSTALL_DIR/tools/$1/run" ]; then
+        echo "$INSTALL_DIR/tools/$1/run" && return 0
     fi
     return 1
 }
@@ -886,7 +909,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.082043-b503e9
+# Version: 1908.220946-65f51e
 
 #####################################################
 # Prints the command line help for usage and
@@ -928,19 +951,44 @@ print_help_header() {
 }
 
 #####################################################
+# Sets the ${INSTALL_DIR} variable
+
+# Returns: 0 if success, 1 otherwise
+#####################################################
+load_install_dir() {
+
+    INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+    #shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        # install dir not defined, use default
+        INSTALL_DIR=~/".githooks"
+    elif [ ! -d "$INSTALL_DIR" ]; then
+        echo "! Githooks installation is corrupt! " >&2
+        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        INSTALL_DIR=~/".githooks"
+        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Please run the Githooks install script again to fix it." >&2
+    fi
+
+    return 0
+}
+
+#####################################################
 # Set up the main variables that
 #   we will throughout the hook.
 #
 # Sets the ${CURRENT_GIT_DIR} variable
 #
-# Returns:
-#   None
+# Returns: None
 #####################################################
 set_main_variables() {
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
     fi
+
+    load_install_dir
 
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
@@ -1545,19 +1593,19 @@ get_hook_enabled_or_disabled_state() {
 
 #####################################################
 # List the shared hooks from the
-#   ~/.githooks/shared directory.
+#  $INSTALL_DIR/shared directory.
 #
 # Returns the list of paths to the hook files
 #   in the shared hook repositories found locally.
 #####################################################
 list_hooks_in_shared_repos() {
-    if [ ! -d ~/.githooks/shared ]; then
+    if [ ! -d "$INSTALL_DIR/shared" ]; then
         return
     fi
 
     SHARED_LIST_TYPE="$1"
 
-    for SHARED_ROOT in ~/.githooks/shared/*; do
+    for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
         if [ ! -d "$SHARED_ROOT" ]; then
             continue
         fi
@@ -1624,8 +1672,8 @@ git hooks shared [update|pull]
     fi
 
     if [ "$1" = "purge" ]; then
-        [ -w ~/.githooks/shared ] &&
-            rm -rf ~/.githooks/shared &&
+        [ -w "$INSTALL_DIR/shared" ] &&
+            rm -rf "$INSTALL_DIR/shared" &&
             echo "All existing shared hook repositories have been deleted locally" &&
             return
 
@@ -2023,7 +2071,7 @@ set_shared_root() {
     NORMALIZED_NAME=$(echo "$1" |
         sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
         sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT=~/.githooks/shared/"$NORMALIZED_NAME"
+    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
 }
 
 #####################################################
@@ -2039,7 +2087,7 @@ update_shared_hooks_in() {
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
-        mkdir -p ~/.githooks/shared
+        mkdir -p "$INSTALL_DIR/shared"
 
         set_shared_root "$SHARED_REPO"
 
@@ -2204,12 +2252,12 @@ record_update_time() {
 #   `$1`
 #
 # Returns:
-#   0 and "~/.githooks/tools/$1/run"
+#   0 and "$INSTALL_DIR/tools/$1/run"
 #   1 and "" otherwise
 #####################################################
 get_tool_script() {
-    if [ -f ~/".githooks/tools/$1/run" ]; then
-        echo ~/".githooks/tools/$1/run" && return 0
+    if [ -f "$INSTALL_DIR/tools/$1/run" ]; then
+        echo "$INSTALL_DIR/tools/$1/run" && return 0
     fi
     return 1
 }
@@ -2974,10 +3022,10 @@ git hooks tools unregister [download|dialog]
 
     case "$TOOLS_OPERATION" in
     "register")
-        tools_install "$@"
+        tools_register "$@"
         ;;
     "unregister")
-        tools_uninstall "$@"
+        tools_unregister "$@"
         ;;
     *)
         manage_tools "help"
@@ -2993,7 +3041,7 @@ git hooks tools unregister [download|dialog]
 # Returns:
 #   1 on failure, 0 otherwise
 #####################################################
-tools_install() {
+tools_register() {
     if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
         SCRIPT_FOLDER="$2"
 
@@ -3005,12 +3053,12 @@ tools_install() {
                 exit 1
             fi
 
-            if ! tools_uninstall "$1" --quiet; then
+            if ! tools_unregister "$1" --quiet; then
                 echo "! Unregister failed!" >&2
                 exit 1
             fi
 
-            TARGET_FOLDER=~/".githooks/tools/$1"
+            TARGET_FOLDER="$INSTALL_DIR/tools/$1"
 
             mkdir -p "$TARGET_FOLDER" >/dev/null 2>&1 # Install new
             if ! cp -r "$SCRIPT_FOLDER"/* "$TARGET_FOLDER"/; then
@@ -3034,12 +3082,12 @@ tools_install() {
 # Returns:
 #   1 on failure, 0 otherwise
 #####################################################
-tools_uninstall() {
+tools_unregister() {
     [ "$2" = "--quiet" ] && QUIET="Y"
 
     if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
-        if [ -d ~/".githooks/tools/$1" ]; then
-            rm -r ~/".githooks/tools/$1"
+        if [ -d "$INSTALL_DIR/tools/$1" ]; then
+            rm -r "$INSTALL_DIR/tools/$1"
             [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
         else
             [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed" >&2
@@ -3141,7 +3189,6 @@ choose_command() {
     esac
 }
 
-# Set the main variables we will need
 set_main_variables
 # Choose and execute the command
 choose_command "$@"
@@ -3186,8 +3233,9 @@ execute_installation() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
-
     parse_command_line_arguments "$@"
+
+    set_install_dir || return 1
 
     if is_non_interactive; then
         disable_tty_input
@@ -3233,6 +3281,37 @@ execute_installation() {
         echo # For visual separation
     fi
 }
+############################################################
+# Sets the install directory.
+#
+# Returns: None
+############################################################
+set_install_dir() {
+    # First check if we already  have
+    # an install directory set (from --prefix)
+    if [ -z "$INSTALL_DIR" ]; then
+
+        # still empty  -> load from config
+        INSTALL_DIR=$(git config --global githooks.installDir)
+
+        if [ -z "$INSTALL_DIR" ]; then
+            # if still empty  -> set to default and return
+            INSTALL_DIR=~/".githooks"
+        elif [ ! -d "$INSTALL_DIR" ]; then
+            echo "! Configured install directory \`$INSTALL_DIR\` is not existing" >&2
+            INSTALL_DIR=~/".githooks"
+        fi
+    fi
+
+    if ! is_dry_run && ! git config --global githooks.installDir "$INSTALL_DIR"; then
+        echo "! Could not set \`githooks.installDir\`."
+        return 1
+    fi
+
+    echo "Installing Githooks to \`$INSTALL_DIR\`"
+
+    return 0
+}
 
 ############################################################
 # Set up variables based on command line arguments.
@@ -3241,9 +3320,10 @@ execute_installation() {
 # Sets ${NON_INTERACTIVE} for --non-interactive
 # Sets ${SINGLE_REPO_INSTALL} for --single
 # Sets ${SKIP_INSTALL_INTO_EXISTING} for --skip-install-into-existing
+# Sets ${INSTALL_DIR} for --prefix
+# Sets ${TARGET_TEMPLATE_DIR} for --template-dir
 #
-# Returns:
-#   None
+# Returns: None
 ############################################################
 parse_command_line_arguments() {
     TARGET_TEMPLATE_DIR=""
@@ -3256,6 +3336,15 @@ parse_command_line_arguments() {
             SINGLE_REPO_INSTALL="yes"
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
+        elif [ "$prev_p" = "--prefix" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+            # Allow user to pass prefered install prefix
+            INSTALL_DIR="$p"
+            # Try to see if the path is given with a tilde
+            TILDE_REPLACED=$(echo "$INSTALL_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
+            if [ -n "$TILDE_REPLACED" ]; then
+                INSTALL_DIR="$TILDE_REPLACED"
+            fi
+            INSTALL_DIR="$INSTALL_DIR/.githooks"
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
@@ -3549,7 +3638,7 @@ search_pre_commit_sample_file() {
 ############################################################
 setup_new_templates_folder() {
     # shellcheck disable=SC2088
-    DEFAULT_TARGET="~/.githooks/templates"
+    DEFAULT_TARGET="$INSTALL_DIR/templates"
 
     if is_non_interactive; then
         USER_TEMPLATES="$DEFAULT_TARGET"
@@ -3620,17 +3709,17 @@ setup_hook_templates() {
 
 ############################################################
 # Installs the command line helper tool at
-#   ~/.githooks/bin/githooks and adds a Git alias for it.
+#   $INSTALL_DIR/bin/githooks and adds a Git alias for it.
 #
 # Returns:
 #   None
 ############################################################
 install_command_line_tool() {
-    mkdir -p "$HOME/.githooks/bin" &&
-        echo "$CLI_TOOL_CONTENT" >"$HOME/.githooks/bin/githooks" &&
-        chmod +x "$HOME/.githooks/bin/githooks" &&
-        git config --global alias.hooks "!$HOME/.githooks/bin/githooks" &&
-        echo "The command line helper tool is installed at ${HOME}/.githooks/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
+    mkdir -p "$INSTALL_DIR/bin" &&
+        echo "$CLI_TOOL_CONTENT" >"$INSTALL_DIR/bin/githooks" &&
+        chmod +x "$INSTALL_DIR/bin/githooks" &&
+        git config --global alias.hooks "!$INSTALL_DIR/bin/githooks" &&
+        echo "The command line helper tool is installed at \`$INSTALL_DIR/bin/githooks\`, and it is now available as 'git hooks <cmd>'" &&
         return
 
     echo "! Failed to setup the command line helper automatically. If you'd like to do it manually, install the 'cli.sh' file from the repository into a folder on your PATH environment variable, and make it executable." >&2
