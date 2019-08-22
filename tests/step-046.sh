@@ -2,6 +2,11 @@
 # Test:
 #   Run an install, adding the intro README files into an existing repo
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 mkdir -p /tmp/test046/.githooks/pre-commit &&
     echo 'echo "Testing" > /tmp/test46.out' >/tmp/test046/.githooks/pre-commit/test &&
     cd /tmp/test046 ||

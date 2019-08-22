@@ -2,6 +2,11 @@
 # Test:
 #   Remember the start directory for searching existing repos
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 mkdir -p /tmp/start/dir || exit 1
 
 echo 'n

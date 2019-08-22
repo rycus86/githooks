@@ -239,7 +239,7 @@ This is the recommended approach, especially if you want to selectively control 
 
 In this approach, the install script installs the hook templates into a centralized location (`~/.githooks/templates/` by default) and sets the global `core.hooksPath` variable to that location. Git will then, for all relevant actions, check the `core.hooksPath` location, instead of the default `${GIT_DIR}/hooks` location.
 
-This approach works more like a *blanket* solution, where any repository (\*) will start using the hook templates, regardless of its location.
+This approach works more like a *blanket* solution, where __all repositories__ (\*) will start using the hook templates, regardless of their location.
 
 **Note**(\*): It is possible to override the behavior for a specific repository, by setting a local `core.hooksPath` variable with value `${GIT_DIR}/hooks`, which will revert git back to its default behavior for that specific repository.
 

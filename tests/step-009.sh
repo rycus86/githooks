@@ -2,6 +2,11 @@
 # Test:
 #   Run an install that preserves an existing hook in an existing repo
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 mkdir -p /tmp/test9/.githooks/pre-commit &&
     cd /tmp/test9 &&
     echo 'echo "In-repo" >> /tmp/test-009.out' >.githooks/pre-commit/test &&

@@ -13,7 +13,7 @@ MANAGED_HOOK_NAMES="
 mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&
-    sh /var/lib/githooks/install.sh --single &&
+    sh /var/lib/githooks/install.sh &&
     git config githooks.autoupdate.enabled N ||
     exit 1
 

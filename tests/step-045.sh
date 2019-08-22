@@ -2,6 +2,11 @@
 # Test:
 #   Run an install, skipping the intro README files
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 mkdir -p /tmp/test045/001 && cd /tmp/test045/001 && git init || exit 1
 mkdir -p /tmp/test045/002 && cd /tmp/test045/002 && git init || exit 1
 

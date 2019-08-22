@@ -2,6 +2,11 @@
 # Test:
 #   Run an install, and let it search for the template dir
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 # move the built-in git template folder
 mkdir -p /tmp/git-templates &&
     mv /usr/share/git-core/templates /tmp/git-templates/ &&

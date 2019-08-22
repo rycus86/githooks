@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.222135-cb3939
+# Version: 1908.222316-e608c7
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.222135-cb3939
+# Version: 1908.222316-e608c7
 
 #####################################################
 # Execute the current hook,
@@ -907,7 +907,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.222135-cb3939
+# Version: 1908.222316-e608c7
 
 #####################################################
 # Prints the command line help for usage and
@@ -3298,14 +3298,14 @@ load_install_dir() {
         fi
     fi
 
-    if ! is_dry_run; then
-        if ! git config --global githooks.installDir "$INSTALL_DIR"; then
-            echo "! Could not set \`githooks.installDir\`"
-            return 1
-        fi
+    if is_dry_run; then
+        return 0
     fi
 
-    echo "Installing Githooks into ${INSTALL_DIR}"
+    if ! git config --global githooks.installDir "$INSTALL_DIR"; then
+        echo "! Could not set \`githooks.installDir\`"
+        return 1
+    fi
 
     return 0
 }
@@ -3331,6 +3331,12 @@ parse_command_line_arguments() {
             NON_INTERACTIVE="yes"
         elif [ "$p" = "--single" ]; then
             SINGLE_REPO_INSTALL="yes"
+
+            if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+                echo "! Cannot use --single and --use-core-hookspath together" >&2
+                exit 1
+            fi
+
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
 
@@ -3350,11 +3356,15 @@ parse_command_line_arguments() {
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
         elif [ "$p" = "--use-core-hookspath" ]; then
-            USE_HOOKS_PATH="yes"
+            USE_CORE_HOOKSPATH="yes"
             # No point in installing into existing when using core.hooksPath
             SKIP_INSTALL_INTO_EXISTING="yes"
+
             # Using core.hooksPath implies it applies to all repo's
-            SINGLE_REPO_INSTALL="no"
+            if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+                echo "! Cannot use --single and --use-core-hookspath together" >&2
+                exit 1
+            fi
         fi
         prev_p="$p"
     done
@@ -3477,6 +3487,10 @@ prepare_target_template_directory() {
         echo "Git hook templates directory not found" >&2
         return 1
     fi
+
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+        set_githooks_directory "$TARGET_TEMPLATE_DIR"
+    fi
 }
 
 ############################################################
@@ -3494,7 +3508,7 @@ find_git_hook_templates() {
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 2. from git config
-    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
         mark_directory_as_target "$(git config --global core.hooksPath)"
     else
         mark_directory_as_target "$(git config --global init.templateDir)" "hooks"
@@ -3649,7 +3663,6 @@ search_pre_commit_sample_file() {
 #   None
 ############################################################
 setup_new_templates_folder() {
-    # shellcheck disable=SC2088
     DEFAULT_TARGET="$INSTALL_DIR/templates"
 
     if is_non_interactive; then
@@ -4032,7 +4045,7 @@ setup_shared_hook_repositories() {
 #   None
 ############################################################
 set_githooks_directory() {
-    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
         git config --global githooks.useCoreHooksPath yes
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
