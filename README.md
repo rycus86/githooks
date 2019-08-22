@@ -5,9 +5,33 @@
 
 A simple Shell script to support per-repository [Git hooks](https://git-scm.com/docs/githooks), checked into the actual repository that uses them.
 
-To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
-
 > Check out the [blog post](https://blog.viktoradam.net/2018/07/26/githooks-auto-install-hooks/) for the long read!
+
+## Templates vs global hooks
+
+This script can work in one of 2 ways:
+
+- Using the git template folder (default behaviour)
+- Using the git `core.hooksPath` variable (set by passing the `--use-core-hookspath` parameter to the install script)
+
+Read about the differences between these 2 approaches below
+
+In both cases, the script will make sure git finds the hook templates provided by this script.
+When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
+
+### Template folder
+
+In this approach, the install script creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`.
+
+This is the recommanded approach if you want to selectively control which repositories use these scripts. The install script offers to search for repositories to which it will install the hooks, and any new repositories you clone will have these hooks configured.
+
+### Central hooks location (core.hooksPath)
+
+In this approach, the install script installs the hook templates into a centralized location (`~/.githooks/templates/` by default) and sets the global `core.hooksPath` variable to that location. Git will then, for all relevant actions, check the `core.hooksPath` location, instead of the default `$(GIT_DIR)/hooks` location.
+
+This approach works more like a 'blanket' solution, where any repository (\*) will start using the hook templates, regardless of its location.
+
+**Note**(\*): It is possible to override the behaviour for a specific repository, by setting a local `core.hooksPath` variable with value `$(GIT_DIR)/hooks/`, which will revert git back to its default behaviour for that specific repository.
 
 ## Layout and options
 
@@ -93,7 +117,7 @@ It is advisable for repositories using *Git LFS* to also have a pre-commit hook 
 
 ## Ignoring files
 
-The `.ignore` files allow excluding files from being treated as a hook script. They allow *glob* filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`.
+The `.ignore` files allow excluding files from being treated as a hook script. They allow _glob_ filename patterns, empty lines and comments, where the line starts with a `#` character. In the above example, one of the `.ignore` files should contain `*.md` to exclude the `pre-commit/docs.md` Markdown file. The `.githooks/.ignore` file applies to each of the hook directories, and should still define filename patterns, `*.txt` instead of `**/*.txt` for example. If there is a `.ignore` file both in the hook type folder and in `.githooks`, the files whose filename matches any pattern from either of those two files will be excluded. You can also manage `.ignore` files using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks ignore <pattern>`.
 
 Hooks in individual repositories can be disabled as well, running `git hooks disable ...`, or all of them with `git hooks config set disable`, check their documentation or `help` for more information. Finally, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable too.
 
@@ -122,7 +146,7 @@ To try and make things a little bit more secure, Githooks checks if any new hook
 
 If the repository contains a `.githooks/trust-all` file, it is marked as a trusted repository. On the first interaction with hooks, Githooks will ask for confirmation that the user trusts all existing and future hooks in the repository, and if she does, no more confirmation prompts will be shown. This can be reverted by running either the `git config --unset githooks.trust.all`, or the `git hooks config reset trusted` command. This is a per-repository setting. These can be set up and changed with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as well, run `git hooks trust help` and `git hooks config help` for more information.
 
-There is a caveat worth mentioning: if a terminal *(tty)* can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
+There is a caveat worth mentioning: if a terminal _(tty)_ can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
 
 You can also accept changes to a hook using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, and running `git hooks accept <hook>`. See the tool's documentation in the `docs/` folder to see the available options.
 
@@ -192,6 +216,18 @@ $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
 
 You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
+
+Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [here](#Templates-vs-global-hooks). For this, run the command below.
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath
+```
+
+By default the script will install the hooks into `~/.githooks/templates/`, optionally, you can also pass the path to which you want to install the centralized hooks by appending `<path>` to the command above, for example:
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath /home/public/.githooks
+```
 
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
 
