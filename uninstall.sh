@@ -169,8 +169,9 @@ uninstall_hooks_from_repo() {
 #   None
 ############################################################
 uninstall_shared_hooks() {
-    if [ -d ~/.githooks/shared ]; then
-        if ! rm -rf ~/.githooks/shared >/dev/null 2>&1; then
+    if [ -d "$INSTALL_DIR/shared" ]; then
+        #shellcheck disable=SC2115
+        if ! rm -rf "$INSTALL_DIR/shared" >/dev/null 2>&1; then
             echo "! Failed to delete shared hook repository folders"
             exit 1
         fi
@@ -184,13 +185,45 @@ uninstall_shared_hooks() {
 #   None
 ############################################################
 uninstall_cli() {
-    if [ -d ~/.githooks/bin ]; then
-        if ! rm -rf ~/.githooks/bin >/dev/null 2>&1; then
+    if [ -d "$INSTALL_DIR/bin" ]; then
+        #shellcheck disable=SC2115
+        if ! rm -rf "$INSTALL_DIR/bin" >/dev/null 2>&1; then
             echo "! Failed to delete the githook command-line tool"
             exit 1
         fi
     fi
 }
+
+#####################################################
+# Sets the ${INSTALL_DIR} variable
+
+# Returns: 0 if success, 1 otherwise
+#####################################################
+load_install_dir() {
+
+    INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+    #shellcheck disable=SC2181
+    if [ $? -ne 0 ]; then
+        # install dir not defined, use default
+        INSTALL_DIR=~/".githooks"
+    elif [ ! -d "$INSTALL_DIR" ]; then
+        echo "! Githooks installation is corrupt! " >&2
+        echo "  Install directory \`${INSTALL_DIR}\` is missing."
+        INSTALL_DIR=~/".githooks"
+        echo "  Using default install directory \`$INSTALL_DIR\`"
+    fi
+
+    # Final check since we are going to delete folders
+    if ! echo "$INSTALL_DIR" | grep -q ".githooks"; then
+        echo "! Uninstall path \`$INSTALL_DIR\` needs to contain \`.githooks\`"
+        return 1
+    fi
+
+    return 0
+}
+
+load_install_dir || exit 1
 
 # Find the current Git hook templates directory
 TARGET_TEMPLATE_DIR=""
@@ -207,7 +240,7 @@ remove_existing_hook_templates "$TARGET_TEMPLATE_DIR"
 
 # Uninstall the hooks from existing local repositories
 if ! uninstall_from_existing_repositories; then
-    echo "Failed to uninstall from existing repositories"
+    echo "! Failed to uninstall from existing repositories" >&2
     exit 1
 fi
 
@@ -224,6 +257,7 @@ git config --global --unset githooks.autoupdate.enabled
 git config --global --unset githooks.autoupdate.lastrun
 git config --global --unset githooks.previous.searchdir
 git config --global --unset githooks.disable
+git config --global --unset githooks.installDir
 git config --global --unset alias.hooks
 
 # Finished
