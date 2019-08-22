@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.222102-3dc7b1
+# Version: 1908.222125-5f7260
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.222102-3dc7b1
+# Version: 1908.222125-5f7260
 
 #####################################################
 # Execute the current hook,
@@ -907,7 +907,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.222102-3dc7b1
+# Version: 1908.222125-5f7260
 
 #####################################################
 # Prints the command line help for usage and
@@ -3421,21 +3421,6 @@ is_single_repo_install() {
 }
 
 ############################################################
-# Check if the install script should
-#   use core.hooksPath to manage hooks centrally.
-#
-# Returns:
-#   0 when no, 1 when yes
-############################################################
-should_use_hooksPath() {
-    if [ "$USE_HOOKS_PATH" = "yes" ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-############################################################
 # Disable user input by redirecting /dev/null
 #   to the standard input of the install script.
 #
@@ -3472,18 +3457,6 @@ ensure_running_in_git_repo() {
 ############################################################
 mark_as_single_install_repo() {
     git config githooks.single.install yes
-}
-
-############################################################
-# Marks the global githooks config to use hooksPath
-#
-# Sets the 'githooks.use.hookspath' configuration.
-#
-# Returns:
-#   None
-############################################################
-mark_as_hookspath_global() {
-    git config --global githooks.use.hookspath yes
 }
 
 ############################################################
@@ -3698,7 +3671,7 @@ setup_new_templates_folder() {
     if ! is_dry_run; then
         if mkdir -p "${TILDE_REPLACED}/hooks"; then
             # Let this one go with or without a tilde
-            set_githooks_directory "$USER_TEMPLATES/hooks"
+            set_githooks_directory "$USER_TEMPLATES"
         else
             echo "! Failed to set up the new Git templates folder" >&2
             return
@@ -4005,10 +3978,6 @@ install_hooks_into_repo() {
 #   None
 ############################################################
 setup_shared_hook_repositories() {
-    if [ "$USE_HOOKS_PATH" = "yes" ]; then
-        # No point in setting up shared hooks when using hooksPath
-        return
-    fi
     if [ -n "$(git config --global --get githooks.shared)" ]; then
         printf "Looks like you already have shared hook repositories setup, do you want to change them now? [y/N] "
     else
@@ -4063,13 +4032,20 @@ setup_shared_hook_repositories() {
 #   None
 ############################################################
 set_githooks_directory() {
-    if should_use_hooksPath; then
-        mark_as_hookspath_global
+    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+        git config --global githooks.useCoreHooksPath yes
+        git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
-        git config --global --unset init.templateDir
     else
+        git config --global githooks.useCoreHooksPath no
         git config --global init.templateDir "$1"
-        git config --global --unset core.hooksPath
+
+        CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)
+        if [ -n "$CURRENT_CORE_HOOKS_PATH" ]; then
+            echo "! The \`core.hooksPath\` setting is set to $CURRENT_CORE_HOOKS_PATH currently" >&2
+            echo "  This could mean that Githooks hooks will be ignored" >&2
+            echo "  Either unset \`core.hooksPath\` or run the Githooks installation with the --use-core-hookspath parameter" >&2
+        fi
     fi
 }
 
