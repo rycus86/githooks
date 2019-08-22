@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.220946-65f51e
+# Version: 1908.222053-e7d4c3
 
 #####################################################
 # Execute the current hook,
@@ -46,23 +46,21 @@ are_githooks_disabled() {
 }
 
 #####################################################
-# Sets the ${INSTALL_DIR} variable
-
-# Returns: 0 if success, 1 otherwise
+# Sets the ${INSTALL_DIR} variable.
+#
+# Returns: None
 #####################################################
 load_install_dir() {
-
     INSTALL_DIR=$(git config --global --get githooks.installDir)
 
-    #shellcheck disable=SC2181
     if [ -z "${INSTALL_DIR}" ]; then
         # install dir not defined, use default
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
 }

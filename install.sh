@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.220946-65f51e
+# Version: 1908.222053-e7d4c3
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.220946-65f51e
+# Version: 1908.222053-e7d4c3
 
 #####################################################
 # Execute the current hook,
@@ -65,23 +65,21 @@ are_githooks_disabled() {
 }
 
 #####################################################
-# Sets the ${INSTALL_DIR} variable
-
-# Returns: 0 if success, 1 otherwise
+# Sets the ${INSTALL_DIR} variable.
+#
+# Returns: None
 #####################################################
 load_install_dir() {
-
     INSTALL_DIR=$(git config --global --get githooks.installDir)
 
-    #shellcheck disable=SC2181
     if [ -z "${INSTALL_DIR}" ]; then
         # install dir not defined, use default
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
 }
@@ -909,7 +907,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.220946-65f51e
+# Version: 1908.222053-e7d4c3
 
 #####################################################
 # Prints the command line help for usage and
@@ -951,27 +949,23 @@ print_help_header() {
 }
 
 #####################################################
-# Sets the ${INSTALL_DIR} variable
-
-# Returns: 0 if success, 1 otherwise
+# Sets the ${INSTALL_DIR} variable.
+#
+# Returns: None
 #####################################################
 load_install_dir() {
-
     INSTALL_DIR=$(git config --global --get githooks.installDir)
 
-    #shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if [ -z "${INSTALL_DIR}" ]; then
         # install dir not defined, use default
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory \`${INSTALL_DIR}\` is missing." >&2
+        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Fallback to default directory \`${INSTALL_DIR}\`" >&2
+        echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
-
-    return 0
 }
 
 #####################################################
@@ -3235,7 +3229,7 @@ execute_installation() {
 "
     parse_command_line_arguments "$@"
 
-    set_install_dir || return 1
+    load_install_dir
 
     if is_non_interactive; then
         disable_tty_input
@@ -3281,34 +3275,38 @@ execute_installation() {
         echo # For visual separation
     fi
 }
+
 ############################################################
 # Sets the install directory.
 #
-# Returns: None
+# Returns:
+#   1 when failed to configure the install directory,
+#   0 otherwise
 ############################################################
-set_install_dir() {
-    # First check if we already  have
+load_install_dir() {
+    # First check if we already have
     # an install directory set (from --prefix)
     if [ -z "$INSTALL_DIR" ]; then
-
-        # still empty  -> load from config
+        # load from config
         INSTALL_DIR=$(git config --global githooks.installDir)
 
         if [ -z "$INSTALL_DIR" ]; then
-            # if still empty  -> set to default and return
+            # if still empty, then set to default
             INSTALL_DIR=~/".githooks"
         elif [ ! -d "$INSTALL_DIR" ]; then
-            echo "! Configured install directory \`$INSTALL_DIR\` is not existing" >&2
+            echo "! Configured install directory ${INSTALL_DIR} does not exist" >&2
             INSTALL_DIR=~/".githooks"
         fi
     fi
 
-    if ! is_dry_run && ! git config --global githooks.installDir "$INSTALL_DIR"; then
-        echo "! Could not set \`githooks.installDir\`."
-        return 1
+    if ! is_dry_run; then
+        if ! git config --global githooks.installDir "$INSTALL_DIR"; then
+            echo "! Could not set \`githooks.installDir\`"
+            return 1
+        fi
     fi
 
-    echo "Installing Githooks to \`$INSTALL_DIR\`"
+    echo "Installing Githooks into ${INSTALL_DIR}"
 
     return 0
 }
@@ -3336,15 +3334,19 @@ parse_command_line_arguments() {
             SINGLE_REPO_INSTALL="yes"
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
+
         elif [ "$prev_p" = "--prefix" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered install prefix
             INSTALL_DIR="$p"
+
             # Try to see if the path is given with a tilde
             TILDE_REPLACED=$(echo "$INSTALL_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
             if [ -n "$TILDE_REPLACED" ]; then
                 INSTALL_DIR="$TILDE_REPLACED"
             fi
+
             INSTALL_DIR="$INSTALL_DIR/.githooks"
+
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
@@ -3719,7 +3721,7 @@ install_command_line_tool() {
         echo "$CLI_TOOL_CONTENT" >"$INSTALL_DIR/bin/githooks" &&
         chmod +x "$INSTALL_DIR/bin/githooks" &&
         git config --global alias.hooks "!$INSTALL_DIR/bin/githooks" &&
-        echo "The command line helper tool is installed at \`$INSTALL_DIR/bin/githooks\`, and it is now available as 'git hooks <cmd>'" &&
+        echo "The command line helper tool is installed at ${INSTALL_DIR}/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
         return
 
     echo "! Failed to setup the command line helper automatically. If you'd like to do it manually, install the 'cli.sh' file from the repository into a folder on your PATH environment variable, and make it executable." >&2

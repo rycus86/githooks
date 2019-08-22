@@ -170,8 +170,7 @@ uninstall_hooks_from_repo() {
 ############################################################
 uninstall_shared_hooks() {
     if [ -d "$INSTALL_DIR/shared" ]; then
-        #shellcheck disable=SC2115
-        if ! rm -rf "$INSTALL_DIR/shared" >/dev/null 2>&1; then
+        if ! rm -rf "${INSTALL_DIR:?}/shared" >/dev/null 2>&1; then
             echo "! Failed to delete shared hook repository folders"
             exit 1
         fi
@@ -186,8 +185,7 @@ uninstall_shared_hooks() {
 ############################################################
 uninstall_cli() {
     if [ -d "$INSTALL_DIR/bin" ]; then
-        #shellcheck disable=SC2115
-        if ! rm -rf "$INSTALL_DIR/bin" >/dev/null 2>&1; then
+        if ! rm -rf "${INSTALL_DIR:?}/bin" >/dev/null 2>&1; then
             echo "! Failed to delete the githook command-line tool"
             exit 1
         fi
@@ -196,27 +194,26 @@ uninstall_cli() {
 
 #####################################################
 # Sets the ${INSTALL_DIR} variable
-
-# Returns: 0 if success, 1 otherwise
+#
+# Returns:
+#   0 if success, 1 otherwise
 #####################################################
 load_install_dir() {
-
     INSTALL_DIR=$(git config --global --get githooks.installDir)
 
-    #shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
+    if [ -z "$INSTALL_DIR" ]; then
         # install dir not defined, use default
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory \`${INSTALL_DIR}\` is missing."
+        echo "  Install directory at ${INSTALL_DIR} is missing."
         INSTALL_DIR=~/".githooks"
-        echo "  Using default install directory \`$INSTALL_DIR\`"
+        echo "  Using default install directory at $INSTALL_DIR"
     fi
 
     # Final check since we are going to delete folders
     if ! echo "$INSTALL_DIR" | grep -q ".githooks"; then
-        echo "! Uninstall path \`$INSTALL_DIR\` needs to contain \`.githooks\`"
+        echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`"
         return 1
     fi
 
