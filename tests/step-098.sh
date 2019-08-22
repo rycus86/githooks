@@ -2,10 +2,16 @@
 # Test:
 #   Git worktrees: run hooks
 
+SINGLE="--single"
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    # Do not use single install with core.hooksPath
+    SINGLE=""
+fi
+
 mkdir -p /tmp/test098/.git/hooks &&
     cd /tmp/test098 &&
     git init &&
-    sh /var/lib/githooks/install.sh &&
+    sh /var/lib/githooks/install.sh "$SINGLE" &&
     git config githooks.autoupdate.enabled N ||
     exit 1
 
