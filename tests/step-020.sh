@@ -2,6 +2,11 @@
 # Test:
 #   Run an install, and let it set up a new template directory (non-tilde)
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 # delete the built-in git template folder
 rm -rf /usr/share/git-core/templates || exit 1
 

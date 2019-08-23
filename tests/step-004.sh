@@ -2,6 +2,11 @@
 # Test:
 #   Set up local repos, run the install and verify the hooks get installed
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 mkdir -p /tmp/test4/p001 && mkdir -p /tmp/test4/p002 || exit 1
 
 cd /tmp/test4/p001 && git init || exit 1

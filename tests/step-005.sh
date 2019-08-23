@@ -12,11 +12,20 @@ cd /tmp/shared/hooks-005.git &&
     git commit -m 'Initial commit'
 
 # run the install, and set up shared repos
-echo 'n
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo 'n
+y
+/tmp/shared/hooks-005.git
+' | sh /var/lib/githooks/install.sh || exit 1
+
+else
+    echo 'n
 n
 y
 /tmp/shared/hooks-005.git
 ' | sh /var/lib/githooks/install.sh || exit 1
+
+fi
 
 mkdir -p /tmp/test5 && cd /tmp/test5 || exit 1
 git init || exit 1

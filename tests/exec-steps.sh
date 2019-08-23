@@ -9,6 +9,8 @@ TEST_RUNS=0
 FAILED=0
 SKIPPED=0
 
+FAILED_TEST_LIST=""
+
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
@@ -43,6 +45,8 @@ for STEP in /var/lib/tests/step-*.sh; do
         echo "! $STEP has failed with code $TEST_RESULT ($FAILURE), output:"
         echo "$TEST_OUTPUT"
         FAILED=$((FAILED + 1))
+        FAILED_TEST_LIST="$FAILED_TEST_LIST
+- $STEP ($TEST_RESULT -- $FAILURE)"
 
     fi
 
@@ -75,6 +79,11 @@ done
 
 echo "$TEST_RUNS tests run: $FAILED failed and $SKIPPED skipped"
 echo
+
+if [ -n "$FAILED_TEST_LIST" ]; then
+    echo "Failed tests: $FAILED_TEST_LIST"
+    echo
+fi
 
 if [ $FAILED -ne 0 ]; then
     exit 1

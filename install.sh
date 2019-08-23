@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.232127-854ee8
+# Version: 1908.232148-6a2c18
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.232127-854ee8
+# Version: 1908.232148-6a2c18
 
 #####################################################
 # Execute the current hook,
@@ -907,7 +907,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.232127-854ee8
+# Version: 1908.232148-6a2c18
 
 #####################################################
 # Prints the command line help for usage and
@@ -3307,7 +3307,6 @@ If you find it useful, please show your support by starring the project in GitHu
 #   0 when successfully finished, 1 if failed
 ############################################################
 execute_installation() {
-
     # Global IFS for loops
     IFS_NEWLINE="
 "
@@ -3383,14 +3382,14 @@ load_install_dir() {
         fi
     fi
 
-    if ! is_dry_run; then
-        if ! git config --global githooks.installDir "$INSTALL_DIR"; then
-            echo "! Could not set \`githooks.installDir\`"
-            return 1
-        fi
+    if is_dry_run; then
+        return 0
     fi
 
-    echo "Installing Githooks into ${INSTALL_DIR}"
+    if ! git config --global githooks.installDir "$INSTALL_DIR"; then
+        echo "! Could not set \`githooks.installDir\`"
+        return 1
+    fi
 
     return 0
 }
@@ -3416,6 +3415,12 @@ parse_command_line_arguments() {
             NON_INTERACTIVE="yes"
         elif [ "$p" = "--single" ]; then
             SINGLE_REPO_INSTALL="yes"
+
+            if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+                echo "! Cannot use --single and --use-core-hookspath together" >&2
+                exit 1
+            fi
+
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
 
@@ -3434,6 +3439,16 @@ parse_command_line_arguments() {
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
+        elif [ "$p" = "--use-core-hookspath" ]; then
+            USE_CORE_HOOKSPATH="yes"
+            # No point in installing into existing when using core.hooksPath
+            SKIP_INSTALL_INTO_EXISTING="yes"
+
+            # Using core.hooksPath implies it applies to all repo's
+            if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+                echo "! Cannot use --single and --use-core-hookspath together" >&2
+                exit 1
+            fi
         fi
         prev_p="$p"
     done
@@ -3542,7 +3557,7 @@ mark_as_single_install_repo() {
 # Prepare the target template directory variable,
 #   and make sure it points to a directory when set.
 #
-# Resets and sets the ${TARGET_TEMPLATE_DIR} variable.
+# Sets the ${TARGET_TEMPLATE_DIR} variable.
 #
 # Returns:
 #   1 if failed, 0 otherwise
@@ -3555,6 +3570,10 @@ prepare_target_template_directory() {
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
         echo "Git hook templates directory not found" >&2
         return 1
+    fi
+
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+        set_githooks_directory "$TARGET_TEMPLATE_DIR"
     fi
 }
 
@@ -3573,7 +3592,11 @@ find_git_hook_templates() {
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 2. from git config
-    mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+        mark_directory_as_target "$(git config --global core.hooksPath)"
+    else
+        mark_directory_as_target "$(git config --global init.templateDir)" "hooks"
+    fi
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 3. from the default location
@@ -3600,7 +3623,8 @@ find_git_hook_templates() {
 
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
                 TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
-                if ! git config --global init.templateDir "$TEMPLATE_DIR"; then
+
+                if ! set_githooks_directory "$TEMPLATE_DIR"; then
                     echo "! Failed to set it up as Git template directory" >&2
                 fi
             fi
@@ -3723,7 +3747,6 @@ search_pre_commit_sample_file() {
 #   None
 ############################################################
 setup_new_templates_folder() {
-    # shellcheck disable=SC2088
     DEFAULT_TARGET="$INSTALL_DIR/templates"
 
     if is_non_interactive; then
@@ -3745,7 +3768,7 @@ setup_new_templates_folder() {
     if ! is_dry_run; then
         if mkdir -p "${TILDE_REPLACED}/hooks"; then
             # Let this one go with or without a tilde
-            git config --global init.templateDir "$USER_TEMPLATES"
+            set_githooks_directory "$USER_TEMPLATES"
         else
             echo "! Failed to set up the new Git templates folder" >&2
             return
@@ -4092,6 +4115,34 @@ setup_shared_hook_repositories() {
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
         echo "! Failed to set up the shared hook repositories" >&2
+    fi
+}
+
+############################################################
+# Sets the githooks templatedir or hookspath
+#   config variable
+#
+# Parameters:
+#   1: path for templateDir or hooksPath
+#
+# Returns:
+#   None
+############################################################
+set_githooks_directory() {
+    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+        git config --global githooks.useCoreHooksPath yes
+        git config --global githooks.pathForUseCoreHooksPath "$1"
+        git config --global core.hooksPath "$1"
+    else
+        git config --global githooks.useCoreHooksPath no
+        git config --global init.templateDir "$1"
+
+        CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)
+        if [ -n "$CURRENT_CORE_HOOKS_PATH" ]; then
+            echo "! The \`core.hooksPath\` setting is set to $CURRENT_CORE_HOOKS_PATH currently" >&2
+            echo "  This could mean that Githooks hooks will be ignored" >&2
+            echo "  Either unset \`core.hooksPath\` or run the Githooks installation with the --use-core-hookspath parameter" >&2
+        fi
     fi
 }
 

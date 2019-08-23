@@ -2,6 +2,11 @@
 # Test:
 #   Run a single-repo install and try the auto-update
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 if ! curl --version && ! wget --version; then
     echo "Neither curl nor wget is available"
     exit 249

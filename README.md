@@ -5,7 +5,7 @@
 
 A simple Shell script to support per-repository [Git hooks](https://git-scm.com/docs/githooks), checked into the actual repository that uses them.
 
-To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
+To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one. There's more to the story though, you can read about it under the [Templates or global hooks](#Templates-or-global-hooks) section.
 
 > Check out the [blog post](https://blog.viktoradam.net/2018/07/26/githooks-auto-install-hooks/) for the long read!
 
@@ -193,6 +193,18 @@ $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 
 You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
+Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [below](#Templates-or-global-hooks). For this, run the command below.
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath
+```
+
+By default the script will install the hooks into `~/.githooks/templates/`, optionally, you can also pass the path to which you want to install the centralized hooks by appending `<path>` to the command above, for example:
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath /home/public/.githooks
+```
+
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
 
 ```shell
@@ -206,6 +218,32 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 ```
 
 The GitHub URL also accepts the additional parameters mentioned above, the `https://r.viktoradam.net/githooks` URL is just a redirect to the longer GitHub address.
+
+### Templates or global hooks
+
+This script can work in one of 2 ways:
+
+- Using the git template folder (default behavior)
+- Using the git `core.hooksPath` variable (set by passing the `--use-core-hookspath` parameter to the install script)
+
+Read about the differences between these 2 approaches below.
+
+In both cases, the script will make sure git finds the hook templates provided by this script.
+When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one.
+
+#### Template folder
+
+In this approach, the install script creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`.
+
+This is the recommended approach, especially if you want to selectively control which repositories use these scripts. The install script offers to search for repositories to which it will install the hooks, and any new repositories you clone will have these hooks configured.
+
+#### Central hooks location (core.hooksPath)
+
+In this approach, the install script installs the hook templates into a centralized location (`~/.githooks/templates/` by default) and sets the global `core.hooksPath` variable to that location. Git will then, for all relevant actions, check the `core.hooksPath` location, instead of the default `${GIT_DIR}/hooks` location.
+
+This approach works more like a *blanket* solution, where __all repositories__ (\*) will start using the hook templates, regardless of their location.
+
+**Note**(\*): It is possible to override the behavior for a specific repository, by setting a local `core.hooksPath` variable with value `${GIT_DIR}/hooks`, which will revert git back to its default behavior for that specific repository.
 
 ### Required tools
 

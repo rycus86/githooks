@@ -2,6 +2,11 @@
 # Test:
 #   Run an install that tries to install hooks into a non-existing directory
 
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo "Using core.hooksPath"
+    exit 249
+fi
+
 rm -rf /does/not/exist
 
 OUTPUT=$(

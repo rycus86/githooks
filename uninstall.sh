@@ -17,11 +17,15 @@ find_git_hook_templates() {
     mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-    # 2. from git config
+    # 2. from git config for templateDir
     mark_directory_as_target "$(git config --get init.templateDir)" "hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
-    # 3. from the default location
+    # 3. from git config for hooksPath
+    mark_directory_as_target "$(git config --get core.hooksPath)"
+    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+
+    # 4. from the default location
     mark_directory_as_target "/usr/share/git-core/templates/hooks"
     if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 }
@@ -88,6 +92,11 @@ remove_existing_hook_templates() {
 #   0 on success, 1 on failure
 ############################################################
 uninstall_from_existing_repositories() {
+    # Don't offer to remove from repo's if we were using the hooksPath implementation
+    if using_hooks_path; then
+        return 0
+    fi
+
     printf 'Do you want to uninstall the hooks from existing repositories? [yN] '
     read -r DO_UNINSTALL
     if [ "$DO_UNINSTALL" != "y" ] && [ "$DO_UNINSTALL" != "Y" ]; then return 0; fi
@@ -205,6 +214,21 @@ uninstall_hooks_from_repo() {
 }
 
 ############################################################
+# Checks if we're using the hooksPath
+#   or templateDir implementation.
+#
+# Returns:
+#   0 on true, 1 on false
+############################################################
+using_hooks_path() {
+    USE_HOOKS_PATH=$(git config --global githooks.useCoreHooksPath)
+    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Uninstall shared hooks.
 #
 # Returns:
@@ -363,6 +387,19 @@ uninstall() {
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir
     git config --global --unset alias.hooks
+
+    if using_hooks_path; then
+        git config --global --unset githooks.useCoreHooksPath
+
+        GITHOOKS_CORE_HOOKSPATH=$(git config --global githooks.pathForUseCoreHooksPath)
+        GIT_CORE_HOOKSPATH=$(git config --global core.hooksPath)
+
+        if [ "$GITHOOKS_CORE_HOOKSPATH" = "$GIT_CORE_HOOKSPATH" ]; then
+            git config --global --unset core.hooksPath
+        fi
+
+        git config --global --unset githooks.pathForUseCoreHooksPath
+    fi
 
     # Finished
     echo "All done!"
