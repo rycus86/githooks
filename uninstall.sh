@@ -108,7 +108,7 @@ uninstall_from_existing_repositories() {
     fi
 
     if [ ! -d "$START_DIR" ]; then
-        echo "'$START_DIR' is not a directory"
+        echo "'$START_DIR' is not a directory" >&2
         return 1
     fi
 
@@ -117,6 +117,38 @@ uninstall_from_existing_repositories() {
     done
 
     return 0
+}
+
+#####################################################
+# Checks if the current directory is
+#   a Git repository or not.
+#
+# Returns:
+#   0 if it is likely a Git repository,
+#   1 otherwise
+#####################################################
+is_running_in_git_repo_root() {
+    if ! git status >/dev/null 2>&1; then
+        return 1
+    fi
+
+    [ -d "${CURRENT_GIT_DIR}" ] || return 1
+}
+
+############################################################
+# Uninstall the existing Git hook templates from the
+#   current repository.
+#
+# Returns:
+#   0 on success, 1 on failure
+############################################################
+uninstall_from_current_repository() {
+    if ! is_running_in_git_repo_root; then
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!" >&2
+        exit 1
+    fi
+
+    uninstall_hooks_from_repo "$CURRENT_GIT_DIR"
 }
 
 ############################################################
@@ -160,6 +192,16 @@ uninstall_hooks_from_repo() {
         TARGET_DIR=$(dirname "$TARGET")
         echo "Hooks are uninstalled from $TARGET_DIR"
     fi
+
+    # If Git LFS is available, try installing the LFS hooks again
+    if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
+        OUTPUT=$(cd "$CURRENT_GIT_DIR" && git lfs install 2>&1)
+        #shellcheck disable=2181
+        if [ $? -ne 0 ]; then
+            echo "! Reinstalling Git LFS failed! Output:" >&2
+            echo "$OUTPUT" >&2
+        fi
+    fi
 }
 
 ############################################################
@@ -171,7 +213,7 @@ uninstall_hooks_from_repo() {
 uninstall_shared_hooks() {
     if [ -d "$INSTALL_DIR/shared" ]; then
         if ! rm -rf "${INSTALL_DIR:?}/shared" >/dev/null 2>&1; then
-            echo "! Failed to delete shared hook repository folders"
+            echo "! Failed to delete shared hook repository folders" >&2
             exit 1
         fi
     fi
@@ -186,7 +228,7 @@ uninstall_shared_hooks() {
 uninstall_cli() {
     if [ -d "$INSTALL_DIR/bin" ]; then
         if ! rm -rf "${INSTALL_DIR:?}/bin" >/dev/null 2>&1; then
-            echo "! Failed to delete the githook command-line tool"
+            echo "! Failed to delete the githook command-line tool" >&2
             exit 1
         fi
     fi
@@ -206,59 +248,129 @@ load_install_dir() {
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory at ${INSTALL_DIR} is missing."
+        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Using default install directory at $INSTALL_DIR"
+        echo "  Using default install directory at $INSTALL_DIR" >&2
     fi
 
     # Final check since we are going to delete folders
     if ! echo "$INSTALL_DIR" | grep -q ".githooks"; then
-        echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`"
+        echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`" >&2
         return 1
     fi
 
     return 0
 }
 
-load_install_dir || exit 1
+#####################################################
+# Check the install is local or global
+#
+# Returns: 0 if uninstall is local, 1 otherwise
+#####################################################
+is_local_uninstall() {
+    [ "$UNINSTALL_LOCAL" = "true" ] || return 1
+}
 
-# Find the current Git hook templates directory
-TARGET_TEMPLATE_DIR=""
+#####################################################
+# Parse command line args.
+#
+# Returns: None
+#####################################################
+parse_command_line_args() {
+    # Global or local uninstall
+    if [ "$1" = "--local" ]; then
+        UNINSTALL_LOCAL="true"
+    else
+        UNINSTALL_LOCAL="false"
+    fi
+}
 
-find_git_hook_templates
+#####################################################
+# Set up the main variables that
+#   we will throughout the hook.
+#
+# Sets the ${CURRENT_GIT_DIR} variable
+# Sets the ${INSTALL_DIR} variable
+# Sets the ${GIT_LFS_AVAILABLE} variable
+#
+# Returns: None
+#####################################################
+set_main_variables() {
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
+        CURRENT_GIT_DIR=".git"
+    fi
 
-if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-    echo "Git hook templates directory not found"
-    exit 1
-fi
+    load_install_dir || return 1
 
-# Delete the hook templates
-remove_existing_hook_templates "$TARGET_TEMPLATE_DIR"
+    # do we have Git LFS installed
+    GIT_LFS_AVAILABLE="false"
+    command -v git-lfs >/dev/null 2>&1 && GIT_LFS_AVAILABLE="true"
 
-# Uninstall the hooks from existing local repositories
-if ! uninstall_from_existing_repositories; then
-    echo "! Failed to uninstall from existing repositories" >&2
-    exit 1
-fi
+    return 0
+}
 
-# Uninstall all shared hooks
-uninstall_shared_hooks
+#####################################################
+# Main uninstall routine.
 
-# Uninstall all cli
-uninstall_cli
+# Returns: 0 if success, 1 otherwise
+#####################################################
+uninstall() {
+    set_main_variables || return 1
+    parse_command_line_args "$@"
 
-# Unset global Githooks variables
-git config --global --unset githooks.shared
-git config --global --unset githooks.failOnNonExistingSharedHooks
-git config --global --unset githooks.autoupdate.enabled
-git config --global --unset githooks.autoupdate.lastrun
-git config --global --unset githooks.previous.searchdir
-git config --global --unset githooks.disable
-git config --global --unset githooks.installDir
-git config --global --unset alias.hooks
+    if [ "$UNINSTALL_LOCAL" = "true" ]; then
+        # Uninstall the hooks from the current repository
+        if uninstall_from_current_repository; then
+            return 0
+        else
+            echo "! Failed to uninstall from current repository" >&2
+            return 1
+        fi
+    fi
 
-# Finished
-echo "All done!"
-echo
-echo "If you ever want to reinstall the hooks, just follow"
-echo "the install instructions at https://github.com/rycus86/githooks"
+    # Uninstall the hooks from existing local repositories
+    if ! uninstall_from_existing_repositories; then
+        echo "! Failed to uninstall from existing repositories" >&2
+        return 1
+    fi
+
+    # Find the current Git hook templates directory
+    TARGET_TEMPLATE_DIR=""
+
+    find_git_hook_templates
+
+    if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+        echo "Git hook templates directory not found" >&2
+        return 1
+    fi
+
+    # Delete the hook templates
+    remove_existing_hook_templates "$TARGET_TEMPLATE_DIR"
+
+    # Uninstall all shared hooks
+    uninstall_shared_hooks
+
+    # Uninstall all cli
+    uninstall_cli
+
+    # Unset global Githooks variables
+    git config --global --unset githooks.shared
+    git config --global --unset githooks.failOnNonExistingSharedHooks
+    git config --global --unset githooks.autoupdate.enabled
+    git config --global --unset githooks.autoupdate.lastrun
+    git config --global --unset githooks.previous.searchdir
+    git config --global --unset githooks.disable
+    git config --global --unset githooks.installDir
+    git config --global --unset alias.hooks
+
+    # Finished
+    echo "All done!"
+    echo
+    echo "If you ever want to reinstall the hooks, just follow"
+    echo "the install instructions at https://github.com/rycus86/githooks"
+
+    return 0
+}
+
+uninstall "$@" || exit 1

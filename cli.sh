@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.222053-e7d4c3
+# Version: 1908.232127-854ee8
 
 #####################################################
 # Prints the command line help for usage and
@@ -30,6 +30,7 @@ Available commands:
     list        Lists the active hooks in the current repository
     shared      Manages the shared hook repositories
     install     Installs the latest Githooks hooks
+    uninstall   Uninstalls the Githooks hooks
     update      Performs an update check
     readme      Manages the Githooks README in the current repository
     ignore      Manages Githooks ignore files in the current repository
@@ -1262,6 +1263,48 @@ git hooks install [--global]
 }
 
 #####################################################
+# Executes an ondemand uninstallation of Githooks.
+#
+# Returns:
+#   1 if the uninstallation fails,
+#   0 otherwise
+#####################################################
+run_ondemand_uninstallation() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks uninstall [--global]
+
+    Uninstalls the Githooks hooks from the current repository.
+    If the \`--global\` flag is given, it executes the uninstallation
+    globally, including the hook templates and all local repositories.
+"
+        return
+    fi
+
+    UNINSTALL_ARGS="--local"
+    if [ "$1" = "--global" ]; then
+        UNINSTALL_ARGS="--global"
+    elif [ -n "$1" ]; then
+        echo "! Invalid argument: \`$1\`" >&2 && exit 1
+    fi
+
+    echo "Fetching the uninstall script ..."
+
+    if ! fetch_latest_uninstall_script; then
+        echo "! Failed to fetch the latest uninstall script" >&2
+        echo "  You can retry manually using one of the alternative methods," >&2
+        echo "  see them here: https://github.com/rycus86/githooks#uninstalling" >&2
+        exit 1
+    fi
+
+    if ! execute_uninstall_script $UNINSTALL_ARGS; then
+        echo "! Failed to execute the uninstallation" >&2
+        exit 1
+    fi
+}
+
+#####################################################
 # Executes an update check, and potentially
 #   the installation of the latest version.
 #
@@ -1423,7 +1466,7 @@ download_file() {
 
 #####################################################
 # Loads the contents of the latest install
-#   script into a variable.
+#   script into a file ${INSTALL_SCRIPT}.
 #
 # Sets the ${INSTALL_SCRIPT} variable
 #
@@ -1433,6 +1476,22 @@ download_file() {
 fetch_latest_install_script() {
     INSTALL_SCRIPT="$(mktemp)"
     if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
+        return 1
+    fi
+}
+
+#####################################################
+# Loads the contents of the latest uninstall
+#   script into a file ${UNINSTALL_SCRIPT}.
+#
+# Sets the ${UNINSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed the load the script, 0 otherwise
+#####################################################
+fetch_latest_uninstall_script() {
+    UNINSTALL_SCRIPT="$(mktemp)"
+    if ! download_file "uninstall.sh" "$UNINSTALL_SCRIPT"; then
         return 1
     fi
 }
@@ -1503,6 +1562,28 @@ execute_install_script() {
         fi
     else
         if sh <"$INSTALL_SCRIPT"; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+#####################################################
+# Performs the uninstallation of the previously
+#   fetched uninstall script.
+#
+# Returns:
+#   0 if the uninstallation was successful,
+#   1 otherwise
+#####################################################
+execute_uninstall_script() {
+    if [ $# -ne 0 ]; then
+        if sh -s -- "$@" <"$UNINSTALL_SCRIPT"; then
+            return 0
+        fi
+    else
+        if sh <"$UNINSTALL_SCRIPT"; then
             return 0
         fi
     fi
@@ -2257,6 +2338,9 @@ choose_command() {
         ;;
     "install")
         run_ondemand_installation "$@"
+        ;;
+    "uninstall")
+        run_ondemand_uninstallation "$@"
         ;;
     "update")
         run_update_check "$@"
