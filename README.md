@@ -5,6 +5,8 @@
 
 A simple Shell script to support per-repository [Git hooks](https://git-scm.com/docs/githooks), checked into the actual repository that uses them.
 
+To make this work, it creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. When one of them executes, it will try to find matching files in the `.githooks` directory under the project root, and invoke them one-by-one. There's more to the story though, you can read about it under the [Templates or global hooks](#Templates-or-global-hooks) section.
+
 > Check out the [blog post](https://blog.viktoradam.net/2018/07/26/githooks-auto-install-hooks/) for the long read!
 
 ## Layout and options
@@ -191,7 +193,7 @@ $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 
 You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
-Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [below](#Templates-vs-global-hooks). For this, run the command below.
+Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [below](#Templates-or-global-hooks). For this, run the command below.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath
