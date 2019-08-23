@@ -119,7 +119,7 @@ Uninstalls the Githooks hooks.
 $ git hooks uninstall [--global]
 ```
 
-Uninstalls the Githooks hooks into the current repository. If the `--global` flag is given, it executes the uninstallation globally.
+Uninstalls the Githooks hooks from the current repository. If the `--global` flag is given, it executes the uninstallation globally, including the hook templates and all local repositories.
 
 ## git hooks update
 

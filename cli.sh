@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.221710-591f8c
+# Version: 1908.232125-469bb0
 
 #####################################################
 # Prints the command line help for usage and
@@ -1263,11 +1263,10 @@ git hooks install [--global]
 }
 
 #####################################################
-# Executes an ondemand installation
-#   of the latest Githooks version.
+# Executes an ondemand uninstallation of Githooks.
 #
 # Returns:
-#   1 if the installation fails,
+#   1 if the uninstallation fails,
 #   0 otherwise
 #####################################################
 run_ondemand_uninstallation() {
@@ -1276,9 +1275,9 @@ run_ondemand_uninstallation() {
         echo "
 git hooks uninstall [--global]
 
-    Installs the Githooks hooks into the current repository.
-    If the \`--global\` flag is given, it executes the installation
-    globally, including the hook templates for future repositories.
+    Uninstalls the Githooks hooks from the current repository.
+    If the \`--global\` flag is given, it executes the uninstallation
+    globally, including the hook templates and all local repositories.
 "
         return
     fi
@@ -1287,8 +1286,7 @@ git hooks uninstall [--global]
     if [ "$1" = "--global" ]; then
         UNINSTALL_ARGS="--global"
     elif [ -n "$1" ]; then
-        echo "! Invalid operation: \`$1\`" >&2 && exit 1
-
+        echo "! Invalid argument: \`$1\`" >&2 && exit 1
     fi
 
     echo "Fetching the uninstall script ..."
