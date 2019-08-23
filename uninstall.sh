@@ -108,7 +108,7 @@ uninstall_from_existing_repositories() {
     fi
 
     if [ ! -d "$START_DIR" ]; then
-        echo "'$START_DIR' is not a directory"
+        echo "'$START_DIR' is not a directory" >&2
         return 1
     fi
 
@@ -144,7 +144,7 @@ is_running_in_git_repo_root() {
 ############################################################
 uninstall_from_current_repository() {
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!" >&2
         exit 1
     fi
 
@@ -198,8 +198,8 @@ uninstall_hooks_from_repo() {
         OUTPUT=$(cd "$CURRENT_GIT_DIR" && git lfs install 2>&1)
         #shellcheck disable=2181
         if [ $? -ne 0 ]; then
-            echo "! Reinstalling Git LFS failed! Output:"
-            echo "$OUTPUT"
+            echo "! Reinstalling Git LFS failed! Output:" >&2
+            echo "$OUTPUT" >&2
         fi
     fi
 }
@@ -213,7 +213,7 @@ uninstall_hooks_from_repo() {
 uninstall_shared_hooks() {
     if [ -d "$INSTALL_DIR/shared" ]; then
         if ! rm -rf "${INSTALL_DIR:?}/shared" >/dev/null 2>&1; then
-            echo "! Failed to delete shared hook repository folders"
+            echo "! Failed to delete shared hook repository folders" >&2
             exit 1
         fi
     fi
@@ -228,7 +228,7 @@ uninstall_shared_hooks() {
 uninstall_cli() {
     if [ -d "$INSTALL_DIR/bin" ]; then
         if ! rm -rf "${INSTALL_DIR:?}/bin" >/dev/null 2>&1; then
-            echo "! Failed to delete the githook command-line tool"
+            echo "! Failed to delete the githook command-line tool" >&2
             exit 1
         fi
     fi
@@ -248,14 +248,14 @@ load_install_dir() {
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory at ${INSTALL_DIR} is missing."
+        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Using default install directory at $INSTALL_DIR"
+        echo "  Using default install directory at $INSTALL_DIR" >&2
     fi
 
     # Final check since we are going to delete folders
     if ! echo "$INSTALL_DIR" | grep -q ".githooks"; then
-        echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`"
+        echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`" >&2
         return 1
     fi
 
@@ -341,7 +341,7 @@ uninstall() {
     find_git_hook_templates
 
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-        echo "Git hook templates directory not found"
+        echo "Git hook templates directory not found" >&2
         return 1
     fi
 
