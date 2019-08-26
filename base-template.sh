@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.232148-6a2c18
+# Version: 1908.261141-2cc7d9
 
 #####################################################
 # Execute the current hook,
@@ -318,7 +318,7 @@ is_trusted_repo() {
         if [ $TRUST_ALL_RESULT -ne 0 ]; then
             MESSAGE="$(printf "%s\n%s" "! This repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
 
-            show_prompt TRUST_ALL_HOOKS "$MESSAGE" "y/N" "Yes" "No"
+            show_prompt TRUST_ALL_HOOKS "$MESSAGE" "(yes, No)" "y/N" "Yes" "No"
 
             if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
                 git config githooks.trust.all Y
@@ -828,7 +828,7 @@ is_single_repo() {
 #####################################################
 should_run_update() {
     MESSAGE="$(printf "%s\n%s" "* There is a new Githooks update available: Version $LATEST_VERSION" "Would you like to install it now?")"
-    show_prompt EXECUTE_UPDATE "$MESSAGE" "Y/n" "Yes" "no"
+    show_prompt EXECUTE_UPDATE "$MESSAGE" "(Yes, no)" "Y/n" "Yes" "no"
 
     if [ -z "$EXECUTE_UPDATE" ] || [ "$EXECUTE_UPDATE" = "y" ] || [ "$EXECUTE_UPDATE" = "Y" ]; then
         return 0
