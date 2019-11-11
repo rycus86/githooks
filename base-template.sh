@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.191144-02653f
 
 #####################################################
 # Execute the current hook,
@@ -476,7 +476,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
+                PULL_OUTPUT=$(cd "$SHARED_ROOT" && env -i git pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
@@ -485,7 +485,7 @@ update_shared_hooks_if_appropriate() {
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO"
                 [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
-                CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
+                CLONE_OUTPUT=$(env -i git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Clone failed, git clone output:" >&2
@@ -708,10 +708,16 @@ show_prompt() {
         # else: Running fallback...
     fi
 
-    # Read from stdin
+    # Read from stdin if its available
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
-    # shellcheck disable=SC2229
-    read -r "$VARIABLE" </dev/tty
+    if [ -f /dev/tty ]; then
+        # shellcheck disable=SC2229
+        read -r "$VARIABLE" </dev/tty
+    else
+        echo
+    fi
+
+    # return with unset $VARIABLE ...
 }
 
 #####################################################

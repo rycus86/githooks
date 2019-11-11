@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.191144-02653f
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.191144-02653f
 
 #####################################################
 # Execute the current hook,
@@ -495,7 +495,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
+                PULL_OUTPUT=$(cd "$SHARED_ROOT" && env -i git pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
@@ -504,7 +504,7 @@ update_shared_hooks_if_appropriate() {
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO"
                 [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
-                CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
+                CLONE_OUTPUT=$(env -i git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Clone failed, git clone output:" >&2
@@ -727,10 +727,16 @@ show_prompt() {
         # else: Running fallback...
     fi
 
-    # Read from stdin
+    # Read from stdin if its available
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
-    # shellcheck disable=SC2229
-    read -r "$VARIABLE" </dev/tty
+    if [ -f /dev/tty ]; then
+        # shellcheck disable=SC2229
+        read -r "$VARIABLE" </dev/tty
+    else
+        echo
+    fi
+
+    # return with unset $VARIABLE ...
 }
 
 #####################################################
@@ -912,7 +918,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.191144-02653f
 
 #####################################################
 # Prints the command line help for usage and
@@ -998,17 +1004,26 @@ set_main_variables() {
 #####################################################
 # Checks if the current directory is
 #   a Git repository or not.
-#
+
 # Returns:
 #   0 if it is likely a Git repository,
 #   1 otherwise
 #####################################################
 is_running_in_git_repo_root() {
-    if ! git status >/dev/null 2>&1; then
-        return 1
-    fi
-
+    git rev-parse >/dev/null 2>&1 || return 1
     [ -d "${CURRENT_GIT_DIR}" ] || return 1
+}
+
+#####################################################
+# Echo if the current repository is non-bare.
+#
+# Returns: 0
+#####################################################
+echo_if_non_bare_repo() {
+    if [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "false" ]; then
+        echo "$@"
+    fi
+    return 0
 }
 
 #####################################################
@@ -1302,7 +1317,7 @@ git hooks trust [forget]
             touch .githooks/trust-all &&
             git config githooks.trust.all Y &&
             echo "The current repository is now trusted." &&
-            echo "  Do not forget to commit and push the trust marker!" &&
+            echo_if_non_bare_repo "  Do not forget to commit and push the trust marker!" &&
             return
 
         echo "! Failed to mark the current repository as trusted" >&2
@@ -1337,7 +1352,7 @@ git hooks trust [forget]
     if [ "$1" = "delete" ] || [ -f .githooks/trust-all ]; then
         rm -rf .githooks/trust-all &&
             echo "The trust marker is removed from the repository." &&
-            echo "  Do not forget to commit and push the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit and push the change!" &&
             return
 
         echo "! Failed to delete the trust marker" >&2
@@ -1760,7 +1775,7 @@ add_shared_hook_repo() {
         echo "# Added on $(date)" >>"$(pwd)/.githooks/.shared" &&
             echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
             echo "The new shared hook repository is successfully added" &&
-            echo "  Do not forget to commit the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to add the new shared hook repository" >&2
@@ -1863,7 +1878,7 @@ ${SHARED_REPO_ITEM}"
 
         echo "$NEW_LIST" >"$(pwd)/.githooks/.shared" &&
             echo "The list of shared hook repositories is successfully changed" &&
-            echo "  Do not forget to commit the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to remove a shared hook repository" >&2
@@ -2093,7 +2108,7 @@ update_shared_hooks_in() {
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
+            PULL_OUTPUT="$(cd "$SHARED_ROOT" && env -i git pull 2>&1)"
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
@@ -2102,7 +2117,7 @@ update_shared_hooks_in() {
         else
             echo "* Retrieving shared hooks from: $SHARED_REPO"
             [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
-            CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
+            CLONE_OUTPUT=$(env -i git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Clone failed, git clone output:" >&2
@@ -2554,7 +2569,8 @@ git hooks readme [add|update]
 
     mkdir -p "$(pwd)/.githooks" &&
         cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
-        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "The README file is updated." &&
+        echo_if_non_bare_repo "  Do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository" >&2
 }
 
@@ -2643,7 +2659,7 @@ git hooks ignore [trigger] [pattern...]
     done
 
     echo "The ignore file at $TARGET_DIR/.ignore is updated"
-    echo "  Do not forget to commit the changes!"
+    echo_if_non_bare_repo "  Do not forget to commit the changes!"
 }
 
 #####################################################
@@ -3349,7 +3365,8 @@ execute_installation() {
     # Install the hooks into existing local repositories
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
-            install_hooks_into_repo "$(pwd)" || return 1
+            CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+            install_hooks_into_repo "$CURRENT_GIT_DIR" || return 1
         else
             install_into_existing_repositories
         fi
@@ -3531,6 +3548,17 @@ disable_tty_input() {
 }
 
 ############################################################
+# Checks whether the given directory
+#   is a Git repository (bare included) or not.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+is_git_repo() {
+    (cd "$1" && git rev-parse >/dev/null 2>&1) || return 1
+}
+
+############################################################
 # Checks whether the current working directory
 #   is a Git repository or not.
 #
@@ -3538,8 +3566,8 @@ disable_tty_input() {
 #   1 if failed, 0 otherwise
 ############################################################
 ensure_running_in_git_repo() {
-    if ! git status >/dev/null 2>&1; then
-        echo "! The current directory is not Git repository" >&2
+    if ! is_git_repo "$(pwd)"; then
+        echo "! The current directory is not a Git repository" >&2
         return 1
     fi
 }
@@ -3952,7 +3980,10 @@ install_into_existing_repositories() {
 
     git config --global githooks.previous.searchdir "$RAW_START_DIR"
 
-    LOCAL_REPOSITORY_LIST=$(find "$START_DIR" -type d -name .git 2>/dev/null)
+    LOCAL_REPOSITORY_LIST=$(
+        find "$START_DIR" \( -type d -and -name .git \) -or \
+            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
+    )
 
     # Sort the list if we can
     if sort --help >/dev/null 2>&1; then
@@ -3963,8 +3994,11 @@ install_into_existing_repositories() {
     for EXISTING in $LOCAL_REPOSITORY_LIST; do
         unset IFS
 
-        EXISTING_REPO_ROOT=$(dirname "$EXISTING")
-        install_hooks_into_repo "$EXISTING_REPO_ROOT"
+        if [ -f "$EXISTING" ]; then
+            # Strip HEAD file
+            EXISTING=$(dirname "$EXISTING")
+        fi
+        install_hooks_into_repo "$EXISTING"
 
         IFS="$IFS_NEWLINE"
     done
@@ -3981,8 +4015,13 @@ install_into_existing_repositories() {
 #   0 on success, 1 on failure
 ############################################################
 install_hooks_into_repo() {
-    TARGET_ROOT="$1"
-    TARGET="${TARGET_ROOT}/.git"
+    TARGET="$1"
+
+    if ! is_git_repo "${TARGET}"; then
+        return
+    fi
+
+    IS_BARE=$(cd "${TARGET}" && git rev-parse --is-bare-repository 2>/dev/null)
 
     if [ ! -w "${TARGET}/hooks" ]; then
         # Try to create the .git/hooks folder
@@ -4028,44 +4067,53 @@ install_hooks_into_repo() {
     done
 
     # Offer to setup the intro README if running in interactive mode
-    if is_non_interactive; then
-        true # Let's skip this in non-interactive mode to avoid polluting the local repos with README files
+    # Let's skip this in non-interactive mode or in a bare repository
+    # to avoid polluting the repos with README files
+    if ! is_non_interactive && [ "${IS_BARE}" != "true" ]; then
 
-    elif [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
-        if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
-            true # OK, we already said we want to skip all
+        # Getting the working tree (no external .git directories)
+        # see https://stackoverflow.com/a/38852055/293195
+        TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel)
+        if [ -z "$TARGET_ROOT" ]; then
+            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir)/.." && pwd)
+        fi
 
-        elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
-            mkdir -p "${TARGET_ROOT}/.githooks" &&
-                echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+        if [ -d "${TARGET_ROOT}" ] && [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
+            if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
+                true # OK, we already said we want to skip all
 
-        else
-            if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
-                echo "Looks like you don't have a .githooks folder in the ${TARGET_ROOT} repository yet."
-                printf "  Would you like to create one with a README containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
-            else
-                echo "Looks like you don't have a README.md in the ${TARGET_ROOT}/.githooks folder yet."
-                echo "  A README file might help contributors and other team members learn about what is this for."
-                printf "  Would you like to add one now with a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
-            fi
-
-            read -r SETUP_INCLUDED_README </dev/tty
-
-            if [ -z "$SETUP_INCLUDED_README" ] ||
-                [ "$SETUP_INCLUDED_README" = "y" ] || [ "$SETUP_INCLUDED_README" = "Y" ] ||
-                [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
-
+            elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
                 mkdir -p "${TARGET_ROOT}/.githooks" &&
                     echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+
+            else
+                if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
+                    echo "Looks like you don't have a .githooks folder in the ${TARGET_ROOT} repository yet."
+                    printf "  Would you like to create one with a README containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+                else
+                    echo "Looks like you don't have a README.md in the ${TARGET_ROOT}/.githooks folder yet."
+                    echo "  A README file might help contributors and other team members learn about what is this for."
+                    printf "  Would you like to add one now with a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+                fi
+
+                read -r SETUP_INCLUDED_README </dev/tty
+
+                if [ -z "$SETUP_INCLUDED_README" ] ||
+                    [ "$SETUP_INCLUDED_README" = "y" ] || [ "$SETUP_INCLUDED_README" = "Y" ] ||
+                    [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
+
+                    mkdir -p "${TARGET_ROOT}/.githooks" &&
+                        echo "$INCLUDED_README_CONTENT" >"${TARGET_ROOT}/.githooks/README.md"
+                fi
             fi
         fi
     fi
 
     if [ "$INSTALLED" = "yes" ]; then
         if is_dry_run; then
-            echo "[Dry run] Hooks would have been installed into $TARGET_ROOT"
+            echo "[Dry run] Hooks would have been installed into $TARGET"
         else
-            echo "Hooks installed into $TARGET_ROOT"
+            echo "Hooks installed into $TARGET"
         fi
     fi
 
