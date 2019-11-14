@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1908.261141-2cc7d9
+# Version: 1911.141922-39ad43
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1908.261141-2cc7d9
+# Version: 1911.141922-39ad43
 
 #####################################################
 # Execute the current hook,
@@ -33,7 +33,12 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    are_githooks_disabled && return 0
+    if are_githooks_disabled; then
+        set_main_variables
+        execute_lfs_hook_if_appropriate "$@" || return 1
+        return
+    fi
+
     set_main_variables
     export_staged_files
     check_for_updates_if_needed
@@ -907,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1908.261141-2cc7d9
+# Version: 1911.141922-39ad43
 
 #####################################################
 # Prints the command line help for usage and
