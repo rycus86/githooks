@@ -5,7 +5,7 @@
 # shellcheck disable=SC2016
 mkdir -p /tmp/test106-lfs &&
     echo '#!/bin/sh' >/tmp/test106-lfs/git-lfs &&
-    echo 'echo "lfs-exec:$1" >> /tmp/test106/lfs.out' >/tmp/test106-lfs/git-lfs &&
+    echo 'echo "lfs-exec:$1" > /tmp/test106/lfs.out' >/tmp/test106-lfs/git-lfs &&
     chmod +x /tmp/test106-lfs/git-lfs ||
     exit 1
 
@@ -19,7 +19,7 @@ mkdir -p /tmp/test106 &&
     git lfs install ||
     exit 4
 
-if ! grep -q 'lfs-exec:install' /tmp/test106/lfs.out; then
+if ! grep -q 'lfs-exec:install' lfs.out; then
     echo "! Test setup is broken"
     exit 5
 fi
@@ -43,12 +43,23 @@ if ! grep -q 'post-commit' lfs.out; then
     exit 9
 fi
 
+# Test LFS invocation if git hooks are disabled
+rm lfs.out && rm hook.out &&
+    git hooks config set disable &&
+    ACCEPT_CHANGES=Y git commit --allow-empty -m "Second commit" ||
+    exit 10
+
+if ! grep -q 'post-commit' lfs.out || [ -f hook.out ]; then
+    echo "! LFS hook did not run or the normal hook ran"
+    exit 11
+fi
+
 # an extra invocation for coverage
 HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
     sh /var/lib/githooks/base-template.sh unused ||
-    exit 10
+    exit 12
 
 if ! grep -q 'post-merge' lfs.out; then
     echo "! LFS hook did not run"
-    exit 11
+    exit 13
 fi
