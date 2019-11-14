@@ -106,10 +106,11 @@ The `update` or `pull` subcommands update all the shared repositories, both glob
 Installs the latest Githooks hooks.
 
 ```shell
-$ git hooks install [--global]
+$ git hooks install [--global] [--purge-existing]
 ```
 
 Installs the Githooks hooks into the current repository. If the `--global` flag is given, it executes the installation globally, including the hook templates for future repositories.
+If the `--purge-existing` flag is given, all existing hooks in the repository hooks folder are deleted first.
 
 ## git hooks uninstall
 

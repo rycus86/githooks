@@ -24,6 +24,8 @@ sed 's/# Version: /# Version: 0/' /var/lib/githooks/cli.sh >/tmp/cli-0 &&
     chmod +x /var/lib/githooks/cli.sh ||
     exit 1
 
+# make an existing hook
+echo "#old-hook" >.git/hooks/post-checkout && chmod u+x .git/hooks/post-checkout || exit 1
 if ! sh /var/lib/githooks/cli.sh install; then
     echo "! Failed to run the installation"
     exit 1
@@ -34,8 +36,24 @@ if ! grep 'rycus86/githooks' .git/hooks/pre-commit; then
     exit 1
 fi
 
+if ! grep -q "#old-hook" ".git/hooks/post-checkout.replaced.githooks"; then
+    echo "! Previous hook not replaced"
+fi
+
 if grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
     echo "! Unexpected non-single installation"
+    exit 1
+fi
+
+# check install with purging existing hooks
+if ! sh /var/lib/githooks/cli.sh install --purge-existing; then
+    echo "! Failed to run the purge installation"
+    exit 1
+fi
+
+if ! grep 'rycus86/githooks' .git/hooks/post-checkout ||
+    [ -f .git/hooks/post-checkout.replaced.githooks ]; then
+    echo "! Installation was unsuccessful"
     exit 1
 fi
 

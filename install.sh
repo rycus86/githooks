@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.190921-99acb5
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.190921-99acb5
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.190921-99acb5
 
 #####################################################
 # Prints the command line help for usage and
@@ -2128,20 +2128,34 @@ run_ondemand_installation() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks install [--global]
+git hooks install [--global] [--purge-existing]
 
     Installs the Githooks hooks into the current repository.
     If the \`--global\` flag is given, it executes the installation
     globally, including the hook templates for future repositories.
+
+    The flag \`--purge-existing\` will delete all existing hooks in the 
+    repository hooks folder before the Githooks hooks are installed.
 "
         return
     fi
 
-    if [ "$1" = "--global" ]; then
-        IS_SINGLE_REPO="no"
-    else
-        IS_SINGLE_REPO="yes"
-    fi
+    IS_SINGLE_ARG="--single"
+    PURGE_ARG=""
+    for ARG in "$@"; do
+        case "$ARG" in
+        "--global")
+            IS_SINGLE_ARG=""
+            ;;
+        "--purge-existing")
+            PURGE_ARG="$ARG"
+            ;;
+        *)
+            echo "! Unknown install option: $ARG" >&2
+            exit 1
+            ;;
+        esac
+    done
 
     echo "Fetching the install script ..."
 
@@ -2157,7 +2171,8 @@ git hooks install [--global]
     echo "  Githooks install script downloaded: Version $LATEST_VERSION"
     echo
 
-    if ! execute_install_script; then
+    #shellcheck disable=2086
+    if ! execute_install_script $IS_SINGLE_ARG $PURGE_ARG; then
         echo "! Failed to execute the installation" >&2
         exit 1
     fi
@@ -2272,7 +2287,12 @@ git hooks update [enable|disable]
 
     read_single_repo_information
 
-    if ! execute_install_script; then
+    INSTALL_ARGS=""
+    if is_single_repo; then
+        INSTALL_ARGS="--single"
+    fi
+
+    if ! execute_install_script $INSTALL_ARGS; then
         echo "! Failed to execute the installation"
         print_update_disable_info
     fi
@@ -2457,17 +2477,7 @@ is_single_repo() {
 #   0 if the installation was successful, 1 otherwise
 #####################################################
 execute_install_script() {
-    if is_single_repo; then
-        if sh -s -- --single <"$INSTALL_SCRIPT"; then
-            return 0
-        fi
-    else
-        if sh <"$INSTALL_SCRIPT"; then
-            return 0
-        fi
-    fi
-
-    return 1
+    sh -s -- "$@" <"$INSTALL_SCRIPT" || return 1
 }
 
 #####################################################
@@ -3425,7 +3435,8 @@ parse_command_line_arguments() {
                 echo "! Cannot use --single and --use-core-hookspath together" >&2
                 exit 1
             fi
-
+        elif [ "$p" = "--purge-existing-hooks" ]; then
+            PURGE_EXISTING_HOOKS="yes"
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
 
@@ -3997,6 +4008,11 @@ install_hooks_into_repo() {
         if is_dry_run; then
             INSTALLED="yes"
             continue
+        fi
+
+        if [ "$PURGE_EXISTING_HOOKS" = "yes" ] && ! rm -r "${TARGET}/hooks"/*; then
+            echo "! Failed to purge existing hooks in '${TARGET}/hooks'" >&2
+            return 1
         fi
 
         TARGET_HOOK="${TARGET}/hooks/${HOOK_NAME}"
