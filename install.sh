@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.160112-e4948d
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.160112-e4948d
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.160112-e4948d
 
 #####################################################
 # Prints the command line help for usage and
@@ -3938,11 +3938,12 @@ install_into_existing_repositories() {
         START_DIR="$PRE_START_DIR"
     fi
 
-    RAW_START_DIR="$START_DIR"
     TILDE_REPLACED=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
     if [ -n "$TILDE_REPLACED" ]; then
         START_DIR="$TILDE_REPLACED"
     fi
+
+    START_DIR=$(realpath "$START_DIR")
 
     if [ ! -d "$START_DIR" ]; then
         echo "! '$START_DIR' is not a directory" >&2
@@ -3950,7 +3951,7 @@ install_into_existing_repositories() {
         return
     fi
 
-    git config --global githooks.previous.searchdir "$RAW_START_DIR"
+    git config --global githooks.previous.searchdir "$START_DIR"
 
     LOCAL_REPOSITORY_LIST=$(find "$START_DIR" -type d -name .git 2>/dev/null)
 
