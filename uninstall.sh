@@ -197,17 +197,18 @@ uninstall_hooks_from_repo() {
         UNINSTALLED="yes"
     fi
 
+    TARGET_DIR=$(dirname "$TARGET")
+
     if [ "$UNINSTALLED" = "yes" ]; then
-        TARGET_DIR=$(dirname "$TARGET")
         echo "Hooks are uninstalled from $TARGET_DIR"
     fi
 
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
-        OUTPUT=$(cd "$CURRENT_GIT_DIR" && git lfs install 2>&1)
+        OUTPUT=$(cd "$TARGET_DIR" && git lfs install 2>&1)
         #shellcheck disable=2181
         if [ $? -ne 0 ]; then
-            echo "! Reinstalling Git LFS failed! Output:" >&2
+            echo "! Reinstalling Git LFS in \`$TARGET_DIR\` failed! Output:" >&2
             echo "$OUTPUT" >&2
         fi
     fi
