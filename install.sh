@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.181211-6b7ceb
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.181211-6b7ceb
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.141922-39ad43
+# Version: 1911.181211-6b7ceb
 
 #####################################################
 # Prints the command line help for usage and
@@ -4013,6 +4013,10 @@ install_hooks_into_repo() {
                     continue
                 fi
             fi
+
+            # Try to delete this hook first, because it could be currently running.
+            # The file stays around till the last file descriptor is freed.
+            rm -f "$TARGET_HOOK" >/dev/null 2>&1
         fi
 
         if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
