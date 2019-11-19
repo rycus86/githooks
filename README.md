@@ -273,7 +273,7 @@ $ git config --global --unset githooks.autoupdate.enabled
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
 
-### Custom download tool [experimental]
+### Custom download tool
 
 If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can manually setup a download script.
 You can use any executable or script file to perform the download.
@@ -299,7 +299,7 @@ The arguments for the download tool are:
 
 Read more about this command on the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) documentation page.
 
-### Custom user prompt [experimental]
+### Custom user prompt
 
 If you want to use a GUI dialog when Githooks asks for user input, you can use an executable or script file to display it.
 The example in the `examples/tools/dialog` folder contains a Python script `run` which uses the Python provided `tkinter` to show a dialog.
