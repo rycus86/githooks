@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.191144-02653f
+# Version: 1911.201015-bef4d7
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.191144-02653f
+# Version: 1911.201015-bef4d7
 
 #####################################################
 # Execute the current hook,
@@ -727,16 +727,10 @@ show_prompt() {
         # else: Running fallback...
     fi
 
-    # Read from stdin if its available
+    # Read from stdin
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
-    if [ -f /dev/tty ]; then
-        # shellcheck disable=SC2229
-        read -r "$VARIABLE" </dev/tty
-    else
-        echo
-    fi
-
-    # return with unset $VARIABLE ...
+    # shellcheck disable=SC2229
+    read -r "$VARIABLE" </dev/tty
 }
 
 #####################################################
@@ -918,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.191144-02653f
+# Version: 1911.201015-bef4d7
 
 #####################################################
 # Prints the command line help for usage and
@@ -4069,8 +4063,9 @@ install_hooks_into_repo() {
     # Offer to setup the intro README if running in interactive mode
     # Let's skip this in non-interactive mode or in a bare repository
     # to avoid polluting the repos with README files
-    if ! is_non_interactive && [ "${IS_BARE}" != "true" ]; then
-
+    if is_non_interactive || [ "${IS_BARE}" = "true" ]; then
+        true
+    else
         # Getting the working tree (no external .git directories)
         # see https://stackoverflow.com/a/38852055/293195
         TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel)
@@ -4078,7 +4073,8 @@ install_hooks_into_repo() {
             TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir)/.." && pwd)
         fi
 
-        if [ -d "${TARGET_ROOT}" ] && [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
+        if [ -d "${TARGET_ROOT}" ] &&
+            [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
             if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
                 true # OK, we already said we want to skip all
 
