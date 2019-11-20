@@ -219,6 +219,22 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 
 The GitHub URL also accepts the additional parameters mentioned above, the `https://r.viktoradam.net/githooks` URL is just a redirect to the longer GitHub address.
 
+#### Setup for bare repositories
+Because bare repositories mostly live on a server, you should setup the following:
+```shell
+cd bareRepo
+# Install Githooks into this bare repository
+git hooks install
+# Creates .githooks/trust-all marker for this bare repo
+git hooks trust
+# Automaticall accept changes to all existing and new 
+# hooks in the current repository.
+git hooks config accept trusted
+# Don't do global automatic updates, since the Githooks update
+# script should not be run in parallel on a server.
+git hooks config disable update
+```
+
 ### Templates or global hooks
 
 This script can work in one of 2 ways:
@@ -233,7 +249,7 @@ When one of them executes, it will try to find matching files in the `.githooks`
 
 #### Template folder
 
-In this approach, the install script creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`.
+In this approach, the install script creates hook templates that are installed into the `.git/hooks` folders automatically on `git init` and `git clone`. For bare repositories, the hooks are installed into the `./hooks` folder on `git init --bare`.
 
 This is the recommended approach, especially if you want to selectively control which repositories use these scripts. The install script offers to search for repositories to which it will install the hooks, and any new repositories you clone will have these hooks configured.
 

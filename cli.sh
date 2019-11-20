@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.181211-6b7ceb
+# Version: 1911.201015-bef4d7
 
 #####################################################
 # Prints the command line help for usage and
@@ -97,17 +97,26 @@ set_main_variables() {
 #####################################################
 # Checks if the current directory is
 #   a Git repository or not.
-#
+
 # Returns:
 #   0 if it is likely a Git repository,
 #   1 otherwise
 #####################################################
 is_running_in_git_repo_root() {
-    if ! git status >/dev/null 2>&1; then
-        return 1
-    fi
-
+    git rev-parse >/dev/null 2>&1 || return 1
     [ -d "${CURRENT_GIT_DIR}" ] || return 1
+}
+
+#####################################################
+# Echo if the current repository is non-bare.
+#
+# Returns: 0
+#####################################################
+echo_if_non_bare_repo() {
+    if [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "false" ]; then
+        echo "$@"
+    fi
+    return 0
 }
 
 #####################################################
@@ -401,7 +410,7 @@ git hooks trust [forget]
             touch .githooks/trust-all &&
             git config githooks.trust.all Y &&
             echo "The current repository is now trusted." &&
-            echo "  Do not forget to commit and push the trust marker!" &&
+            echo_if_non_bare_repo "  Do not forget to commit and push the trust marker!" &&
             return
 
         echo "! Failed to mark the current repository as trusted" >&2
@@ -436,7 +445,7 @@ git hooks trust [forget]
     if [ "$1" = "delete" ] || [ -f .githooks/trust-all ]; then
         rm -rf .githooks/trust-all &&
             echo "The trust marker is removed from the repository." &&
-            echo "  Do not forget to commit and push the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit and push the change!" &&
             return
 
         echo "! Failed to delete the trust marker" >&2
@@ -859,7 +868,7 @@ add_shared_hook_repo() {
         echo "# Added on $(date)" >>"$(pwd)/.githooks/.shared" &&
             echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
             echo "The new shared hook repository is successfully added" &&
-            echo "  Do not forget to commit the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to add the new shared hook repository" >&2
@@ -962,7 +971,7 @@ ${SHARED_REPO_ITEM}"
 
         echo "$NEW_LIST" >"$(pwd)/.githooks/.shared" &&
             echo "The list of shared hook repositories is successfully changed" &&
-            echo "  Do not forget to commit the change!" &&
+            echo_if_non_bare_repo "  Do not forget to commit the change!" &&
             return
 
         echo "! Failed to remove a shared hook repository" >&2
@@ -1192,7 +1201,7 @@ update_shared_hooks_in() {
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT=$(cd "$SHARED_ROOT" && git pull 2>&1)
+            PULL_OUTPUT="$(cd "$SHARED_ROOT" && env -i git pull 2>&1)"
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
@@ -1201,7 +1210,7 @@ update_shared_hooks_in() {
         else
             echo "* Retrieving shared hooks from: $SHARED_REPO"
             [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
-            CLONE_OUTPUT=$(git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
+            CLONE_OUTPUT=$(env -i git clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Clone failed, git clone output:" >&2
@@ -1653,7 +1662,8 @@ git hooks readme [add|update]
 
     mkdir -p "$(pwd)/.githooks" &&
         cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
-        echo "The README file is updated, do not forget to commit and push it!" ||
+        echo "The README file is updated." &&
+        echo_if_non_bare_repo "  Do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository" >&2
 }
 
@@ -1742,7 +1752,7 @@ git hooks ignore [trigger] [pattern...]
     done
 
     echo "The ignore file at $TARGET_DIR/.ignore is updated"
-    echo "  Do not forget to commit the changes!"
+    echo_if_non_bare_repo "  Do not forget to commit the changes!"
 }
 
 #####################################################

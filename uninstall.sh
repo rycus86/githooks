@@ -121,9 +121,15 @@ uninstall_from_existing_repositories() {
         return 1
     fi
 
-    find "$START_DIR" -type d -name .git 2>/dev/null | while IFS= read -r EXISTING; do
-        uninstall_hooks_from_repo "$EXISTING"
-    done
+    find "$START_DIR" \( -type d -and -name .git \) -or \
+        \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null |
+        while IFS= read -r EXISTING; do
+            if [ -f "$EXISTING" ]; then
+                # Strip HEAD file
+                EXISTING=$(dirname "$EXISTING")
+            fi
+            uninstall_hooks_from_repo "$EXISTING"
+        done
 
     return 0
 }
@@ -137,11 +143,19 @@ uninstall_from_existing_repositories() {
 #   1 otherwise
 #####################################################
 is_running_in_git_repo_root() {
-    if ! git status >/dev/null 2>&1; then
-        return 1
-    fi
-
+    is_git_repo "$(pwd)" || exit 1
     [ -d "${CURRENT_GIT_DIR}" ] || return 1
+}
+
+############################################################
+# Checks whether the given directory
+#   is a Git repository (bare included) or not.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+is_git_repo() {
+    (cd "$1" && git rev-parse >/dev/null 2>&1) || return 1
 }
 
 ############################################################
@@ -169,6 +183,11 @@ uninstall_from_current_repository() {
 ############################################################
 uninstall_hooks_from_repo() {
     TARGET="$1"
+
+    if ! is_git_repo "${TARGET}"; then
+        return
+    fi
+
     if [ ! -w "${TARGET}/hooks" ]; then
         return
     fi
@@ -197,10 +216,8 @@ uninstall_hooks_from_repo() {
         UNINSTALLED="yes"
     fi
 
-    TARGET_DIR=$(dirname "$TARGET")
-
     if [ "$UNINSTALLED" = "yes" ]; then
-        echo "Hooks are uninstalled from $TARGET_DIR"
+        echo "Hooks are uninstalled from $TARGET"
     fi
 
     # If Git LFS is available, try installing the LFS hooks again
