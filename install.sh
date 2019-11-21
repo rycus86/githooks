@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.212020-f03ac5
+# Version: 1911.212022-20c6fe
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.212020-f03ac5
+# Version: 1911.212022-20c6fe
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.212020-f03ac5
+# Version: 1911.212022-20c6fe
 
 #####################################################
 # Prints the command line help for usage and
@@ -3750,7 +3750,7 @@ search_pre_commit_sample_file() {
         read -r ACCEPT </dev/tty
 
         if [ "$ACCEPT" = "y" ] || [ "$ACCEPT" = "Y" ]; then
-            TARGET_TEMPLATE_DIR=$(dirname "$HIT")
+            TARGET_TEMPLATE_DIR="$HIT"
             return
         fi
         IFS="$IFS_NEWLINE"
