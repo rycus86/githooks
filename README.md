@@ -219,11 +219,32 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 
 The GitHub URL also accepts the additional parameters mentioned above, the `https://r.viktoradam.net/githooks` URL is just a redirect to the longer GitHub address.
 
-#### Setup for bare repositories
+### Install on the server
+On a server infrastructure where only *bare* repositories are maintained, it is best to maintain only server hooks.
+This can be achieved by installing with the additional flag `--only-server-hooks` by:
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --only-server-hooks
+```
+The global template directory then **only** maintain contains the following server hooks:
+
+ - `pre-push`
+ - `pre-receive`
+ - `update`
+ - `post-receive`
+ - `post-update`
+ - `push-to-checkout`
+ - `pre-auto-gc`
+
+which get deployed with `git init` or `git clone` automatically.
+See also the [setup for bare repositories](#setup-for-bare-repositories).
+
+### Setup for bare repositories
 Because bare repositories mostly live on a server, you should setup the following:
 ```shell
 cd bareRepo
 # Install Githooks into this bare repository
+# which will only install server hooks:
 git hooks install
 # Creates .githooks/trust-all marker for this bare repo
 git hooks trust
@@ -234,6 +255,8 @@ git hooks config accept trusted
 # script should not be run in parallel on a server.
 git hooks config disable update
 ```
+
+Githooks updates in *bare* repositories will only update server hooks as described in the [install section](#install-on-the-server)
 
 ### Templates or global hooks
 

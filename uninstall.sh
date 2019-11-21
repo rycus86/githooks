@@ -399,6 +399,7 @@ uninstall() {
     # Unset global Githooks variables
     git config --global --unset githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
+    git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
     git config --global --unset githooks.previous.searchdir
