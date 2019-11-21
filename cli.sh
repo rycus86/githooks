@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.201542-e35c79
+# Version: 1911.212147-30fc15
 
 #####################################################
 # Prints the command line help for usage and
@@ -1831,6 +1831,14 @@ git hooks config [enable|disable|print] fail-on-non-existing-shared-hooks [--glo
 Enable or disable failing hooks with an error when any
 shared hooks configured in \`.shared\` are missing,
 which usually means \`git hooks update\` has not been called yet.
+
+git hooks config [yes|no|reset|print] delete-detected-lfs-hooks
+
+By default, detected LFS hooks during install are disabled and backed up.
+The \`yes\` option remembers to always delete these hooks. 
+The \`no\` option remembers the default behavior.
+The decision is reset with \`reset\` to the default behavior. 
+The \`print\` option outputs the current behavior.
 "
         return
     fi
@@ -1880,6 +1888,9 @@ which usually means \`git hooks update\` has not been called yet.
         ;;
     "fail-on-non-existing-shared-hooks")
         config_fail_on_not_existing_shared_hooks "$CONFIG_OPERATION" "$@"
+        ;;
+    "delete-detected-lfs-hooks")
+        config_delete_detected_lfs_hooks "$CONFIG_OPERATION" "$@"
         ;;
     *)
         manage_configuration "help"
@@ -2140,6 +2151,35 @@ config_fail_on_not_existing_shared_hooks() {
 
     else
         echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\` or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the deleteDetectedLFSHooks default bahavior.
+# Modifies or prints
+#   `githooks.deleteDetectedLFSHooks`
+#   global Git configuration.
+#####################################################
+config_delete_detected_lfs_hooks() {
+    if [ "$1" = "yes" ]; then
+        git config --global githooks.deleteDetectedLFSHooks "a"
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "no" ]; then
+        git config --global githooks.deleteDetectedLFSHooks "n"
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.deleteDetectedLFSHooks
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "print" ]; then
+        VALUE=$(git config --global githooks.deleteDetectedLFSHooks)
+        if [ "$VALUE" = "Y" ]; then
+            echo "Detected LFS hooks are by default deleted"
+        else
+            echo "Detected LFS hooks are by default disabled and backed up"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`yes\`, \`no\` or \`reset\`)" >&2
         exit 1
     fi
 }

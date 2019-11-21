@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.201542-e35c79
+# Version: 1911.212147-30fc15
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -23,7 +23,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.201542-e35c79
+# Version: 1911.212147-30fc15
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +912,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.201542-e35c79
+# Version: 1911.212147-30fc15
 
 #####################################################
 # Prints the command line help for usage and
@@ -2732,6 +2732,14 @@ git hooks config [enable|disable|print] fail-on-non-existing-shared-hooks [--glo
 Enable or disable failing hooks with an error when any
 shared hooks configured in \`.shared\` are missing,
 which usually means \`git hooks update\` has not been called yet.
+
+git hooks config [yes|no|reset|print] delete-detected-lfs-hooks
+
+By default, detected LFS hooks during install are disabled and backed up.
+The \`yes\` option remembers to always delete these hooks. 
+The \`no\` option remembers the default behavior.
+The decision is reset with \`reset\` to the default behavior. 
+The \`print\` option outputs the current behavior.
 "
         return
     fi
@@ -2781,6 +2789,9 @@ which usually means \`git hooks update\` has not been called yet.
         ;;
     "fail-on-non-existing-shared-hooks")
         config_fail_on_not_existing_shared_hooks "$CONFIG_OPERATION" "$@"
+        ;;
+    "delete-detected-lfs-hooks")
+        config_delete_detected_lfs_hooks "$CONFIG_OPERATION" "$@"
         ;;
     *)
         manage_configuration "help"
@@ -3041,6 +3052,35 @@ config_fail_on_not_existing_shared_hooks() {
 
     else
         echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\` or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the deleteDetectedLFSHooks default bahavior.
+# Modifies or prints
+#   `githooks.deleteDetectedLFSHooks`
+#   global Git configuration.
+#####################################################
+config_delete_detected_lfs_hooks() {
+    if [ "$1" = "yes" ]; then
+        git config --global githooks.deleteDetectedLFSHooks "a"
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "no" ]; then
+        git config --global githooks.deleteDetectedLFSHooks "n"
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "reset" ]; then
+        git config --global --unset githooks.deleteDetectedLFSHooks
+        config_delete_detected_lfs_hooks "print"
+    elif [ "$1" = "print" ]; then
+        VALUE=$(git config --global githooks.deleteDetectedLFSHooks)
+        if [ "$VALUE" = "Y" ]; then
+            echo "Detected LFS hooks are by default deleted"
+        else
+            echo "Detected LFS hooks are by default disabled and backed up"
+        fi
+    else
+        echo "! Invalid operation: \`$1\` (use \`yes\`, \`no\` or \`reset\`)" >&2
         exit 1
     fi
 }
@@ -4002,6 +4042,60 @@ install_into_existing_repositories() {
 }
 
 ############################################################
+# Disable a locally installed LFS hook `$1` if detected.
+#   By default, a detected lfs hook is disabled and
+#   backed up.
+#   Sets the variable `DELETE_DETECTED_LFS_HOOKS` for
+#   later invocations.
+#
+# Returns:
+#   0 on moved or deleted, 1 otherwise
+############################################################
+disable_lfs_hook_if_detected() {
+    HOOK_FILE="$1"
+
+    if [ -f "$HOOK_FILE" ] &&
+        grep -qE "(git\s+lfs|git-lfs)" "$HOOK_FILE"; then
+
+        # Load the global decision
+        if [ -z "$DELETE_DETECTED_LFS_HOOKS" ]; then
+            DELETE_DETECTED_LFS_HOOKS=$(git config --global githooks.deleteDetectedLFSHooks)
+        fi
+
+        if ! is_non_interactive && [ -z "$DELETE_DETECTED_LFS_HOOKS" ]; then
+            echo "! There is an LFS commmand statement in \`$HOOK_FILE\`."
+            echo "  Githooks will call LFS hooks internally and LFS should not be called twice."
+            printf "  Do you want to delete this hook instead of beeing disabled/backed up? (No, yes, all, skip all) [N,y,a,s] "
+
+            read -r DELETE_DETECTED_LFS_HOOKS </dev/tty
+
+            # Store decision
+            if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "a|A|s|S"; then
+                git config --global githooks.deleteDetectedLFSHooks "$DELETE_DETECTED_LFS_HOOKS"
+            fi
+        fi
+
+        DELETE="N"
+        if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "a|A"; then
+            DELETE="y"
+        elif echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "y|Y|n|N"; then
+            DELETE="$DELETE_DETECTED_LFS_HOOKS"
+            unset DELETE_DETECTED_LFS_HOOKS
+        fi
+
+        if [ "$DELETE" = "y" ] || [ "$DELETE" = "Y" ]; then
+            echo "LFS hook \`$HOOK_FILE\` deleted"
+            rm -f "$HOOK_FILE" >/dev/null 2>&1
+        else
+            echo "LFS hook \`$HOOK_FILE\` disabled and moved to \`$HOOK_FILE.disabled.githooks\`"
+            mv -f "$HOOK_FILE" "$HOOK_FILE.disabled.githooks" >/dev/null 2>&1
+        fi
+        return 0
+    fi
+    return 1
+}
+
+############################################################
 # Install the new Git hook templates into an existing
 #   local repository, given by the first parameter.
 #
@@ -4040,7 +4134,8 @@ install_hooks_into_repo() {
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 # Save the existing Git hook so that we'll continue to execute it
-                if ! mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"; then
+                if ! disable_lfs_hook_if_detected "$TARGET_HOOK" &&
+                    ! mv "$TARGET_HOOK" "${TARGET_HOOK}.replaced.githook"; then
                     HAD_FAILURE=Y
                     echo "! Failed to save the existing hook at $TARGET_HOOK" >&2
                     continue

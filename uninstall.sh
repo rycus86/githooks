@@ -404,6 +404,7 @@ uninstall() {
     git config --global --unset githooks.previous.searchdir
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir
+    git config --global --unset githooks.deleteDetectedLFSHooks
     git config --global --unset alias.hooks
 
     if using_hooks_path; then

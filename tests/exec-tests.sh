@@ -30,6 +30,9 @@ RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
         sed -i -E "s|sh -c (.*) -- |sh -c \\1 -- \${EXTRA_INSTALL_ARGS} |g" /var/lib/tests/step-* ; \\
     fi
 
+# Always don't delete LFS Hooks (for testing, default is unset, but cumbersome for tests)
+RUN git config --global githooks.deleteDetectedLFSHooks "n"
+
 ${ADDITIONAL_INSTALL_STEPS:-}
 
 RUN sh /var/lib/tests/exec-steps.sh
