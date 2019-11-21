@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.212157-cd2007
+# Version: 1911.212214-b175c3
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.212157-cd2007
+# Version: 1911.212214-b175c3
 
 #####################################################
 # Execute the current hook,
@@ -917,7 +917,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.212157-cd2007
+# Version: 1911.212214-b175c3
 
 #####################################################
 # Prints the command line help for usage and
@@ -4087,15 +4087,15 @@ disable_lfs_hook_if_detected() {
             read -r DELETE_DETECTED_LFS_HOOKS </dev/tty
 
             # Store decision
-            if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "a|A|s|S"; then
+            if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qwE "a|A|s|S"; then
                 git config --global githooks.deleteDetectedLFSHooks "$DELETE_DETECTED_LFS_HOOKS"
             fi
         fi
 
         DELETE="N"
-        if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "a|A"; then
+        if echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qwE "a|A"; then
             DELETE="y"
-        elif echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qw "y|Y|n|N"; then
+        elif echo "$DELETE_DETECTED_LFS_HOOKS" | grep -qwE "y|Y|n|N"; then
             DELETE="$DELETE_DETECTED_LFS_HOOKS"
             unset DELETE_DETECTED_LFS_HOOKS
         fi
