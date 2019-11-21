@@ -396,6 +396,15 @@ uninstall() {
     # Uninstall all cli
     uninstall_cli
 
+    if using_hooks_path; then
+        GITHOOKS_CORE_HOOKSPATH=$(git config --global githooks.pathForUseCoreHooksPath)
+        GIT_CORE_HOOKSPATH=$(git config --global core.hooksPath)
+
+        if [ "$GITHOOKS_CORE_HOOKSPATH" = "$GIT_CORE_HOOKSPATH" ]; then
+            git config --global --unset core.hooksPath
+        fi
+    fi
+
     # Unset global Githooks variables
     git config --global --unset githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
@@ -404,20 +413,9 @@ uninstall() {
     git config --global --unset githooks.previous.searchdir
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir
+    git config --global --unset githooks.pathForUseCoreHooksPath
+    git config --global --unset githooks.useCoreHooksPath
     git config --global --unset alias.hooks
-
-    if using_hooks_path; then
-        git config --global --unset githooks.useCoreHooksPath
-
-        GITHOOKS_CORE_HOOKSPATH=$(git config --global githooks.pathForUseCoreHooksPath)
-        GIT_CORE_HOOKSPATH=$(git config --global core.hooksPath)
-
-        if [ "$GITHOOKS_CORE_HOOKSPATH" = "$GIT_CORE_HOOKSPATH" ]; then
-            git config --global --unset core.hooksPath
-        fi
-
-        git config --global --unset githooks.pathForUseCoreHooksPath
-    fi
 
     # Finished
     echo "All done!"
