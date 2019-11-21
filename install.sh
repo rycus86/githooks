@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.212147-30fc15
+# Version: 1911.212157-cd2007
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -15,6 +15,11 @@ MANAGED_HOOK_NAMES="
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
 "
 
+MANAGED_SERVER_HOOK_NAMES="
+    pre-push pre-receive update post-receive post-update
+    push-to-checkout pre-auto-gc
+"
+
 # A copy of the base-template.sh file's contents
 # shellcheck disable=SC2016
 BASE_TEMPLATE_CONTENT='#!/bin/sh
@@ -23,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.212147-30fc15
+# Version: 1911.212157-cd2007
 
 #####################################################
 # Execute the current hook,
@@ -912,7 +917,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.212147-30fc15
+# Version: 1911.212157-cd2007
 
 #####################################################
 # Prints the command line help for usage and
@@ -3471,12 +3476,6 @@ parse_command_line_arguments() {
             NON_INTERACTIVE="yes"
         elif [ "$p" = "--single" ]; then
             SINGLE_REPO_INSTALL="yes"
-
-            if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
-                echo "! Cannot use --single and --use-core-hookspath together" >&2
-                exit 1
-            fi
-
         elif [ "$p" = "--skip-install-into-existing" ]; then
             SKIP_INSTALL_INTO_EXISTING="yes"
 
@@ -3495,19 +3494,23 @@ parse_command_line_arguments() {
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
+        elif [ "$p" = "--only-server-hooks" ]; then
+            INSTALL_ONLY_SERVER_HOOKS="yes"
         elif [ "$p" = "--use-core-hookspath" ]; then
             USE_CORE_HOOKSPATH="yes"
             # No point in installing into existing when using core.hooksPath
             SKIP_INSTALL_INTO_EXISTING="yes"
-
-            # Using core.hooksPath implies it applies to all repo's
-            if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
-                echo "! Cannot use --single and --use-core-hookspath together" >&2
-                exit 1
-            fi
+        else
+            echo "! Unknown argument \`$p\`" >&2
         fi
         prev_p="$p"
     done
+
+    # Using core.hooksPath implies it applies to all repo's
+    if [ "$SINGLE_REPO_INSTALL" = "yes" ] && [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+        echo "! Cannot use --single and --use-core-hookspath together" >&2
+        exit 1
+    fi
 }
 
 ############################################################
@@ -3859,7 +3862,17 @@ setup_hook_templates() {
         return 0
     fi
 
-    for HOOK in $MANAGED_HOOK_NAMES; do
+    if [ "$(git config --global githooks.maintainOnlyServerHooks)" = "Y" ]; then
+        INSTALL_ONLY_SERVER_HOOKS="yes"
+    fi
+
+    if [ "$INSTALL_ONLY_SERVER_HOOKS" = "yes" ]; then
+        HOOK_NAMES="$MANAGED_SERVER_HOOK_NAMES"
+    else
+        HOOK_NAMES="$MANAGED_HOOK_NAMES"
+    fi
+
+    for HOOK in $HOOK_NAMES; do
         HOOK_TEMPLATE="${TARGET_TEMPLATE_DIR}/${HOOK}"
 
         if [ -x "$HOOK_TEMPLATE" ]; then
@@ -3879,6 +3892,10 @@ setup_hook_templates() {
             return 1
         fi
     done
+
+    if [ "$INSTALL_ONLY_SERVER_HOOKS" = "yes" ]; then
+        git config --global githooks.maintainOnlyServerHooks "Y"
+    fi
 
     return 0
 }
@@ -4120,7 +4137,13 @@ install_hooks_into_repo() {
 
     INSTALLED="no"
 
-    for HOOK_NAME in $MANAGED_HOOK_NAMES; do
+    if [ "$IS_BARE" = "true" ]; then
+        HOOK_NAMES="$MANAGED_SERVER_HOOK_NAMES"
+    else
+        HOOK_NAMES="$MANAGED_HOOK_NAMES"
+    fi
+
+    for HOOK_NAME in $HOOK_NAMES; do
         if is_dry_run; then
             INSTALLED="yes"
             continue

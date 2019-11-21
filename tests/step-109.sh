@@ -7,7 +7,7 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-mkdir -p /tmp/test109/p001 && mkdir -p /tmp/test109/p002 || exit 1
+mkdir -p /tmp/test109/p001 && mkdir -p /tmp/test109/p002 && mkdir -p /tmp/test109/p003 || exit 1
 
 cd /tmp/test109/p001 && git init --bare || exit 1
 cd /tmp/test109/p002 && git init --bare || exit 1
@@ -17,17 +17,44 @@ if grep -r 'github.com/rycus86/githooks' /tmp/test109/; then
     exit 1
 fi
 
-# run the install, and select installing the hooks into existing repos
+mkdir -p ~/.githooks/templates/hooks
+git config --global init.templateDir ~/.githooks/templates
+templateDir=$(git config --global init.templateDir)
+
+# run the install, and select installing hooks into existing repos
 echo 'n
 y
 /tmp/test109
 ' | sh /var/lib/githooks/install.sh || exit 1
 
-if ! grep -r 'github.com/rycus86/githooks' /tmp/test109/p001/hooks ||
-    ! grep -r 'github.com/rycus86/githooks' /tmp/test109/p002/hooks; then
+if ! grep -qr 'github.com/rycus86/githooks' /tmp/test109/p001/hooks ||
+    ! grep -qr 'github.com/rycus86/githooks' /tmp/test109/p002/hooks; then
     echo "! Hooks were not installed successfully"
     exit 1
 fi
+
+# check if only server hooks are installed.
+for hook in pre-push pre-receive update post-receive post-update push-to-checkout pre-auto-gc; do
+    if [ ! -f /tmp/test109/p001/hooks/$hook ]; then
+        echo "! Server hooks were not installed successfully ('$hook')"
+        exit 1
+    fi
+done
+#shellcheck disable=2012
+count=$(ls /tmp/test109/p001/hooks | wc -l)
+if [ "$count" != "7" ]; then
+    echo "! Expected only server hooks to be installed ($count)"
+    exit 1
+fi
+
+cd /tmp/test109/p003 && git init --bare || exit 1
+# check if only server hooks are installed.
+for hook in pre-push pre-receive update post-receive post-update push-to-checkout pre-auto-gc; do
+    if [ ! -f /tmp/test109/p003/hooks/$hook ]; then
+        echo "! Server hooks were not installed successfully ('$hook')"
+        exit 1
+    fi
+done
 
 echo 'y
 /tmp/test109
@@ -36,5 +63,25 @@ echo 'y
 if grep -qr 'github.com/rycus86/githooks' /tmp/test109/p001/hooks ||
     grep -qr 'github.com/rycus86/githooks' /tmp/test109/p002/hooks; then
     echo "! Hooks were not uninstalled successfully"
+    exit 1
+fi
+
+# run the install, and select installing only server hooks into existing repos
+echo 'n
+y
+/tmp/test109
+' | sh /var/lib/githooks/install.sh --only-server-hooks || exit 1
+
+# check if only server hooks are inside the template folder.
+for hook in pre-push pre-receive update post-receive post-update push-to-checkout pre-auto-gc; do
+    if ! [ -f "$templateDir/hooks/$hook" ]; then
+        echo "! Server hooks were not installed successfully"
+        exit 1
+    fi
+done
+#shellcheck disable=2012
+count="$(ls "$templateDir/hooks/" | wc -l)"
+if [ "$count" != "7" ]; then
+    echo "! Expected only server hooks to be installed ($count)"
     exit 1
 fi
