@@ -7,8 +7,8 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
-mkdir -p /tmp/test112.shared.git/.githooks/pre-commit &&
-    cd /tmp/test112.shared.git &&
+mkdir -p /tmp/test112.shared/shared-repo.git/.githooks/pre-commit &&
+    cd /tmp/test112.shared/shared-repo.git &&
     git init &&
     echo 'echo "Shared invoked" > /tmp/test112.out' >.githooks/pre-commit/test-shared &&
     git add .githooks &&
@@ -20,8 +20,8 @@ mkdir -p /tmp/test112.repo &&
     git init ||
     exit 3
 
-sh /var/lib/githooks/cli.sh shared add --local /tmp/test112.shared.git &&
-    sh /var/lib/githooks/cli.sh shared list | grep "test112_shared" | grep "pending" &&
+sh /var/lib/githooks/cli.sh shared add --local /tmp/test112.shared/shared-repo.git &&
+    sh /var/lib/githooks/cli.sh shared list | grep "shared_repo" | grep "pending" &&
     sh /var/lib/githooks/cli.sh shared pull ||
     exit 4
 
