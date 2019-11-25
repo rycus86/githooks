@@ -25,38 +25,38 @@ See the list of available subcommands below, or run `git hooks help` locally.
 Disables a hook in the current repository.
 
 ```shell
-$ git hooks disable [trigger] [hook-script]
-$ git hooks disable [hook-script]
-$ git hooks disable [trigger]
+$ git hooks disable [--shared] [trigger] [hook-script]
+$ git hooks disable [--shared] [hook-script]
+$ git hooks disable [--shared] [trigger]
 $ git hooks disable [-a|--all]
 $ git hooks disable [-r|--reset]
 ```
 
-Disables a hook in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to disable, or its relative path, or an absolute path, we will try to find it. The `--all` parameter on its own will disable running any Githooks in the current repository, both existing ones and any future hooks. The `--reset` parameter is used to undo this, and let hooks run again. This command needs to be run at the root of a repository.
+Disables a hook in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to disable, or its relative path, or an absolute path, we will try to find it. If the `--shared` parameter is given as the first argument, hooks in the shared repositories will be disabled, otherwise they are looked up in the current local repository. The `--all` parameter on its own will disable running any Githooks in the current repository, both existing ones and any future hooks. The `--reset` parameter is used to undo this, and let hooks run again. This command needs to be run at the root of a repository.
 
 ## git hooks enable
 
 Enables a previously disabled hook in the current repository.
 
 ```shell
-$ git hooks enable [trigger] [hook-script]
-$ git hooks enable [hook-script]
-$ git hooks enable [trigger]
+$ git hooks enable [--shared] [trigger] [hook-script]
+$ git hooks enable [--shared] [hook-script]
+$ git hooks enable [--shared] [trigger]
 ```
 
-Enables a hook or hooks in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository.
+Enables a hook or hooks in the current repository. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository. If the `--shared` parameter is given as the first argument, hooks in the shared repositories will be enabled, otherwise they are looked up in the current local repository.
 
 ## git hooks accept
 
 Accept the pending changes of a new or modified hook.
 
 ```shell
-$ git hooks accept [trigger] [hook-script]
-$ git hooks accept [hook-script]
-$ git hooks accept [trigger]
+$ git hooks accept [--shared] [trigger] [hook-script]
+$ git hooks accept [--shared] [hook-script]
+$ git hooks accept [--shared] [trigger]
 ```
 
-Accepts a new hook or changes to an existing hook. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository.
+Accepts a new hook or changes to an existing hook. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository. If the `--shared` parameter is given as the first argument, hooks in the shared repositories will be accepted, otherwise they are looked up in the current local repository.
 
 ## git hooks trust
 

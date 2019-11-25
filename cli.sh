@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.212214-b175c3
+# Version: 1911.252309-523bb9
 
 #####################################################
 # Prints the command line help for usage and
@@ -130,6 +130,50 @@ echo_if_non_bare_repo() {
 #   0 on success, 1 when no hooks found
 #####################################################
 find_hook_path_to_enable_or_disable() {
+    if [ "$1" = "--shared" ]; then
+        shift
+
+        if [ -z "$1" ]; then
+            echo "For shared repositories, either the trigger type, the hook name or both needs to be given"
+            return 1
+        fi
+
+        if [ ! -d "$INSTALL_DIR/shared" ]; then
+            echo "No shared repositories found"
+            return 1
+        fi
+
+        for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
+            if [ ! -d "$SHARED_ROOT" ]; then
+                continue
+            fi
+
+            REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+
+            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
+
+            ACTIVE_GLOBAL_REPO=$(git config --global --get githooks.shared | grep -o "$REMOTE_URL")
+
+            if [ "$ACTIVE_LOCAL_REPO" != "$REMOTE_URL" ] && [ "$ACTIVE_GLOBAL_REPO" != "$REMOTE_URL" ]; then
+                continue
+            fi
+
+            if [ -n "$1" ] && [ -n "$2" ]; then
+                if [ -f "$SHARED_ROOT/.githooks/$1/$2" ]; then
+                    HOOK_PATH="$SHARED_ROOT/.githooks/$1/$2"
+                    return
+                fi
+            else
+                HOOK_PATH=$(find "$SHARED_ROOT/.githooks" -name "$1" | head -1)
+                [ -n "$HOOK_PATH" ] && return 0 || return 1
+            fi
+        done
+
+        echo "Sorry, cannot find any shared hooks that would match that"
+        return 1
+    fi
+
     if [ -z "$1" ]; then
         HOOK_PATH=$(cd .githooks && pwd)
 
@@ -209,9 +253,9 @@ disable_hook() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks disable [trigger] [hook-script]
-git hooks disable [hook-script]
-git hooks disable [trigger]
+git hooks disable [--shared] [trigger] [hook-script]
+git hooks disable [--shared] [hook-script]
+git hooks disable [--shared] [trigger]
 git hooks disable [-a|--all]
 git hooks disable [-r|--reset]
 
@@ -219,6 +263,9 @@ git hooks disable [-r|--reset]
     The \`trigger\` parameter should be the name of the Git event if given.
     The \`hook-script\` can be the name of the file to disable, or its
     relative path, or an absolute path, we will try to find it.
+    If the \`--shared\` parameter is given as the first argument,
+    hooks in the shared repositories will be disabled,
+    otherwise they are looked up in the current local repository.
     The \`--all\` parameter on its own will disable running any Githooks
     in the current repository, both existing ones and any future hooks.
     The \`--reset\` parameter is used to undo this, and let hooks run again.
@@ -283,14 +330,17 @@ enable_hook() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks enable [trigger] [hook-script]
-git hooks enable [hook-script]
-git hooks enable [trigger]
+git hooks enable [--shared] [trigger] [hook-script]
+git hooks enable [--shared] [hook-script]
+git hooks enable [--shared] [trigger]
 
     Enables a hook or hooks in the current repository.
     The \`trigger\` parameter should be the name of the Git event if given.
     The \`hook-script\` can be the name of the file to enable, or its
     relative path, or an absolute path, we will try to find it.
+    If the \`--shared\` parameter is given as the first argument,
+    hooks in the shared repositories will be enabled,
+    otherwise they are looked up in the current local repository.
 "
         return
     fi
@@ -327,14 +377,17 @@ accept_changes() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks accept [trigger] [hook-script]
-git hooks accept [hook-script]
-git hooks accept [trigger]
+git hooks accept [--shared] [trigger] [hook-script]
+git hooks accept [--shared] [hook-script]
+git hooks accept [--shared] [trigger]
 
     Accepts a new hook or changes to an existing hook.
     The \`trigger\` parameter should be the name of the Git event if given.
     The \`hook-script\` can be the name of the file to enable, or its
     relative path, or an absolute path, we will try to find it.
+    If the \`--shared\` parameter is given as the first argument,
+    hooks in the shared repositories will be accepted,
+    otherwise they are looked up in the current local repository.
 "
         return
     fi
@@ -345,6 +398,7 @@ git hooks accept [trigger]
     fi
 
     find_hook_path_to_enable_or_disable "$@" || exit 1
+
     ensure_checksum_file_exists
 
     find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
