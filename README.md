@@ -193,22 +193,24 @@ $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 
 You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
+It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
+
+```shell
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --template-dir /home/public/.githooks
+```
+
+By default the script will install the hooks into the `~/.githooks/templates/` directory.
+
 Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [below](#Templates-or-global-hooks). For this, run the command below.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath
 ```
 
-By default the script will install the hooks into `~/.githooks/templates/`, optionally, you can also pass the path to which you want to install the centralized hooks by appending `<path>` to the command above, for example:
+Optionally, you can also pass the template directory to which you want to install the centralized hooks by appending `--template-dir <path>` to the command above, for example:
 
 ```shell
-$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath /home/public/.githooks
-```
-
-It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
-
-```shell
-$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --template-dir /home/public/.githooks
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath --template-dir /home/public/.githooks
 ```
 
 Finally, if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
@@ -220,12 +222,14 @@ $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/rycus86/githooks/master/
 The GitHub URL also accepts the additional parameters mentioned above, the `https://r.viktoradam.net/githooks` URL is just a redirect to the longer GitHub address.
 
 ### Install on the server
+
 On a server infrastructure where only *bare* repositories are maintained, it is best to maintain only server hooks.
 This can be achieved by installing with the additional flag `--only-server-hooks` by:
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --only-server-hooks
 ```
+
 The global template directory then **only** maintain contains the following server hooks:
 
  - `pre-push`
@@ -240,6 +244,7 @@ which get deployed with `git init` or `git clone` automatically.
 See also the [setup for bare repositories](#setup-for-bare-repositories).
 
 ### Setup for bare repositories
+
 Because bare repositories mostly live on a server, you should setup the following:
 ```shell
 cd bareRepo
