@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1911.252309-523bb9
+# Version: 1911.260018-b70412
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1911.252309-523bb9
+# Version: 1911.260018-b70412
 
 #####################################################
 # Execute the current hook,
@@ -917,7 +917,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.252309-523bb9
+# Version: 1911.260018-b70412
 
 #####################################################
 # Prints the command line help for usage and
@@ -3545,6 +3545,8 @@ parse_command_line_arguments() {
 
             INSTALL_DIR="$INSTALL_DIR/.githooks"
 
+        elif [ "$p" = "--template-dir" ]; then
+            : # nothing to do here
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
