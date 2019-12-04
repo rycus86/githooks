@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1911.260018-b70412
+# Version: 1912.042217-43ad0f
 
 #####################################################
 # Prints the command line help for usage and
@@ -163,9 +163,15 @@ find_hook_path_to_enable_or_disable() {
                 if [ -f "$SHARED_ROOT/.githooks/$1/$2" ]; then
                     HOOK_PATH="$SHARED_ROOT/.githooks/$1/$2"
                     return
+                elif [ -f "$SHARED_ROOT/$1/$2" ]; then
+                    HOOK_PATH="$SHARED_ROOT/$1/$2"
+                    return
                 fi
-            else
+            elif [ -d "$SHARED_ROOT/.githooks" ]; then
                 HOOK_PATH=$(find "$SHARED_ROOT/.githooks" -name "$1" | head -1)
+                [ -n "$HOOK_PATH" ] && return 0 || return 1
+            else
+                HOOK_PATH=$(find "$SHARED_ROOT" -name "$1" | head -1)
                 [ -n "$HOOK_PATH" ] && return 0 || return 1
             fi
         done
