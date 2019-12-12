@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1912.042217-43ad0f
+# Version: 1912.122150-8769e7
 
 #####################################################
 # Execute the current hook,
@@ -476,7 +476,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git -c core.hooksPath=/dev/null --git-dir="$SHARED_ROOT/.git" pull 2>&1)
+                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
