@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1912.122150-8769e7
+# Version: 1912.161811-71df49
 
 #####################################################
 # Execute the current hook,
@@ -17,14 +17,15 @@ process_git_hook() {
     if are_githooks_disabled; then
         set_main_variables
         execute_lfs_hook_if_appropriate "$@" || return 1
+        execute_old_hook_if_available "$@" || return 1
         return
     fi
 
     set_main_variables
     export_staged_files
     check_for_updates_if_needed
-    execute_old_hook_if_available "$@" || return 1
     execute_lfs_hook_if_appropriate "$@" || return 1
+    execute_old_hook_if_available "$@" || return 1
     execute_global_shared_hooks "$@" || return 1
     execute_local_shared_hooks "$@" || return 1
     execute_all_hooks_in "$(pwd)/.githooks" "$@" || return 1
