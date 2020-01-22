@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1912.161811-71df49
+# Version: 2001.241152-6f44a6
 
 #####################################################
 # Prints the command line help for usage and
@@ -2001,9 +2001,11 @@ config_single_install() {
     fi
 
     if [ "$1" = "set" ]; then
+        git config --unset githooks.autoupdate.registered
         git config githooks.single.install yes
     elif [ "$1" = "reset" ]; then
         git config --unset githooks.single.install
+        # the repository is registered in the next hooks run
     elif [ "$1" = "print" ]; then
         if read_single_repo_information && is_single_repo; then
             echo "The current repository is marked as a single installation"

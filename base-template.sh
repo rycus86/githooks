@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1912.161811-71df49
+# Version: 2001.241152-6f44a6
 
 #####################################################
 # Execute the current hook,
@@ -14,14 +14,15 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
+    set_main_variables
+    register_for_autoupdate_if_needed
+
     if are_githooks_disabled; then
-        set_main_variables
         execute_lfs_hook_if_appropriate "$@" || return 1
         execute_old_hook_if_available "$@" || return 1
         return
     fi
 
-    set_main_variables
     export_staged_files
     check_for_updates_if_needed
     execute_lfs_hook_if_appropriate "$@" || return 1
@@ -97,6 +98,54 @@ set_main_variables() {
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
 "
+}
+
+############################################################
+# We register this repository for future potential
+# autoupdates if all of the following is true
+#   - core.hooksPath is not defined, meaning this hook
+#     needs to be in `.git/hooks`.
+#   - its not yet registered.
+#   - its a non-single install.
+#
+# Returns: None
+############################################################
+register_for_autoupdate_if_needed() {
+    if ! git config --local githooks.autoupdate.registered >/dev/null 2>&1 &&
+        [ "$(git config --local githooks.single.install)" != "yes" ] &&
+        [ ! -d "$(git config --global core.hooksPath)" ]; then
+        register_repo_for_autoupdate "$CURRENT_GIT_DIR"
+    fi
+}
+
+############################################################
+# Adds the repository to the list `autoupdate.registered`
+#  for future potential autoupdate.
+#
+# Returns: None
+############################################################
+register_repo_for_autoupdate() {
+    CURRENT_REPO="$(cd "$1" && pwd)"
+    LIST="$INSTALL_DIR/autoupdate/registered"
+
+    # Remove
+    if [ -f "$LIST" ]; then
+        TEMP_FILE=$(mktemp)
+        CURRENT_ESCAPED=$(echo "$CURRENT_REPO" | sed "s@/@\\\\\/@g")
+        sed "/$CURRENT_ESCAPED/d" "$LIST" >"$TEMP_FILE"
+        mv -f "$TEMP_FILE" "$LIST"
+    else
+        # Create folder
+        PARENT_DIR=$(dirname "$LIST")
+        if [ ! -d "$PARENT_DIR" ]; then
+            mkdir -p "$PARENT_DIR" >/dev/null 2>&1
+        fi
+    fi
+
+    # Add at the bottom
+    echo "$CURRENT_REPO" >>"$LIST"
+    # Mark this repo as registered
+    git config --local githooks.autoupdate.registered "yes"
 }
 
 #####################################################
@@ -851,11 +900,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -s -- --single <"$INSTALL_SCRIPT"; then
+        if DO_UPDATE_ONLY="yes" sh -s -- --single <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if sh <"$INSTALL_SCRIPT"; then
+        if DO_UPDATE_ONLY="yes" sh <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi
