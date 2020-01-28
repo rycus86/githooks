@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 1912.161811-71df49
+# Version: 2001.241152-6f44a6
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 1912.161811-71df49
+# Version: 2001.241152-6f44a6
 
 #####################################################
 # Execute the current hook,
@@ -38,14 +38,15 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
+    set_main_variables
+    register_for_autoupdate_if_needed
+
     if are_githooks_disabled; then
-        set_main_variables
         execute_lfs_hook_if_appropriate "$@" || return 1
         execute_old_hook_if_available "$@" || return 1
         return
     fi
 
-    set_main_variables
     export_staged_files
     check_for_updates_if_needed
     execute_lfs_hook_if_appropriate "$@" || return 1
@@ -121,6 +122,54 @@ set_main_variables() {
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
 "
+}
+
+############################################################
+# We register this repository for future potential
+# autoupdates if all of the following is true
+#   - core.hooksPath is not defined, meaning this hook
+#     needs to be in `.git/hooks`.
+#   - its not yet registered.
+#   - its a non-single install.
+#
+# Returns: None
+############################################################
+register_for_autoupdate_if_needed() {
+    if ! git config --local githooks.autoupdate.registered >/dev/null 2>&1 &&
+        [ "$(git config --local githooks.single.install)" != "yes" ] &&
+        [ ! -d "$(git config --global core.hooksPath)" ]; then
+        register_repo_for_autoupdate "$CURRENT_GIT_DIR"
+    fi
+}
+
+############################################################
+# Adds the repository to the list `autoupdate.registered`
+#  for future potential autoupdate.
+#
+# Returns: None
+############################################################
+register_repo_for_autoupdate() {
+    CURRENT_REPO="$(cd "$1" && pwd)"
+    LIST="$INSTALL_DIR/autoupdate/registered"
+
+    # Remove
+    if [ -f "$LIST" ]; then
+        TEMP_FILE=$(mktemp)
+        CURRENT_ESCAPED=$(echo "$CURRENT_REPO" | sed "s@/@\\\\\/@g")
+        sed "/$CURRENT_ESCAPED/d" "$LIST" >"$TEMP_FILE"
+        mv -f "$TEMP_FILE" "$LIST"
+    else
+        # Create folder
+        PARENT_DIR=$(dirname "$LIST")
+        if [ ! -d "$PARENT_DIR" ]; then
+            mkdir -p "$PARENT_DIR" >/dev/null 2>&1
+        fi
+    fi
+
+    # Add at the bottom
+    echo "$CURRENT_REPO" >>"$LIST"
+    # Mark this repo as registered
+    git config --local githooks.autoupdate.registered "yes"
 }
 
 #####################################################
@@ -875,11 +924,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if sh -s -- --single <"$INSTALL_SCRIPT"; then
+        if DO_UPDATE_ONLY="yes" sh -s -- --single <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if sh <"$INSTALL_SCRIPT"; then
+        if DO_UPDATE_ONLY="yes" sh <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi
@@ -918,7 +967,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 1912.161811-71df49
+# Version: 2001.241152-6f44a6
 
 #####################################################
 # Prints the command line help for usage and
@@ -2908,9 +2957,11 @@ config_single_install() {
     fi
 
     if [ "$1" = "set" ]; then
+        git config --unset githooks.autoupdate.registered
         git config githooks.single.install yes
     elif [ "$1" = "reset" ]; then
         git config --unset githooks.single.install
+        # the repository is registered in the next hooks run
     elif [ "$1" = "print" ]; then
         if read_single_repo_information && is_single_repo; then
             echo "The current repository is marked as a single installation"
@@ -3458,24 +3509,26 @@ execute_installation() {
     echo # For visual separation
 
     # Automatic updates
-    if setup_automatic_update_checks; then
+    if ! is_update_only && setup_automatic_update_checks; then
         echo # For visual separation
     fi
 
-    # Install the hooks into existing local repositories
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
             CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
             install_hooks_into_repo "$CURRENT_GIT_DIR" || return 1
         else
-            install_into_existing_repositories
+            if ! is_update_only; then
+                install_into_existing_repositories
+            fi
+            install_into_registered_repositories
         fi
     fi
 
     echo # For visual separation
 
     # Set up shared hook repositories if needed
-    if ! is_single_repo_install && ! is_non_interactive; then
+    if ! is_update_only && ! is_non_interactive && ! is_single_repo_install; then
         setup_shared_hook_repositories
         echo # For visual separation
     fi
@@ -3637,6 +3690,17 @@ is_single_repo_install() {
 }
 
 ############################################################
+# Check if the install script is only an update executed by
+#   a running hook.
+#
+# Returns:
+#   0 if its an update, 1 otherwise
+############################################################
+is_update_only() {
+    [ "$DO_UPDATE_ONLY" = "yes" ] || return 1
+}
+
+############################################################
 # Disable user input by redirecting /dev/null
 #   to the standard input of the install script.
 #
@@ -3683,7 +3747,8 @@ ensure_running_in_git_repo() {
 #   None
 ############################################################
 mark_as_single_install_repo() {
-    git config githooks.single.install yes
+    git config --local githooks.single.install yes
+    git config --local --unset githooks.autoupdate.registered
 }
 
 ############################################################
@@ -4094,25 +4159,27 @@ install_into_existing_repositories() {
 
     git config --global githooks.previous.searchdir "$RAW_START_DIR"
 
-    LOCAL_REPOSITORY_LIST=$(
+    EXISTING_REPOSITORY_LIST=$(
         find "$START_DIR" \( -type d -and -name .git \) -or \
             \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
     )
 
     # Sort the list if we can
     if sort --help >/dev/null 2>&1; then
-        LOCAL_REPOSITORY_LIST=$(echo "$LOCAL_REPOSITORY_LIST" | sort)
+        EXISTING_REPOSITORY_LIST=$(echo "$EXISTING_REPOSITORY_LIST" | sort)
     fi
 
     IFS="$IFS_NEWLINE"
-    for EXISTING in $LOCAL_REPOSITORY_LIST; do
+    for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
 
         if [ -f "$EXISTING" ]; then
             # Strip HEAD file
             EXISTING=$(dirname "$EXISTING")
         fi
-        install_hooks_into_repo "$EXISTING"
+
+        install_hooks_into_repo "$EXISTING" &&
+            register_repo_for_autoupdate "$EXISTING"
 
         IFS="$IFS_NEWLINE"
     done
@@ -4176,6 +4243,93 @@ disable_lfs_hook_if_detected() {
 }
 
 ############################################################
+# Install the new Git hook templates into
+#   all repos registered for autoupdate.
+#
+# Returns: None
+############################################################
+install_into_registered_repositories() {
+
+    LIST="$INSTALL_DIR/autoupdate/registered"
+    if [ -f "$LIST" ]; then
+
+        # Filter list according to
+        # - non-existing repos
+        # - already installed
+        # - if marked as single install.
+
+        # The list of repositories we still need to update if the user agrees.
+        INSTALL_LIST=$(mktemp)
+        # The new list of all registered repositories
+        NEW_LIST=$(mktemp)
+
+        IFS="$IFS_NEWLINE"
+        while read -r INSTALLED_REPO; do
+            unset IFS
+
+            if [ ! -d "$INSTALLED_REPO" ]; then
+                # Not existing repo -> skip.
+                true
+
+            elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
+                # Found a registed repo which is now a single install:
+                # For safety: Remove registered flag and skip.
+                (cd "$INSTALLED_REPO" && git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1)
+
+            elif echo "$EXISTING_REPOSITORY_LIST" | grep -q "$INSTALLED_REPO"; then
+                # We already installed to this repository, don't install
+                echo "$INSTALLED_REPO" >>"$NEW_LIST"
+
+            else
+                # Existing registed repository, install.
+                echo "$INSTALLED_REPO" >>"$NEW_LIST"
+                echo "$INSTALLED_REPO" >>"$INSTALL_LIST"
+            fi
+
+            IFS="$IFS_NEWLINE"
+        done <"$LIST"
+
+        # Move the new cleaned list into place
+        mv -f "$NEW_LIST" "$LIST"
+
+        if [ -s "$INSTALL_LIST" ]; then
+
+            if is_non_interactive; then
+                # Install into registered repositories by default
+                true
+            else
+                echo "The following remaining registered repositories in \`$LIST\`"
+                echo "contain a Githooks installation:"
+                sed -E "s/^/ - /" <"$INSTALL_LIST"
+                printf 'Do you want to install to all of them? [Yn] '
+
+                read -r DO_INSTALL </dev/tty
+                if [ "$DO_INSTALL" = "n" ] || [ "$DO_INSTALL" = "N" ]; then
+                    rm -f "$INSTALL_LIST" >/dev/null 2>&1
+                    return 0
+                fi
+            fi
+
+            IFS="$IFS_NEWLINE"
+            while read -r INSTALLED_REPO; do
+                unset IFS
+
+                EXISTING_REPO_ROOT=$(dirname "$INSTALLED_REPO")
+                install_hooks_into_repo "$EXISTING_REPO_ROOT"
+
+                # no register_repo_for_autoupdate needed
+                # since already in the list
+
+                IFS="$IFS_NEWLINE"
+            done <"$INSTALL_LIST"
+
+        fi
+
+        rm -f "$INSTALL_LIST" >/dev/null 2>&1
+    fi
+}
+
+############################################################
 # Install the new Git hook templates into an existing
 #   local repository, given by the first parameter.
 #
@@ -4194,6 +4348,7 @@ install_hooks_into_repo() {
     if [ ! -w "${TARGET}/hooks" ]; then
         # Try to create the .git/hooks folder
         if ! mkdir "${TARGET}/hooks" 2>/dev/null; then
+            echo "! Could not install into \`$TARGET\` because there is no write access."
             return 1
         fi
     fi
@@ -4299,6 +4454,39 @@ install_hooks_into_repo() {
     else
         return 0
     fi
+}
+
+############################################################
+# Adds the repository to the list `autoupdate.registered`
+#  for potential future autoupdates.
+#
+# Returns: 0
+############################################################
+register_repo_for_autoupdate() {
+    CURRENT_REPO="$(cd "$1" && pwd)"
+    LIST="$INSTALL_DIR/autoupdate/registered"
+
+    # Remove
+    if [ -f "$LIST" ]; then
+        TEMP_FILE=$(mktemp)
+        CURRENT_ESCAPED=$(echo "$CURRENT_REPO" | sed "s@/@\\\\\/@g")
+        sed "/$CURRENT_ESCAPED/d" "$LIST" >"$TEMP_FILE"
+        mv -f "$TEMP_FILE" "$LIST"
+    else
+        # Create folder
+        PARENT_DIR=$(dirname "$LIST")
+        if [ ! -d "$PARENT_DIR" ]; then
+            mkdir -p "$PARENT_DIR" >/dev/null 2>&1
+        fi
+    fi
+
+    # Add at the bottom
+    echo "$CURRENT_REPO" >>"$LIST"
+
+    # Mark the repo as registered.
+    (cd "$CURRENT_REPO" && git config --local githooks.autoupdate.registered "yes")
+
+    return 0
 }
 
 ############################################################

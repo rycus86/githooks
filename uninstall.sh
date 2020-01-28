@@ -114,6 +114,11 @@ uninstall_from_existing_repositories() {
 
     if [ "$START_DIR" = "" ]; then
         START_DIR="$HOME"
+    else
+        TILDE_REPLACED=$(echo "$START_DIR" | awk 'gsub("~", "'"$HOME"'", $0)')
+        if [ -n "$TILDE_REPLACED" ]; then
+            START_DIR="$TILDE_REPLACED"
+        fi
     fi
 
     if [ ! -d "$START_DIR" ]; then
@@ -121,15 +126,95 @@ uninstall_from_existing_repositories() {
         return 1
     fi
 
-    find "$START_DIR" \( -type d -and -name .git \) -or \
-        \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null |
-        while IFS= read -r EXISTING; do
-            if [ -f "$EXISTING" ]; then
-                # Strip HEAD file
-                EXISTING=$(dirname "$EXISTING")
+    EXISTING_REPOSITORY_LIST=$(
+        find "$START_DIR" \( -type d -and -name .git \) -or \
+            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
+    )
+
+    IFS="$IFS_NEWLINE"
+    for EXISTING in $EXISTING_REPOSITORY_LIST; do
+        unset IFS
+
+        if [ -f "$EXISTING" ]; then
+            # Strip HEAD file
+            EXISTING=$(dirname "$EXISTING")
+        fi
+
+        uninstall_hooks_from_repo "$EXISTING"
+
+        IFS="$IFS_NEWLINE"
+    done
+    unset IFS
+
+    return 0
+}
+
+#####################################################
+# Uninstall from all repositories in
+#   `autoupdate.registered` which gets deleted
+#    at the end.
+#
+# Returns: 0
+#####################################################
+uninstall_from_registered_repositories() {
+
+    LIST="$INSTALL_DIR/autoupdate/registered"
+    if [ -f "$LIST" ]; then
+
+        # Filter list according to
+        # - non-existing repos
+        # - if marked as single install.
+
+        # Uninstall list
+        UNINSTALL_LIST=$(mktemp)
+
+        IFS="$IFS_NEWLINE"
+        while read -r INSTALLED_REPO; do
+            unset IFS
+
+            if [ ! -d "$INSTALLED_REPO" ]; then
+                # Not existing repo -> skip.
+                true
+
+            elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
+                # Found a registered repo which is now a single install:
+                # -> remove registered flag and skip.
+                (cd "$INSTALLED_REPO" && git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1)
+
+            else
+                # Found existing registed repository -> uninstall
+                echo "$INSTALLED_REPO" >>"$UNINSTALL_LIST"
             fi
-            uninstall_hooks_from_repo "$EXISTING"
-        done
+
+            IFS="$IFS_NEWLINE"
+        done <"$LIST"
+
+        if [ -s "$UNINSTALL_LIST" ]; then
+            echo "The following registered repositories in \`$LIST\`"
+            echo "contain a Githooks installation:"
+            sed -E "s/^/ - /" <"$UNINSTALL_LIST"
+            printf 'Do you want to uninstall from all of them? [Yn] '
+
+            read -r DO_UNINSTALL
+            if [ "$DO_UNINSTALL" = "n" ] || [ "$DO_UNINSTALL" = "N" ]; then
+                rm -f "$UNINSTALL_LIST" >/dev/null 2>&1
+                # Do not change registered list.
+                return 0
+            fi
+
+            IFS="$IFS_NEWLINE"
+            while read -r INSTALLED_REPO; do
+                unset IFS
+                uninstall_hooks_from_repo "$INSTALLED_REPO"
+                IFS="$IFS_NEWLINE"
+            done <"$UNINSTALL_LIST"
+            rm -f "$UNINSTALL_LIST" >/dev/null 2>&1
+        fi
+
+        # Remove the registered list since we
+        # uninstalled from all registered repos.
+        rm -f "$LIST" >/dev/null 2>&1
+    fi
 
     return 0
 }
@@ -159,6 +244,25 @@ is_git_repo() {
 }
 
 ############################################################
+# Removes the repository from the list `autoupdate.registered`
+#  for potential future autoupdates.
+#
+# Returns: None
+############################################################
+unregister_repo_for_autoupdate() {
+    CURRENT_REPO="$(cd "$1" && pwd)"
+    LIST="$INSTALL_DIR/autoupdate/registered"
+
+    # Remove
+    if [ -f "$LIST" ]; then
+        TEMP_FILE=$(mktemp)
+        CURRENT_ESCAPED=$(echo "$CURRENT_REPO" | sed "s@/@\\\\\/@g")
+        sed "/$CURRENT_ESCAPED/d" "$LIST" >"$TEMP_FILE"
+        mv -f "$TEMP_FILE" "$LIST"
+    fi
+}
+
+############################################################
 # Uninstall the existing Git hook templates from the
 #   current repository.
 #
@@ -179,7 +283,7 @@ uninstall_from_current_repository() {
 #   local repository, given by the first parameter.
 #
 # Returns:
-#   None
+#   0 if sucessful, 1 otherwise
 ############################################################
 uninstall_hooks_from_repo() {
     TARGET="$1"
@@ -189,12 +293,12 @@ uninstall_hooks_from_repo() {
     fi
 
     if [ ! -w "${TARGET}/hooks" ]; then
-        return
+        echo "! Could not uninstall from \`$TARGET\` because there is no write access."
+        return 1
     fi
-
     UNINSTALLED="no"
 
-    for TARGET_HOOK in "$TARGET"/hooks/*; do
+    for TARGET_HOOK in "$TARGET/hooks/"*; do
         if [ -f "$TARGET_HOOK" ]; then
             grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
 
@@ -216,19 +320,30 @@ uninstall_hooks_from_repo() {
         UNINSTALLED="yes"
     fi
 
+    # Remove all install relevant local githooks configs
+    (
+        cd "${TARGET}" && git config --local --unset githooks.single.install >/dev/null 2>&1 &&
+            git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
+    )
+
     if [ "$UNINSTALLED" = "yes" ]; then
         echo "Hooks are uninstalled from $TARGET"
     fi
 
+    # Always remove this repo from the registered list (also single install)
+    unregister_repo_for_autoupdate "${TARGET}"
+
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
-        OUTPUT=$(cd "$TARGET_DIR" && git lfs install 2>&1)
+        OUTPUT=$(cd "$TARGET" && git lfs install 2>&1)
         #shellcheck disable=2181
         if [ $? -ne 0 ]; then
-            echo "! Reinstalling Git LFS in \`$TARGET_DIR\` failed! Output:" >&2
+            echo "! Reinstalling Git LFS in \`$TARGET\` failed! Output:" >&2
             echo "$OUTPUT" >&2
         fi
     fi
+
+    return 0
 }
 
 ############################################################
@@ -338,6 +453,10 @@ parse_command_line_args() {
 # Returns: None
 #####################################################
 set_main_variables() {
+
+    IFS_NEWLINE="
+"
+
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
         CURRENT_GIT_DIR=".git"
@@ -374,6 +493,11 @@ uninstall() {
     # Uninstall the hooks from existing local repositories
     if ! uninstall_from_existing_repositories; then
         echo "! Failed to uninstall from existing repositories" >&2
+        return 1
+    fi
+
+    if ! uninstall_from_registered_repositories; then
+        echo "! Failed to uninstall from registered repositories" >&2
         return 1
     fi
 
