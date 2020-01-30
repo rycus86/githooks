@@ -85,6 +85,52 @@ remove_existing_hook_templates() {
 }
 
 ############################################################
+# Find existing repositories from a start directory `$1`.
+#   Sets the variable `$EXISTING_REPOSITORY_LIST`
+#
+# Returns:
+#   0 on success, 1 on failure
+############################################################
+find_existing_git_dirs() {
+
+    REPOSITORY_LIST=$(
+        find "$1" \( -type d -and -name .git \) -or \
+            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
+    )
+
+    # List if existing Git repositories
+    EXISTING_REPOSITORY_LIST=""
+
+    IFS="$IFS_NEWLINE"
+    for EXISTING in $REPOSITORY_LIST; do
+        unset IFS
+
+        if [ -f "$EXISTING" ]; then
+            # Strip HEAD file
+            EXISTING=$(dirname "$EXISTING")
+        fi
+
+        # Go to the root git dir (works in bare and non-bare repositories)
+        # Try to go to the root git dir (works in bare and non-bare repositories)
+        # to neglect false positives from the find above
+        # e.g. spourious HEAD file or .git dir which does not mark a repository
+        GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
+        # Convert the path to the convention this shell uses
+        # (e.g. on windows the above gives windows paths)
+        GIT_DIR=$(cd "$GIT_DIR" && pwd)
+        if [ -n "$GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$GIT_DIR"; then
+            EXISTING_REPOSITORY_LIST="$GIT_DIR
+$EXISTING_REPOSITORY_LIST"
+        fi
+    done
+
+    # Sort the list if we can
+    if sort --help >/dev/null 2>&1; then
+        EXISTING_REPOSITORY_LIST=$(echo "$EXISTING_REPOSITORY_LIST" | sort)
+    fi
+}
+
+############################################################
 # Uninstall the existing Git hook templates from the
 #   existing local repositories.
 #
@@ -126,19 +172,11 @@ uninstall_from_existing_repositories() {
         return 1
     fi
 
-    EXISTING_REPOSITORY_LIST=$(
-        find "$START_DIR" \( -type d -and -name .git \) -or \
-            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
-    )
+    find_existing_git_dirs "$START_DIR"
 
     IFS="$IFS_NEWLINE"
     for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
-
-        if [ -f "$EXISTING" ]; then
-            # Strip HEAD file
-            EXISTING=$(dirname "$EXISTING")
-        fi
 
         uninstall_hooks_from_repo "$EXISTING"
 

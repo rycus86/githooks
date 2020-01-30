@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2001.241152-6f44a6
+# Version: 2001.301056-ee0376
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2001.241152-6f44a6
+# Version: 2001.301056-ee0376
 
 #####################################################
 # Execute the current hook,
@@ -967,7 +967,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2001.241152-6f44a6
+# Version: 2001.301056-ee0376
 
 #####################################################
 # Prints the command line help for usage and
@@ -4102,6 +4102,51 @@ setup_automatic_update_checks() {
 }
 
 ############################################################
+# Find existing repositories from a start directory `$1`.
+#   Sets the variable `$EXISTING_REPOSITORY_LIST`
+#
+# Returns:
+#   0 on success, 1 on failure
+############################################################
+find_existing_git_dirs() {
+
+    REPOSITORY_LIST=$(
+        find "$1" \( -type d -and -name .git \) -or \
+            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
+    )
+
+    # List if existing Git repositories
+    EXISTING_REPOSITORY_LIST=""
+
+    IFS="$IFS_NEWLINE"
+    for EXISTING in $REPOSITORY_LIST; do
+        unset IFS
+
+        if [ -f "$EXISTING" ]; then
+            # Strip HEAD file
+            EXISTING=$(dirname "$EXISTING")
+        fi
+
+        # Try to go to the root git dir (works in bare and non-bare repositories)
+        # to neglect false positives from the find above
+        # e.g. spourious HEAD file or .git dir which does not mark a repository
+        GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
+        # Convert the path to the convention this shell uses 
+        # (e.g. on windows the above gives windows paths)
+        GIT_DIR=$(cd "$GIT_DIR" && pwd) 
+        if [ -n "$GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$GIT_DIR"; then
+            EXISTING_REPOSITORY_LIST="$GIT_DIR
+$EXISTING_REPOSITORY_LIST"
+        fi
+    done
+
+    # Sort the list if we can
+    if sort --help >/dev/null 2>&1; then
+        EXISTING_REPOSITORY_LIST=$(echo "$EXISTING_REPOSITORY_LIST" | sort)
+    fi
+}
+
+############################################################
 # Install the new Git hook templates into the
 #   existing local repositories.
 #
@@ -4159,24 +4204,11 @@ install_into_existing_repositories() {
 
     git config --global githooks.previous.searchdir "$RAW_START_DIR"
 
-    EXISTING_REPOSITORY_LIST=$(
-        find "$START_DIR" \( -type d -and -name .git \) -or \
-            \( -type f -and -name HEAD -and -not -path "*/.git/*" \) 2>/dev/null
-    )
-
-    # Sort the list if we can
-    if sort --help >/dev/null 2>&1; then
-        EXISTING_REPOSITORY_LIST=$(echo "$EXISTING_REPOSITORY_LIST" | sort)
-    fi
+    find_existing_git_dirs "$START_DIR"
 
     IFS="$IFS_NEWLINE"
     for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
-
-        if [ -f "$EXISTING" ]; then
-            # Strip HEAD file
-            EXISTING=$(dirname "$EXISTING")
-        fi
 
         install_hooks_into_repo "$EXISTING" &&
             register_repo_for_autoupdate "$EXISTING"
@@ -4404,12 +4436,12 @@ install_hooks_into_repo() {
     else
         # Getting the working tree (no external .git directories)
         # see https://stackoverflow.com/a/38852055/293195
-        TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel)
+        TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel 2>/dev/null)
         if [ -z "$TARGET_ROOT" ]; then
-            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir)/.." && pwd)
+            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir 2>/dev/null)/.." && pwd)
         fi
 
-        if [ -d "${TARGET_ROOT}" ] &&
+        if [ -d "${TARGET_ROOT}" ] && is_git_repo "$TARGET_ROOT" &&
             [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
             if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
                 true # OK, we already said we want to skip all
