@@ -24,6 +24,10 @@ cp tests/$STEPS_TO_RUN "$GITHOOKS_TESTS"/ || exit 3
 
 # Do not use the terminal in tests
 sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh || exit 4
+
+# We overwrite the download to use the current install.sh !
+sed -i -E 's|download_file.*"install.sh"|cp -f /var/lib/githooks/install.sh|' "$ROOT_DIR"/install.sh
+
 # Change the base template so we can pass in the hook name and accept flags
 # shellcheck disable=SC2016
 sed -i -E 's|HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' "$ROOT_DIR"base-template.sh &&

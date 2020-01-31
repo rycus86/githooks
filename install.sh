@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2001.301056-ee0376
+# Version: 2001.311420-ff1e90
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2001.301056-ee0376
+# Version: 2001.311420-ff1e90
 
 #####################################################
 # Execute the current hook,
@@ -967,7 +967,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2001.301056-ee0376
+# Version: 2001.311420-ff1e90
 
 #####################################################
 # Prints the command line help for usage and
@@ -4130,12 +4130,12 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
-        # Convert the path to the convention this shell uses 
+        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
+        # Convert the path to the convention this shell uses
         # (e.g. on windows the above gives windows paths)
-        GIT_DIR=$(cd "$GIT_DIR" && pwd) 
-        if [ -n "$GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$GIT_DIR"; then
-            EXISTING_REPOSITORY_LIST="$GIT_DIR
+        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
+        if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+            EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
     done
@@ -4343,11 +4343,10 @@ install_into_registered_repositories() {
             fi
 
             IFS="$IFS_NEWLINE"
-            while read -r INSTALLED_REPO; do
+            while read -r REPO_GIT_DIR; do
                 unset IFS
 
-                EXISTING_REPO_ROOT=$(dirname "$INSTALLED_REPO")
-                install_hooks_into_repo "$EXISTING_REPO_ROOT"
+                install_hooks_into_repo "$REPO_GIT_DIR"
 
                 # no register_repo_for_autoupdate needed
                 # since already in the list
