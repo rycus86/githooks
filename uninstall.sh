@@ -110,16 +110,15 @@ find_existing_git_dirs() {
             EXISTING=$(dirname "$EXISTING")
         fi
 
-        # Go to the root git dir (works in bare and non-bare repositories)
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
+        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
         # Convert the path to the convention this shell uses
         # (e.g. on windows the above gives windows paths)
-        GIT_DIR=$(cd "$GIT_DIR" && pwd)
-        if [ -n "$GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$GIT_DIR"; then
-            EXISTING_REPOSITORY_LIST="$GIT_DIR
+        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
+        if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+            EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
     done

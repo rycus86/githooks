@@ -2,6 +2,9 @@
 # Test:
 #   Test registering mechanism.
 
+# We overwrite the download to use the current install.sh !
+sed -i -E 's|download_file.*"install.sh"|cp -f /var/lib/githooks/install.sh|' /var/lib/githooks/install.sh
+
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1
