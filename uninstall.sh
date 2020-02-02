@@ -113,10 +113,8 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
-        # Convert the path to the convention this shell uses
-        # (e.g. on windows the above gives windows paths)
-        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
+        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --git-dir 2>/dev/null)" && pwd)
+
         if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
@@ -256,19 +254,6 @@ uninstall_from_registered_repositories() {
     return 0
 }
 
-#####################################################
-# Checks if the current directory is
-#   a Git repository or not.
-#
-# Returns:
-#   0 if it is likely a Git repository,
-#   1 otherwise
-#####################################################
-is_running_in_git_repo_root() {
-    is_git_repo "$(pwd)" || exit 1
-    [ -d "${CURRENT_GIT_DIR}" ] || return 1
-}
-
 ############################################################
 # Checks whether the given directory
 #   is a Git repository (bare included) or not.
@@ -307,8 +292,10 @@ unregister_repo_for_autoupdate() {
 #   0 on success, 1 on failure
 ############################################################
 uninstall_from_current_repository() {
-    if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!" >&2
+    CURRENT_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+
+    if ! is_git_repo "$(pwd)" || [ ! -d "$CURRENT_GIT_DIR" ]; then
+        echo "The current directory ($(pwd)) does not seem to be inside a Git repository!" >&2
         exit 1
     fi
 
@@ -483,7 +470,6 @@ parse_command_line_args() {
 # Set up the main variables that
 #   we will throughout the hook.
 #
-# Sets the ${CURRENT_GIT_DIR} variable
 # Sets the ${INSTALL_DIR} variable
 # Sets the ${GIT_LFS_AVAILABLE} variable
 #
@@ -493,12 +479,6 @@ set_main_variables() {
 
     IFS_NEWLINE="
 "
-
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git"
-    fi
-
     load_install_dir || return 1
 
     # do we have Git LFS installed

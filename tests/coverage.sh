@@ -2,10 +2,10 @@
 
 RUN_DIR="${RUN_DIR:-"$PWD"}"
 
-if [ -z "$1" ]; then
-    TESTS_TO_RUN="/var/lib/tests/exec-steps.sh"
+if [ -n "$1" ]; then
+    STEPS_TO_RUN="$1.sh"
 else
-    TESTS_TO_RUN="/var/lib/tests/${1}.sh"
+    STEPS_TO_RUN="step-*"
 fi
 
 # Build a Docker image on top of kcov with our scripts
@@ -22,11 +22,16 @@ ADD examples /var/lib/githooks/examples
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/exec-steps.sh tests/step-* tests/replace-inline-content.py /var/lib/tests/
+ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} tests/replace-inline-content.py /var/lib/tests/
 
 # Some fixup below:
+# We overwrite the download to use the current install.sh in all scripts
+RUN sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_FILE).*@cp -f /var/lib/githooks/install.sh "\$OUTPUT_FILE"@g' \\
+        /var/lib/githooks/install.sh \\
+        /var/lib/githooks/cli.sh  \\
+        /var/lib/githooks/base-template.sh && \\
 # Make sure we're using Bash for kcov
-RUN find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
 # Revert changed shell script filenames
@@ -61,4 +66,4 @@ docker run --rm --security-opt seccomp=unconfined \
     --coveralls-id="$TRAVIS_JOB_ID" \
     --include-pattern="/var/lib/githooks/" \
     /cover \
-    "$TESTS_TO_RUN"
+    "/var/lib/tests/exec-steps.sh"

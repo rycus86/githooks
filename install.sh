@@ -3515,7 +3515,7 @@ execute_installation() {
 
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
-            CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+            CURRENT_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
             install_hooks_into_repo "$CURRENT_GIT_DIR" || return 1
         else
             if ! is_update_only; then
@@ -4130,11 +4130,9 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
-        # Convert the path to the convention this shell uses
-        # (e.g. on windows the above gives windows paths)
-        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
-        if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --git-dir 2>/dev/null)" && pwd)
+
+        if [ -d "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -4399,6 +4397,7 @@ install_hooks_into_repo() {
         fi
 
         TARGET_HOOK="${TARGET}/hooks/${HOOK_NAME}"
+        echo "INstalled to $TARGET_HOOK"
 
         if [ -f "$TARGET_HOOK" ]; then
             grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
@@ -4421,6 +4420,7 @@ install_hooks_into_repo() {
 
         if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="yes"
+            echo "INstalled to $TARGET_HOOK"
         else
             HAD_FAILURE=Y
             echo "! Failed to install $TARGET_HOOK" >&2
