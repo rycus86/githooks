@@ -526,7 +526,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
+                PULL_OUTPUT=$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
@@ -583,7 +583,7 @@ execute_shared_hooks() {
 
         # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
         # which means we really need a `-f` to sepcify the actual config!
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             echo "! Failed to execute shared hooks in $SHARED_REPO" >&2

@@ -215,7 +215,7 @@ uninstall_from_registered_repositories() {
             elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
                 # Found a registered repo which is now a single install:
                 # -> remove registered flag and skip.
-                (cd "$INSTALLED_REPO" && git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1)
+                git -C "$INSTALLED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
 
             else
                 # Found existing registed repository -> uninstall
@@ -356,7 +356,7 @@ uninstall_hooks_from_repo() {
 
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
-        OUTPUT=$(cd "$TARGET" && git lfs install 2>&1)
+        OUTPUT=$(git -C "$TARGET" lfs install 2>&1)
         #shellcheck disable=2181
         if [ $? -ne 0 ]; then
             echo "! Reinstalling Git LFS in \`$TARGET\` failed! Output:" >&2
