@@ -112,9 +112,9 @@ set_main_variables() {
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
 
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git" # reset to a sensible default
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ ! -d "${CURRENT_GIT_DIR}" ]; then
+        echo "! Hook not run inside a git repository" >&2 && exit 1
     fi
 
     load_install_dir
@@ -460,13 +460,13 @@ execute_opt_in_checks() {
                 echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
                 echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
 
-                echo "disabled> $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+                echo "disabled> $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
                 return 1
             fi
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+        echo "$MD5_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
 }
 
@@ -3515,8 +3515,8 @@ execute_installation() {
 
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
-            CURRENT_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
-            install_hooks_into_repo "$CURRENT_GIT_DIR" || return 1
+            REPO_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+            install_hooks_into_repo "$REPO_GIT_DIR" || return 1
         else
             if ! is_update_only; then
                 install_into_existing_repositories
@@ -3719,7 +3719,7 @@ disable_tty_input() {
 #   1 if failed, 0 otherwise
 ############################################################
 is_git_repo() {
-    (cd "$1" && git rev-parse >/dev/null 2>&1) || return 1
+    git -C "$1" rev-parse >/dev/null 2>&1 || return 1
 }
 
 ############################################################
@@ -4130,9 +4130,9 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --git-dir 2>/dev/null)" && pwd)
+        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
 
-        if [ -d "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -4204,6 +4204,7 @@ install_into_existing_repositories() {
 
     find_existing_git_dirs "$START_DIR"
 
+    # Loop over all existing git dirs
     IFS="$IFS_NEWLINE"
     for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
@@ -4297,8 +4298,8 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ ! -d "$INSTALLED_REPO" ]; then
-                # Not existing repo -> skip.
+            if ! is_git_repo "$INSTALLED_REPO"; then
+                # Not existing git dir -> skip.
                 true
 
             elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
@@ -4340,6 +4341,7 @@ install_into_registered_repositories() {
                 fi
             fi
 
+            # Loop over all existing git dirs
             IFS="$IFS_NEWLINE"
             while read -r REPO_GIT_DIR; do
                 unset IFS
@@ -4368,10 +4370,6 @@ install_into_registered_repositories() {
 install_hooks_into_repo() {
     TARGET="$1"
 
-    if ! is_git_repo "${TARGET}"; then
-        return
-    fi
-
     IS_BARE=$(cd "${TARGET}" && git rev-parse --is-bare-repository 2>/dev/null)
 
     if [ ! -w "${TARGET}/hooks" ]; then
@@ -4397,7 +4395,6 @@ install_hooks_into_repo() {
         fi
 
         TARGET_HOOK="${TARGET}/hooks/${HOOK_NAME}"
-        echo "INstalled to $TARGET_HOOK"
 
         if [ -f "$TARGET_HOOK" ]; then
             grep 'https://github.com/rycus86/githooks' "${TARGET_HOOK}" >/dev/null 2>&1
@@ -4420,7 +4417,6 @@ install_hooks_into_repo() {
 
         if echo "$BASE_TEMPLATE_CONTENT" >"$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="yes"
-            echo "INstalled to $TARGET_HOOK"
         else
             HAD_FAILURE=Y
             echo "! Failed to install $TARGET_HOOK" >&2
@@ -4437,7 +4433,7 @@ install_hooks_into_repo() {
         # see https://stackoverflow.com/a/38852055/293195
         TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel 2>/dev/null)
         if [ -z "$TARGET_ROOT" ]; then
-            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir 2>/dev/null)/.." && pwd)
+            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-common-dir 2>/dev/null)/.." && pwd)
         fi
 
         if [ -d "${TARGET_ROOT}" ] && is_git_repo "$TARGET_ROOT" &&

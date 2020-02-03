@@ -88,9 +88,9 @@ set_main_variables() {
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
 
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git" # reset to a sensible default
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ ! -d "${CURRENT_GIT_DIR}" ]; then
+        echo "! Hook not run inside a git repository" >&2 && exit 1
     fi
 
     load_install_dir
@@ -436,13 +436,13 @@ execute_opt_in_checks() {
                 echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
                 echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
 
-                echo "disabled> $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+                echo "disabled> $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
                 return 1
             fi
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+        echo "$MD5_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
 }
 
