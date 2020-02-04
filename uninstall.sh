@@ -208,8 +208,8 @@ uninstall_from_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if ! is_git_repo "$INSTALLED_REPO"; then
-                # Not a git repo -> skip.
+            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
+                # Not existing git dir -> skip.
                 true
 
             elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then

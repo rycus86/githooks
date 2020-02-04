@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2001.311420-ff1e90
+# Version: 2002.041113-bea826
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2001.311420-ff1e90
+# Version: 2002.041113-bea826
 
 #####################################################
 # Execute the current hook,
@@ -967,7 +967,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2001.311420-ff1e90
+# Version: 2002.041113-bea826
 
 #####################################################
 # Prints the command line help for usage and
@@ -4298,7 +4298,7 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if ! is_git_repo "$INSTALLED_REPO"; then
+            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
                 # Not existing git dir -> skip.
                 true
 
