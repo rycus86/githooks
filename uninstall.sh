@@ -113,11 +113,9 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
-        # Convert the path to the convention this shell uses
-        # (e.g. on windows the above gives windows paths)
-        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
-        if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -173,6 +171,7 @@ uninstall_from_existing_repositories() {
 
     find_existing_git_dirs "$START_DIR"
 
+    # Loop over all existing git dirs
     IFS="$IFS_NEWLINE"
     for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
@@ -209,14 +208,14 @@ uninstall_from_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ ! -d "$INSTALLED_REPO" ]; then
-                # Not existing repo -> skip.
+            if ! is_git_repo "$INSTALLED_REPO"; then
+                # Not a git repo -> skip.
                 true
 
             elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
                 # Found a registered repo which is now a single install:
                 # -> remove registered flag and skip.
-                (cd "$INSTALLED_REPO" && git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1)
+                git -C "$INSTALLED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
 
             else
                 # Found existing registed repository -> uninstall
@@ -239,6 +238,7 @@ uninstall_from_registered_repositories() {
                 return 0
             fi
 
+            # Loop over all existing git dirs
             IFS="$IFS_NEWLINE"
             while read -r INSTALLED_REPO; do
                 unset IFS
@@ -256,19 +256,6 @@ uninstall_from_registered_repositories() {
     return 0
 }
 
-#####################################################
-# Checks if the current directory is
-#   a Git repository or not.
-#
-# Returns:
-#   0 if it is likely a Git repository,
-#   1 otherwise
-#####################################################
-is_running_in_git_repo_root() {
-    is_git_repo "$(pwd)" || exit 1
-    [ -d "${CURRENT_GIT_DIR}" ] || return 1
-}
-
 ############################################################
 # Checks whether the given directory
 #   is a Git repository (bare included) or not.
@@ -277,7 +264,7 @@ is_running_in_git_repo_root() {
 #   1 if failed, 0 otherwise
 ############################################################
 is_git_repo() {
-    (cd "$1" && git rev-parse >/dev/null 2>&1) || return 1
+    git -C "$1" rev-parse >/dev/null 2>&1 || return 1
 }
 
 ############################################################
@@ -307,12 +294,13 @@ unregister_repo_for_autoupdate() {
 #   0 on success, 1 on failure
 ############################################################
 uninstall_from_current_repository() {
-    if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!" >&2
+    if ! is_git_repo "$(pwd)"; then
+        echo "! The current directory ($(pwd)) does not seem to be inside a Git repository!" >&2
         exit 1
     fi
 
-    uninstall_hooks_from_repo "$CURRENT_GIT_DIR"
+    REPO_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+    uninstall_hooks_from_repo "$REPO_GIT_DIR"
 }
 
 ############################################################
@@ -324,10 +312,6 @@ uninstall_from_current_repository() {
 ############################################################
 uninstall_hooks_from_repo() {
     TARGET="$1"
-
-    if ! is_git_repo "${TARGET}"; then
-        return
-    fi
 
     if [ ! -w "${TARGET}/hooks" ]; then
         echo "! Could not uninstall from \`$TARGET\` because there is no write access."
@@ -372,7 +356,7 @@ uninstall_hooks_from_repo() {
 
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
-        OUTPUT=$(cd "$TARGET" && git lfs install 2>&1)
+        OUTPUT=$(git -C "$TARGET" lfs install 2>&1)
         #shellcheck disable=2181
         if [ $? -ne 0 ]; then
             echo "! Reinstalling Git LFS in \`$TARGET\` failed! Output:" >&2
@@ -483,7 +467,6 @@ parse_command_line_args() {
 # Set up the main variables that
 #   we will throughout the hook.
 #
-# Sets the ${CURRENT_GIT_DIR} variable
 # Sets the ${INSTALL_DIR} variable
 # Sets the ${GIT_LFS_AVAILABLE} variable
 #
@@ -493,12 +476,6 @@ set_main_variables() {
 
     IFS_NEWLINE="
 "
-
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git"
-    fi
-
     load_install_dir || return 1
 
     # do we have Git LFS installed

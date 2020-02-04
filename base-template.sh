@@ -88,9 +88,9 @@ set_main_variables() {
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
 
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git" # reset to a sensible default
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ ! -d "${CURRENT_GIT_DIR}" ]; then
+        echo "! Hook not run inside a git repository" >&2 && exit 1
     fi
 
     load_install_dir
@@ -436,13 +436,13 @@ execute_opt_in_checks() {
                 echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
                 echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
 
-                echo "disabled> $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+                echo "disabled> $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
                 return 1
             fi
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+        echo "$MD5_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
 }
 
@@ -526,7 +526,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
+                PULL_OUTPUT=$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
@@ -583,7 +583,7 @@ execute_shared_hooks() {
 
         # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
         # which means we really need a `-f` to sepcify the actual config!
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             echo "! Failed to execute shared hooks in $SHARED_REPO" >&2

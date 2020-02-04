@@ -112,9 +112,9 @@ set_main_variables() {
     HOOK_FOLDER=$(dirname "$0")
     ACCEPT_CHANGES=
 
-    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir)
-    if [ "${CURRENT_GIT_DIR}" = "--git-common-dir" ]; then
-        CURRENT_GIT_DIR=".git" # reset to a sensible default
+    CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ ! -d "${CURRENT_GIT_DIR}" ]; then
+        echo "! Hook not run inside a git repository" >&2 && exit 1
     fi
 
     load_install_dir
@@ -460,13 +460,13 @@ execute_opt_in_checks() {
                 echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
                 echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
 
-                echo "disabled> $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+                echo "disabled> $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
                 return 1
             fi
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>$CURRENT_GIT_DIR/.githooks.checksum
+        echo "$MD5_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
 }
 
@@ -550,7 +550,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 echo "* Updating shared hooks from: $SHARED_REPO"
-                PULL_OUTPUT=$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
+                PULL_OUTPUT=$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
@@ -607,7 +607,7 @@ execute_shared_hooks() {
 
         # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
         # which means we really need a `-f` to sepcify the actual config!
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
@@ -1104,7 +1104,7 @@ find_hook_path_to_enable_or_disable() {
                 continue
             fi
 
-            REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+            REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
             SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
             ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
@@ -1734,7 +1734,7 @@ list_hooks_in_shared_repos() {
             continue
         fi
 
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
@@ -2086,7 +2086,7 @@ list_shared_hook_repos() {
 
                 set_shared_root "$LIST_ITEM"
                 if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -2126,7 +2126,7 @@ list_shared_hook_repos() {
                 set_shared_root "$LIST_ITEM"
 
                 if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -2217,7 +2217,7 @@ update_shared_hooks_in() {
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT="$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
+            PULL_OUTPUT="$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
@@ -3515,8 +3515,8 @@ execute_installation() {
 
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
-            CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
-            install_hooks_into_repo "$CURRENT_GIT_DIR" || return 1
+            REPO_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+            install_hooks_into_repo "$REPO_GIT_DIR" || return 1
         else
             if ! is_update_only; then
                 install_into_existing_repositories
@@ -3719,7 +3719,7 @@ disable_tty_input() {
 #   1 if failed, 0 otherwise
 ############################################################
 is_git_repo() {
-    (cd "$1" && git rev-parse >/dev/null 2>&1) || return 1
+    git -C "$1" rev-parse >/dev/null 2>&1 || return 1
 }
 
 ############################################################
@@ -4130,11 +4130,9 @@ find_existing_git_dirs() {
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
         # e.g. spourious HEAD file or .git dir which does not mark a repository
-        REPO_GIT_DIR=$(cd "$EXISTING" && GIT_DISCOVERY_ACROSS_FILESYSTEM=0 git rev-parse --absolute-git-dir 2>/dev/null)
-        # Convert the path to the convention this shell uses
-        # (e.g. on windows the above gives windows paths)
-        REPO_GIT_DIR=$(cd "$REPO_GIT_DIR" && pwd)
-        if [ -n "$REPO_GIT_DIR" ] && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
+
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -4206,6 +4204,7 @@ install_into_existing_repositories() {
 
     find_existing_git_dirs "$START_DIR"
 
+    # Loop over all existing git dirs
     IFS="$IFS_NEWLINE"
     for EXISTING in $EXISTING_REPOSITORY_LIST; do
         unset IFS
@@ -4299,14 +4298,14 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ ! -d "$INSTALLED_REPO" ]; then
-                # Not existing repo -> skip.
+            if ! is_git_repo "$INSTALLED_REPO"; then
+                # Not existing git dir -> skip.
                 true
 
             elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
                 # Found a registed repo which is now a single install:
                 # For safety: Remove registered flag and skip.
-                (cd "$INSTALLED_REPO" && git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1)
+                git -C "$INSTALLED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
 
             elif echo "$EXISTING_REPOSITORY_LIST" | grep -q "$INSTALLED_REPO"; then
                 # We already installed to this repository, don't install
@@ -4342,6 +4341,7 @@ install_into_registered_repositories() {
                 fi
             fi
 
+            # Loop over all existing git dirs
             IFS="$IFS_NEWLINE"
             while read -r REPO_GIT_DIR; do
                 unset IFS
@@ -4370,11 +4370,7 @@ install_into_registered_repositories() {
 install_hooks_into_repo() {
     TARGET="$1"
 
-    if ! is_git_repo "${TARGET}"; then
-        return
-    fi
-
-    IS_BARE=$(cd "${TARGET}" && git rev-parse --is-bare-repository 2>/dev/null)
+    IS_BARE=$(git -C "${TARGET}" rev-parse --is-bare-repository 2>/dev/null)
 
     if [ ! -w "${TARGET}/hooks" ]; then
         # Try to create the .git/hooks folder
@@ -4435,9 +4431,9 @@ install_hooks_into_repo() {
     else
         # Getting the working tree (no external .git directories)
         # see https://stackoverflow.com/a/38852055/293195
-        TARGET_ROOT=$(cd "${TARGET}" && git rev-parse --show-toplevel 2>/dev/null)
+        TARGET_ROOT=$(git -C "${TARGET}" rev-parse --show-toplevel 2>/dev/null)
         if [ -z "$TARGET_ROOT" ]; then
-            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-dir 2>/dev/null)/.." && pwd)
+            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-common-dir 2>/dev/null)/.." && pwd)
         fi
 
         if [ -d "${TARGET_ROOT}" ] && is_git_repo "$TARGET_ROOT" &&
@@ -4515,7 +4511,7 @@ register_repo_for_autoupdate() {
     echo "$CURRENT_REPO" >>"$LIST"
 
     # Mark the repo as registered.
-    (cd "$CURRENT_REPO" && git config --local githooks.autoupdate.registered "yes")
+    (git -C "$CURRENT_REPO" config --local githooks.autoupdate.registered "yes")
 
     return 0
 }

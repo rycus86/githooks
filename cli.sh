@@ -148,7 +148,7 @@ find_hook_path_to_enable_or_disable() {
                 continue
             fi
 
-            REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+            REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
             SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
             ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
@@ -778,7 +778,7 @@ list_hooks_in_shared_repos() {
             continue
         fi
 
-        REMOTE_URL=$(cd "$SHARED_ROOT" && git config --get remote.origin.url)
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
         ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
@@ -1130,7 +1130,7 @@ list_shared_hook_repos() {
 
                 set_shared_root "$LIST_ITEM"
                 if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -1170,7 +1170,7 @@ list_shared_hook_repos() {
                 set_shared_root "$LIST_ITEM"
 
                 if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(cd "$SHARED_ROOT" && git config --get remote.origin.url)" = "$LIST_ITEM" ]; then
+                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
                         LIST_ITEM_STATE="active"
                     else
                         LIST_ITEM_STATE="invalid"
@@ -1261,7 +1261,7 @@ update_shared_hooks_in() {
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT="$(cd "$SHARED_ROOT" && git --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
+            PULL_OUTPUT="$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
