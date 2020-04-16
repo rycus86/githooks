@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2004.162028-00b20e
+# Version: 2004.162031-c978c3
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -28,7 +28,7 @@ BASE_TEMPLATE_CONTENT='#!/bin/sh
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.162028-00b20e
+# Version: 2004.162031-c978c3
 
 #####################################################
 # Execute the current hook,
@@ -788,8 +788,8 @@ show_prompt() {
     # However, only do this when stdout *is* a tty, otherwise it is
     # likely we have no controlling terminal and reading from /dev/tty
     # would fail with an error.
+    printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
     if [ -t 0 ] && [ -t 1 ]; then
-        printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
         # shellcheck disable=SC2229
         read -r "$VARIABLE" </dev/tty
     fi
@@ -977,7 +977,7 @@ CLI_TOOL_CONTENT='#!/bin/sh
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2004.162028-00b20e
+# Version: 2004.162031-c978c3
 
 #####################################################
 # Prints the command line help for usage and
