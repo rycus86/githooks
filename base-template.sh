@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.162018-62f173
+# Version: 2004.162028-00b20e
 
 #####################################################
 # Execute the current hook,
@@ -764,7 +764,7 @@ show_prompt() {
     # However, only do this when stdout *is* a tty, otherwise it is
     # likely we have no controlling terminal and reading from /dev/tty
     # would fail with an error.
-    if [ -t 1 ]; then
+    if [ -t 0 ] && [ -t 1 ]; then
         printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
         # shellcheck disable=SC2229
         read -r "$VARIABLE" </dev/tty
