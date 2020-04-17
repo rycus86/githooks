@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.162031-c978c3
+# Version: 2004.170929-8e4d56
 
 #####################################################
 # Execute the current hook,
@@ -765,13 +765,12 @@ show_prompt() {
     # likely we have no controlling terminal and reading from /dev/tty
     # would fail with an error.
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
-    if [ -t 0 ] && [ -t 1 ]; then
-        # shellcheck disable=SC2229
-        read -r "$VARIABLE" </dev/tty
-    fi
+    # shellcheck disable=SC2229
+    read -r "$VARIABLE" </dev/tty 2>/dev/null
 
-    # By default: If we end up here we do not modify the variable
-    # and gracefully do nothing, leaving the decision to the caller.
+    # If the above gives any error (e.g. /dev/tty could not be written to or read from),
+    # ${$VARIABLE} is not changed
+    # and we leave the decision to the caller.
 }
 
 #####################################################
