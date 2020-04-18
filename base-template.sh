@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.251306-8304f2
+# Version: 2004.261333-23ac79
 
 #####################################################
 # Execute the current hook,
@@ -70,6 +70,19 @@ load_install_dir() {
         echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
+}
+
+#####################################################
+# Does a release clone repository exist in the
+#  install folder
+#
+# Returns: 0 if `true`, 1 otherwise
+#####################################################
+is_release_clone_existing() {
+    if git -C "$INSTALL_DIR/release" rev-parse >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
 }
 
 #####################################################
@@ -622,10 +635,10 @@ check_for_updates_if_needed() {
     read_last_update_time
     should_run_update_checks || return
     record_update_time
+    read_single_repo_information
     fetch_latest_update_script || return
     read_updated_version_number
     is_update_available || return
-    read_single_repo_information
     should_run_update && execute_update && return
     print_update_disable_info
 }
@@ -777,61 +790,140 @@ show_prompt() {
 }
 
 #####################################################
-# Downloads a file "$1" with `wget` or `curl`
-#
-# Returns:
-#   0 if download succeeded, 1 otherwise
-#####################################################
-download_file() {
-    DOWNLOAD_FILE="$1"
-    OUTPUT_FILE="$2"
-    DOWNLOAD_TOOL="$(get_tool_script "download")"
-
-    if [ "$DOWNLOAD_TOOL" != "" ]; then
-        # Use the external download tool for downloading the file
-        call_script "$DOWNLOAD_TOOL" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
-    else
-        # The main update url.
-        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
-
-        # Default implementation
-        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
-
-        if curl --version >/dev/null 2>&1; then
-            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
-        elif wget --version >/dev/null 2>&1; then
-            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
-        else
-            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget" >&2
-            return 1
-        fi
-    fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
-        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed" >&2
-        return 1
-    fi
-    return 0
-}
-
-#####################################################
 # Loads the contents of the latest install
 #   script into a variable.
 #
 # Sets the ${INSTALL_SCRIPT} variable
 #
 # Returns:
-#   1 if failed the load the script, 0 otherwise
+#   1 if failed to load the script, 0 otherwise
 #####################################################
 fetch_latest_update_script() {
     echo "^ Checking for updates ..."
+    update_release_clone || return 1
 
-    INSTALL_SCRIPT="$(mktemp)"
-    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
-        echo "! Failed to check for updates" >&2
+    # Set the install script
+    INSTALL_SCRIPT="$INSTALL_DIR/release/install.sh"
+    if [ ! -f "$INSTALL_SCRIPT" ]; then
+        echo "! Non-existing \`install.sh\` in  \`$INSTALL_DIR/release\`" >&2
         return 1
     fi
+
+    return 0
+}
+
+############################################################
+# Clone the URL `$GITHOOKS_CLONE_URL` into the install
+# folder `$INSTALL_DIR/release` for further updates.
+#
+# Returns: 0 if successful, 1 otherwise
+############################################################
+clone_release_repository() {
+
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+
+    if [ -z "$GITHOOKS_CLONE_URL" ]; then
+        GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
+    fi
+
+    if [ -z "$GITHOOKS_CLONE_BRANCH" ]; then
+        GITHOOKS_CLONE_BRANCH="master"
+    fi
+
+    if [ -d "$INSTALL_DIR/release" ]; then
+        if ! rm -rf "$INSTALL_DIR/release" >/dev/null 2>&1; then
+            echo "! Failed to remove an existing githook release repository" >&2
+            return 1
+        fi
+    fi
+
+    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` ..."
+
+    CLONE_OUTPUT=$(git clone \
+        -c core.hooksPath=/dev/null \
+        --depth 1 \
+        --single-branch \
+        --branch "$GITHOOKS_CLONE_BRANCH" \
+        "$GITHOOKS_CLONE_URL" "$INSTALL_DIR/release" 2>&1)
+
+    #shellcheck disable=2181
+    if [ $? -ne 0 ]; then
+        echo "! Cloning of repository \`$GITHOOKS_CLONE_URL\`"
+        echo "! to install directory \`$INSTALL_DIR/release\` failed with output: " >&2
+        echo "$CLONE_OUTPUT" >&2
+        return 1
+    fi
+
+    git config --global githooks.autoupdate.releaseCloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.autoupdate.releaseCloneBranch "$GITHOOKS_CLONE_BRANCH"
+
+    return 0
+}
+
+############################################################
+# Checks whether the given directory
+#   is a Git repository (bare included) or not.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+is_git_repo() {
+    git -C "$1" rev-parse >/dev/null 2>&1 || return 1
+}
+
+#####################################################
+# Updates the release clone in the install folder.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+#####################################################
+update_release_clone() {
+
+    CLONE_DIR="$INSTALL_DIR/release"
+    PULL_ONLY="true"
+
+    # We do a fresh clone if:
+    # - we have an existing clone AND
+    #   - url or branch of the existing clone does not match the settings OR
+    #   - the existing clone has modifications (should not be the case)
+    # - we dont have an existing clone
+
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+
+    if is_git_repo "$CLONE_DIR"; then
+        URL=$(git -C "$CLONE_DIR" config remote.origin.url)
+        BRANCH=$(git -C "$CLONE_DIR" symbolic-ref -q --short HEAD)
+
+        if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
+            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ] ||
+            git -C "$CLONE_DIR" diff --quiet; then
+            PULL_ONLY="false"
+        fi
+    else
+        PULL_ONLY="false"
+    fi
+
+    if [ "$PULL_ONLY" = "true" ]; then
+        PULL_OUTPUT=$(
+            git -C "$CLONE_DIR" \
+                --work-tree="$CLONE_DIR" \
+                --git-dir="$CLONE_DIR/.git" \
+                -c core.hooksPath=/dev/null pull origin "$GITHOOKS_CLONE_BRANCH" 2>&1
+        )
+
+        #shellcheck disable=2181
+        if [ $? -ne 0 ]; then
+            echo "! Pulling updates in  \`$CLONE_DIR\` failed with:" >&2
+            echo "$PULL_OUTPUT" >&2
+            return 1
+        fi
+    else
+        clone_release_repository || return 1
+    fi
+
+    return 0
 }
 
 #####################################################

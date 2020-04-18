@@ -16,7 +16,8 @@ RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.lis
     && (apt-get update || true) \
     && apt-get install -y git
 
-ADD base-template.sh install.sh uninstall.sh cli.sh .githooks/README.md /var/lib/githooks/
+ADD base-template.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
 
 RUN git config --global user.email "githook@test.com" && \
@@ -26,10 +27,7 @@ ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} tests/replace-inline-content.py /v
 
 # Some fixup below:
 # We overwrite the download to use the current install.sh in all scripts
-RUN sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_FILE).*@cp -f /var/lib/githooks/install.sh "\$OUTPUT_FILE"@g' \\
-        /var/lib/githooks/install.sh \\
-        /var/lib/githooks/cli.sh  \\
-        /var/lib/githooks/base-template.sh && \\
+RUN \\
 # Make sure we're using Bash for kcov
     find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
@@ -44,7 +42,14 @@ RUN sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_F
     sed -i 's|HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
-    sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh
+    sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh && \\
+    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh 
+
+# Commit everything
+RUN echo "Make test gitrepo to clone from ..." && \
+    cd /var/lib/githooks && git init && \
+    git add . && \
+    git commit -a -m "Initial release"
 EOF
 
 # shellcheck disable=SC2181

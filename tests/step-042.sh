@@ -7,18 +7,6 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-if ! curl --version && ! wget --version; then
-    echo "Neither curl nor wget is available"
-    exit 249
-fi
-
-if ! curl -fsSL --connect-timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-    if ! wget -O- --timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-        echo "Could not connect to GitHub"
-        exit 249
-    fi
-fi
-
 LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update already marked as run"

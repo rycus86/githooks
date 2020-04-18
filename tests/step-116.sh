@@ -2,13 +2,6 @@
 # Test:
 #   Test registering mechanism.
 
-# We overwrite the download to use the current install.sh !
-# shellcheck disable=SC2016
-sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_FILE).*@cp -f /var/lib/githooks/install.sh "\$OUTPUT_FILE"@g' \
-    /var/lib/githooks/install.sh \
-    /var/lib/githooks/cli.sh \
-    /var/lib/githooks/base-template.sh
-
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1

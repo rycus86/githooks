@@ -9,8 +9,6 @@ script:
 
 env:
   - TEST_INSTANCE=test-alpine
-  - TEST_INSTANCE=test-alpine-curl
-  - TEST_INSTANCE=test-alpine-wget
   - TEST_INSTANCE=test-alpine-user
   - TEST_INSTANCE=test-alpine-lfs
   - TEST_INSTANCE=test-debian
