@@ -357,7 +357,7 @@ uninstall_hooks_from_repo() {
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
         OUTPUT=$(git -C "$TARGET" lfs install 2>&1)
-        #shellcheck disable=2181
+        # shellcheck disable=SC2181
         if [ $? -ne 0 ]; then
             echo "! Reinstalling Git LFS in \`$TARGET\` failed! Output:" >&2
             echo "$OUTPUT" >&2

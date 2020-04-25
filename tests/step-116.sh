@@ -3,7 +3,7 @@
 #   Test registering mechanism.
 
 # We overwrite the download to use the current install.sh !
-# shellcheck disable=2016
+# shellcheck disable=SC2016
 sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_FILE).*@cp -f /var/lib/githooks/install.sh "\$OUTPUT_FILE"@g' \
     /var/lib/githooks/install.sh \
     /var/lib/githooks/cli.sh \
@@ -124,7 +124,7 @@ fi
 
 # Update Test
 # Set all other hooks to dirty by adding something
-#shellcheck disable=2156
+# shellcheck disable=SC2156
 find /tmp -type f -path "*/.git/hooks/*" -exec sh -c "echo 'Add DIRTY to {}' && echo '#DIRTY' >>'{}'" \; || exit 1
 find /tmp -type f -path "*/.git/hooks/*" |
     while read -r HOOK; do

@@ -47,7 +47,7 @@ git commit -a -m "First" || exit 1
 echo "Push hook to fail"
 OUTPUT=$(git push 2>&1)
 
-#shellcheck disable=2181
+# shellcheck disable=SC2181
 if [ $? -eq 0 ] || ! echo "$OUTPUT" | grep -q "Update hook run"; then
     echo "!! Push should have failed and update hook should have run. Output:"
     echo "$OUTPUT"
@@ -67,7 +67,7 @@ echo "Push hook to succeed"
 cd /tmp/test110/local || exit 1
 OUTPUT=$(git push 2>&1)
 
-#shellcheck disable=2181
+# shellcheck disable=SC2181
 if [ $? -ne 0 ] || ! echo "$OUTPUT" | grep -q "Update hook run"; then
     echo "!! Push should have succeeded and update hook should have run. Output:"
     echo "$OUTPUT"

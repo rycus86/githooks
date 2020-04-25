@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.170929-8e4d56
+# Version: 2004.251306-8304f2
 
 #####################################################
 # Execute the current hook,
@@ -165,7 +165,7 @@ export_staged_files() {
 
     CHANGED_FILES=$(git diff --cached --diff-filter=ACMR --name-only)
 
-    # shellcheck disable=2181
+    # shellcheck disable=SC2181
     if [ $? -eq 0 ]; then
         export STAGED_FILES="$CHANGED_FILES"
     fi
@@ -760,15 +760,18 @@ show_prompt() {
 
     # Try to read from `dev/tty` if available.
     # Our stdin is never a tty (either a pipe or /dev/null when called
-    # from git), so read from /dev/tty, our controlling terminal.
-    # However, only do this when stdout *is* a tty, otherwise it is
-    # likely we have no controlling terminal and reading from /dev/tty
-    # would fail with an error.
+    # from git), so read from /dev/tty, our controlling terminal,
+    # if it can be opened.
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
-    # shellcheck disable=SC2229
-    read -r "$VARIABLE" </dev/tty 2>/dev/null
 
-    # If the above gives any error (e.g. /dev/tty could not be written to or read from),
+    # shellcheck disable=SC2217
+    if true </dev/tty 2>/dev/null; then
+        # shellcheck disable=SC2229
+        read -r "$VARIABLE" </dev/tty
+    fi
+
+    # If the above gives any error
+    # e.g. /dev/tty could not be opened or `read` returned an error,
     # ${$VARIABLE} is not changed
     # and we leave the decision to the caller.
 }
