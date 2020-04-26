@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2004.261333-23ac79
+# Version: 2004.261514-29e54f
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -186,13 +186,13 @@ parse_command_line_arguments() {
             USE_CORE_HOOKSPATH="yes"
             # No point in installing into existing when using core.hooksPath
             SKIP_INSTALL_INTO_EXISTING="yes"
-        elif [ "$p" = "--release-clone-url" ]; then
+        elif [ "$p" = "--update-clone-url" ]; then
             : # nothing to do here
-        elif [ "$prev_p" = "--release-clone-url" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+        elif [ "$prev_p" = "--update-clone-url" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             GITHOOKS_CLONE_URL="$p"
-        elif [ "$p" = "--release-clone-branch" ]; then
+        elif [ "$p" = "--update-clone-branch" ]; then
             : # nothing to do here
-        elif [ "$prev_p" = "--release-clone-branch" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+        elif [ "$prev_p" = "--update-clone-branch" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             GITHOOKS_CLONE_BRANCH="$p"
         else
             echo "! Unknown argument \`$p\`" >&2
@@ -1176,7 +1176,7 @@ set_githooks_directory() {
 }
 
 #####################################################
-# Updates the release clone in the install folder.
+# Updates the update clone in the install folder.
 #
 # Returns:
 #   1 if failed, 0 otherwise
@@ -1194,10 +1194,10 @@ update_release_clone() {
 
     # If not set by the user, check the config for url and branch
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
-        GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
+        GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
     fi
     if [ -z "$GITHOOKS_CLONE_BRANCH" ]; then
-        GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+        GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
     fi
 
     if is_git_repo "$CLONE_DIR"; then
@@ -1206,7 +1206,7 @@ update_release_clone() {
 
         if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
             [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ] ||
-            git -C "$CLONE_DIR" diff --quiet; then
+            ! git -C "$CLONE_DIR" diff-index --quiet HEAD; then
             PULL_ONLY="false"
         fi
     else
@@ -1276,14 +1276,14 @@ clone_release_repository() {
         return 1
     fi
 
-    git config --global githooks.autoupdate.releaseCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.releaseCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
 }
 
 ############################################################
-# Run the install from the release clone.
+# Run the install from the update clone.
 
 # Returns: 0 if succesful, 1 otherwise
 ############################################################

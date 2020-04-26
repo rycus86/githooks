@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2004.261333-23ac79
+# Version: 2004.261514-29e54f
 
 #####################################################
 # Prints the command line help for usage and
@@ -1493,7 +1493,7 @@ call_script() {
 }
 
 #####################################################
-# Does a release clone repository exist in the
+# Does a update clone repository exist in the
 #  install folder
 #
 # Returns: 0 if `true`, 1 otherwise
@@ -1531,7 +1531,7 @@ is_git_repo() {
 }
 
 #####################################################
-# Updates the release clone in the install folder
+# Updates the update clone in the install folder
 #
 # Sets the ${INSTALL_SCRIPT} variable
 #
@@ -1583,8 +1583,8 @@ update_release_clone() {
 ############################################################
 clone_release_repository() {
 
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
 
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
         GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
@@ -1618,8 +1618,8 @@ clone_release_repository() {
         return 1
     fi
 
-    git config --global githooks.autoupdate.releaseCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.releaseCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
 }
@@ -1949,6 +1949,18 @@ git hooks config [enable|disable|reset|print] update
     The \`reset\` option clears this setting.
     The \`print\` option outputs the current setting.
 
+git hooks config set update-clone-url <git-url> 
+git hooks config [set|print] update-clone-url
+
+    Sets or prints the configured githooks clone url used
+    for any update.
+
+git hooks config set update-clone-branch <branch-name> 
+git hooks config print update-clone-branch
+
+    Sets or prints the configured branch of the update clone 
+    used for any update.
+
 git hooks config [reset|print] update-time
 
     Resets the last Githooks update time with the \`reset\` option,
@@ -2012,6 +2024,12 @@ The \`print\` option outputs the current behavior.
         ;;
     "update")
         config_update_state "$CONFIG_OPERATION"
+        ;;
+    "update-clone-url")
+        config_update_clone_url "$CONFIG_OPERATION"
+        ;;
+    "update-clone-branch")
+        config_update_clone_branch "$CONFIG_OPERATION"
         ;;
     "update-time")
         config_update_last_run "$CONFIG_OPERATION"
@@ -2209,6 +2227,52 @@ config_update_state() {
         fi
     else
         echo "! Invalid operation: \`$1\` (use \`enable\`, \`disable\`, \`reset\` or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update clone url.
+# Prints or modifies the
+#   \`githooks.autoupdate.updateCloneUrl\`
+#   global Git configuration.
+#####################################################
+config_update_clone_url() {
+    if [ "$1" = "print" ]; then
+        echo "Update clone url set to:"
+        git config --global githooks.autoupdate.updateCloneUrl
+    elif [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            echo "! No valid url given" >&2
+            exit 1
+        fi
+        git config --global githooks.autoupdate.updateCloneUrl "$2"
+        config_update_clone_url "print"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update clone branch.
+# Prints or modifies the
+#   \`githooks.autoupdate.updateCloneUrl\`
+#   global Git configuration.
+#####################################################
+config_update_clone_branch() {
+    if [ "$1" = "print" ]; then
+        echo "Update clone branch set to:"
+        git config --global githooks.autoupdate.updateCloneBranch
+    elif [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            echo "! No valid branch name given" >&2
+            exit 1
+        fi
+        git config --global githooks.autoupdate.updateCloneBranch "$2"
+        config_update_clone_branch "print"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2
         exit 1
     fi
 }

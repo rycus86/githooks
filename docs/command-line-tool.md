@@ -208,6 +208,20 @@ $ git hooks config [reset|print] update-time
 Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
 
 ```shell
+git hooks config set update-clone-url <git-url>
+git hooks config [set|print] update-clone-url
+```
+
+Sets or prints the configured githooks clone url used for any update.
+
+```shell
+git hooks config set update-clone-branch <branch-name>
+git hooks config print update-clone-branch
+```
+
+Sets or prints the configured branch of the update clone used for any update.
+
+```shell
 git hooks config [enable|disable] fail-on-non-existing-shared-hooks
 ```
 
@@ -218,9 +232,9 @@ git hooks config [yes|no|reset|print] delete-detected-lfs-hooks
 ```
 
 By default, detected LFS hooks during install are disabled and backed up.
-The `yes` option remembers to always delete these hooks. 
+The `yes` option remembers to always delete these hooks.
 The `no` option remembers the default behavior.
-The decision is reset with `reset` to the default behavior. 
+The decision is reset with `reset` to the default behavior.
 The `print` option outputs the current behavior.
 
 ## git hooks tools
@@ -259,16 +273,17 @@ $ run <title> <text> <options> <long-options>
 ```
 
 The arguments for are:
+
 - `<title>` the title for the user gui dialog
 - `<text>` the text for the user gui dialog
-- `<short-options>` the button return values, slash-delimited, 
-    e.g. `Y/n/d`.
-    The default button is the first capital character found.
+- `<short-options>` the button return values, slash-delimited,
+  e.g. `Y/n/d`.
+  The default button is the first capital character found.
 - `<long-options>` the button texts in the gui,
-    e.g. `Yes/no/disable`
+  e.g. `Yes/no/disable`
 
 The script needs to return one of the short-options on `stdout`.
-If the exit code is not `0`, the normal prompt on `stdin` is shown as a fallback mechanism. 
+If the exit code is not `0`, the normal prompt on `stdin` is shown as a fallback mechanism.
 
 ```shell
 $ git hooks tools unregister [download|dialog]

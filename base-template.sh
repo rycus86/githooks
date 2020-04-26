@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.261333-23ac79
+# Version: 2004.261514-29e54f
 
 #####################################################
 # Execute the current hook,
@@ -73,7 +73,7 @@ load_install_dir() {
 }
 
 #####################################################
-# Does a release clone repository exist in the
+# Does a update clone repository exist in the
 #  install folder
 #
 # Returns: 0 if `true`, 1 otherwise
@@ -820,8 +820,8 @@ fetch_latest_update_script() {
 ############################################################
 clone_release_repository() {
 
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
 
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
         GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
@@ -855,8 +855,8 @@ clone_release_repository() {
         return 1
     fi
 
-    git config --global githooks.autoupdate.releaseCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.releaseCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
 }
@@ -873,7 +873,7 @@ is_git_repo() {
 }
 
 #####################################################
-# Updates the release clone in the install folder.
+# Updates the update clone in the install folder.
 #
 # Returns:
 #   1 if failed, 0 otherwise
@@ -889,17 +889,31 @@ update_release_clone() {
     #   - the existing clone has modifications (should not be the case)
     # - we dont have an existing clone
 
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.releaseCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.releaseCloneBranch)
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
 
     if is_git_repo "$CLONE_DIR"; then
         URL=$(git -C "$CLONE_DIR" config remote.origin.url)
         BRANCH=$(git -C "$CLONE_DIR" symbolic-ref -q --short HEAD)
 
         if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
-            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ] ||
-            git -C "$CLONE_DIR" diff --quiet; then
-            PULL_ONLY="false"
+            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ]; then
+            echo "! Cannot pull updates because \`origin\` of update clone \`$CLONE_DIR\` points" >&2
+            echo "  to url:" >&2
+            echo "   \`$URL\` on branch \`$BRANCH\`" >&2
+            echo "  which is not configured." >&2
+            echo "  See \`git hooks config [set|print] update-clone-url\` and" >&2
+            echo "      \`git hooks config [set|print] update-clone-branch\`" >&2
+            echo "  Either fix this or delete the clone \`$CLONE_DIR\` to trigger" >&2
+            echo "  a new checkout." >&2
+            return 1
+        fi
+
+        if ! git -C "$CLONE_DIR" diff-index --quiet HEAD; then
+            echo "! Cannot pull updates because the update clone \`$CLONE_DIR\` is dirty! " >&2
+            echo "  Either fix this or delete the clone \`$CLONE_DIR\` to trigger" >&2
+            echo "  a new checkout." >&2
+            return 1
         fi
     else
         PULL_ONLY="false"
