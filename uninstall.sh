@@ -54,7 +54,7 @@ mark_directory_as_target() {
 
     # Try to see if the path is given with a tilde
     TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
-    if [ -w "$TILDE_REPLACED" ]; then
+    if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
         TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
         return
     fi
