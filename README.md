@@ -213,10 +213,11 @@ Optionally, you can also pass the template directory to which you want to instal
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath --template-dir /home/public/.githooks
 ```
 
-If you want to install from another repository (e.g. from your own fork), you can specify the update repository url 
-as well as the branch name (default: `master`) when installing with:
+If you want to install from another repository (e.g. from your own fork), you can specify the update repository url as well as the branch name (default: `master`) when installing with:
+
 ```shell
-sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --update-clone-url "https://server.com/my-githooks-fork.git" --update-clone-branch "release"
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --update-clone-url "https://server.com/my-githooks-fork.git" --update-clone-branch "release"
+```
 
 This will be then used for installation and further updates.
 
