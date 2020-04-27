@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2004.272130-08fba9
+# Version: 2004.272128-9ba345
 
 #####################################################
 # Prints the command line help for usage and
@@ -1674,7 +1674,11 @@ is_update_available() {
 #   None
 #####################################################
 read_single_repo_information() {
-    IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+    if is_git_repo; then
+        IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
+    else
+        IS_SINGLE_REPO="no"
+    fi
 }
 
 #####################################################
