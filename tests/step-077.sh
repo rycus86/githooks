@@ -2,18 +2,6 @@
 # Test:
 #   Direct template execution: choose to ignore the update (single)
 
-if ! curl --version && ! wget --version; then
-    echo "Neither curl nor wget is available"
-    exit 249
-fi
-
-if ! curl -fsSL --connect-timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-    if ! wget -O- --timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-        echo "Could not connect to GitHub"
-        exit 249
-    fi
-fi
-
 mkdir -p /tmp/test077 && cd /tmp/test077 || exit 1
 git init || exit 1
 

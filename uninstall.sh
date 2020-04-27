@@ -406,7 +406,22 @@ uninstall_shared_hooks() {
 uninstall_cli() {
     if [ -d "$INSTALL_DIR/bin" ]; then
         if ! rm -rf "${INSTALL_DIR:?}/bin" >/dev/null 2>&1; then
-            echo "! Failed to delete the githook command-line tool" >&2
+            echo "! Failed to delete the githooks command-line tool" >&2
+            exit 1
+        fi
+    fi
+}
+
+############################################################
+# Uninstall the release repository.
+#
+# Returns:
+#   None
+############################################################
+uninstall_release_repo() {
+    if [ -d "$INSTALL_DIR/release" ]; then
+        if ! rm -rf "${INSTALL_DIR:?}/release" >/dev/null 2>&1; then
+            echo "! Failed to delete the githooks release repository" >&2
             exit 1
         fi
     fi
@@ -534,12 +549,17 @@ uninstall() {
     # Uninstall all cli
     uninstall_cli
 
+    # uninstall release repo
+    uninstall_release_repo
+
     # Unset global Githooks variables
     git config --global --unset githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
+    git config --global --unset githooks.autoupdate.updateCloneUrl
+    git config --global --unset githooks.autoupdate.updateCloneBranch
     git config --global --unset githooks.previous.searchdir
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir

@@ -4,7 +4,7 @@ TEST_DIR=$(dirname "$0")
 
 cat <<EOF | docker build --force-rm -t githooks:corehookspath-base -
 FROM alpine
-RUN apk add --no-cache git curl ca-certificates
+RUN apk add --no-cache git ca-certificates
 ENV EXTRA_INSTALL_ARGS --use-core-hookspath
 EOF
 

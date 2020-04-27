@@ -213,6 +213,13 @@ Optionally, you can also pass the template directory to which you want to instal
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspath --template-dir /home/public/.githooks
 ```
 
+If you want to install from another repository (e.g. from your own fork), you can specify the update repository url 
+as well as the branch name (default: `master`) when installing with:
+```shell
+sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --update-clone-url "https://server.com/my-githooks-fork.git" --update-clone-branch "release"
+
+This will be then used for installation and further updates.
+
 Finally, if you trust GitHub URLs more, use the command below that skips the redirect from `r.viktoradam.net`. Also, some corporate proxies are not in favour of my Cloudflare certificates for some reason, so you might have a better chance with GitHub links in this case.
 
 ```shell
@@ -316,32 +323,6 @@ $ git config --global --unset githooks.autoupdate.enabled
 ```
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.
-
-### Custom download tool
-
-If you want to use your own fork of this repository and/or need credentials to access the files for the update mechanism, you can manually setup a download script.
-You can use any executable or script file to perform the download.
-The example in the `examples/tools/download` folder contains a download script `run` which uses `git credential fill` to retrieve login and password.
-
-```shell
-# install the example download tool from this repository
-$ git hooks tools register download "./examples/tools/download"
-```
-
-This will copy the tool to a centrally managed folder to execute when downloading files.
-The tool's interface is as follows.
-
-```shell
-$ run <relativeFilePath> <outputFile>     # if `run` is executable
-$ sh run <relativeFilePath> <outputFile>  # otherwise, assuming `run` is a shell script
-```
-
-The arguments for the download tool are:
-
-- `<relativeFilePath>` is the file relative to the repository root directory
-- `<outputFile>` temporary file save the downloaded content to
-
-Read more about this command on the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) documentation page.
 
 ### Custom user prompt
 

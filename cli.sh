@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2004.251306-8304f2
+# Version: 2004.261514-29e54f
 
 #####################################################
 # Prints the command line help for usage and
@@ -1493,44 +1493,16 @@ call_script() {
 }
 
 #####################################################
-# Downloads a file "$1" with `wget` or `curl`
+# Does a update clone repository exist in the
+#  install folder
 #
-# Returns:
-#   0 if download succeeded, 1 otherwise
+# Returns: 0 if `true`, 1 otherwise
 #####################################################
-download_file() {
-    DOWNLOAD_FILE="$1"
-    OUTPUT_FILE="$2"
-    DOWNLOAD_APP=$(get_tool_script "download")
-
-    if [ "$DOWNLOAD_APP" != "" ]; then
-        echo "  Using App at \`$DOWNLOAD_APP\`"
-        # Use the external download app for downloading the file
-        call_script "$DOWNLOAD_APP" "$DOWNLOAD_FILE" "$OUTPUT_FILE"
-    else
-        # The main update url.
-        MAIN_DOWNLOAD_URL="https://raw.githubusercontent.com/rycus86/githooks/master"
-
-        # Default implementation
-        DOWNLOAD_URL="$MAIN_DOWNLOAD_URL/$DOWNLOAD_FILE"
-
-        echo "  Download $DOWNLOAD_URL ..."
-        if curl --version >/dev/null 2>&1; then
-            curl -fsSL "$DOWNLOAD_URL" -o "$OUTPUT_FILE" >/dev/null 2>&1
-        elif wget --version >/dev/null 2>&1; then
-            wget -O "$OUTPUT_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1
-        else
-            echo "! Cannot download file \`$DOWNLOAD_URL\` - needs either curl or wget"
-            return 1
-        fi
+is_release_clone_existing() {
+    if git -C "$INSTALL_DIR/release" rev-parse >/dev/null 2>&1; then
+        return 0
     fi
-
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
-        echo "! Cannot download file \`$DOWNLOAD_FILE\` - command failed"
-        return 1
-    fi
-    return 0
+    return 1
 }
 
 #####################################################
@@ -1540,13 +1512,116 @@ download_file() {
 # Sets the ${INSTALL_SCRIPT} variable
 #
 # Returns:
-#   1 if failed the load the script, 0 otherwise
+#   1 if failed to load the script, 0 otherwise
 #####################################################
 fetch_latest_install_script() {
-    INSTALL_SCRIPT="$(mktemp)"
-    if ! download_file "install.sh" "$INSTALL_SCRIPT"; then
+    update_release_clone || return 1
+    return 0
+}
+
+############################################################
+# Checks whether the given directory
+#   is a Git repository (bare included) or not.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+is_git_repo() {
+    git -C "$1" rev-parse >/dev/null 2>&1 || return 1
+}
+
+#####################################################
+# Updates the update clone in the install folder
+#
+# Sets the ${INSTALL_SCRIPT} variable
+#
+# Returns:
+#   1 if failed, 0 otherwise
+#####################################################
+update_release_clone() {
+
+    if ! is_git_repo "$INSTALL_DIR/release"; then
+        clone_release_repository || return 1
+    fi
+
+    GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
+
+    PULL_OUTPUT=$(git -C "$GITHOOKS_CLONE_DIR" --work-tree="$GITHOOKS_CLONE_DIR" --git-dir="$GITHOOKS_CLONE_DIR/.git" -c core.hooksPath=/dev/null pull 2>&1)
+    #shellcheck disable=2181
+    if [ $? -ne 0 ]; then
+        echo "! Pulling updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
+        echo "$PULL_OUTPUT" >&2
         return 1
     fi
+
+    INSTALL_SCRIPT="$GITHOOKS_CLONE_DIR/install.sh"
+    if [ ! -f "$INSTALL_SCRIPT" ]; then
+        echo "! Non-existing \`install.sh\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
+        return 1
+    fi
+
+    UNINSTALL_SCRIPT="$GITHOOKS_CLONE_DIR/uninstall.sh"
+    if [ ! -f "$UNINSTALL_SCRIPT" ]; then
+        echo "! Non-existing \`uninstall.sh\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
+        return 1
+    fi
+
+    README_FILE="$GITHOOKS_CLONE_DIR/.githooks/README.md"
+    if [ ! -f "$README_FILE" ]; then
+        echo "! Non-existing \`.githooks/README.md\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+############################################################
+# Clone the URL `$GITHOOKS_CLONE_URL` into the install
+# folder `$INSTALL_DIR/release` for further updates.
+#
+# Returns: 0 if succesful, 1 otherwise
+############################################################
+clone_release_repository() {
+
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+
+    if [ -z "$GITHOOKS_CLONE_URL" ]; then
+        GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
+    fi
+
+    if [ -z "$GITHOOKS_CLONE_BRANCH" ]; then
+        GITHOOKS_CLONE_BRANCH="master"
+    fi
+
+    if [ -d "$INSTALL_DIR/release" ]; then
+        if ! rm -rf "$INSTALL_DIR/release" >/dev/null 2>&1; then
+            echo "! Failed to remove an existing githook release repository" >&2
+            return 1
+        fi
+    fi
+
+    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` ..."
+
+    CLONE_OUTPUT=$(git clone \
+        -c core.hooksPath=/dev/null \
+        --depth 1 \
+        --single-branch \
+        --branch "$GITHOOKS_CLONE_BRANCH" \
+        "$GITHOOKS_CLONE_URL" "$INSTALL_DIR/release" 2>&1)
+
+    #shellcheck disable=2181
+    if [ $? -ne 0 ]; then
+        echo "! Cloning of repository \`$GITHOOKS_CLONE_URL\`"
+        echo "! to install directory \`$INSTALL_DIR/release\` failed with output: " >&2
+        echo "$CLONE_OUTPUT" >&2
+        return 1
+    fi
+
+    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
+
+    return 0
 }
 
 #####################################################
@@ -1556,13 +1631,11 @@ fetch_latest_install_script() {
 # Sets the ${UNINSTALL_SCRIPT} variable
 #
 # Returns:
-#   1 if failed the load the script, 0 otherwise
+#   1 if failed to load the script, 0 otherwise
 #####################################################
 fetch_latest_uninstall_script() {
-    UNINSTALL_SCRIPT="$(mktemp)"
-    if ! download_file "uninstall.sh" "$UNINSTALL_SCRIPT"; then
-        return 1
-    fi
+    update_release_clone || return 1
+    return 0
 }
 
 #####################################################
@@ -1734,14 +1807,11 @@ git hooks readme [add|update]
 # Sets the ${README_FILE} variable
 #
 # Returns:
-#   1 if failed the load the contents, 0 otherwise
+#   1 if failed to load the contents, 0 otherwise
 #####################################################
 fetch_latest_readme() {
-    README_FILE="$(mktemp)"
-    if ! download_file ".githooks/README.md" "$README_FILE"; then
-        echo "! Failed to fetch the latest README" >&2
-        return 1
-    fi
+    update_release_clone || return 1
+    return 0
 }
 
 #####################################################
@@ -1879,6 +1949,18 @@ git hooks config [enable|disable|reset|print] update
     The \`reset\` option clears this setting.
     The \`print\` option outputs the current setting.
 
+git hooks config set update-clone-url <git-url> 
+git hooks config [set|print] update-clone-url
+
+    Sets or prints the configured githooks clone url used
+    for any update.
+
+git hooks config set update-clone-branch <branch-name> 
+git hooks config print update-clone-branch
+
+    Sets or prints the configured branch of the update clone 
+    used for any update.
+
 git hooks config [reset|print] update-time
 
     Resets the last Githooks update time with the \`reset\` option,
@@ -1942,6 +2024,12 @@ The \`print\` option outputs the current behavior.
         ;;
     "update")
         config_update_state "$CONFIG_OPERATION"
+        ;;
+    "update-clone-url")
+        config_update_clone_url "$CONFIG_OPERATION"
+        ;;
+    "update-clone-branch")
+        config_update_clone_branch "$CONFIG_OPERATION"
         ;;
     "update-time")
         config_update_last_run "$CONFIG_OPERATION"
@@ -2144,6 +2232,52 @@ config_update_state() {
 }
 
 #####################################################
+# Manages the automatic update clone url.
+# Prints or modifies the
+#   \`githooks.autoupdate.updateCloneUrl\`
+#   global Git configuration.
+#####################################################
+config_update_clone_url() {
+    if [ "$1" = "print" ]; then
+        echo "Update clone url set to:"
+        git config --global githooks.autoupdate.updateCloneUrl
+    elif [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            echo "! No valid url given" >&2
+            exit 1
+        fi
+        git config --global githooks.autoupdate.updateCloneUrl "$2"
+        config_update_clone_url "print"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
+# Manages the automatic update clone branch.
+# Prints or modifies the
+#   \`githooks.autoupdate.updateCloneUrl\`
+#   global Git configuration.
+#####################################################
+config_update_clone_branch() {
+    if [ "$1" = "print" ]; then
+        echo "Update clone branch set to:"
+        git config --global githooks.autoupdate.updateCloneBranch
+    elif [ "$1" = "set" ]; then
+        if [ -z "$2" ]; then
+            echo "! No valid branch name given" >&2
+            exit 1
+        fi
+        git config --global githooks.autoupdate.updateCloneBranch "$2"
+        config_update_clone_branch "print"
+    else
+        echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2
+        exit 1
+    fi
+}
+
+#####################################################
 # Manages the timestamp for the last update check.
 # Prints or modifies the
 #   \`githooks.autoupdate.lastrun\`
@@ -2256,27 +2390,14 @@ manage_tools() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks tools register [download|dialog] <scriptFolder>
-
-    ( experimental feature )
+git hooks tools register <toolName> <scriptFolder>
 
     Install the script folder \`<scriptFolder>\` in 
     the installation directory under \`tools/<toolName>\`.
 
-    >> Download Tool
+    Currently the following tools are supported:
 
-    The interface of the download tool is as follows.
-    
-    # if \`run\` is executable
-    \$ run <relativeFilePath> <outputFile>
-    # otherwise, assuming \`run\` is a shell script
-    \$ sh run <relativeFilePath> <outputFile>
-    
-    The arguments of the download tool are:
-    - \`<relativeFilePath>\` is the file relative to the repository root
-    - \`<outputFile>\` file to write the results to (may not exist yet)
-
-    >> Dialog Tool
+    >> Dialog Tool (<toolName> = \"dialog\")
 
     The interface of the dialog tool is as follows.
     
@@ -2297,9 +2418,7 @@ git hooks tools register [download|dialog] <scriptFolder>
     The script needs to return one of the short-options on \`stdout\`.
     Non-zero exit code triggers the fallback of reading from \`stdin\`.
 
-git hooks tools unregister [download|dialog]
-
-    ( experimental feature )
+git hooks tools unregister <toolName>
 
     Uninstall the script folder in the installation 
     directory under \`tools/<toolName>\`.
@@ -2333,7 +2452,7 @@ git hooks tools unregister [download|dialog]
 #   1 on failure, 0 otherwise
 #####################################################
 tools_register() {
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "dialog" ]; then
         SCRIPT_FOLDER="$2"
 
         if [ -d "$SCRIPT_FOLDER" ]; then
@@ -2362,7 +2481,7 @@ tools_register() {
             exit 1
         fi
     else
-        echo "! Invalid operation: \`$1\` (use \`download\` or  \`dialog\`)" >&2
+        echo "! Invalid operation: \`$1\` (use \`dialog\`)" >&2
         exit 1
     fi
 }
@@ -2376,7 +2495,7 @@ tools_register() {
 tools_unregister() {
     [ "$2" = "--quiet" ] && QUIET="Y"
 
-    if [ "$1" = "download" ] || [ "$1" = "dialog" ]; then
+    if [ "$1" = "dialog" ]; then
         if [ -d "$INSTALL_DIR/tools/$1" ]; then
             rm -r "$INSTALL_DIR/tools/$1"
             [ -n "$QUIET" ] || echo "Uninstalled the \`$1\` tool"
@@ -2384,7 +2503,7 @@ tools_unregister() {
             [ -n "$QUIET" ] || echo "! The \`$1\` tool is not installed" >&2
         fi
     else
-        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`download\` or \`dialog\`)" >&2
+        [ -n "$QUIET" ] || echo "! Invalid tool: \`$1\` (use \`dialog\`)" >&2
         exit 1
     fi
 }

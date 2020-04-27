@@ -2,18 +2,6 @@
 # Test:
 #   Cli tool: add/update README
 
-if ! curl --version && ! wget --version; then
-    echo "Neither curl nor wget is available"
-    exit 249
-fi
-
-if ! curl -fsSL --connect-timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-    if ! wget -O- --timeout 3 https://github.com/rycus86/githooks >/dev/null 2>&1; then
-        echo "Could not connect to GitHub"
-        exit 249
-    fi
-fi
-
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1

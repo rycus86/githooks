@@ -8,15 +8,11 @@ else
     STEPS_TO_RUN="step-*"
 fi
 
-# Switch to mock the download of any install.sh and use the current implementation
-if [ -n "$MOCK_DOWNLOAD" ]; then
-    echo "Execute tests by mocking the download of the install.sh script!"
-fi
-
 cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
 ADD base-template.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
 
 RUN git config --global user.email "githook@test.com" && \
@@ -31,15 +27,15 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
     sed -i -E 's|HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i -E 's|HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
-    sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh
+    sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh && \\
+    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh 
 
-RUN if [ -n "$MOCK_DOWNLOAD" ]; then \\
-    # We overwrite the download to use the current install.sh in all scripts
-    sed -i -E 's@(curl|wget).*(DOWNLOAD_URL|OUTPUT_FILE).*(DOWNLOAD_URL|OUTPUT_FILE).*@cp -f /var/lib/githooks/install.sh "\$OUTPUT_FILE"@g' \\
-        /var/lib/githooks/install.sh \\
-        /var/lib/githooks/cli.sh  \\
-        /var/lib/githooks/base-template.sh ; \\
-    fi
+# Commit everything
+RUN echo "Make test gitrepo to clone from ..." && \
+    cd /var/lib/githooks && git init && \
+    git add . && \
+    git commit -a -m "Initial release"
+
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
         sed -i "s|sh /var/lib/githooks/install.sh|sh /var/lib/githooks/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
