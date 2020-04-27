@@ -390,7 +390,7 @@ using_hooks_path() {
 ############################################################
 uninstall_shared_hooks() {
     if [ -d "$INSTALL_DIR/shared" ]; then
-        if ! rm -rf "${INSTALL_DIR:?}/shared" >/dev/null 2>&1; then
+        if ! rm -rf "${INSTALL_DIR}/shared" >/dev/null 2>&1; then
             echo "! Failed to delete shared hook repository folders" >&2
             exit 1
         fi
@@ -404,8 +404,9 @@ uninstall_shared_hooks() {
 #   None
 ############################################################
 uninstall_cli() {
-    if [ -d "$INSTALL_DIR/bin" ]; then
-        if ! rm -rf "${INSTALL_DIR:?}/bin" >/dev/null 2>&1; then
+    CLI_DIR="${INSTALL_DIR}/bin"
+    if [ -d "$CLI_DIR" ]; then
+        if ! rm -rf "$CLI_DIR" >/dev/null 2>&1; then
             echo "! Failed to delete the githooks command-line tool" >&2
             exit 1
         fi
@@ -419,8 +420,9 @@ uninstall_cli() {
 #   None
 ############################################################
 uninstall_release_repo() {
-    if [ -d "$INSTALL_DIR/release" ]; then
-        if ! rm -rf "${INSTALL_DIR:?}/release" >/dev/null 2>&1; then
+    RELEASE_DIR="${INSTALL_DIR}/release"
+    if [ -d "$RELEASE_DIR" ]; then
+        if ! rm -rf "$RELEASE_DIR" >/dev/null 2>&1; then
             echo "! Failed to delete the githooks release repository" >&2
             exit 1
         fi

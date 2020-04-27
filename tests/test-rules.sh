@@ -25,6 +25,7 @@ run_pre_commit_test no-tabs
 run_pre_commit_test no-todo-or-fixme
 run_pre_commit_test shfmt
 run_pre_commit_test shellcheck
+run_pre_commit_test shellcheck-ignore-format
 run_pre_commit_test has-shell-function-comments
 run_pre_commit_test cli-docs-up-to-date
 

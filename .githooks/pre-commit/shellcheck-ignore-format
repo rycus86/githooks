@@ -1,0 +1,20 @@
+#!/bin/sh
+INVALID_FORMAT="no"
+OLD_IFS="$IFS"
+
+OFFENDING_LINES=$(grep -nrE 'shellcheck.*disable' ./* .githooks/* examples/* | grep -v '/cover/' | grep -v '# shellcheck disable=SC')
+
+IFS="
+"
+for WITH_LINE in $OFFENDING_LINES; do
+    echo "! Shellcheck ignore with wrong format: $WITH_LINE"
+    INVALID_FORMAT="yes"
+done
+IFS="$OLD_IFS"
+
+if [ "$INVALID_FORMAT" = "no" ]; then
+    echo "* No shellcheck ignore format issues found"
+else
+    echo "  Use \`# shellcheck disable=SCnnnn\` format instead"
+    exit 1
+fi

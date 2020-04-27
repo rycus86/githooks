@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2004.261514-29e54f
+# Version: 2004.272130-08fba9
 
 #####################################################
 # Prints the command line help for usage and
@@ -1547,7 +1547,7 @@ update_release_clone() {
     GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
 
     PULL_OUTPUT=$(git -C "$GITHOOKS_CLONE_DIR" --work-tree="$GITHOOKS_CLONE_DIR" --git-dir="$GITHOOKS_CLONE_DIR/.git" -c core.hooksPath=/dev/null pull 2>&1)
-    #shellcheck disable=2181
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "! Pulling updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
         echo "$PULL_OUTPUT" >&2
@@ -1596,7 +1596,7 @@ clone_release_repository() {
 
     if [ -d "$INSTALL_DIR/release" ]; then
         if ! rm -rf "$INSTALL_DIR/release" >/dev/null 2>&1; then
-            echo "! Failed to remove an existing githook release repository" >&2
+            echo "! Failed to remove an existing githooks release repository" >&2
             return 1
         fi
     fi
@@ -1610,10 +1610,9 @@ clone_release_repository() {
         --branch "$GITHOOKS_CLONE_BRANCH" \
         "$GITHOOKS_CLONE_URL" "$INSTALL_DIR/release" 2>&1)
 
-    #shellcheck disable=2181
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
-        echo "! Cloning of repository \`$GITHOOKS_CLONE_URL\`"
-        echo "! to install directory \`$INSTALL_DIR/release\` failed with output: " >&2
+        echo "! Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` failed with output: " >&2
         echo "$CLONE_OUTPUT" >&2
         return 1
     fi
@@ -2239,8 +2238,7 @@ config_update_state() {
 #####################################################
 config_update_clone_url() {
     if [ "$1" = "print" ]; then
-        echo "Update clone url set to:"
-        git config --global githooks.autoupdate.updateCloneUrl
+        echo "Update clone url set to: $(git config --global githooks.autoupdate.updateCloneUrl)"
     elif [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             echo "! No valid url given" >&2
@@ -2262,8 +2260,7 @@ config_update_clone_url() {
 #####################################################
 config_update_clone_branch() {
     if [ "$1" = "print" ]; then
-        echo "Update clone branch set to:"
-        git config --global githooks.autoupdate.updateCloneBranch
+        echo "Update clone branch set to: $(git config --global githooks.autoupdate.updateCloneBranch)"
     elif [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             echo "! No valid branch name given" >&2
