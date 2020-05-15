@@ -11,7 +11,7 @@ fi
 cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
-ADD base-template.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+ADD base-template.sh base-template-symlink.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
 ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
 
@@ -34,7 +34,8 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
     git add . && \
-    git commit -a -m "Initial release"
+    git commit -a -m "Initial release" && \
+    git commit -a --allow-empty -m "Empty to reset to trigger update"
 
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\

@@ -22,13 +22,7 @@ if ! sh /var/lib/githooks/install.sh --single; then
     exit 1
 fi
 
-SETUP_AS_SINGLE_REPO=$(git config --get --local githooks.single.install)
-if [ "$SETUP_AS_SINGLE_REPO" != "yes" ]; then
-    echo "! Expected to be a single-repo install"
-    exit 1
-fi
-
-ARE_UPDATES_ENABLED=$(git config --local --get githooks.autoupdate.enabled)
+ARE_UPDATES_ENABLED=$(git config --global --get githooks.autoupdate.enabled)
 if [ "$ARE_UPDATES_ENABLED" != "Y" ]; then
     echo "! Auto updates were expected to be enabled"
     exit 1
@@ -40,8 +34,11 @@ if [ -n "$LAST_UPDATE" ]; then
     exit 1
 fi
 
-sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh ||
+# Reset to trigger update
+if ! (cd ~/.githooks/release && git reset --hard HEAD^); then
+    echo "! Could not reset origin/master to trigger update."
     exit 1
+fi
 
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
@@ -51,12 +48,6 @@ OUTPUT=$(
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then
     echo "$OUTPUT"
     echo "! Expected installation output not found"
-    exit 1
-fi
-
-if echo "$OUTPUT" | grep -q "Git hook template ready"; then
-    echo "$OUTPUT"
-    echo "! Unexpected installation output found"
     exit 1
 fi
 

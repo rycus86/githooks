@@ -31,7 +31,8 @@ mkdir -p /tmp/test108/.githooks/pre-commit &&
 
 echo A >A.txt
 git add A.txt
-if ! git commit -a -m "Test" 2>&1 | grep -q "Githooks installation is corrupt"; then
-    echo "! Expected the installation to be corrupt"
+OUT=$(git commit -a -m "Test" 2>&1)
+if ! echo "$OUT" | grep -q "Githooks installation is corrupt"; then
+    echo "! Expected the installation to be corrupt: '$OUT'"
     exit 6
 fi

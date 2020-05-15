@@ -185,13 +185,11 @@ The global install prefix defaults to `${HOME}` but can be changed by passing `-
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --non-interactive
 ```
 
-There is also an option to run the install script for the repository in the current directory only, without setting up the Git templates for any future repositories. For this, run the command below.
+There is also an option to run the install script for the repository in the current directory only. For this, run the command below.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
-
-You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
 

@@ -186,20 +186,17 @@ uninstall_from_existing_repositories() {
 }
 
 #####################################################
-# Uninstall from all repositories in
-#   `autoupdate.registered` which gets deleted
-#    at the end.
+# Uninstall from all registered repositories
 #
 # Returns: 0
 #####################################################
 uninstall_from_registered_repositories() {
 
-    LIST="$INSTALL_DIR/autoupdate/registered"
+    LIST="$INSTALL_DIR/registered"
     if [ -f "$LIST" ]; then
 
         # Filter list according to
-        # - non-existing repos
-        # - if marked as single install.
+        # - non-standalone repos
 
         # Uninstall list
         UNINSTALL_LIST=$(mktemp)
@@ -211,12 +208,6 @@ uninstall_from_registered_repositories() {
             if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
                 # Not existing git dir -> skip.
                 true
-
-            elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
-                # Found a registered repo which is now a single install:
-                # -> remove registered flag and skip.
-                git -C "$INSTALLED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
-
             else
                 # Found existing registed repository -> uninstall
                 echo "$INSTALLED_REPO" >>"$UNINSTALL_LIST"
@@ -268,14 +259,13 @@ is_git_repo() {
 }
 
 ############################################################
-# Removes the repository from the list `autoupdate.registered`
-#  for potential future autoupdates.
+# Removes the repository from the global list
 #
 # Returns: None
 ############################################################
-unregister_repo_for_autoupdate() {
+unregister_repo() {
     CURRENT_REPO="$(cd "$1" && pwd)"
-    LIST="$INSTALL_DIR/autoupdate/registered"
+    LIST="$INSTALL_DIR/registered"
 
     # Remove
     if [ -f "$LIST" ]; then
@@ -326,7 +316,7 @@ uninstall_hooks_from_repo() {
             # shellcheck disable=SC2181
             if [ $? -eq 0 ]; then
                 rm -f "$TARGET_HOOK"
-                UNINSTALLED="yes"
+                UNINSTALLED="true"
 
                 # Restore the previously moved hook if there was any
                 if [ -f "${TARGET_HOOK}.replaced.githook" ]; then
@@ -338,21 +328,22 @@ uninstall_hooks_from_repo() {
 
     if [ -f "${TARGET}/.githooks.checksum" ]; then
         rm -f "${TARGET}/.githooks.checksum"
-        UNINSTALLED="yes"
+        UNINSTALLED="true"
     fi
 
     # Remove all install relevant local githooks configs
     (
-        cd "${TARGET}" && git config --local --unset githooks.single.install >/dev/null 2>&1 &&
-            git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
+        cd "${TARGET}" &&
+            git config --local --unset githooks.single.install >/dev/null && # legacy setting (deperecated)
+            git config --local --unset githooks.install.registered >/dev/null 2>&1
     )
 
-    if [ "$UNINSTALLED" = "yes" ]; then
+    if [ "$UNINSTALLED" = "true" ]; then
         echo "Hooks are uninstalled from $TARGET"
     fi
 
-    # Always remove this repo from the registered list (also single install)
-    unregister_repo_for_autoupdate "${TARGET}"
+    # Always remove this repo from the registered list
+    unregister_repo "${TARGET}"
 
     # If Git LFS is available, try installing the LFS hooks again
     if [ "$GIT_LFS_AVAILABLE" = "true" ]; then
