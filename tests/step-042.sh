@@ -36,7 +36,7 @@ fi
 
 # Reset to trigger update
 if ! (cd ~/.githooks/release && git reset --hard HEAD^); then
-    echo "! Could not reset origin/master to trigger update."
+    echo "! Could not reset master to trigger update."
     exit 1
 fi
 

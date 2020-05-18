@@ -10,7 +10,7 @@ git init || exit 1
 
 # add a pre-commit hook, execute and verify that it worked
 mkdir -p .githooks/pre-commit &&
-    echo 'echo "From githooks" > /tmp/hooktest' >.githooks/pre-commit/test ||
+    echo 'echo "WUPS" && echo "From githooks" > /tmp/hooktest' >.githooks/pre-commit/test ||
     exit 1
 
 git commit -m '' 2>/dev/null

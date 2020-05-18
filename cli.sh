@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2005.151157-80e089
+# Version: 2005.181533-1c8100
 
 #####################################################
 # Prints the command line help for usage and
@@ -1310,12 +1310,8 @@ git hooks install [--global]
         INSTALL_FLAGS="--single"
     fi
 
-    if ! update_release_clone --fetch-only; then
+    if ! assert_release_clone; then
         exit 1
-    fi
-
-    if is_autoupdate_enabled && is_update_available; then
-        update_release_clone || exit 1
     fi
 
     if ! execute_install_script $INSTALL_FLAGS; then
@@ -1349,14 +1345,6 @@ git hooks uninstall [--global]
         UNINSTALL_ARGS="--global"
     elif [ -n "$1" ]; then
         echo "! Invalid argument: \`$1\`" >&2 && exit 1
-    fi
-
-    if ! update_release_clone --fetch-only; then
-        exit 1
-    fi
-
-    if is_autoupdate_enabled && is_update_available; then
-        update_release_clone || exit 1
     fi
 
     if ! execute_uninstall_script $UNINSTALL_ARGS; then
@@ -1410,19 +1398,6 @@ git hooks update [enable|disable]
     fi
 
     record_update_time
-
-    echo "Checking for updates ..."
-
-    if ! update_release_clone; then
-        exit 1
-    fi
-
-    if [ "$1" != "force" ]; then
-        if ! is_update_applied; then
-            echo "  Githooks is already on the latest version"
-            return
-        fi
-    fi
 
     if ! execute_install_script; then
         echo "! Failed to execute the installation"
@@ -1518,137 +1493,20 @@ execute_git() {
 }
 
 #####################################################
-# Updates the update clone in the install folder.
-#   Always sets the current commit SHA of the release to
-#   `$GITHOOKS_RELEASE_COMMIT`
-#   If `--fetch-only` is given the
-#   `$GITHOOKS_UPDATE_COMMIT` is set to the
-#   commit SHA of the remote changes if there
-#   is an update available.
-#   If the release clone got updated the variable
-#   `$GITHOOKS_CLONE_DIR_IS_UPDATED` is set to
-#   `true`
-#
+#  Creates the release clone if needed.
 # Returns:
 #   1 if failed, 0 otherwise
 #####################################################
 # shellcheck disable=SC2120
-update_release_clone() {
+assert_release_clone() {
 
-    MERGE="true"
-    [ "$1" = "--fetch-only" ] && MERGE="false"
-
+    # We do a fresh clone if there is no clone
     GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
-    GITHOOKS_CLONE_DIR_IS_UPDATED="false"
-    PULL_ONLY="true"
-
-    # We do a fresh clone if:
-    # - we have an existing clone AND
-    #   - url or branch of the existing clone does not match the settings OR
-    #   - the existing clone has modifications (should not be the case)
-    # - we dont have an existing clone
-
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
-
-    if is_git_repo "$GITHOOKS_CLONE_DIR"; then
-        URL=$(execute_git "$GITHOOKS_CLONE_DIR" config remote.origin.url)
-        BRANCH=$(execute_git "$GITHOOKS_CLONE_DIR" symbolic-ref -q --short HEAD)
-
-        if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
-            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ]; then
-            echo "! Cannot pull updates because \`origin\` of update clone \`$GITHOOKS_CLONE_DIR\` points" >&2
-            echo "  to url:" >&2
-            echo "   \`$URL\` on branch \`$BRANCH\`" >&2
-            echo "  which is not configured." >&2
-            echo "  See \`git hooks config [set|print] update-clone-url\` and" >&2
-            echo "      \`git hooks config [set|print] update-clone-branch\`" >&2
-            echo "  Either fix this or delete the clone \`$GITHOOKS_CLONE_DIR\` to trigger" >&2
-            echo "  a new checkout." >&2
-            return 1
-        fi
-
-        if ! execute_git "$GITHOOKS_CLONE_DIR" diff-index --quiet HEAD; then
-            echo "! Cannot pull updates because the update clone \`$GITHOOKS_CLONE_DIR\` is dirty! " >&2
-            echo "  Either fix this or delete the clone \`$GITHOOKS_CLONE_DIR\` to trigger" >&2
-            echo "  a new checkout." >&2
-            return 1
-        fi
-    else
-        PULL_ONLY="false"
-    fi
-
-    if [ "$PULL_ONLY" = "true" ]; then
-
-        FETCH_OUTPUT=$(
-            execute_git "$GITHOOKS_CLONE_DIR" remote update origin 2>&1
-        )
-
-        # shellcheck disable=SC2181
-        if [ $? -ne 0 ]; then
-            echo "! Fetching updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
-            echo "$FETCH_OUTPUT" >&2
-            return 1
-        fi
-
-        GITHOOKS_RELEASE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
-        GITHOOKS_UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "origin/$GITHOOKS_CLONE_BRANCH")
-
-        if [ "$GITHOOKS_RELEASE_COMMIT" != "$GITHOOKS_UPDATE_COMMIT" ]; then
-
-            if [ "$MERGE" = "true" ]; then
-                # Update will be merged
-                unset GITHOOKS_UPDATE_COMMIT
-
-                # Fast forward merge in the changes if possible
-                PULL_OUTPUT=$(
-                    execute_git "$GITHOOKS_CLONE_DIR" merge --ff-only "origin/$GITHOOKS_CLONE_BRANCH" 2>&1
-                )
-
-                # shellcheck disable=SC2181
-                if [ $? -ne 0 ]; then
-                    echo "! Fast-forward merging updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
-                    echo "$PULL_OUTPUT" >&2
-                    return 1
-                fi
-
-                # shellcheck disable=SC2034
-                GITHOOKS_CLONE_DIR_IS_UPDATED="true"
-            fi
-        else
-            # No update available
-            unset GITHOOKS_UPDATE_COMMIT
-        fi
-
-    else
+    if ! is_git_repo "$GITHOOKS_CLONE_DIR"; then
         clone_release_repository || return 1
     fi
 
-    GITHOOKS_RELEASE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
-
     return 0
-}
-
-#####################################################
-# Checks if there is an update in the release clone
-#   waiting for a fast-forward merge.
-#
-# Returns:
-#   0 if an update needs to be applied, 1 otherwise
-#####################################################
-is_update_available() {
-    [ -n "$GITHOOKS_UPDATE_COMMIT" ] || return 1
-}
-
-#####################################################
-# Checks if an update was applied
-#  in the release clone. A clone is also an update.
-#
-# Returns:
-#   0 if an update was applied, 1 otherwise
-#####################################################
-is_update_applied() {
-    [ "$GITHOOKS_CLONE_DIR_IS_UPDATED" = "true" ] || return 1
 }
 
 ############################################################
@@ -1659,8 +1517,9 @@ is_update_applied() {
 ############################################################
 clone_release_repository() {
 
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+    GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
+    GITHOOKS_CLONE_URL=$(git config --global githooks.cloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.cloneBranch)
 
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
         GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
@@ -1670,44 +1529,33 @@ clone_release_repository() {
         GITHOOKS_CLONE_BRANCH="master"
     fi
 
-    if [ -d "$INSTALL_DIR/release" ]; then
-        if ! rm -rf "$INSTALL_DIR/release" >/dev/null 2>&1; then
+    if [ -d "$GITHOOKS_CLONE_DIR" ]; then
+        if ! rm -rf "$GITHOOKS_CLONE_DIR" >/dev/null 2>&1; then
             echo "! Failed to remove an existing githooks release repository" >&2
             return 1
         fi
     fi
 
-    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` ..."
+    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` ..."
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
         --depth 1 \
         --single-branch \
         --branch "$GITHOOKS_CLONE_BRANCH" \
-        "$GITHOOKS_CLONE_URL" "$INSTALL_DIR/release" 2>&1)
+        "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1)
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
-        echo "! Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` failed with output: " >&2
+        echo "! Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` failed with output: " >&2
         echo "$CLONE_OUTPUT" >&2
         return 1
     fi
 
-    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
-}
-
-#####################################################
-# Checks if the release clone has been update
-#   after calling `update_release_clone`.
-#
-# Returns:
-#   0 if an the release clone was updated, 1 otherwise
-#####################################################
-is_update_applied() {
-    [ "$GITHOOKS_CLONE_DIR_IS_UPDATED" = "true" ] || return 1
 }
 
 #####################################################
@@ -1835,12 +1683,8 @@ git hooks readme [add|update]
         exit 1
     fi
 
-    if ! update_release_clone --fetch-only; then
+    if ! assert_release_clone; then
         exit 1
-    fi
-
-    if is_autoupdate_enabled && is_update_available; then
-        update_release_clone || exit 1
     fi
 
     README_FILE="$INSTALL_DIR/release/README.md"
@@ -2238,18 +2082,18 @@ config_update_state() {
 #####################################################
 # Manages the automatic update clone url.
 # Prints or modifies the
-#   \`githooks.autoupdate.updateCloneUrl\`
+#   \`githooks.cloneUrl\`
 #   global Git configuration.
 #####################################################
 config_update_clone_url() {
     if [ "$1" = "print" ]; then
-        echo "Update clone url set to: $(git config --global githooks.autoupdate.updateCloneUrl)"
+        echo "Update clone url set to: $(git config --global githooks.cloneUrl)"
     elif [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             echo "! No valid url given" >&2
             exit 1
         fi
-        git config --global githooks.autoupdate.updateCloneUrl "$2"
+        git config --global githooks.cloneUrl "$2"
         config_update_clone_url "print"
     else
         echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2
@@ -2260,18 +2104,18 @@ config_update_clone_url() {
 #####################################################
 # Manages the automatic update clone branch.
 # Prints or modifies the
-#   \`githooks.autoupdate.updateCloneUrl\`
+#   \`githooks.cloneUrl\`
 #   global Git configuration.
 #####################################################
 config_update_clone_branch() {
     if [ "$1" = "print" ]; then
-        echo "Update clone branch set to: $(git config --global githooks.autoupdate.updateCloneBranch)"
+        echo "Update clone branch set to: $(git config --global githooks.cloneBranch)"
     elif [ "$1" = "set" ]; then
         if [ -z "$2" ]; then
             echo "! No valid branch name given" >&2
             exit 1
         fi
-        git config --global githooks.autoupdate.updateCloneBranch "$2"
+        git config --global githooks.cloneBranch "$2"
         config_update_clone_branch "print"
     else
         echo "! Invalid operation: \`$1\` (use \`set\`, or \`print\`)" >&2

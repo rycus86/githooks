@@ -5,7 +5,7 @@
 TEST_PREFIX_DIR="/tmp/githooks"
 sh /var/lib/githooks/install.sh --prefix "$TEST_PREFIX_DIR" || exit 1
 
-if [ ! -d "$TEST_PREFIX_DIR/.githooks" ] || [ ! -f "$TEST_PREFIX_DIR/.githooks/bin/githooks" ]; then
+if [ ! -d "$TEST_PREFIX_DIR/.githooks" ] || [ ! -d "$TEST_PREFIX_DIR/.githooks/release" ]; then
     echo "! Expected the install directory to be in \`$TEST_PREFIX_DIR\`"
     exit 2
 fi

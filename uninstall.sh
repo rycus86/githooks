@@ -196,7 +196,7 @@ uninstall_from_registered_repositories() {
     if [ -f "$LIST" ]; then
 
         # Filter list according to
-        # - non-standalone repos
+        # - non git repos
 
         # Uninstall list
         UNINSTALL_LIST=$(mktemp)
@@ -205,8 +205,8 @@ uninstall_from_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
-                # Not existing git dir -> skip.
+            if ! is_git_repo "$INSTALLED_REPO"; then
+                # Not existing or no git dir -> skip.
                 true
             else
                 # Found existing registed repository -> uninstall
@@ -551,8 +551,8 @@ uninstall() {
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
-    git config --global --unset githooks.autoupdate.updateCloneUrl
-    git config --global --unset githooks.autoupdate.updateCloneBranch
+    git config --global --unset githooks.cloneUrl
+    git config --global --unset githooks.cloneBranch
     git config --global --unset githooks.previous.searchdir
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir

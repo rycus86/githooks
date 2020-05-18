@@ -39,18 +39,20 @@ if (cd /tmp/test094/c && sh /var/lib/githooks/cli.sh install); then
     exit 1
 fi
 
-if ! (cd ~/.githooks/release && git reset --hard HEAD^); then
-    echo "! Could not reset origin/master to trigger update."
+if ! (cd ~/.githooks/release && git status && git reset --hard HEAD^); then
+    echo "! Could not reset master to trigger update."
     exit 1
 fi
 
+CURRENT="$(git rev-parse HEAD)"
 if ! git hooks install; then
     echo "! The Git alias integration failed: single"
     # exit 1
 fi
+AFTER="$(git rev-parse HEAD)"
 
-if ! (cd ~/.githooks/release && git reset --hard HEAD^); then
-    echo "! Could not reset origin/master to trigger update."
+if [ "$CURRENT" != "$AFTER" ]; then
+    echo "! Release clone was updated, but it should not have!"
     exit 1
 fi
 if ! git hooks install --global; then

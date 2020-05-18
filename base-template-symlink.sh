@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2005.151157-80e089
+# Version: 2005.181533-1c8100
 
 INSTALL_DIR=$(git config --global githooks.installDir)
 GITHOOKS_SCRIPT="$INSTALL_DIR/release/base-template.sh"
@@ -21,4 +21,4 @@ elif [ ! -f "$GITHOOKS_SCRIPT" ]; then
 fi
 
 # shellcheck disable=SC1090
-. "$GITHOOKS_SCRIPT"
+sh "$GITHOOKS_SCRIPT" "$INSTALL_DIR" "$0" "$@"
