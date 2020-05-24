@@ -334,14 +334,35 @@ mark_as_single_install_repo() {
 ############################################################
 prepare_target_template_directory() {
     if [ -z "$TARGET_TEMPLATE_DIR" ]; then
-        find_git_hook_templates
+        # Automatically find a template directory
+        if ! find_git_hook_templates; then
+            echo "! Git hook templates directory not found" >&2
+            return 1
+        fi
+    else
+        # The user provided a template directory, check it and
+        # add `hooks` which is needed.
+        if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+            echo "! Git hook templates directory does not exists" >&2
+            return 1
+        else
+            TARGET_TEMPLATE_DIR="$TARGET_TEMPLATE_DIR/hooks"
+            if ! mkdir -p "$TARGET_TEMPLATE_DIR" >/dev/null 2>&1; then
+                echo "! Could not create folder \`$TARGET_TEMPLATE_DIR\`" >&2
+                return 1
+            fi
+        fi
     fi
 
+    # TARGET_TEMPLATE_DIR is now `<template-dir>/hooks`
+    # Create the `hooks` directory if it does not yet exist:
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
         echo "Git hook templates directory not found" >&2
         return 1
     fi
 
+    # Up to now the directories would not have been set if
+    # --use-core-hookspath is used, we set it now here.
     if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
         set_githooks_directory "$TARGET_TEMPLATE_DIR"
     fi
