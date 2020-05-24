@@ -357,25 +357,22 @@ prepare_target_template_directory() {
 ############################################################
 find_git_hook_templates() {
     # 1. from environment variables
-    mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return 0; fi
+    mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks" && return 0
 
     # 2. from git config
     if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
-        mark_directory_as_target "$(git config --global core.hooksPath)"
+        mark_directory_as_target "$(git config --global core.hooksPath)" && return 0
     else
-        mark_directory_as_target "$(git config --global init.templateDir)" "hooks"
+        mark_directory_as_target "$(git config --global init.templateDir)" "hooks" && return 0
     fi
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return 0; fi
 
     # 3. from the default location
-    mark_directory_as_target "/usr/share/git-core/templates/hooks"
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return 0; fi
+    mark_directory_as_target "/usr/share/git-core/templates/hooks" && return 0
 
     # 4. Setup new folder if running interactively and no folder is found by now
     if is_non_interactive; then
-        setup_new_templates_folder
-        return # we are finished either way here
+        setup_new_templates_folder || return 1
+        return 0 # we are finished either way here
     fi
 
     # 5. try to search for it on disk
@@ -418,32 +415,35 @@ find_git_hook_templates() {
 
 ############################################################
 # Sets the ${TARGET_TEMPLATE_DIR} variable if the
-#   first parameter is a writable directory.
-#
-# Returns:
-#   None
+#   `$1` is a writable directory.
+#   `$2` is a subfolder applied to the result.
+# Returns: 0 if `$TARGET_TEMPLATE_DIR` is set, 1 otherwise
 ############################################################
 mark_directory_as_target() {
     TARGET="$1"
-    if [ "$TARGET" = "" ]; then
-        return
+    if [ -z "$TARGET" ]; then
+        return 1
     fi
 
-    if [ "$2" != "" ]; then
-        TARGET="${TARGET}/$2"
-    fi
-
+    # Check if its writable
     if [ -w "$TARGET" ]; then
         TARGET_TEMPLATE_DIR="$TARGET"
-        return
+    else
+        # Try to see if the path is given with a tilde
+        TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
+        if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
+            TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
+        else
+            return 1
+        fi
     fi
 
-    # Try to see if the path is given with a tilde
-    TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
-    if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
-        TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
-        return
+    # Add the subfolder if given
+    if [ -n "$TARGET_TEMPLATE_DIR" ] && [ "$2" != "" ]; then
+        TARGET_TEMPLATE_DIR="$TARGET_TEMPLATE_DIR/$2"
     fi
+
+    return 0
 }
 
 ############################################################
