@@ -1179,15 +1179,27 @@ set_githooks_directory() {
         git config --global githooks.useCoreHooksPath yes
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
+
+        CURRENT_CORE_TEMPLATE_DIR=$(git config --global init.templateDir)
+        # shellcheck disable=SC2012
+        if [ "$(ls -1 "$CURRENT_CORE_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
+            echo "! The \`init.templateDir\` setting is currently set to \`$CURRENT_CORE_TEMPLATE_DIR\`" >&2
+            echo "  and you appear to have hooks in \`$CURRENT_CORE_TEMPLATE_DIR/hooks\`" >&2
+            echo "  which get installed but ignored because \`core.hooksPath\`" >&2
+            echo "  is also set. Either remove the files or run the Githooks" >&2
+            echo "  installation without the \`--use-core-hookspath\` parameter" >&2
+        fi
+
     else
         git config --global githooks.useCoreHooksPath no
         git config --global init.templateDir "$1"
 
         CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)
         if [ -n "$CURRENT_CORE_HOOKS_PATH" ]; then
-            echo "! The \`core.hooksPath\` setting is set to $CURRENT_CORE_HOOKS_PATH currently" >&2
+            echo "! The \`core.hooksPath\` setting is currently set to \`$CURRENT_CORE_HOOKS_PATH\`" >&2
             echo "  This could mean that Githooks hooks will be ignored" >&2
-            echo "  Either unset \`core.hooksPath\` or run the Githooks installation with the --use-core-hookspath parameter" >&2
+            echo "  Either unset \`core.hooksPath\` or run the Githooks" >&2
+            echo "  installation with the --use-core-hookspath parameter" >&2
         fi
     fi
 }
