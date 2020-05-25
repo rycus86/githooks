@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2004.272234-8af36c
+# Version: 2005.251127-b053ae
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="

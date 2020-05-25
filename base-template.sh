@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2004.272234-8af36c
+# Version: 2005.251127-b053ae
 
 #####################################################
 # Execute the current hook,
@@ -892,8 +892,14 @@ update_release_clone() {
     GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
 
     if is_git_repo "$CLONE_DIR"; then
-        URL=$(git -C "$CLONE_DIR" config remote.origin.url)
-        BRANCH=$(git -C "$CLONE_DIR" symbolic-ref -q --short HEAD)
+        URL=$(git -C "$CLONE_DIR" \
+            --work-tree="$CLONE_DIR" \
+            --git-dir="$CLONE_DIR/.git" \
+            config remote.origin.url)
+        BRANCH=$(git -C "$CLONE_DIR" \
+            --work-tree="$CLONE_DIR" \
+            --git-dir="$CLONE_DIR/.git" \
+            symbolic-ref -q --short HEAD)
 
         if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
             [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ]; then
@@ -908,7 +914,10 @@ update_release_clone() {
             return 1
         fi
 
-        if ! git -C "$CLONE_DIR" diff-index --quiet HEAD; then
+        if ! git -C "$CLONE_DIR" \
+            --work-tree="$CLONE_DIR" \
+            --git-dir="$CLONE_DIR/.git" \
+            diff-index --quiet HEAD; then
             echo "! Cannot pull updates because the update clone \`$CLONE_DIR\` is dirty! " >&2
             echo "  Either fix this or delete the clone \`$CLONE_DIR\` to trigger" >&2
             echo "  a new checkout." >&2
