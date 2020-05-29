@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2005.291319-6efc0a
+# Version: 2005.291319-5eea6e
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -1198,11 +1198,12 @@ set_githooks_directory() {
             HOOKS_GET_IGNORED=1
         fi
 
-        if [ "$HOOKS_GET_IGNORED" = 1 ]; then
+        if [ "$HOOKS_GET_IGNORED" = "1" ]; then
             echo "  and contains Git hooks which get installed but" >&2
             echo "  ignored because \`core.hooksPath\` is also set." >&2
-            echo "  Either remove the files or run the Githooks" >&2
-            echo "  installation without the \`--use-core-hookspath\` parameter" >&2
+            echo "  It is recommended to either remove the files or run" >&2
+            echo "  the Githooks installation without the \`--use-core-hookspath\`" >&2
+            echo "  parameter" >&2
             unset HOOKS_GET_IGNORED
         fi
 
