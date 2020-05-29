@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2005.291318-19834b
+# Version: 2005.291319-6efc0a
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -1180,14 +1180,30 @@ set_githooks_directory() {
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
 
-        CURRENT_CORE_TEMPLATE_DIR=$(git config --global init.templateDir)
+        CURRENT_TEMPLATE_DIR=$(git config --global init.templateDir)
+
         # shellcheck disable=SC2012
-        if [ "$(ls -1 "$CURRENT_CORE_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
-            echo "! The \`init.templateDir\` setting is currently set to \`$CURRENT_CORE_TEMPLATE_DIR\`" >&2
-            echo "  and you appear to have hooks in \`$CURRENT_CORE_TEMPLATE_DIR/hooks\`" >&2
-            echo "  which get installed but ignored because \`core.hooksPath\`" >&2
-            echo "  is also set. Either remove the files or run the Githooks" >&2
+        if [ -d "$CURRENT_TEMPLATE_DIR" ] &&
+            [ "$(ls -1 "$CURRENT_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
+            echo "! The \`init.templateDir\` setting is currently set to" >&2
+            echo "  \`$CURRENT_TEMPLATE_DIR\`" >&2
+            HOOKS_GET_IGNORED=1
+        fi
+
+        # shellcheck disable=SC2012
+        if [ -d "$GIT_TEMPLATE_DIR" ] &&
+            [ "$(ls -1 "$GIT_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
+            echo "! The environment variable \`GIT_TEMPLATE_DIR\` is currently set to" >&2
+            echo "  \`$GIT_TEMPLATE_DIR\`" >&2
+            HOOKS_GET_IGNORED=1
+        fi
+
+        if [ "$HOOKS_GET_IGNORED" = 1 ]; then
+            echo "  and contains Git hooks which get installed but" >&2
+            echo "  ignored because \`core.hooksPath\` is also set." >&2
+            echo "  Either remove the files or run the Githooks" >&2
             echo "  installation without the \`--use-core-hookspath\` parameter" >&2
+            unset HOOKS_GET_IGNORED
         fi
 
     else
