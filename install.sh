@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.021431-5f4f28
+# Version: 2006.022309-09ca86
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -88,6 +88,10 @@ execute_installation() {
         setup_shared_hook_repositories
         echo # For visual separation
     fi
+
+    thank_you
+
+    return 0
 }
 
 ############################################################
@@ -194,11 +198,63 @@ parse_command_line_arguments() {
         prev_p="$p"
     done
 
+    if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+        if ! check_not_deprecated_single_install; then
+            echo "! Install failed due to deprecated single install" >&2
+            exit 1
+        else
+            warn_deprecated_single_install
+        fi
+    fi
+
     # Using core.hooksPath implies it applies to all repo's
     if [ "$SINGLE_REPO_INSTALL" = "yes" ] && [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
         echo "! Cannot use --single and --use-core-hookspath together" >&2
         exit 1
     fi
+}
+
+############################################################
+# Install flag `--single` will behave differently in
+# future versions.
+#
+# Returns: None
+############################################################
+warn_deprecated_single_install() {
+    echo "" >&2
+    echo "! FEATURE CHANGE WARNING: The single installation feature" >&2
+    echo "  with \`--single\` will be changed to the following only" >&2
+    echo "  bahavior in future updates:" >&2
+    echo "" >&2
+    echo "    - install Githooks hooks into the current repository" >&2
+    echo "    - the installed hooks are not standalone anymore" >&2
+    echo "      and behave exactly the same as current non-single" >&2
+    echo "      installs" >&2
+    echo "" >&2
+}
+
+############################################################
+# Check if this repo is not a deprecated single install.
+#
+# Returns: 1 if deprecated single install, 0 otherwise
+############################################################
+check_not_deprecated_single_install() {
+    if is_git_repo "$(pwd)" && git config --local githooks.single.install; then
+        echo "" >&2
+        echo "! DEPRECATION WARNING: Single install repositories will be " >&2
+        echo "  completely deprecated in future updates:" >&2
+        echo "" >&2
+        echo "    You appear to have setup this repo as a single install." >&2
+        echo "    The hooks will still work with this install but will not be" >&2
+        echo "    supported anymore in the next update." >&2
+        echo "" >&2
+        echo "    You need to reset this option by running" >&2
+        echo "      \`git hooks config reset single\`" >&2
+        echo "    in order to use this repository with the next updates!" >&2
+        echo "" >&2
+        return 1 # DeprecateSingleInstall
+    fi
+    return 0
 }
 
 ############################################################
@@ -1354,4 +1410,3 @@ thank_you() {
 
 # Start the installation process
 execute_installation "$@" || exit 1
-thank_you

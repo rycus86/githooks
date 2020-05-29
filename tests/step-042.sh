@@ -40,23 +40,35 @@ if [ -n "$LAST_UPDATE" ]; then
     exit 1
 fi
 
+# Test update again with single flag
 sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh ||
     exit 1
 
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template.sh 2>&1
+)
+if ! echo "$OUTPUT" | grep -iq "DEPRECATION WARNING: Single install" ||
+    ! echo "$OUTPUT" | grep -iq "Install failed due to deprecated single install"; then
+    echo "$OUTPUT"
+    echo "! Expected installation to fail because of single install flag"
+    exit 1
+fi
+
+# Test update again without single flag
+git config --local --unset githooks.single.install || exit 1
+
+sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh || exit 1
+git config --global --unset githooks.autoupdate.lastrun
+
+OUTPUT=$(
+    HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
+        sh /var/lib/githooks/base-template.sh 2>&1
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then
     echo "$OUTPUT"
     echo "! Expected installation output not found"
-    exit 1
-fi
-
-if echo "$OUTPUT" | grep -q "Git hook template ready"; then
-    echo "$OUTPUT"
-    echo "! Unexpected installation output found"
     exit 1
 fi
 
