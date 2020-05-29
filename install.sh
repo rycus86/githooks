@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2005.251127-b053ae
+# Version: 2005.291319-5eea6e
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -140,13 +140,6 @@ is_running_internal_install() {
 
 ############################################################
 # Set up variables based on command line arguments.
-#
-# Sets ${DRY_RUN} for --dry-run
-# Sets ${NON_INTERACTIVE} for --non-interactive
-# Sets ${SINGLE_REPO_INSTALL} for --single
-# Sets ${SKIP_INSTALL_INTO_EXISTING} for --skip-install-into-existing
-# Sets ${INSTALL_DIR} for --prefix
-# Sets ${TARGET_TEMPLATE_DIR} for --template-dir
 #
 # Returns: None
 ############################################################
@@ -341,14 +334,35 @@ mark_as_single_install_repo() {
 ############################################################
 prepare_target_template_directory() {
     if [ -z "$TARGET_TEMPLATE_DIR" ]; then
-        find_git_hook_templates
+        # Automatically find a template directory
+        if ! find_git_hook_templates; then
+            echo "! Git hook templates directory not found" >&2
+            return 1
+        fi
+    else
+        # The user provided a template directory, check it and
+        # add `hooks` which is needed.
+        if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
+            echo "! Git hook templates directory does not exists" >&2
+            return 1
+        else
+            TARGET_TEMPLATE_DIR="$TARGET_TEMPLATE_DIR/hooks"
+            if ! mkdir -p "$TARGET_TEMPLATE_DIR" >/dev/null 2>&1; then
+                echo "! Could not create folder \`$TARGET_TEMPLATE_DIR\`" >&2
+                return 1
+            fi
+        fi
     fi
 
+    # TARGET_TEMPLATE_DIR is now `<template-dir>/hooks`
+    # Create the `hooks` directory if it does not yet exist:
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
         echo "Git hook templates directory not found" >&2
         return 1
     fi
 
+    # Up to now the directories would not have been set if
+    # --use-core-hookspath is used, we set it now here.
     if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
         set_githooks_directory "$TARGET_TEMPLATE_DIR"
     fi
@@ -360,30 +374,26 @@ prepare_target_template_directory() {
 #
 # Sets ${TARGET_TEMPLATE_DIR} if found.
 #
-# Returns:
-#   None
+# Returns: 0 if succesfull found, otherwise 1
 ############################################################
 find_git_hook_templates() {
     # 1. from environment variables
-    mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks"
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks" && return 0
 
     # 2. from git config
     if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
-        mark_directory_as_target "$(git config --global core.hooksPath)"
+        mark_directory_as_target "$(git config --global core.hooksPath)" && return 0
     else
-        mark_directory_as_target "$(git config --global init.templateDir)" "hooks"
+        mark_directory_as_target "$(git config --global init.templateDir)" "hooks" && return 0
     fi
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
 
     # 3. from the default location
-    mark_directory_as_target "/usr/share/git-core/templates/hooks"
-    if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+    mark_directory_as_target "/usr/share/git-core/templates/hooks" && return 0
 
     # 4. Setup new folder if running interactively and no folder is found by now
     if is_non_interactive; then
-        setup_new_templates_folder
-        return # we are finished either way here
+        setup_new_templates_folder || return 1
+        return 0 # we are finished either way here
     fi
 
     # 5. try to search for it on disk
@@ -403,10 +413,12 @@ find_git_hook_templates() {
 
                 if ! set_githooks_directory "$TEMPLATE_DIR"; then
                     echo "! Failed to set it up as Git template directory" >&2
+                    return 1
                 fi
+                return 0
             fi
 
-            return
+            return 1
         fi
     fi
 
@@ -415,39 +427,44 @@ find_git_hook_templates() {
     read -r SETUP_NEW_FOLDER </dev/tty
 
     if [ "${SETUP_NEW_FOLDER}" = "y" ] || [ "${SETUP_NEW_FOLDER}" = "Y" ]; then
-        setup_new_templates_folder
-        if [ "$TARGET_TEMPLATE_DIR" != "" ]; then return; fi
+        setup_new_templates_folder || return 1
+        return 0
     fi
+
+    return 1
 }
 
 ############################################################
 # Sets the ${TARGET_TEMPLATE_DIR} variable if the
-#   first parameter is a writable directory.
-#
-# Returns:
-#   None
+#   `$1` is a writable directory.
+#   `$2` is a subfolder applied to the result.
+# Returns: 0 if `$TARGET_TEMPLATE_DIR` is set, 1 otherwise
 ############################################################
 mark_directory_as_target() {
     TARGET="$1"
-    if [ "$TARGET" = "" ]; then
-        return
+    if [ -z "$TARGET" ]; then
+        return 1
     fi
 
-    if [ "$2" != "" ]; then
-        TARGET="${TARGET}/$2"
-    fi
-
+    # Check if its writable
     if [ -w "$TARGET" ]; then
         TARGET_TEMPLATE_DIR="$TARGET"
-        return
+    else
+        # Try to see if the path is given with a tilde
+        TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
+        if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
+            TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
+        else
+            return 1
+        fi
     fi
 
-    # Try to see if the path is given with a tilde
-    TILDE_REPLACED=$(echo "$TARGET" | awk 'gsub("~", "'"$HOME"'", $0)')
-    if [ -n "$TILDE_REPLACED" ] && [ -w "$TILDE_REPLACED" ]; then
-        TARGET_TEMPLATE_DIR="$TILDE_REPLACED"
-        return
+    # Add the subfolder if given
+    if [ -n "$TARGET_TEMPLATE_DIR" ] && [ "$2" != "" ]; then
+        TARGET_TEMPLATE_DIR="$TARGET_TEMPLATE_DIR/$2"
     fi
+
+    return 0
 }
 
 ############################################################
@@ -520,8 +537,7 @@ search_pre_commit_sample_file() {
 ############################################################
 # Setup a new Git templates folder.
 #
-# Returns:
-#   None
+# Returns: 0 if the $TARGET_TEMPLATE_DIR is set, 1 otherwise
 ############################################################
 setup_new_templates_folder() {
     DEFAULT_TARGET="$INSTALL_DIR/templates"
@@ -542,17 +558,19 @@ setup_new_templates_folder() {
         TILDE_REPLACED="$USER_TEMPLATES"
     fi
 
+    TARGET_TEMPLATE_DIR="${TILDE_REPLACED}/hooks"
+
     if ! is_dry_run; then
-        if mkdir -p "${TILDE_REPLACED}/hooks"; then
+        if mkdir -p "$TARGET_TEMPLATE_DIR"; then
             # Let this one go with or without a tilde
             set_githooks_directory "$USER_TEMPLATES"
         else
             echo "! Failed to set up the new Git templates folder" >&2
-            return
+            return 1
         fi
     fi
 
-    TARGET_TEMPLATE_DIR="${TILDE_REPLACED}/hooks"
+    return 0
 }
 
 ############################################################
@@ -1161,15 +1179,44 @@ set_githooks_directory() {
         git config --global githooks.useCoreHooksPath yes
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
+
+        CURRENT_TEMPLATE_DIR=$(git config --global init.templateDir)
+
+        # shellcheck disable=SC2012
+        if [ -d "$CURRENT_TEMPLATE_DIR" ] &&
+            [ "$(ls -1 "$CURRENT_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
+            echo "! The \`init.templateDir\` setting is currently set to" >&2
+            echo "  \`$CURRENT_TEMPLATE_DIR\`" >&2
+            HOOKS_GET_IGNORED=1
+        fi
+
+        # shellcheck disable=SC2012
+        if [ -d "$GIT_TEMPLATE_DIR" ] &&
+            [ "$(ls -1 "$GIT_TEMPLATE_DIR/hooks" 2>/dev/null | wc -l)" != "0" ]; then
+            echo "! The environment variable \`GIT_TEMPLATE_DIR\` is currently set to" >&2
+            echo "  \`$GIT_TEMPLATE_DIR\`" >&2
+            HOOKS_GET_IGNORED=1
+        fi
+
+        if [ "$HOOKS_GET_IGNORED" = "1" ]; then
+            echo "  and contains Git hooks which get installed but" >&2
+            echo "  ignored because \`core.hooksPath\` is also set." >&2
+            echo "  It is recommended to either remove the files or run" >&2
+            echo "  the Githooks installation without the \`--use-core-hookspath\`" >&2
+            echo "  parameter" >&2
+            unset HOOKS_GET_IGNORED
+        fi
+
     else
         git config --global githooks.useCoreHooksPath no
         git config --global init.templateDir "$1"
 
         CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)
         if [ -n "$CURRENT_CORE_HOOKS_PATH" ]; then
-            echo "! The \`core.hooksPath\` setting is set to $CURRENT_CORE_HOOKS_PATH currently" >&2
+            echo "! The \`core.hooksPath\` setting is currently set to \`$CURRENT_CORE_HOOKS_PATH\`" >&2
             echo "  This could mean that Githooks hooks will be ignored" >&2
-            echo "  Either unset \`core.hooksPath\` or run the Githooks installation with the --use-core-hookspath parameter" >&2
+            echo "  Either unset \`core.hooksPath\` or run the Githooks" >&2
+            echo "  installation with the --use-core-hookspath parameter" >&2
         fi
     fi
 }

@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2005.251127-b053ae
+# Version: 2005.291319-5eea6e
 
 #####################################################
 # Prints the command line help for usage and
@@ -1952,16 +1952,16 @@ git hooks config [enable|disable|reset|print] update
     The \`reset\` option clears this setting.
     The \`print\` option outputs the current setting.
 
-git hooks config set update-clone-url <git-url> 
+git hooks config set update-clone-url <git-url>
 git hooks config [set|print] update-clone-url
 
     Sets or prints the configured githooks clone url used
     for any update.
 
-git hooks config set update-clone-branch <branch-name> 
+git hooks config set update-clone-branch <branch-name>
 git hooks config print update-clone-branch
 
-    Sets or prints the configured branch of the update clone 
+    Sets or prints the configured branch of the update clone
     used for any update.
 
 git hooks config [reset|print] update-time
@@ -1980,9 +1980,9 @@ which usually means \`git hooks update\` has not been called yet.
 git hooks config [yes|no|reset|print] delete-detected-lfs-hooks
 
 By default, detected LFS hooks during install are disabled and backed up.
-The \`yes\` option remembers to always delete these hooks. 
+The \`yes\` option remembers to always delete these hooks.
 The \`no\` option remembers the default behavior.
-The decision is reset with \`reset\` to the default behavior. 
+The decision is reset with \`reset\` to the default behavior.
 The \`print\` option outputs the current behavior.
 "
         return
@@ -2393,7 +2393,7 @@ manage_tools() {
         echo "
 git hooks tools register <toolName> <scriptFolder>
 
-    Install the script folder \`<scriptFolder>\` in 
+    Install the script folder \`<scriptFolder>\` in
     the installation directory under \`tools/<toolName>\`.
 
     Currently the following tools are supported:
@@ -2401,7 +2401,7 @@ git hooks tools register <toolName> <scriptFolder>
     >> Dialog Tool (<toolName> = \"dialog\")
 
     The interface of the dialog tool is as follows.
-    
+
     # if \`run\` is executable
     \$ run <title> <text> <options> <long-options>
     # otherwise, assuming \`run\` is a shell script
@@ -2410,7 +2410,7 @@ git hooks tools register <toolName> <scriptFolder>
     The arguments of the dialog tool are:
     - \`<title>\` the title for the GUI dialog
     - \`<text>\` the text for the GUI dialog
-    - \`<short-options>\` the button return values, slash-delimited, 
+    - \`<short-options>\` the button return values, slash-delimited,
         e.g. \`Y/n/d\`.
         The default button is the first capital character found.
     - \`<long-options>\` the button texts in the GUI,
@@ -2421,7 +2421,7 @@ git hooks tools register <toolName> <scriptFolder>
 
 git hooks tools unregister <toolName>
 
-    Uninstall the script folder in the installation 
+    Uninstall the script folder in the installation
     directory under \`tools/<toolName>\`.
 "
         return

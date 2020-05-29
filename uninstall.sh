@@ -503,6 +503,22 @@ set_main_variables() {
 }
 
 #####################################################
+# Try removing core.hooksPath if we are using it.
+
+# Returns: 0 if success, 1 otherwise
+#####################################################
+remove_core_hooks_path() {
+    if using_hooks_path; then
+        GITHOOKS_CORE_HOOKSPATH=$(git config --global githooks.pathForUseCoreHooksPath)
+        GIT_CORE_HOOKSPATH=$(git config --global core.hooksPath)
+
+        if [ "$GITHOOKS_CORE_HOOKSPATH" = "$GIT_CORE_HOOKSPATH" ]; then
+            git config --global --unset core.hooksPath
+        fi
+    fi
+}
+
+#####################################################
 # Main uninstall routine.
 
 # Returns: 0 if success, 1 otherwise
@@ -554,6 +570,9 @@ uninstall() {
     # uninstall release repo
     uninstall_release_repo
 
+    # remove core hooks path if we are using it
+    remove_core_hooks_path
+
     # Unset global Githooks variables
     git config --global --unset githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
@@ -566,20 +585,9 @@ uninstall() {
     git config --global --unset githooks.disable
     git config --global --unset githooks.installDir
     git config --global --unset githooks.deleteDetectedLFSHooks
+    git config --global --unset githooks.pathForUseCoreHooksPath
+    git config --global --unset githooks.useCoreHooksPath
     git config --global --unset alias.hooks
-
-    if using_hooks_path; then
-        git config --global --unset githooks.useCoreHooksPath
-
-        GITHOOKS_CORE_HOOKSPATH=$(git config --global githooks.pathForUseCoreHooksPath)
-        GIT_CORE_HOOKSPATH=$(git config --global core.hooksPath)
-
-        if [ "$GITHOOKS_CORE_HOOKSPATH" = "$GIT_CORE_HOOKSPATH" ]; then
-            git config --global --unset core.hooksPath
-        fi
-
-        git config --global --unset githooks.pathForUseCoreHooksPath
-    fi
 
     # Finished
     echo "All done!"
