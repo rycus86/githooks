@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2005.291319-5eea6e
+# Version: 2006.021338-d6ab48
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -347,18 +347,16 @@ prepare_target_template_directory() {
             return 1
         else
             TARGET_TEMPLATE_DIR="$TARGET_TEMPLATE_DIR/hooks"
-            if ! mkdir -p "$TARGET_TEMPLATE_DIR" >/dev/null 2>&1; then
-                echo "! Could not create folder \`$TARGET_TEMPLATE_DIR\`" >&2
-                return 1
-            fi
         fi
     fi
 
     # TARGET_TEMPLATE_DIR is now `<template-dir>/hooks`
     # Create the `hooks` directory if it does not yet exist:
     if [ ! -d "$TARGET_TEMPLATE_DIR" ]; then
-        echo "Git hook templates directory not found" >&2
-        return 1
+        if ! mkdir -p "$TARGET_TEMPLATE_DIR" >/dev/null 2>&1; then
+            echo "! Could not create template folder \`$TARGET_TEMPLATE_DIR\`" >&2
+            return 1
+        fi
     fi
 
     # Up to now the directories would not have been set if
