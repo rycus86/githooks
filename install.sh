@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.022309-09ca86
+# Version: 2006.022313-8dd877
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -224,7 +224,7 @@ warn_deprecated_single_install() {
     echo "" >&2
     echo "! FEATURE CHANGE WARNING: The single installation feature" >&2
     echo "  with \`--single\` will be changed to the following only" >&2
-    echo "  bahavior in future updates:" >&2
+    echo "  behavior in future updates:" >&2
     echo "" >&2
     echo "    - install Githooks hooks into the current repository" >&2
     echo "    - the installed hooks are not standalone anymore" >&2
