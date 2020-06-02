@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.021338-d6ab48
+# Version: 2006.021431-5f4f28
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -543,12 +543,12 @@ setup_new_templates_folder() {
     if is_non_interactive; then
         USER_TEMPLATES="$DEFAULT_TARGET"
     else
+        unset USER_TEMPLATES
         printf "Enter the target folder: [%s] " "$DEFAULT_TARGET"
         read -r USER_TEMPLATES </dev/tty
-    fi
-
-    if [ "$USER_TEMPLATES" = "" ]; then
-        USER_TEMPLATES="$DEFAULT_TARGET"
+        if [ -z "$USER_TEMPLATES" ]; then
+            USER_TEMPLATES="$DEFAULT_TARGET"
+        fi
     fi
 
     TILDE_REPLACED=$(echo "$USER_TEMPLATES" | awk 'gsub("~", "'"$HOME"'", $0)')
