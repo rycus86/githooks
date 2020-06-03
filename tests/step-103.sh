@@ -22,8 +22,9 @@ mkdir -p .githooks && echo '/tmp/shared/hooks-103.git' >.githooks/.shared || exi
 git add .githooks/.shared
 git hooks shared update
 
-RESULT=$(ls -A ~/.githooks/shared 2>/dev/null)
-if [ "$RESULT" = "" ]; then
+# shellcheck disable=SC2012
+RESULT=$(ls -1 ~/.githooks/shared 2>/dev/null | wc -l)
+if [ "$RESULT" = "0" ]; then
     echo "! Expected shared hooks to be installed."
     exit 1
 fi
@@ -31,6 +32,11 @@ git commit -m "Test" || exit 1
 
 # Remove all shared hooks and make it fail
 git hooks shared purge || exit 1
+
+if [ -d ~/.githooks/shared ]; then
+    echo "! Expected shared hooks to be purged. $RESULT"
+    exit 1
+fi
 
 # Fail on not existing hooks
 # Local on/ global off
@@ -78,9 +84,10 @@ echo "Cloning"
 cd /tmp || exit 1
 git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
 
-RESULT=$(ls -A ~/.githooks/shared 2>/dev/null)
-if [ "$RESULT" = "" ]; then
-    echo "! Expected shared hooks to be installed."
+# shellcheck disable=SC2012
+RESULT=$(ls -1 ~/.githooks/shared 2>/dev/null | wc -l)
+if [ "$RESULT" = "0" ]; then
+    echo "! Expected shared hooks to be installed. $RESULT"
     exit 1
 fi
 

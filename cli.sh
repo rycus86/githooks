@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.021431-5f4f28
+# Version: 2006.022313-8dd877
 
 #####################################################
 # Prints the command line help for usage and
@@ -1912,8 +1912,9 @@ git hooks config [set|reset|print] disable
     The \`print\` option outputs the current setting.
     This command needs to be run at the root of a repository.
 
-git hooks config [set|reset|print] single
+[deprecated] git hooks config [set|reset|print] single
 
+    This command is deprecated and will be removed in the future.
     Marks the current local repository to be managed as a single Githooks
     installation, or clears the marker, with \`set\` and \`reset\` respectively.
     The \`print\` option outputs the current setting of it.
@@ -2029,10 +2030,10 @@ The \`print\` option outputs the current behavior.
         config_update_state "$CONFIG_OPERATION"
         ;;
     "update-clone-url")
-        config_update_clone_url "$CONFIG_OPERATION"
+        config_update_clone_url "$CONFIG_OPERATION" "$@"
         ;;
     "update-clone-branch")
-        config_update_clone_branch "$CONFIG_OPERATION"
+        config_update_clone_branch "$CONFIG_OPERATION" "$@"
         ;;
     "update-time")
         config_update_last_run "$CONFIG_OPERATION"
@@ -2092,6 +2093,20 @@ config_single_install() {
     fi
 
     if [ "$1" = "set" ]; then
+
+        echo "" >&2
+        echo "! DEPRECATION WARNING: Single install repositories will be " >&2
+        echo "  completely deprecated in future updates:" >&2
+        echo "" >&2
+        echo "    The hooks will still work but will not be" >&2
+        echo "    supported anymore in the next update." >&2
+        echo "" >&2
+        echo "    You should migrate to a non-single install by" >&2
+        echo "    resetting this option with" >&2
+        echo "      \`git hooks config reset single\`" >&2
+        echo "    in order to use this repository with the next updates!" >&2
+        echo "" >&2
+
         git config --unset githooks.autoupdate.registered
         git config githooks.single.install yes
     elif [ "$1" = "reset" ]; then

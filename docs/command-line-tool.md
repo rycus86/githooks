@@ -173,7 +173,7 @@ Disables running any Githooks files in the current repository, when the `set` op
 $ git hooks config [set|reset|print] single
 ```
 
-Marks the current local repository to be managed as a single Githooks installation, or clears the marker, with `set` and `reset` respectively. The `print` option outputs the current setting of it. This command needs to be run at the root of a repository.
+**[deprecated]**: Marks the current local repository to be managed as a single Githooks installation, or clears the marker, with `set` and `reset` respectively. The `print` option outputs the current setting of it. This command needs to be run at the root of a repository.
 
 ```shell
 $ git hooks config set search-dir <path>

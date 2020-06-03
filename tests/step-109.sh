@@ -80,7 +80,7 @@ for hook in pre-push pre-receive update post-receive post-update push-to-checkou
     fi
 done
 # shellcheck disable=SC2012
-count="$(ls "$templateDir/hooks/" | wc -l)"
+count="$(ls -1 "$templateDir/hooks/" | wc -l)"
 if [ "$count" != "7" ]; then
     echo "! Expected only server hooks to be installed ($count)"
     exit 1
