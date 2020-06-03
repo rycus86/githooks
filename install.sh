@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.022313-8dd877
+# Version: 2006.031558-97a441
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -690,7 +690,7 @@ install_command_line_tool() {
     mkdir -p "$INSTALL_DIR/bin" &&
         cp "$INSTALL_DIR/release/cli.sh" "$INSTALL_DIR/bin/githooks" &&
         chmod +x "$INSTALL_DIR/bin/githooks" &&
-        git config --global alias.hooks "!$INSTALL_DIR/bin/githooks" &&
+        git config --global alias.hooks "!\"$INSTALL_DIR/bin/githooks\"" &&
         echo "The command line helper tool is installed at ${INSTALL_DIR}/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
         return
 
