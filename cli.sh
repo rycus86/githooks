@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.031558-97a441
+# Version: 2006.040236-ac2ebc
 
 #####################################################
 # Prints the command line help for usage and
@@ -143,7 +143,10 @@ find_hook_path_to_enable_or_disable() {
             return 1
         fi
 
+        IFS="$IFS_NEWLINE"
         for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
+            unset IFS
+
             if [ ! -d "$SHARED_ROOT" ]; then
                 continue
             fi
@@ -174,6 +177,8 @@ find_hook_path_to_enable_or_disable() {
                 HOOK_PATH=$(find "$SHARED_ROOT" -name "$1" | head -1)
                 [ -n "$HOOK_PATH" ] && return 0 || return 1
             fi
+
+            IFS="$IFS_NEWLINE"
         done
 
         echo "Sorry, cannot find any shared hooks that would match that"
@@ -216,11 +221,16 @@ find_hook_path_to_enable_or_disable() {
 
                 HOOK_DIR=$(cd "$HOOK_DIR" && pwd)
 
+                IFS="$IFS_NEWLINE"
                 for HOOK_FILE in "$HOOK_DIR"/*; do
+                    unset IFS
+
                     HOOK_ITEM=$(basename "$HOOK_FILE")
                     if [ "$HOOK_ITEM" = "$1" ]; then
                         HOOK_PATH="$HOOK_FILE"
                     fi
+
+                    IFS="$IFS_NEWLINE"
                 done
             done
         fi
@@ -567,7 +577,9 @@ git hooks list [type]
 
         # global shared hooks
         SHARED_REPOS_LIST=$(git config --global --get githooks.shared)
+        IFS="$IFS_NEWLINE"
         for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
+            unset IFS
             if [ -d "$SHARED_ITEM" ]; then
                 for LIST_ITEM in "$SHARED_ITEM"/*; do
                     ITEM_NAME=$(basename "$LIST_ITEM")
@@ -581,12 +593,18 @@ git hooks list [type]
                 LIST_OUTPUT="$LIST_OUTPUT
   - $LIST_TYPE (file / ${ITEM_STATE} / shared:global)"
             fi
+
+            IFS="$IFS_NEWLINE"
         done
 
         # local shared hooks
         if [ -f "$(pwd)/.githooks/.shared" ]; then
             SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+
+            IFS="$IFS_NEWLINE"
             for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
+                unset IFS
+
                 if [ -d "$SHARED_ITEM" ]; then
                     for LIST_ITEM in "$SHARED_ITEM"/*; do
                         ITEM_NAME=$(basename "$LIST_ITEM")
@@ -600,16 +618,24 @@ git hooks list [type]
                     LIST_OUTPUT="$LIST_OUTPUT
   - $LIST_TYPE (file / ${ITEM_STATE} / shared:local)"
                 fi
+
+                IFS="$IFS_NEWLINE"
             done
         fi
 
         # in the current repository
         if [ -d ".githooks/$LIST_TYPE" ]; then
+
+            IFS="$IFS_NEWLINE"
             for LIST_ITEM in .githooks/"$LIST_TYPE"/*; do
+                unset IFS
+
                 ITEM_NAME=$(basename "$LIST_ITEM")
                 ITEM_STATE=$(get_hook_state "$(pwd)/.githooks/$LIST_TYPE/$ITEM_NAME")
                 LIST_OUTPUT="$LIST_OUTPUT
   - $ITEM_NAME (${ITEM_STATE})"
+
+                IFS="$IFS_NEWLINE"
             done
 
         elif [ -f ".githooks/$LIST_TYPE" ]; then
@@ -773,7 +799,9 @@ list_hooks_in_shared_repos() {
 
     SHARED_LIST_TYPE="$1"
 
+    IFS="$IFS_NEWLINE"
     for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
+        unset IFS
         if [ ! -d "$SHARED_ROOT" ]; then
             continue
         fi
@@ -789,6 +817,7 @@ list_hooks_in_shared_repos() {
         elif [ -e "${SHARED_ROOT}/${LIST_TYPE}" ]; then
             echo "${SHARED_ROOT}/${LIST_TYPE}"
         fi
+        IFS="$IFS_NEWLINE"
     done
 }
 

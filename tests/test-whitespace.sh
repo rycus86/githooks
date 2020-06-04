@@ -5,6 +5,8 @@ TEST_DIR=$(dirname "$0")
 cat <<EOF | docker build --force-rm -t githooks:whitespaces-base -
 FROM alpine
 RUN apk add --no-cache git curl ca-certificates
+RUN mkdir -p "/root/whitespace folder"
+ENV HOME="/root/whitespace folder"
 EOF
 
 export ADDITIONAL_INSTALL_STEPS='
