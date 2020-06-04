@@ -160,7 +160,7 @@ register_repo_for_autoupdate() {
     # Add at the bottom
     echo "$CURRENT_REPO" >>"$LIST"
     # Mark this repo as registered
-    git config --local githooks.autoupdate.registered "yes"
+    git config --local githooks.autoupdate.registered "true"
 }
 
 #####################################################
