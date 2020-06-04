@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051419-b12268
+# Version: 2006.051420-807309
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -319,7 +319,8 @@ is_single_repo_install() {
 ############################################################
 install_only_server_hooks() {
     [ "$INSTALL_ONLY_SERVER_HOOKS" = "true" ] ||
-        [ "$(git config --global githooks.maintainOnlyServerHooks)" = "Y" ] ||
+        [ "$(git config --global githooks.maintainOnlyServerHooks)" = "true" ] ||
+        [ "$(git config --global githooks.maintainOnlyServerHooks)" = "Y" ] || # Legacy
         return 1
 }
 
@@ -686,7 +687,7 @@ setup_hook_templates() {
     done
 
     if install_only_server_hooks; then
-        git config --global githooks.maintainOnlyServerHooks "Y"
+        git config --global githooks.maintainOnlyServerHooks "true"
     fi
 
     return 0
