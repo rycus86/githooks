@@ -16,4 +16,4 @@ RUN find /var/lib/tests -name "*.sh" -exec sed -i -E "s|/tmp/test([0-9.]+)|\"/tm
 RUN find /var/lib/tests -name "*.sh" -exec sed -i -E "s|^\"/tmp/test([^\"]+)\"|/tmp/test\1|g" {} \;
 '
 
-exec sh "$TEST_DIR"/exec-tests.sh 'whitespaces'
+exec sh "$TEST_DIR"/exec-tests.sh 'whitespaces' "$@"

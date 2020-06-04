@@ -7,4 +7,4 @@ FROM alpine
 RUN apk add --no-cache git
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'alpine'
+exec sh "$TEST_DIR"/exec-tests.sh 'alpine' "$@"

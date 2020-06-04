@@ -11,4 +11,4 @@ RUN apk add --no-cache git curl ca-certificates && \
 USER test
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'alpine-user'
+exec sh "$TEST_DIR"/exec-tests.sh 'alpine-user' "$@"

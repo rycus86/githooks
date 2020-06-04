@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.051329-ed9a05
+# Version: 2006.051419-b12268
 
 #####################################################
 # Execute the current hook,
@@ -1026,11 +1026,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if DO_UPDATE_ONLY="yes" sh -s -- --single <"$INSTALL_SCRIPT"; then
+        if sh -s -- --single --internal-autoupdate <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if DO_UPDATE_ONLY="yes" sh <"$INSTALL_SCRIPT"; then
+        if sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi

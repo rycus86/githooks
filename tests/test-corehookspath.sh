@@ -8,4 +8,4 @@ RUN apk add --no-cache git ca-certificates
 ENV EXTRA_INSTALL_ARGS --use-core-hookspath
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'corehookspath'
+exec sh "$TEST_DIR"/exec-tests.sh 'corehookspath' "$@"
