@@ -241,28 +241,15 @@ The `print` option outputs the current behavior.
 
 > Experimental feature
 
-Manages script folders for different tools. The supported `<toolName>` are `download` and `dialog` currently.
+Manages script folders for different tools. The supported `<toolName>` is `dialog` currently.
 
 ```shell
-$ git hooks tools register [download|dialog] <scriptFolder>
+$ git hooks tools register dialog <scriptFolder>
 ```
 
 Install the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
 This folder need to contain a file called `run` that is either executable, or will be invoked as a shell script.
 If `run` is an executable it is called as executable, otherwise it is assumed to be a shell script and run by `sh run "$@"`.
-
-### Download tool
-
-The interface of the tool is as follows.
-
-```shell
-$ run <relativeFilePath> <outputFile>
-```
-
-The arguments are:
-
-- `<relativeFilePath>` is the file relative to the repository root
-- `<outputFile>` file to write the results to (may not exist yet)
 
 ### Dialog tool
 
@@ -286,7 +273,7 @@ The script needs to return one of the short-options on `stdout`.
 If the exit code is not `0`, the normal prompt on `stdin` is shown as a fallback mechanism.
 
 ```shell
-$ git hooks tools unregister [download|dialog]
+$ git hooks tools unregister dialog
 ```
 
 Uninstall the script folder in the installation directory under `tools/<toolName>`.
