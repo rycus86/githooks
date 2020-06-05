@@ -6,7 +6,7 @@ mkdir -p /tmp/test076 && cd /tmp/test076 || exit 1
 git init || exit 1
 
 sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh &&
-    git config --global githooks.autoupdate.enabled Y ||
+    git config --global githooks.autoupdate.enabled true ||
     exit 1
 
 OUTPUT=$(

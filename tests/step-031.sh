@@ -11,7 +11,7 @@ mkdir -p /tmp/test31 && cd /tmp/test31 || exit 1
 git init || exit 1
 
 sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh &&
-    git config --global githooks.autoupdate.enabled Y ||
+    git config --global githooks.autoupdate.enabled true ||
     exit 1
 
 HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \

@@ -21,7 +21,7 @@ mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&
     sh /var/lib/githooks/install.sh $SINGLE &&
-    git config githooks.autoupdate.enabled N ||
+    git config githooks.autoupdate.enabled false ||
     exit 1
 
 for HOOK_TYPE in ${MANAGED_HOOK_NAMES}; do

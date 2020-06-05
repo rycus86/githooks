@@ -2,7 +2,7 @@
 # Test:
 #   Re-enabling automatic update checks
 
-git config --global githooks.autoupdate.enabled N || exit 1
+git config --global githooks.autoupdate.enabled false || exit 1
 echo 'y
 ' | sh /var/lib/githooks/install.sh || exit 1
 
