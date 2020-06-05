@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051420-807309
+# Version: 2006.051422-382787
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -723,7 +723,7 @@ install_command_line_tool() {
 ############################################################
 setup_automatic_update_checks() {
     if CURRENT_SETTING=$(git config --get githooks.autoupdate.enabled); then
-        if [ "$CURRENT_SETTING" = "Y" ]; then
+        if [ "$CURRENT_SETTING" = "true" ]; then
             # OK, it's already enabled
             return 1
         else
@@ -755,7 +755,7 @@ setup_automatic_update_checks() {
 
         if is_dry_run; then
             echo "[Dry run] Automatic update checks would have been enabled"
-        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled Y; then
+        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled true; then
             echo "Automatic update checks are now enabled"
         else
             echo "! Failed to enable automatic update checks" >&2
@@ -1244,7 +1244,7 @@ setup_shared_hook_repositories() {
 ############################################################
 set_githooks_directory() {
     if use_core_hookspath; then
-        git config --global githooks.useCoreHooksPath yes
+        git config --global githooks.useCoreHooksPath true
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
 
@@ -1276,7 +1276,7 @@ set_githooks_directory() {
         fi
 
     else
-        git config --global githooks.useCoreHooksPath no
+        git config --global githooks.useCoreHooksPath false
         git config --global init.templateDir "$1"
 
         CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)

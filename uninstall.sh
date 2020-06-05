@@ -376,7 +376,8 @@ uninstall_hooks_from_repo() {
 ############################################################
 using_hooks_path() {
     USE_HOOKS_PATH=$(git config --global githooks.useCoreHooksPath)
-    if [ "$USE_HOOKS_PATH" = "yes" ]; then
+    if [ "$USE_HOOKS_PATH" = "true" ] ||
+        [ "$USE_HOOKS_PATH" = "yes" ]; then # Legacy
         return 0
     else
         return 1

@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.051420-807309
+# Version: 2006.051422-382787
 
 #####################################################
 # Execute the current hook,
@@ -45,7 +45,9 @@ are_githooks_disabled() {
     [ -n "$GITHOOKS_DISABLE" ] && return 0
 
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
-    if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+    if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     fi
 
@@ -680,7 +682,7 @@ should_run_update_checks() {
     [ "$HOOK_NAME" != "post-commit" ] && return 1
 
     UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
-    [ "$UPDATES_ENABLED" != "Y" ] && return 1
+    [ "$UPDATES_ENABLED" != "true" ] && return 1
 
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - LAST_UPDATE))
