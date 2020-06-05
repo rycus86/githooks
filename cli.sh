@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.051422-382787
+# Version: 2006.051442-decd77
 
 #####################################################
 # Prints the command line help for usage and
@@ -2269,7 +2269,8 @@ config_update_state() {
         git config --global --unset githooks.autoupdate.enabled
     elif [ "$1" = "print" ]; then
         CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
-        if [ "$CONFIG_UPDATE_ENABLED" = "true" ]; then
+        if [ "$CONFIG_UPDATE_ENABLED" = "true" ] ||
+            [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
             echo "Automatic update checks are enabled"
         else
             echo "Automatic update checks are NOT enabled"

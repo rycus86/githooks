@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051422-382787
+# Version: 2006.051442-decd77
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -723,7 +723,7 @@ install_command_line_tool() {
 ############################################################
 setup_automatic_update_checks() {
     if CURRENT_SETTING=$(git config --get githooks.autoupdate.enabled); then
-        if [ "$CURRENT_SETTING" = "true" ]; then
+        if [ "$CURRENT_SETTING" = "true" ] || [ "$CURRENT_SETTING" = "Y" ]; then
             # OK, it's already enabled
             return 1
         else
