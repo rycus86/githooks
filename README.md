@@ -27,8 +27,8 @@ Take this snippet of a project layout as an example:
         └── .ignore
     └── post-checkout
     └── ...
-    └── .ignore 
-    └── .shared 
+    └── .ignore
+    └── .shared
     └── .lfs-required
 ├── README.md
 ├── LICENSE
@@ -79,7 +79,7 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 
 ## Git Large File Storage support
 
-If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling 
+If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling
 `git lfs install` globally or locally for a repository only, `git-lfs` installs 4 hooks when initializing (`git init`) or cloning (`git clone`) a repository:
 
 - `post-checkout`
@@ -133,9 +133,9 @@ In a similar spirit to the opt-in above, you can also opt-out of running the hoo
 ```shell
 # Disable in the current repository
 $ git hooks config set disable
-$ git config githooks.disable Y  # alternative
+$ git config githooks.disable true  # alternative
 # Disable in all repositories
-$ git config --global githooks.disable Y
+$ git config --global githooks.disable true
 ```
 
 Also, as mentioned above, all hook execution can be bypassed with a non-empty value in the `$GITHOOKS_DISABLE` environment variable, or per-repository, by running the `git hooks config set disable` command.
@@ -261,7 +261,7 @@ cd bareRepo
 git hooks install
 # Creates .githooks/trust-all marker for this bare repo
 git hooks trust
-# Automaticall accept changes to all existing and new 
+# Automaticall accept changes to all existing and new
 # hooks in the current repository.
 git hooks config accept trusted
 # Don't do global automatic updates, since the Githooks update
@@ -316,10 +316,10 @@ You can also enable automatic update checks during the installation, that is exe
 ```shell
 # enable with either:
 $ git hooks update enable
-$ git config --global githooks.autoupdate.enabled Y
+$ git config --global githooks.autoupdate.enabled true
 # disable with either:
 $ git hooks update disable
-$ git config --global githooks.autoupdate.enabled N
+$ git config --global githooks.autoupdate.enabled false
 $ git config --global --unset githooks.autoupdate.enabled
 ```
 
@@ -351,7 +351,7 @@ The arguments for the dialog tool are:
 - `<long-options>` the button texts in the GUI, e.g. `Yes/no/disable`
 
 The script needs to return one of the short-options on the standard output.
-If the exit code is not `0`, the normal prompt on the standard input is shown as a fallback mechanism. 
+If the exit code is not `0`, the normal prompt on the standard input is shown as a fallback mechanism.
 
 ### Uninstalling
 

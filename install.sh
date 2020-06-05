@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051329-ed9a05
+# Version: 2006.051457-8e0144
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -36,7 +36,7 @@ execute_installation() {
 
     # Clone the repository to the install folder
     # and run the install.sh from there.
-    if ! is_running_internal_install && ! is_update_only; then
+    if ! is_running_internal_install && ! is_autoupdate; then
         update_release_clone || return 1
         run_internal_install "$@" || return 1
         return 0
@@ -65,7 +65,7 @@ execute_installation() {
     echo # For visual separation
 
     # Automatic updates
-    if ! is_update_only && setup_automatic_update_checks; then
+    if ! is_autoupdate && setup_automatic_update_checks; then
         echo # For visual separation
     fi
 
@@ -74,7 +74,7 @@ execute_installation() {
             REPO_GIT_DIR=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
             install_hooks_into_repo "$REPO_GIT_DIR" || return 1
         else
-            if ! is_update_only; then
+            if ! is_autoupdate; then
                 install_into_existing_repositories
             fi
             install_into_registered_repositories
@@ -84,7 +84,7 @@ execute_installation() {
     echo # For visual separation
 
     # Set up shared hook repositories if needed
-    if ! is_update_only && ! is_non_interactive && ! is_single_repo_install; then
+    if ! is_autoupdate && ! is_non_interactive && ! is_single_repo_install; then
         setup_shared_hook_repositories
         echo # For visual separation
     fi
@@ -150,14 +150,16 @@ is_running_internal_install() {
 parse_command_line_arguments() {
     TARGET_TEMPLATE_DIR=""
     for p in "$@"; do
-        if [ "$p" = "--dry-run" ]; then
-            DRY_RUN="yes"
+        if [ "$p" = "--internal-autoupdate" ]; then
+            INTERNAL_AUTOUPDATE="true"
+        elif [ "$p" = "--dry-run" ]; then
+            DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
-            NON_INTERACTIVE="yes"
+            NON_INTERACTIVE="true"
         elif [ "$p" = "--single" ]; then
-            SINGLE_REPO_INSTALL="yes"
+            SINGLE_REPO_INSTALL="true"
         elif [ "$p" = "--skip-install-into-existing" ]; then
-            SKIP_INSTALL_INTO_EXISTING="yes"
+            SKIP_INSTALL_INTO_EXISTING="true"
         elif [ "$p" = "--prefix" ]; then
             : # nothing to do here
         elif [ "$prev_p" = "--prefix" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
@@ -178,11 +180,11 @@ parse_command_line_arguments() {
             # Allow user to pass prefered template dir
             TARGET_TEMPLATE_DIR="$p"
         elif [ "$p" = "--only-server-hooks" ]; then
-            INSTALL_ONLY_SERVER_HOOKS="yes"
+            INSTALL_ONLY_SERVER_HOOKS="true"
         elif [ "$p" = "--use-core-hookspath" ]; then
-            USE_CORE_HOOKSPATH="yes"
+            USE_CORE_HOOKSPATH="true"
             # No point in installing into existing when using core.hooksPath
-            SKIP_INSTALL_INTO_EXISTING="yes"
+            SKIP_INSTALL_INTO_EXISTING="true"
         elif [ "$p" = "--update-clone-url" ]; then
             : # nothing to do here
         elif [ "$prev_p" = "--update-clone-url" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
@@ -198,7 +200,13 @@ parse_command_line_arguments() {
         prev_p="$p"
     done
 
-    if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
+    # Legacy flag over environment
+    if [ "$DO_UPDATE_ONLY" = "yes" ]; then
+        unset DO_UPDATE_ONLY
+        INTERNAL_AUTOUPDATE="true"
+    fi
+
+    if is_single_repo_install; then
         if ! check_not_deprecated_single_install; then
             echo "! Install failed due to deprecated single install" >&2
             exit 1
@@ -208,7 +216,7 @@ parse_command_line_arguments() {
     fi
 
     # Using core.hooksPath implies it applies to all repo's
-    if [ "$SINGLE_REPO_INSTALL" = "yes" ] && [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+    if is_single_repo_install && use_core_hooks_path; then
         echo "! Cannot use --single and --use-core-hookspath together" >&2
         exit 1
     fi
@@ -265,11 +273,7 @@ check_not_deprecated_single_install() {
 #   0 in dry-run mode, 1 otherwise
 ############################################################
 is_dry_run() {
-    if [ "$DRY_RUN" = "yes" ]; then
-        return 0
-    else
-        return 1
-    fi
+    [ "$DRY_RUN" = "true" ] || return 1
 }
 
 ############################################################
@@ -280,11 +284,7 @@ is_dry_run() {
 #   0 in non-interactive mode, 1 otherwise
 ############################################################
 is_non_interactive() {
-    if [ "$NON_INTERACTIVE" = "yes" ]; then
-        return 0
-    else
-        return 1
-    fi
+    [ "$NON_INTERACTIVE" = "true" ] || return 1
 }
 
 ############################################################
@@ -295,26 +295,44 @@ is_non_interactive() {
 #   0 if we should skip, 1 otherwise
 ############################################################
 should_skip_install_into_existing_repositories() {
-    if [ "$SKIP_INSTALL_INTO_EXISTING" = "yes" ]; then
-        return 0
-    else
-        return 1
-    fi
+    [ "$SKIP_INSTALL_INTO_EXISTING" = "true" ] || return 1
 }
 
 ############################################################
 # Check if the install script is
-#   running in for a single repository without templates.
+#   running for a single repository only.
 #
 # Returns:
 #   0 in single repository install mode, 1 otherwise
 ############################################################
 is_single_repo_install() {
-    if [ "$SINGLE_REPO_INSTALL" = "yes" ]; then
-        return 0
-    else
+    [ "$SINGLE_REPO_INSTALL" = "true" ] || return 1
+}
+
+############################################################
+# Check if the install script is
+#   running with `--only-server-hooks` or if globally
+#   configured to run only server hooks.
+#
+# Returns:
+#   0 if only server hooks should be installed, 1 otherwise
+############################################################
+install_only_server_hooks() {
+    [ "$INSTALL_ONLY_SERVER_HOOKS" = "true" ] ||
+        [ "$(git config --global githooks.maintainOnlyServerHooks)" = "true" ] ||
+        [ "$(git config --global githooks.maintainOnlyServerHooks)" = "Y" ] || # Legacy
         return 1
-    fi
+}
+
+############################################################
+# Check if the install script is
+#   running with `--use-core-hookspath`.
+#
+# Returns:
+#   0 if using `core.hooksPath`, 1 otherwise
+############################################################
+use_core_hookspath() {
+    [ "$USE_CORE_HOOKSPATH" = "true" ] || return 1
 }
 
 ############################################################
@@ -324,8 +342,8 @@ is_single_repo_install() {
 # Returns:
 #   0 if its an update, 1 otherwise
 ############################################################
-is_update_only() {
-    [ "$DO_UPDATE_ONLY" = "yes" ] || return 1
+is_autoupdate() {
+    [ "$INTERNAL_AUTOUPDATE" = "true" ] || return 1
 }
 
 ############################################################
@@ -417,7 +435,7 @@ prepare_target_template_directory() {
 
     # Up to now the directories would not have been set if
     # --use-core-hookspath is used, we set it now here.
-    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+    if use_core_hookspath; then
         set_githooks_directory "$TARGET_TEMPLATE_DIR"
     fi
 }
@@ -435,7 +453,7 @@ find_git_hook_templates() {
     mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks" && return 0
 
     # 2. from git config
-    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
+    if use_core_hookspath; then
         mark_directory_as_target "$(git config --global core.hooksPath)" && return 0
     else
         mark_directory_as_target "$(git config --global init.templateDir)" "hooks" && return 0
@@ -641,11 +659,7 @@ setup_hook_templates() {
         return 0
     fi
 
-    if [ "$(git config --global githooks.maintainOnlyServerHooks)" = "Y" ]; then
-        INSTALL_ONLY_SERVER_HOOKS="yes"
-    fi
-
-    if [ "$INSTALL_ONLY_SERVER_HOOKS" = "yes" ]; then
+    if install_only_server_hooks; then
         HOOK_NAMES="$MANAGED_SERVER_HOOK_NAMES"
     else
         HOOK_NAMES="$MANAGED_HOOK_NAMES"
@@ -672,8 +686,8 @@ setup_hook_templates() {
         fi
     done
 
-    if [ "$INSTALL_ONLY_SERVER_HOOKS" = "yes" ]; then
-        git config --global githooks.maintainOnlyServerHooks "Y"
+    if install_only_server_hooks; then
+        git config --global githooks.maintainOnlyServerHooks "true"
     fi
 
     return 0
@@ -709,7 +723,7 @@ install_command_line_tool() {
 ############################################################
 setup_automatic_update_checks() {
     if CURRENT_SETTING=$(git config --get githooks.autoupdate.enabled); then
-        if [ "$CURRENT_SETTING" = "Y" ]; then
+        if [ "$CURRENT_SETTING" = "true" ] || [ "$CURRENT_SETTING" = "Y" ]; then
             # OK, it's already enabled
             return 1
         else
@@ -741,7 +755,7 @@ setup_automatic_update_checks() {
 
         if is_dry_run; then
             echo "[Dry run] Automatic update checks would have been enabled"
-        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled Y; then
+        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled true; then
             echo "Automatic update checks are now enabled"
         else
             echo "! Failed to enable automatic update checks" >&2
@@ -1162,7 +1176,7 @@ register_repo_for_autoupdate() {
     echo "$CURRENT_REPO" >>"$LIST"
 
     # Mark the repo as registered.
-    (git -C "$CURRENT_REPO" config --local githooks.autoupdate.registered "yes")
+    (git -C "$CURRENT_REPO" config --local githooks.autoupdate.registered "true")
 
     return 0
 }
@@ -1229,8 +1243,8 @@ setup_shared_hook_repositories() {
 #   None
 ############################################################
 set_githooks_directory() {
-    if [ "$USE_CORE_HOOKSPATH" = "yes" ]; then
-        git config --global githooks.useCoreHooksPath yes
+    if use_core_hookspath; then
+        git config --global githooks.useCoreHooksPath true
         git config --global githooks.pathForUseCoreHooksPath "$1"
         git config --global core.hooksPath "$1"
 
@@ -1262,7 +1276,7 @@ set_githooks_directory() {
         fi
 
     else
-        git config --global githooks.useCoreHooksPath no
+        git config --global githooks.useCoreHooksPath false
         git config --global init.templateDir "$1"
 
         CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)

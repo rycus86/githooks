@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.051329-ed9a05
+# Version: 2006.051457-8e0144
 
 #####################################################
 # Prints the command line help for usage and
@@ -295,7 +295,7 @@ git hooks disable [-r|--reset]
     fi
 
     if [ "$1" = "-a" ] || [ "$1" = "--all" ]; then
-        git config githooks.disable Y &&
+        git config githooks.disable true &&
             echo "All existing and future hooks are disabled in the current repository" &&
             return
 
@@ -682,7 +682,9 @@ get_hook_state() {
 #####################################################
 is_repository_disabled() {
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
-    if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+    if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     else
         return 1
@@ -1428,14 +1430,14 @@ git hooks update [enable|disable]
     fi
 
     if [ "$1" = "enable" ]; then
-        git config --global githooks.autoupdate.enabled Y &&
+        git config --global githooks.autoupdate.enabled true &&
             echo "Automatic update checks have been enabled" &&
             return
 
         echo "! Failed to enable automatic updates" >&2 && exit 1
 
     elif [ "$1" = "disable" ]; then
-        git config --global githooks.autoupdate.enabled N &&
+        git config --global githooks.autoupdate.enabled false &&
             echo "Automatic update checks have been disabled" &&
             return
 
@@ -2094,7 +2096,7 @@ config_disable() {
     fi
 
     if [ "$1" = "set" ]; then
-        git config githooks.disable Y
+        git config githooks.disable true
     elif [ "$1" = "reset" ]; then
         git config --unset githooks.disable
     elif [ "$1" = "print" ]; then
@@ -2260,14 +2262,15 @@ config_trust_all_hooks() {
 #####################################################
 config_update_state() {
     if [ "$1" = "enable" ]; then
-        git config --global githooks.autoupdate.enabled Y
+        git config --global githooks.autoupdate.enabled true
     elif [ "$1" = "disable" ]; then
-        git config --global githooks.autoupdate.enabled N
+        git config --global githooks.autoupdate.enabled false
     elif [ "$1" = "reset" ]; then
         git config --global --unset githooks.autoupdate.enabled
     elif [ "$1" = "print" ]; then
         CONFIG_UPDATE_ENABLED=$(git config --get githooks.autoupdate.enabled)
-        if [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
+        if [ "$CONFIG_UPDATE_ENABLED" = "true" ] ||
+            [ "$CONFIG_UPDATE_ENABLED" = "Y" ]; then
             echo "Automatic update checks are enabled"
         else
             echo "Automatic update checks are NOT enabled"

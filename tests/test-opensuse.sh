@@ -7,4 +7,4 @@ FROM opensuse/amd64
 RUN zypper install -y git
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'opensuse'
+exec sh "$TEST_DIR"/exec-tests.sh 'opensuse' "$@"

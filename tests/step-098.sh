@@ -13,7 +13,7 @@ mkdir -p /tmp/test098/.git/hooks &&
     cd /tmp/test098 &&
     git init &&
     sh /var/lib/githooks/install.sh $SINGLE &&
-    git config githooks.autoupdate.enabled N ||
+    git config githooks.autoupdate.enabled false ||
     exit 1
 
 if ! git worktree list >/dev/null 2>/dev/null; then

@@ -7,4 +7,4 @@ FROM fedora
 RUN dnf install -y git findutils
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'fedora'
+exec sh "$TEST_DIR"/exec-tests.sh 'fedora' "$@"

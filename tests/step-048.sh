@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: do not run any hooks in any repos
 
-git config --global githooks.disable Y || exit 1
+git config --global githooks.disable true || exit 1
 
 mkdir -p /tmp/test48 && cd /tmp/test48 || exit 1
 git init || exit 1

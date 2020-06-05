@@ -13,4 +13,4 @@ RUN apt-get update && \
 USER test
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'debian-user'
+exec sh "$TEST_DIR"/exec-tests.sh 'debian-user' "$@"

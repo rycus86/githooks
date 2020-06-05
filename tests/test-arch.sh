@@ -7,4 +7,4 @@ FROM archlinux/base
 RUN echo Y | pacman -Sy git gawk
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'arch'
+exec sh "$TEST_DIR"/exec-tests.sh 'arch' "$@"

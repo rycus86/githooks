@@ -133,7 +133,7 @@ MOCK_LAST_RUN=$((CURRENT_TIME - 100000))
 
 cd /tmp/test116.3 &&
     sed -i 's/^# Version: .*/# Version: 0/' /tmp/test116.3/.git/hooks/post-commit &&
-    git config --global githooks.autoupdate.enabled Y &&
+    git config --global githooks.autoupdate.enabled true &&
     git config --global githooks.autoupdate.lastrun $MOCK_LAST_RUN &&
     git commit --allow-empty -m 'Second commit' || exit 1
 

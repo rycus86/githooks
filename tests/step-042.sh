@@ -29,7 +29,7 @@ if [ "$SETUP_AS_SINGLE_REPO" != "yes" ]; then
 fi
 
 ARE_UPDATES_ENABLED=$(git config --local --get githooks.autoupdate.enabled)
-if [ "$ARE_UPDATES_ENABLED" != "Y" ]; then
+if [ "$ARE_UPDATES_ENABLED" != "true" ]; then
     echo "! Auto updates were expected to be enabled"
     exit 1
 fi

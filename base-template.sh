@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.051329-ed9a05
+# Version: 2006.051457-8e0144
 
 #####################################################
 # Execute the current hook,
@@ -45,7 +45,9 @@ are_githooks_disabled() {
     [ -n "$GITHOOKS_DISABLE" ] && return 0
 
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
-    if [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then
+    if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     fi
 
@@ -158,7 +160,7 @@ register_repo_for_autoupdate() {
     # Add at the bottom
     echo "$CURRENT_REPO" >>"$LIST"
     # Mark this repo as registered
-    git config --local githooks.autoupdate.registered "yes"
+    git config --local githooks.autoupdate.registered "true"
 }
 
 #####################################################
@@ -680,7 +682,8 @@ should_run_update_checks() {
     [ "$HOOK_NAME" != "post-commit" ] && return 1
 
     UPDATES_ENABLED=$(git config --get githooks.autoupdate.enabled)
-    [ "$UPDATES_ENABLED" != "Y" ] && return 1
+    [ "$UPDATES_ENABLED" != "true" ] &&
+        [ "$UPDATES_ENABLED" != "Y" ] && return 1
 
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - LAST_UPDATE))
@@ -1026,11 +1029,11 @@ should_run_update() {
 #####################################################
 execute_update() {
     if is_single_repo; then
-        if DO_UPDATE_ONLY="yes" sh -s -- --single <"$INSTALL_SCRIPT"; then
+        if sh -s -- --single --internal-autoupdate <"$INSTALL_SCRIPT"; then
             return 0
         fi
     else
-        if DO_UPDATE_ONLY="yes" sh <"$INSTALL_SCRIPT"; then
+        if sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT"; then
             return 0
         fi
     fi
