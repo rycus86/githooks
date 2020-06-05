@@ -7,4 +7,4 @@ FROM centos
 RUN yum install -y git
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'centos'
+exec sh "$TEST_DIR"/exec-tests.sh 'centos' "$@"

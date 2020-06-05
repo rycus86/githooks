@@ -2,8 +2,8 @@
 IMAGE_TYPE="$1"
 
 # Test only sepcific tests
-if [ -n "$TEST_STEP" ]; then
-    STEPS_TO_RUN="step-${TEST_STEP}.sh"
+if [ -n "$2" ]; then
+    STEPS_TO_RUN="step-$2.sh"
 else
     STEPS_TO_RUN="step-*"
 fi
@@ -34,7 +34,8 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
     git add . && \
-    git commit -a -m "Initial release"
+    git commit -a -m "Initial release" && \
+    git commit -a --allow-empty -m "Empty to reset to trigger update"
 
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\

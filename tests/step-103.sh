@@ -34,7 +34,7 @@ git commit -m "Test" || exit 1
 git hooks shared purge || exit 1
 
 if [ -d ~/.githooks/shared ]; then
-    echo "! Expected shared hooks to be purged. $RESULT"
+    echo "! Expected shared hooks to be purged."
     exit 1
 fi
 

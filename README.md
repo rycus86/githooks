@@ -27,8 +27,8 @@ Take this snippet of a project layout as an example:
         └── .ignore
     └── post-checkout
     └── ...
-    └── .ignore 
-    └── .shared 
+    └── .ignore
+    └── .shared
     └── .lfs-required
 ├── README.md
 ├── LICENSE
@@ -79,7 +79,7 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 
 ## Git Large File Storage support
 
-If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling 
+If the user has installed [Git Large File Storage](https://git-lfs.github.com/) (`git-lfs`) by calling
 `git lfs install` globally or locally for a repository only, `git-lfs` installs 4 hooks when initializing (`git init`) or cloning (`git clone`) a repository:
 
 - `post-checkout`
@@ -185,13 +185,11 @@ The global install prefix defaults to `${HOME}` but can be changed by passing `-
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --non-interactive
 ```
 
-There is also an option to run the install script for the repository in the current directory only, without setting up the Git templates for any future repositories. For this, run the command below.
+There is also an option to run the install script for the repository in the current directory only. For this, run the command below.
 
 ```shell
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --single
 ```
-
-**[deprecated]:** You can change this setting later with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool, running the `git hooks config [set|reset] single` command, which affects how future updates are run, when started from the local repository.
 
 It's possible to specify which template directory should be used, by passing the `--template-dir <dir>` parameter, where `<dir>` is the directory where you wish the templates to be installed.
 
@@ -261,7 +259,7 @@ cd bareRepo
 git hooks install
 # Creates .githooks/trust-all marker for this bare repo
 git hooks trust
-# Automaticall accept changes to all existing and new 
+# Automaticall accept changes to all existing and new
 # hooks in the current repository.
 git hooks config accept trusted
 # Don't do global automatic updates, since the Githooks update
@@ -351,7 +349,7 @@ The arguments for the dialog tool are:
 - `<long-options>` the button texts in the GUI, e.g. `Yes/no/disable`
 
 The script needs to return one of the short-options on the standard output.
-If the exit code is not `0`, the normal prompt on the standard input is shown as a fallback mechanism. 
+If the exit code is not `0`, the normal prompt on the standard input is shown as a fallback mechanism.
 
 ### Uninstalling
 

@@ -7,4 +7,4 @@ FROM alpine
 RUN apk add --no-cache git git-lfs
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'alpine-lfs'
+exec sh "$TEST_DIR"/exec-tests.sh 'alpine-lfs' "$@"

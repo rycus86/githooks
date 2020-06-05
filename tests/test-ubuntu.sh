@@ -9,4 +9,4 @@ RUN apt-get update && \
         git-core
 EOF
 
-exec sh "$TEST_DIR"/exec-tests.sh 'ubuntu'
+exec sh "$TEST_DIR"/exec-tests.sh 'ubuntu' "$@"

@@ -3,7 +3,7 @@
 RUN_DIR="${RUN_DIR:-"$PWD"}"
 
 if [ -n "$1" ]; then
-    STEPS_TO_RUN="$1.sh"
+    STEPS_TO_RUN="step-$1.sh"
 else
     STEPS_TO_RUN="step-*"
 fi
@@ -49,7 +49,8 @@ RUN \\
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
     git add . && \
-    git commit -a -m "Initial release"
+    git commit -a -m "Initial release" && \
+    git commit -a --allow-empty -m "Empty to reset to trigger update"
 EOF
 
 # shellcheck disable=SC2181

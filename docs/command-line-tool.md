@@ -170,12 +170,6 @@ $ git hooks config [set|reset|print] disable
 Disables running any Githooks files in the current repository, when the `set` option is used. The `reset` option clears this setting. The `print` option outputs the current setting. This command needs to be run at the root of a repository.
 
 ```shell
-$ git hooks config [set|reset|print] single
-```
-
-**[deprecated]**: Marks the current local repository to be managed as a single Githooks installation, or clears the marker, with `set` and `reset` respectively. The `print` option outputs the current setting of it. This command needs to be run at the root of a repository.
-
-```shell
 $ git hooks config set search-dir <path>
 $ git hooks config [reset|print] search-dir
 ```
@@ -250,19 +244,6 @@ $ git hooks tools register [download|dialog] <scriptFolder>
 Install the script folder `<scriptFolder>` in the installation directory under `tools/<toolName>`.
 This folder need to contain a file called `run` that is either executable, or will be invoked as a shell script.
 If `run` is an executable it is called as executable, otherwise it is assumed to be a shell script and run by `sh run "$@"`.
-
-### Download tool
-
-The interface of the tool is as follows.
-
-```shell
-$ run <relativeFilePath> <outputFile>
-```
-
-The arguments are:
-
-- `<relativeFilePath>` is the file relative to the repository root
-- `<outputFile>` file to write the results to (may not exist yet)
 
 ### Dialog tool
 

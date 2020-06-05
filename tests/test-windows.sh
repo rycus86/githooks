@@ -8,6 +8,7 @@ fi
 ROOT_DIR="C:/Program Files"
 mkdir -p "$ROOT_DIR/githooks" || true
 cp base-template.sh "$ROOT_DIR/githooks"/ || exit 1
+cp base-template-symlink.sh "$ROOT_DIR/githooks"/ || exit 1
 cp install.sh "$ROOT_DIR/githooks"/ || exit 1
 cp uninstall.sh "$ROOT_DIR/githooks"/ || exit 1
 cp cli.sh "$ROOT_DIR/githooks"/ || exit 1
