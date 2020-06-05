@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.062058-fb9c53
+# Version: 2006.061942-fa7692
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -711,21 +711,21 @@ setup_hook_templates() {
 }
 
 ############################################################
-# Installs the command line helper tool at
-#   $INSTALL_DIR/bin/githooks and adds a Git alias for it.
+# Adds a Git alias for `$INSTALL_DIR/release/cli.sh`.
 #
 # Returns:
 #   None
 ############################################################
 install_command_line_tool() {
-    mkdir -p "$INSTALL_DIR/bin" &&
-        cp "$INSTALL_DIR/release/cli.sh" "$INSTALL_DIR/bin/githooks" &&
-        chmod +x "$INSTALL_DIR/bin/githooks" &&
-        git config --global alias.hooks "!\"$INSTALL_DIR/bin/githooks\"" &&
-        echo "The command line helper tool is installed at ${INSTALL_DIR}/bin/githooks, and it is now available as 'git hooks <cmd>'" &&
+    [ -f "$INSTALL_DIR/release/cli.sh" ] &&
+        git config --global alias.hooks "!sh \"$INSTALL_DIR/release/cli.sh\"" &&
+        echo "The command line helper is now available as 'git hooks <cmd>'" &&
         return
 
-    echo "! Failed to setup the command line helper automatically. If you'd like to do it manually, install the 'cli.sh' file from the repository into a folder on your PATH environment variable, and make it executable." >&2
+    echo "! Failed to setup the command line helper automatically."
+    echo "  If you'd like to do it manually, install the 'cli.sh' file from the"
+    echo "  repository into a folder on your PATH environment variable"
+    echo "  and make it executable." >&2
     echo "  Direct link to the script: https://raw.githubusercontent.com/rycus86/githooks/master/cli.sh" >&2
 }
 
