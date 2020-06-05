@@ -16,6 +16,7 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     SINGLE=""
 fi
 
+# shellcheck disable=SC2086
 mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&

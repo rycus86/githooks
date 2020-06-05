@@ -1,6 +1,7 @@
 #!/bin/sh
 
 for SCRIPT_FILE in *.sh; do
+    # shellcheck disable=SC2141
     IFS='\-'
 
     # shellcheck disable=SC2013

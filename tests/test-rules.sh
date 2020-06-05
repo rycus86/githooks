@@ -2,11 +2,12 @@
 
 cat <<EOF | docker build --force-rm -t githooks:test-rules -
 FROM alpine
-RUN apk add --no-cache git curl python
-RUN curl -fsSL https://github.com/mvdan/sh/releases/download/v2.6.4/shfmt_v2.6.4_linux_amd64 -o /usr/local/bin/shfmt \
+RUN apk add --no-cache git curl python3
+RUN curl -fsSL https://github.com/mvdan/sh/releases/download/v3.1.1/shfmt_v3.1.1_linux_amd64 -o /usr/local/bin/shfmt \
     && chmod +x /usr/local/bin/shfmt \
     && shfmt --version
-RUN curl -fsSL https://shellcheck.storage.googleapis.com/shellcheck-v0.6.0.linux-x86_64 -o /usr/local/bin/shellcheck \
+RUN T=$(mktemp); curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.7.1/shellcheck-v0.7.1.linux.x86_64.tar.xz -o "\\\$T" \
+    && tar -xf "\\\$T" --strip-components=1 -C /usr/local/bin/ \
     && chmod +x /usr/local/bin/shellcheck \
     && shellcheck --version
 EOF
