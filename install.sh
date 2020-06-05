@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051457-8e0144
+# Version: 2006.051924-163669
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -30,16 +30,21 @@ execute_installation() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
-    parse_command_line_arguments "$@"
+    parse_command_line_arguments "$@" || return 1
 
-    load_install_dir
+    load_install_dir || return 1
 
-    # Clone the repository to the install folder
-    # and run the install.sh from there.
-    if ! is_running_internal_install && ! is_autoupdate; then
+    if ! is_running_internal_install; then
+        # We are running this install not
+        # from the release clone, therefore we need to
+        # clone (or pull) it first and then dispatch.
         update_release_clone || return 1
         run_internal_install "$@" || return 1
         return 0
+    else
+        # Only check deprecations
+        # and their warnings once
+        check_deprecation || return 1
     fi
 
     if is_non_interactive; then
@@ -95,6 +100,24 @@ execute_installation() {
 }
 
 ############################################################
+# Checks if any deprecated features are used
+#
+# Returns:
+#   1 if the install should be aborted, 0 otherwise
+############################################################
+check_deprecation() {
+    if is_single_repo_install; then
+        if ! check_not_deprecated_single_install; then
+            echo "! Install failed due to deprecated single install" >&2
+            return 1
+        else
+            warn_deprecated_single_install
+        fi
+    fi
+    return 0
+}
+
+############################################################
 # Sets the install directory.
 #
 # Returns:
@@ -136,7 +159,8 @@ load_install_dir() {
 # Returns: 0 if `true`, 1 oterhwise
 ############################################################
 is_running_internal_install() {
-    if [ "$INTERNAL_INSTALL" = "yes" ]; then
+    if [ "$INTERNAL_INSTALL" = "true" ] ||
+        [ "$INTERNAL_INSTALL" = "yes" ]; then # Legacy over environment
         return 0
     fi
     return 1
@@ -145,13 +169,15 @@ is_running_internal_install() {
 ############################################################
 # Set up variables based on command line arguments.
 #
-# Returns: None
+# Returns: 0 if all arguments are parsed correctly, 1 otherwise
 ############################################################
 parse_command_line_arguments() {
     TARGET_TEMPLATE_DIR=""
     for p in "$@"; do
         if [ "$p" = "--internal-autoupdate" ]; then
             INTERNAL_AUTOUPDATE="true"
+        elif [ "$p" = "--internal-install" ]; then
+            INTERNAL_INSTALL="true"
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
@@ -195,7 +221,7 @@ parse_command_line_arguments() {
             GITHOOKS_CLONE_BRANCH="$p"
         else
             echo "! Unknown argument \`$p\`" >&2
-            exit 1
+            return 1
         fi
         prev_p="$p"
     done
@@ -206,19 +232,10 @@ parse_command_line_arguments() {
         INTERNAL_AUTOUPDATE="true"
     fi
 
-    if is_single_repo_install; then
-        if ! check_not_deprecated_single_install; then
-            echo "! Install failed due to deprecated single install" >&2
-            exit 1
-        else
-            warn_deprecated_single_install
-        fi
-    fi
-
     # Using core.hooksPath implies it applies to all repo's
     if is_single_repo_install && use_core_hooks_path; then
         echo "! Cannot use --single and --use-core-hookspath together" >&2
-        exit 1
+        return 1
     fi
 }
 
@@ -1406,7 +1423,7 @@ run_internal_install() {
         return 1
     fi
 
-    INTERNAL_INSTALL="yes" sh "$INSTALL_DIR/release/install.sh" "$@" || return 1
+    sh "$INSTALL_DIR/release/install.sh" --internal-install "$@" || return 1
 }
 
 ############################################################
