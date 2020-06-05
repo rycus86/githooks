@@ -110,11 +110,6 @@ if git config githooks.autoupdate.registered >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! curl --version && ! wget --version; then
-    # We skip the update for neither curl or wget
-    exit 0
-fi
-
 # Update Test
 # Set all other hooks to dirty by adding something
 # shellcheck disable=SC2156
@@ -131,14 +126,19 @@ find /tmp -type f -path "*/.git/hooks/*" |
 CURRENT_TIME=$(date +%s)
 MOCK_LAST_RUN=$((CURRENT_TIME - 100000))
 
+# Reset to trigger update from repo 3
+if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
+    echo "! Could not reset master to trigger update."
+    exit 1
+fi
+
 cd /tmp/test116.3 &&
-    sed -i 's/^# Version: .*/# Version: 0/' /tmp/test116.3/.git/hooks/post-commit &&
     git config --global githooks.autoupdate.enabled true &&
     git config --global githooks.autoupdate.lastrun $MOCK_LAST_RUN &&
     git commit --allow-empty -m 'Second commit' || exit 1
 
 # Check that all hooks are updated
-find /tmp -type f -path "*/.git/hooks/*" |
+find /tmp -type f -path "*/.git/hooks/*" -and -not -name "*disabled*" |
     while read -r HOOK; do
         if grep -q "#DIRTY" "$HOOK" && ! echo "$HOOK" | grep -q ".4"; then
             echo "! Expected hooks to be updated $HOOK"
