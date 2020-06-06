@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.051924-163669
+# Version: 2006.062058-fb9c53
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -233,7 +233,7 @@ parse_command_line_arguments() {
     fi
 
     # Using core.hooksPath implies it applies to all repo's
-    if is_single_repo_install && use_core_hooks_path; then
+    if is_single_repo_install && use_core_hookspath; then
         echo "! Cannot use --single and --use-core-hookspath together" >&2
         return 1
     fi
