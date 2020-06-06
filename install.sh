@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.062024-2a0c30
+# Version: 2006.062029-a4e23d
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -53,7 +53,7 @@ execute_installation() {
     # From here starts the post update logic
     # meaning the `--internal-postupdate` flag is set
     # and we are running inside the release clone
-    # meaning the `--internal-install` is flag set.
+    # meaning the `--internal-install` flag is set.
 
     if is_non_interactive; then
         disable_tty_input
