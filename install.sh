@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.061942-fa7692
+# Version: 2006.061943-4d991f
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -722,11 +722,12 @@ install_command_line_tool() {
         echo "The command line helper is now available as 'git hooks <cmd>'" &&
         return
 
-    echo "! Failed to setup the command line helper automatically."
-    echo "  If you'd like to do it manually, install the 'cli.sh' file from the"
-    echo "  repository into a folder on your PATH environment variable"
+    echo "! Failed to setup the command line helper automatically." >&2
+    echo "  If you'd like to do it manually, install the 'cli.sh' file from the" >&2
+    echo "  repository into a folder on your PATH environment variable" >&2
     echo "  and make it executable." >&2
-    echo "  Direct link to the script: https://raw.githubusercontent.com/rycus86/githooks/master/cli.sh" >&2
+    echo "  Direct link to the script:" >&2
+    echo "  https://raw.githubusercontent.com/rycus86/githooks/master/cli.sh" >&2
 }
 
 ############################################################
@@ -1011,7 +1012,8 @@ install_into_registered_repositories() {
                 # Install into registered repositories by default
                 true
             else
-                echo "The following remaining registered repositories in \`$LIST\`"
+                echo "The following remaining registered repositories in"
+                echo "\`$LIST\`"
                 echo "contain a Githooks installation:"
                 sed -E "s/^/ - /" <"$INSTALL_LIST"
                 printf 'Do you want to install to all of them? [Yn] '
@@ -1129,12 +1131,17 @@ install_hooks_into_repo() {
 
             else
                 if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
-                    echo "Looks like you don't have a .githooks folder in the ${TARGET_ROOT} repository yet."
-                    printf "  Would you like to create one with a README containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+                    echo "Looks like you don't have a .githooks folder"
+                    echo "in the ${TARGET_ROOT} repository yet."
+                    echo "  Would you like to create one with a README"
+                    printf "  containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
                 else
-                    echo "Looks like you don't have a README.md in the ${TARGET_ROOT}/.githooks folder yet."
-                    echo "  A README file might help contributors and other team members learn about what is this for."
-                    printf "  Would you like to add one now with a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
+                    echo "Looks like you don't have a README.md in the"
+                    echo "${TARGET_ROOT}/.githooks folder yet."
+                    echo "  A README file might help contributors and"
+                    echo "  other team members learn about what is this for."
+                    echo "  Would you like to add one now with"
+                    printf "  a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
                 fi
 
                 read -r SETUP_INCLUDED_README </dev/tty
@@ -1207,10 +1214,16 @@ register_repo_for_autoupdate() {
 ############################################################
 setup_shared_hook_repositories() {
     if [ -n "$(git config --global --get githooks.shared)" ]; then
-        printf "Looks like you already have shared hook repositories setup, do you want to change them now? [y/N] "
+        echo "Looks like you already have shared hook"
+        printf "repositories setup, do you want to change them now? [y/N] "
     else
-        echo "You can set up shared hook repositories to avoid duplicating common hooks across repositories you work on. See information on what are these in the project's documentation at https://github.com/rycus86/githooks#shared-hook-repositories"
-        echo "Note: you can also have a .githooks/.shared file listing the repositories where you keep the shared hook files"
+        echo "You can set up shared hook repositories to avoid"
+        echo "duplicating common hooks across repositories you"
+        echo "work on. See information on what are these in the"
+        echo "project's documentation at:"
+        echo "https://github.com/rycus86/githooks#shared-hook-repositories"
+        echo "Note: you can also have a .githooks/.shared file listing the"
+        echo "repositories where you keep the shared hook files"
         printf "Would you like to set up shared hook repos now? [y/N] "
     fi
 
@@ -1436,7 +1449,10 @@ run_internal_install() {
 thank_you() {
     echo "All done! Enjoy!"
     echo
-    echo "Please support the project by starring the project at https://github.com/rycus86/githooks, and report bugs or missing features or improvements as issues. Thanks!"
+    echo "Please support the project by starring the project"
+    echo "at https://github.com/rycus86/githooks, and report"
+    echo "bugs or missing features or improvements as issues."
+    echo "Thanks!"
 }
 
 # Start the installation process

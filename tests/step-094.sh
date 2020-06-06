@@ -59,6 +59,13 @@ if [ $? -eq 0 ] || ! echo "$OUT" | grep -iq "DEPRECATION WARNING: Single install
     exit 1
 fi
 
+# Unset deprecated single install and install again.
+git config --unset githooks.single.install
+if ! git hooks install; then
+    echo "! Expected installation to succeed"
+    exit 1
+fi
+
 # revert any changes done by the downloaded install script
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to run the installation again (2)"
