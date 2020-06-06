@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.062029-a4e23d
+# Version: 2006.062037-dd10de
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -1405,6 +1405,8 @@ update_release_clone() {
 
             CREATE_NEW_CLONE="true"
 
+            # During an autoupdate we would silently erase/reclone
+            # which is not so good, therefore we abort here.
             if is_autoupdate; then
                 echo "! Cannot pull updates because \`origin\` of update clone" >&2
                 echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
@@ -1419,16 +1421,18 @@ update_release_clone() {
                 echo "  to trigger a new checkout." >&2
                 return 1
             fi
+        fi
 
-            if is_autoupdate && ! execute_git "$GITHOOKS_CLONE_DIR" diff-index --quiet HEAD >/dev/null 2>&1; then
-                echo "! Cannot pull updates because the update clone" >&2
-                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
-                echo "  is dirty! Either fix this or delete the clone" >&2
-                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
-                echo "  to trigger a new checkout." >&2
-                return 1
-            fi
-
+        # During an autoupdate we also warn when
+        # the update clone is dirty which it really
+        # should not be and abort.
+        if is_autoupdate && ! execute_git "$GITHOOKS_CLONE_DIR" diff-index --quiet HEAD >/dev/null 2>&1; then
+            echo "! Cannot pull updates because the update clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  is dirty! Either fix this or delete the clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  to trigger a new checkout." >&2
+            return 1
         fi
 
     else
