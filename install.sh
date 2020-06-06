@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.062020-8566b5
+# Version: 2006.062024-2a0c30
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -41,10 +41,10 @@ execute_installation() {
         update_release_clone || return 1
 
         if is_clone_updated || ! is_running_internal_install; then
-            # We are running this install
-            # - not from the release clone -> dispatch
-            # - or we just updated the release clone -> dispatch
-            # to the (new) script in the clone
+            # Either
+            # - we just updated the release clone -> dispatch to the new install
+            # - or we are running not from the release clone -> dispatch to the install
+            # in the clone.
             run_internal_install --internal-postupdate "$@" || return 1
             return 0
         fi
