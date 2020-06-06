@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.060128-6d7787
+# Version: 2006.062020-8566b5
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -35,20 +35,25 @@ execute_installation() {
     load_install_dir || return 1
 
     if ! is_postupdate; then
-        check_deprecation || return 1
-        update_release_clone || return 1
-    fi
-    # From here starts the post update logic
 
-    if ! is_running_internal_install ||
-        is_clone_updated; then
-        # We are running this install
-        # - not from the release clone -> dispatch
-        # - or we just updated the release clone -> dispatch
-        # to the (new) script in the clone
-        run_internal_install --internal-postupdate "$@" || return 1
-        return 0
+        check_deprecation || return 1
+
+        update_release_clone || return 1
+
+        if is_clone_updated || ! is_running_internal_install; then
+            # We are running this install
+            # - not from the release clone -> dispatch
+            # - or we just updated the release clone -> dispatch
+            # to the (new) script in the clone
+            run_internal_install --internal-postupdate "$@" || return 1
+            return 0
+        fi
     fi
+
+    # From here starts the post update logic
+    # meaning the `--internal-postupdate` flag is set
+    # and we are running inside the release clone
+    # meaning the `--internal-install` is flag set.
 
     if is_non_interactive; then
         disable_tty_input
@@ -359,7 +364,7 @@ use_core_hookspath() {
 }
 
 ############################################################
-# Check if the install script is an update.
+# Check if the install script is an autoupdate.
 #
 # Returns:
 #   0 if its an update, 1 otherwise
@@ -1401,21 +1406,26 @@ update_release_clone() {
             CREATE_NEW_CLONE="true"
 
             if is_autoupdate; then
-                echo "! Cannot pull updates because \`origin\` of update clone \`$GITHOOKS_CLONE_DIR\` points" >&2
-                echo "  to url:" >&2
-                echo "   \`$URL\` on branch \`$BRANCH\`" >&2
+                echo "! Cannot pull updates because \`origin\` of update clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  points to url:" >&2
+                echo "  \`$URL\`" >&2
+                echo "  on branch \`$BRANCH\`" >&2
                 echo "  which is not configured." >&2
                 echo "  See \`git hooks config [set|print] update-clone-url\` and" >&2
                 echo "      \`git hooks config [set|print] update-clone-branch\`" >&2
-                echo "  Either fix this or delete the clone \`$GITHOOKS_CLONE_DIR\` to trigger" >&2
-                echo "  a new checkout." >&2
+                echo "  Either fix this or delete the clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  to trigger a new checkout." >&2
                 return 1
             fi
 
             if is_autoupdate && ! execute_git "$GITHOOKS_CLONE_DIR" diff-index --quiet HEAD >/dev/null 2>&1; then
-                echo "! Cannot pull updates because the update clone \`$GITHOOKS_CLONE_DIR\` is dirty! " >&2
-                echo "  Either fix this or delete the clone \`$GITHOOKS_CLONE_DIR\` to trigger" >&2
-                echo "  a new checkout." >&2
+                echo "! Cannot pull updates because the update clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  is dirty! Either fix this or delete the clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  to trigger a new checkout." >&2
                 return 1
             fi
 
@@ -1439,15 +1449,19 @@ update_release_clone() {
 
         # shellcheck disable=SC2181
         if [ $? -ne 0 ]; then
-            echo "! Fetching updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
+            echo "! Fetching updates in" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  failed with:" >&2
+            echo "  -------------------" >&2
             echo "$FETCH_OUTPUT" >&2
+            echo "  -------------------" >&2
             return 1
         fi
 
-        CURREN_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
+        CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
         UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "origin/$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
 
-        if [ "$CURREN_COMMIT" != "$UPDATE_COMMIT" ]; then
+        if [ "$CURRENT_COMMIT" != "$UPDATE_COMMIT" ]; then
             # Fast forward merge in the changes if possible
             echo "Merging Githooks updates ..."
             PULL_OUTPUT=$(
@@ -1456,13 +1470,17 @@ update_release_clone() {
 
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
-                echo "! Fast-forward merging updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
+                echo "! Fast-forward merging updates in" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  failed with:" >&2
+                echo "  -------------------" >&2
                 echo "$PULL_OUTPUT" >&2
+                echo "  -------------------" >&2
                 return 1
             fi
 
             # shellcheck disable=SC2034
-            GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURREN_COMMIT"
+            GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURRENT_COMMIT"
             GITHOOKS_CLONE_UPDATED="true"
         fi
     fi

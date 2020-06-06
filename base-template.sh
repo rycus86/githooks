@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.060128-6d7787
+# Version: 2006.062020-8566b5
 
 #####################################################
 # Execute the current hook,
@@ -813,10 +813,10 @@ fetch_latest_updates() {
             return 1
         fi
 
-        CURREN_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
+        CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
         UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "origin/$GITHOOKS_CLONE_BRANCH")
 
-        if [ "$CURREN_COMMIT" != "$UPDATE_COMMIT" ]; then
+        if [ "$CURRENT_COMMIT" != "$UPDATE_COMMIT" ]; then
             # We have an update available
             # install.sh deals with updating ...
             GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
