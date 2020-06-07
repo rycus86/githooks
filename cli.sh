@@ -11,7 +11,7 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.061943-4d991f
+# Version: 2006.062037-dd10de
 
 #####################################################
 # Prints the command line help for usage and
@@ -71,6 +71,8 @@ load_install_dir() {
         echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
+
+    GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
 }
 
 #####################################################
@@ -1336,27 +1338,22 @@ git hooks install [--global]
         return
     fi
 
+    INSTALL_FLAGS="--single"
     if [ "$1" = "--global" ]; then
-        IS_SINGLE_REPO="no"
-    else
-        IS_SINGLE_REPO="yes"
+        INSTALL_FLAGS=""
+    elif [ -n "$1" ]; then
+        echo "! Invalid argument: \`$1\`" >&2 && exit 1
     fi
 
-    echo "Fetching the install script ..."
-
-    if ! fetch_latest_install_script; then
+    if ! fetch_latest_updates; then
         echo "! Failed to fetch the latest install script" >&2
         echo "  You can retry manually using one of the alternative methods," >&2
         echo "  see them here: https://github.com/rycus86/githooks#installation" >&2
         exit 1
     fi
 
-    read_latest_version_number
-
-    echo "  Githooks install script downloaded: Version $LATEST_VERSION"
-    echo
-
-    if ! execute_install_script; then
+    # shellcheck disable=SC2086
+    if ! execute_install_script $INSTALL_FLAGS; then
         echo "! Failed to execute the installation" >&2
         exit 1
     fi
@@ -1389,15 +1386,6 @@ git hooks uninstall [--global]
         echo "! Invalid argument: \`$1\`" >&2 && exit 1
     fi
 
-    echo "Fetching the uninstall script ..."
-
-    if ! fetch_latest_uninstall_script; then
-        echo "! Failed to fetch the latest uninstall script" >&2
-        echo "  You can retry manually using one of the alternative methods," >&2
-        echo "  see them here: https://github.com/rycus86/githooks#uninstalling" >&2
-        exit 1
-    fi
-
     if ! execute_uninstall_script $UNINSTALL_ARGS; then
         echo "! Failed to execute the uninstallation" >&2
         exit 1
@@ -1426,20 +1414,20 @@ git hooks update [enable|disable]
     the automatic checks that would normally run daily
     after a successful commit event.
 "
-        return
+        return 0
     fi
 
     if [ "$1" = "enable" ]; then
         git config --global githooks.autoupdate.enabled true &&
             echo "Automatic update checks have been enabled" &&
-            return
+            return 0
 
         echo "! Failed to enable automatic updates" >&2 && exit 1
 
     elif [ "$1" = "disable" ]; then
         git config --global githooks.autoupdate.enabled false &&
             echo "Automatic update checks have been disabled" &&
-            return
+            return 0
 
         echo "! Failed to disable automatic updates" >&2 && exit 1
 
@@ -1452,29 +1440,25 @@ git hooks update [enable|disable]
 
     echo "Checking for updates ..."
 
-    if ! fetch_latest_install_script; then
-        echo "! Failed to check for updates: cannot fetch updated install script"
+    if ! fetch_latest_updates; then
+        echo "! Failed to check for updates: cannot fetch updates"
         exit 1
     fi
-
-    read_latest_version_number
 
     if [ "$1" != "force" ]; then
         if ! is_update_available; then
             echo "  Githooks is already on the latest version"
-            return
+            return 0
         fi
     fi
 
-    echo "  There is a new Githooks update available: Version $LATEST_VERSION"
-    echo
-
-    read_single_repo_information
-
-    if ! execute_install_script; then
+    # shellcheck disable=SC2086
+    if ! execute_install_script $INSTALL_FLAGS; then
         echo "! Failed to execute the installation"
         print_update_disable_info
+        return 1
     fi
+    return 0
 }
 
 #####################################################
@@ -1537,16 +1521,68 @@ is_release_clone_existing() {
 }
 
 #####################################################
-# Loads the contents of the latest install
-#   script into a file ${INSTALL_SCRIPT}.
-#
-# Sets the ${INSTALL_SCRIPT} variable
+# Checks if there is an update in the release clone
+#   waiting for a fast-forward merge.
 #
 # Returns:
-#   1 if failed to load the script, 0 otherwise
+#   0 if an update needs to be applied, 1 otherwise
 #####################################################
-fetch_latest_install_script() {
-    update_release_clone || return 1
+is_update_available() {
+    [ "$GITHOOKS_CLONE_UPDATE_AVAILABLE" = "true" ] || return 1
+}
+
+#####################################################
+# Fetches updates in the release clone.
+#   If the release clone is newly created the variable
+#   `$GITHOOKS_CLONE_CREATED` is set to
+#   `true`
+#   If an update is available
+#   `GITHOOKS_CLONE_UPDATE_AVAILABLE` is set to `true`
+#
+# Returns:
+#   1 if failed, 0 otherwise
+#####################################################
+fetch_latest_updates() {
+
+    echo "^ Checking for updates ..."
+
+    GITHOOKS_CLONE_CREATED="false"
+    GITHOOKS_CLONE_UPDATE_AVAILABLE="false"
+
+    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+
+    # We do a fresh clone if there is not repository
+    if is_git_repo "$GITHOOKS_CLONE_DIR"; then
+
+        FETCH_OUTPUT=$(
+            execute_git "$GITHOOKS_CLONE_DIR" fetch origin "$GITHOOKS_CLONE_BRANCH" 2>&1
+        )
+
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! Fetching updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
+            echo "$FETCH_OUTPUT" >&2
+            return 1
+        fi
+
+        RELEASE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
+        UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "origin/$GITHOOKS_CLONE_BRANCH")
+
+        if [ "$RELEASE_COMMIT" != "$UPDATE_COMMIT" ]; then
+            # We have an update available
+            # install.sh deals with updating ...
+            GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
+        fi
+
+    else
+        clone_release_repository || return 1
+
+        # shellcheck disable=SC2034
+        GITHOOKS_CLONE_CREATED="true"
+        GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
+    fi
+
     return 0
 }
 
@@ -1562,45 +1598,32 @@ is_git_repo() {
 }
 
 #####################################################
-# Updates the update clone in the install folder
+# Safely execute a git command in the standard
+#   clone dir `$1`.
 #
-# Sets the ${INSTALL_SCRIPT} variable
-#
+# Returns: Error code from `git`
+#####################################################
+execute_git() {
+    REPO="$1"
+    shift
+
+    git -C "$REPO" \
+        --work-tree="$REPO" \
+        --git-dir="$REPO/.git" \
+        -c core.hooksPath=/dev/null \
+        "$@"
+}
+
+#####################################################
+#  Creates the release clone if needed.
 # Returns:
 #   1 if failed, 0 otherwise
 #####################################################
-update_release_clone() {
+assert_release_clone() {
 
-    if ! is_git_repo "$INSTALL_DIR/release"; then
+    # We do a fresh clone if there is no clone
+    if ! is_git_repo "$GITHOOKS_CLONE_DIR"; then
         clone_release_repository || return 1
-    fi
-
-    GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
-
-    PULL_OUTPUT=$(git -C "$GITHOOKS_CLONE_DIR" --work-tree="$GITHOOKS_CLONE_DIR" --git-dir="$GITHOOKS_CLONE_DIR/.git" -c core.hooksPath=/dev/null pull 2>&1)
-    # shellcheck disable=SC2181
-    if [ $? -ne 0 ]; then
-        echo "! Pulling updates in  \`$GITHOOKS_CLONE_DIR\` failed with:" >&2
-        echo "$PULL_OUTPUT" >&2
-        return 1
-    fi
-
-    INSTALL_SCRIPT="$GITHOOKS_CLONE_DIR/install.sh"
-    if [ ! -f "$INSTALL_SCRIPT" ]; then
-        echo "! Non-existing \`install.sh\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
-        return 1
-    fi
-
-    UNINSTALL_SCRIPT="$GITHOOKS_CLONE_DIR/uninstall.sh"
-    if [ ! -f "$UNINSTALL_SCRIPT" ]; then
-        echo "! Non-existing \`uninstall.sh\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
-        return 1
-    fi
-
-    README_FILE="$GITHOOKS_CLONE_DIR/.githooks/README.md"
-    if [ ! -f "$README_FILE" ]; then
-        echo "! Non-existing \`.githooks/README.md\` in  \`$GITHOOKS_CLONE_DIR\`" >&2
-        return 1
     fi
 
     return 0
@@ -1625,25 +1648,25 @@ clone_release_repository() {
         GITHOOKS_CLONE_BRANCH="master"
     fi
 
-    if [ -d "$INSTALL_DIR/release" ]; then
-        if ! rm -rf "$INSTALL_DIR/release" >/dev/null 2>&1; then
+    if [ -d "$GITHOOKS_CLONE_DIR" ]; then
+        if ! rm -rf "$GITHOOKS_CLONE_DIR" >/dev/null 2>&1; then
             echo "! Failed to remove an existing githooks release repository" >&2
             return 1
         fi
     fi
 
-    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` ..."
+    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` ..."
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
         --depth 1 \
         --single-branch \
         --branch "$GITHOOKS_CLONE_BRANCH" \
-        "$GITHOOKS_CLONE_URL" "$INSTALL_DIR/release" 2>&1)
+        "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1)
 
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
-        echo "! Cloning \`$GITHOOKS_CLONE_URL\` to \`$INSTALL_DIR/release\` failed with output: " >&2
+        echo "! Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` failed with output: " >&2
         echo "$CLONE_OUTPUT" >&2
         return 1
     fi
@@ -1655,61 +1678,13 @@ clone_release_repository() {
 }
 
 #####################################################
-# Loads the contents of the latest uninstall
-#   script into a file ${UNINSTALL_SCRIPT}.
-#
-# Sets the ${UNINSTALL_SCRIPT} variable
+# Checks if updates are enabled.
 #
 # Returns:
-#   1 if failed to load the script, 0 otherwise
+#   0 if updates are enabled, 1 otherwise
 #####################################################
-fetch_latest_uninstall_script() {
-    update_release_clone || return 1
-    return 0
-}
-
-#####################################################
-# Reads the version number of the latest
-#   install script into a variable.
-#
-# Sets the ${LATEST_VERSION} variable
-#
-# Returns:
-#   None
-#####################################################
-read_latest_version_number() {
-    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
-}
-
-#####################################################
-# Checks if the latest install script is
-#   newer than what we have installed already.
-#
-# Returns:
-#   0 if the script is newer, 1 otherwise
-#####################################################
-is_update_available() {
-    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
-    UPDATE_AVAILABLE=$(echo "$CURRENT_VERSION $LATEST_VERSION" | awk "{ print (\$1 >= \$2) }")
-    [ "$UPDATE_AVAILABLE" = "0" ] || return 1
-}
-
-#####################################################
-# Reads whether the hooks in the current
-#   local repository were installed in
-#   single repository install mode.
-#
-# Sets the ${IS_SINGLE_REPO} variable
-#
-# Returns:
-#   None
-#####################################################
-read_single_repo_information() {
-    if is_git_repo; then
-        IS_SINGLE_REPO=$(git config --get --local githooks.single.install)
-    else
-        IS_SINGLE_REPO="no"
-    fi
+is_autoupdate_enabled() {
+    [ "$(git config --global githooks.autoupdate.enabled)" = "Y" ] || return 1
 }
 
 #####################################################
@@ -1721,7 +1696,7 @@ read_single_repo_information() {
 #   1 if they were, 0 otherwise
 #####################################################
 is_single_repo() {
-    [ "$IS_SINGLE_REPO" = "yes" ] || return 1
+    [ "$(git config --get --local githooks.single.install)" = "yes" ] || return 1
 }
 
 #####################################################
@@ -1732,17 +1707,21 @@ is_single_repo() {
 #   0 if the installation was successful, 1 otherwise
 #####################################################
 execute_install_script() {
-    if is_single_repo; then
-        if sh -s -- --internal-install --single <"$INSTALL_SCRIPT"; then
-            return 0
-        fi
-    else
-        if sh -s -- --internal-install <"$INSTALL_SCRIPT"; then
-            return 0
-        fi
+
+    if ! assert_release_clone; then
+        echo "! Could not create a release clone in \`$GITHOOKS_CLONE_DIR\`" >&2
+        exit 1
     fi
 
-    return 1
+    # Set the install script
+    INSTALL_SCRIPT="$INSTALL_DIR/release/install.sh"
+    if [ ! -f "$INSTALL_SCRIPT" ]; then
+        echo "! Non-existing \`install.sh\` in  \`$INSTALL_DIR/release\`" >&2
+        return 1
+    fi
+
+    sh -s -- "$@" <"$INSTALL_SCRIPT" || return 1
+    return 0
 }
 
 #####################################################
@@ -1754,17 +1733,17 @@ execute_install_script() {
 #   1 otherwise
 #####################################################
 execute_uninstall_script() {
-    if [ $# -ne 0 ]; then
-        if sh -s -- "$@" <"$UNINSTALL_SCRIPT"; then
-            return 0
-        fi
-    else
-        if sh <"$UNINSTALL_SCRIPT"; then
-            return 0
-        fi
+
+    # Set the install script
+    UNINSTALL_SCRIPT="$INSTALL_DIR/release/uninstall.sh"
+    if [ ! -f "$UNINSTALL_SCRIPT" ]; then
+        echo "! Non-existing \`uninstall.sh\` in  \`$INSTALL_DIR/release\`" >&2
+        return 1
     fi
 
-    return 1
+    sh -s -- "$@" <"$UNINSTALL_SCRIPT" || return 1
+
+    return 0
 }
 
 #####################################################
@@ -1823,29 +1802,16 @@ git hooks readme [add|update]
         exit 1
     fi
 
-    if ! fetch_latest_readme; then
+    if ! assert_release_clone; then
         exit 1
     fi
 
+    README_FILE="$INSTALL_DIR/release/README.md"
     mkdir -p "$(pwd)/.githooks" &&
         cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
         echo "The README file is updated." &&
         echo_if_non_bare_repo "  Do not forget to commit and push it!" ||
         echo "! Failed to update the README file in the current repository" >&2
-}
-
-#####################################################
-# Loads the contents of the latest Githooks README
-#   into a variable.
-#
-# Sets the ${README_FILE} variable
-#
-# Returns:
-#   1 if failed to load the contents, 0 otherwise
-#####################################################
-fetch_latest_readme() {
-    update_release_clone || return 1
-    return 0
 }
 
 #####################################################
@@ -2058,7 +2024,7 @@ The \`print\` option outputs the current behavior.
         config_trust_all_hooks "$CONFIG_OPERATION"
         ;;
     "update")
-        config_update_state "$CONFIG_OPERATION"
+        config_update_state "$CONFIG_OPERATION" "$@"
         ;;
     "update-clone-url")
         config_update_clone_url "$CONFIG_OPERATION" "$@"
@@ -2144,7 +2110,7 @@ config_single_install() {
         git config --unset githooks.single.install
         # the repository is registered in the next hooks run
     elif [ "$1" = "print" ]; then
-        if read_single_repo_information && is_single_repo; then
+        if is_single_repo; then
             echo "The current repository is marked as a single installation"
         else
             echo "The current repository is NOT marked as a single installation"

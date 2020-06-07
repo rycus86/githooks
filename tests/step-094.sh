@@ -7,11 +7,6 @@ mkdir -p /tmp/test094/a /tmp/test094/b /tmp/test094/c &&
     cd /tmp/test094/b && git init ||
     exit 1
 
-sed 's/# Version: /# Version: 0/' /var/lib/githooks/cli.sh >/tmp/cli-0 &&
-    cp /tmp/cli-0 /var/lib/githooks/cli.sh &&
-    chmod +x /var/lib/githooks/cli.sh ||
-    exit 1
-
 if ! sh /var/lib/githooks/cli.sh install; then
     echo "! Failed to run the installation"
     exit 1
@@ -44,39 +39,52 @@ if (cd /tmp/test094/c && sh /var/lib/githooks/cli.sh install); then
     exit 1
 fi
 
-# revert any changes done by the downloaded install script
-if ! sh /var/lib/githooks/install.sh; then
-    echo "! Failed to run the installation again (1)"
+# Revert to trigger an update
+if ! (cd ~/.githooks/release && git status && git reset --hard HEAD^); then
+    echo "! Could not reset master to trigger update."
     exit 1
 fi
 
-# revert any changes to the cli tool
-cp /tmp/cli-0 "$HOME/.githooks/release/cli.sh" || exit 1
+CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 OUT=$(git hooks install 2>&1)
 # shellcheck disable=SC2181
 if [ $? -eq 0 ] || ! echo "$OUT" | grep -iq "DEPRECATION WARNING: Single install"; then
     echo "! Expected installation to fail because of single install flag: $OUT"
     exit 1
 fi
+AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
+if [ "$CURRENT" != "$AFTER" ]; then
+    echo "! Release clone was updated, but it should not have!"
+    exit 1
+fi
 
 # Unset deprecated single install and install again.
 git config --unset githooks.single.install
+CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 if ! git hooks install; then
     echo "! Expected installation to succeed"
     exit 1
 fi
+AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
 
-# revert any changes done by the downloaded install script
-if ! sh /var/lib/githooks/install.sh; then
-    echo "! Failed to run the installation again (2)"
+if [ "$CURRENT" = "$AFTER" ]; then
+    echo "! Release clone was not updated, but it should have!"
     exit 1
 fi
 
-# revert any changes to the cli tool
-cp /tmp/cli-0 "$HOME/.githooks/release/cli.sh" &&
-    chmod +x "$HOME/.githooks/release/cli.sh" || exit 1
+# Reset to trigger a global update
+if ! (cd ~/.githooks/release && git status && git reset --hard HEAD^); then
+    echo "! Could not reset master to trigger update."
+    exit 1
+fi
 
+CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 if ! git hooks install --global; then
-    echo "! The Git alias integration failed: global"
-    # exit 1
+    echo "! Expected global installation to succeed"
+    exit 1
+fi
+AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
+if [ "$CURRENT" = "$AFTER" ]; then
+    echo "! Release clone was not updated, but it should have!"
+    exit 1
 fi

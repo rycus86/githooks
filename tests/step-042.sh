@@ -40,9 +40,11 @@ if [ -n "$LAST_UPDATE" ]; then
     exit 1
 fi
 
-# Test update again with single flag
-sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh ||
+# Reset to trigger update
+if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
+    echo "! Could not reset master to trigger update."
     exit 1
+fi
 
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
@@ -57,8 +59,6 @@ fi
 
 # Test update again without single flag
 git config --local --unset githooks.single.install || exit 1
-
-sed -i 's/^# Version: .*/# Version: 0/' /var/lib/githooks/base-template.sh || exit 1
 git config --global --unset githooks.autoupdate.lastrun
 
 OUTPUT=$(
@@ -67,8 +67,8 @@ OUTPUT=$(
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then
-    echo "$OUTPUT"
     echo "! Expected installation output not found"
+    echo "$OUTPUT"
     exit 1
 fi
 

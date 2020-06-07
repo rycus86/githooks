@@ -35,7 +35,8 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
     git add . && \
-    git commit -a -m "Initial release"
+    git commit -a -m "Initial release" && \
+    git commit -a --allow-empty -m "Empty to reset to trigger update"
 
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
