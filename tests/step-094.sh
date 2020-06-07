@@ -51,12 +51,19 @@ if ! sh /var/lib/githooks/install.sh; then
 fi
 
 # revert any changes to the cli tool
-cp /tmp/cli-0 "$HOME/.githooks/bin/githooks" &&
-    chmod +x "$HOME/.githooks/bin/githooks" || exit 1
+cp /tmp/cli-0 "$HOME/.githooks/release/cli.sh" || exit 1
+OUT=$(git hooks install 2>&1)
+# shellcheck disable=SC2181
+if [ $? -eq 0 ] || ! echo "$OUT" | grep -iq "DEPRECATION WARNING: Single install"; then
+    echo "! Expected installation to fail because of single install flag: $OUT"
+    exit 1
+fi
 
+# Unset deprecated single install and install again.
+git config --unset githooks.single.install
 if ! git hooks install; then
-    echo "! The Git alias integration failed: single"
-    # exit 1
+    echo "! Expected installation to succeed"
+    exit 1
 fi
 
 # revert any changes done by the downloaded install script
@@ -66,8 +73,8 @@ if ! sh /var/lib/githooks/install.sh; then
 fi
 
 # revert any changes to the cli tool
-cp /tmp/cli-0 "$HOME/.githooks/bin/githooks" &&
-    chmod +x "$HOME/.githooks/bin/githooks" || exit 1
+cp /tmp/cli-0 "$HOME/.githooks/release/cli.sh" &&
+    chmod +x "$HOME/.githooks/release/cli.sh" || exit 1
 
 if ! git hooks install --global; then
     echo "! The Git alias integration failed: global"
