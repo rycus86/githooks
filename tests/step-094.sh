@@ -47,12 +47,12 @@ fi
 
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 OUT=$(git hooks install 2>&1)
-AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
 # shellcheck disable=SC2181
 if [ $? -eq 0 ] || ! echo "$OUT" | grep -iq "DEPRECATION WARNING: Single install"; then
     echo "! Expected installation to fail because of single install flag: $OUT"
     exit 1
 fi
+AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
 if [ "$CURRENT" != "$AFTER" ]; then
     echo "! Release clone was updated, but it should not have!"
     exit 1
