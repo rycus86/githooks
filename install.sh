@@ -4,7 +4,7 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.062037-dd10de
+# Version: 2006.100030-fce8db
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -54,6 +54,9 @@ execute_installation() {
     # meaning the `--internal-postupdate` flag is set
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
+
+    # Legacy transformations
+    legacy_transformations || return 1
 
     if is_non_interactive; then
         disable_tty_input
@@ -121,6 +124,38 @@ check_deprecation() {
             warn_deprecated_single_install
         fi
     fi
+    return 0
+}
+
+############################################################
+# Function to dispatch to all legacy transformations
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transformations() {
+
+    # Variable transformations in global git config
+    # Can be applied to all versions without any problem
+    OLD_CONFIG_VALUE=$(git config --global githoooks.autoupdate.updateCloneUrl)
+    if [ -n "$OLD_CONFIG_VALUE" ]; then
+        git config --global git config githoooks.cloneUrl "$OLD_CONFIG_VALUE"
+        git config --unset git config --global githoooks.autoupdate.updateCloneUrl
+        git config --unset git config --global githoooks.autopreviousupdate.updateCloneUrl
+    fi
+
+    OLD_CONFIG_VALUE=$(git config --global githoooks.autoupdate.updateCloneBranch)
+    if [ -n "$OLD_CONFIG_VALUE" ]; then
+        git config --global git config githoooks.cloneBranch "$OLD_CONFIG_VALUE"
+        git config --unset git config --global githoooks.autoupdate.cloneBranch
+    fi
+
+    OLD_CONFIG_VALUE=$(git config --global githoooks.previous.searchdir)
+    if [ -n "$OLD_CONFIG_VALUE" ]; then
+        git config --global git config githoooks.previousSearchDir "$OLD_CONFIG_VALUE"
+        git config --unset git config --global githoooks.previous.searchdir
+    fi
+
     return 0
 }
 
@@ -860,7 +895,7 @@ $EXISTING_REPOSITORY_LIST"
 #   None
 ############################################################
 install_into_existing_repositories() {
-    PRE_START_DIR=$(git config --global --get githooks.previous.searchdir)
+    PRE_START_DIR=$(git config --global --get githooks.previousSearchDir)
     # shellcheck disable=SC2181
     if [ $? -eq 0 ] && [ -n "$PRE_START_DIR" ]; then
         HAS_PRE_START_DIR="Y"
@@ -908,7 +943,7 @@ install_into_existing_repositories() {
         return
     fi
 
-    git config --global githooks.previous.searchdir "$RAW_START_DIR"
+    git config --global githooks.previousSearchDir "$RAW_START_DIR"
 
     find_existing_git_dirs "$START_DIR"
 
@@ -1389,10 +1424,10 @@ update_release_clone() {
 
     # If not set by the user, check the config for url and branch
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
-        GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
+        GITHOOKS_CLONE_URL=$(git config --global githooks.cloneUrl)
     fi
     if [ -z "$GITHOOKS_CLONE_BRANCH" ]; then
-        GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+        GITHOOKS_CLONE_BRANCH=$(git config --global githooks.cloneBranch)
     fi
 
     if is_git_repo "$GITHOOKS_CLONE_DIR"; then
@@ -1554,8 +1589,8 @@ clone_release_repository() {
         return 1
     fi
 
-    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
 }

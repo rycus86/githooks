@@ -14,7 +14,7 @@ y
 /tmp/start
 ' | sh /var/lib/githooks/install.sh || exit 1
 
-if [ "$(git config --global --get githooks.previous.searchdir)" != "/tmp/start" ]; then
+if [ "$(git config --global --get githooks.previousSearchDir)" != "/tmp/start" ]; then
     echo "! The search start directory is not recorded"
     exit 1
 fi

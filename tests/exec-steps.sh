@@ -66,9 +66,9 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.shared
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
-    git config --global --unset githooks.autoupdate.updateCloneUrl
-    git config --global --unset githooks.autoupdate.updateCloneBranch
-    git config --global --unset githooks.previous.searchdir
+    git config --global --unset githooks.cloneUrl
+    git config --global --unset githooks.cloneBranch
+    git config --global --unset githooks.previousSearchDir
     git config --global --unset githooks.disable
     git config --global --unset alias.hooks
     git config --global --unset githooks.installDir
