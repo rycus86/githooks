@@ -2539,12 +2539,13 @@ git hooks version
         return
     fi
 
-    CURRENT_VERSION=$(git -C "$GITHOOKS_CLONE_DIR" rev-parse --short HEAD)
-
+    CURRENT_VERSION=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short HEAD)
+    CURRENT_COMMIT_LOG=$(execute_git "$GITHOOKS_CLONE_DIR" log --pretty=reference -1)
     print_help_header
 
     echo
     echo "Version: $CURRENT_VERSION"
+    echo "Commit: $CURRENT_COMMIT_LOG"
     echo
 }
 
