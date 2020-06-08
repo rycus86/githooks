@@ -11,7 +11,8 @@
 # See the documentation in the project README for more information,
 #   or run the `git hooks help` command for available options.
 #
-# Version: 2006.100030-fce8db
+# Legacy version number. Not used anymore, but old installs read it.
+# Version: 2006.062037-dd10de
 
 #####################################################
 # Prints the command line help for usage and
@@ -2538,7 +2539,7 @@ git hooks version
         return
     fi
 
-    CURRENT_VERSION=$(grep -E "^# Version: .*" "$0" | head -1 | sed -E "s/^# Version: //")
+    CURRENT_VERSION=$(git -C "$GITHOOKS_CLONE_DIR" rev-parse --short HEAD)
 
     print_help_header
 

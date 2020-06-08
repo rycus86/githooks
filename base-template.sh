@@ -4,7 +4,8 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.100030-fce8db
+# Legacy version number. Not used anymore, but old installs read it.
+# Version: 2006.062037-dd10de
 
 #####################################################
 # Execute the current hook,
@@ -992,9 +993,6 @@ execute_update() {
     else
         sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
     fi
-
-    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
-    echo "Githooks install script now at version: $LATEST_VERSION"
 
     return 0
 }
