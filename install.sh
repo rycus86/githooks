@@ -5,7 +5,7 @@
 #   See the documentation in the project README for more information.
 #
 # Legacy version number. Not used anymore, but old installs read it.
-# Version: 2006.062037-dd10de
+# Version: 9912.310000-000000
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="

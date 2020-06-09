@@ -12,7 +12,7 @@
 #   or run the `git hooks help` command for available options.
 #
 # Legacy version number. Not used anymore, but old installs read it.
-# Version: 2006.062037-dd10de
+# Version: 9912.310000-000000
 
 #####################################################
 # Prints the command line help for usage and
@@ -2539,12 +2539,13 @@ git hooks version
         return
     fi
 
-    CURRENT_VERSION=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short HEAD)
+    CURRENT_VERSION=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short=6 HEAD)
+    CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" HEAD)
     CURRENT_COMMIT_LOG=$(execute_git "$GITHOOKS_CLONE_DIR" log --pretty=reference -1)
     print_help_header
 
     echo
-    echo "Version: $CURRENT_VERSION"
+    echo "Version: $CURRENT_COMMIT_DATE-$CURRENT_VERSION"
     echo "Commit: $CURRENT_COMMIT_LOG"
     echo
 }

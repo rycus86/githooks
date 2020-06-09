@@ -5,7 +5,7 @@
 # its hooks to execute on various Git triggers.
 #
 # Legacy version number. Not used anymore, but old installs read it.
-# Version: 2006.062037-dd10de
+# Version: 9912.310000-000000
 
 #####################################################
 # Execute the current hook,
