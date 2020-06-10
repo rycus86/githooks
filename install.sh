@@ -4,7 +4,8 @@
 #   and performs some optional setup for existing repositories.
 #   See the documentation in the project README for more information.
 #
-# Version: 2006.100030-fce8db
+# Legacy version number. Not used anymore, but old installs read it.
+# Version: 9912.310000-000000
 
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
@@ -34,6 +35,9 @@ execute_installation() {
 
     load_install_dir || return 1
 
+    # Legacy transformations
+    legacy_transformations_start || return 1
+
     if ! is_postupdate; then
 
         check_deprecation || return 1
@@ -54,9 +58,6 @@ execute_installation() {
     # meaning the `--internal-postupdate` flag is set
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
-
-    # Legacy transformations
-    legacy_transformations || return 1
 
     if is_non_interactive; then
         disable_tty_input
@@ -104,6 +105,9 @@ execute_installation() {
         echo # For visual separation
     fi
 
+    # Legacy transformations
+    legacy_transformations_end || return 1
+
     thank_you
 
     return 0
@@ -129,32 +133,49 @@ check_deprecation() {
 
 ############################################################
 # Function to dispatch to all legacy transformations
+#   at the start.
+#   We are not yet deleting  old values since the install
+#   could go wrong.
 #
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transformations() {
+legacy_transformations_start() {
 
     # Variable transformations in global git config
     # Can be applied to all versions without any problem
-    OLD_CONFIG_VALUE=$(git config --global githoooks.autoupdate.updateCloneUrl)
+    OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneUrl)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global git config githoooks.cloneUrl "$OLD_CONFIG_VALUE"
-        git config --unset git config --global githoooks.autoupdate.updateCloneUrl
-        git config --unset git config --global githoooks.autopreviousupdate.updateCloneUrl
+        git config --global githooks.cloneUrl "$OLD_CONFIG_VALUE"
     fi
 
-    OLD_CONFIG_VALUE=$(git config --global githoooks.autoupdate.updateCloneBranch)
+    OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneBranch)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global git config githoooks.cloneBranch "$OLD_CONFIG_VALUE"
-        git config --unset git config --global githoooks.autoupdate.cloneBranch
+        git config --global githooks.cloneBranch "$OLD_CONFIG_VALUE"
     fi
 
-    OLD_CONFIG_VALUE=$(git config --global githoooks.previous.searchdir)
+    OLD_CONFIG_VALUE=$(git config --global githooks.previous.searchdir)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global git config githoooks.previousSearchDir "$OLD_CONFIG_VALUE"
-        git config --unset git config --global githoooks.previous.searchdir
+        git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE"
     fi
+
+    return 0
+}
+
+############################################################
+# Function to dispatch to all legacy transformations
+#   at the end
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transformations_end() {
+
+    # Variable transformations in global git config
+    # Can be applied to all versions without any problem
+    git config --global --unset githooks.autoupdate.updateCloneUrl
+    git config --global --unset githooks.autoupdate.updateCloneBranch
+    git config --global --unset githooks.previous.searchdir
 
     return 0
 }
@@ -1520,9 +1541,12 @@ update_release_clone() {
 
             # shellcheck disable=SC2034
             GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURRENT_COMMIT"
+            GITHOOKS_CLONE_CURRENT_COMMIT="$UPDATE_COMMIT"
             GITHOOKS_CLONE_UPDATED="true"
         fi
     fi
+
+    echo "Githooks clone updated to version: $(echo "$GITHOOKS_CLONE_CURRENT_COMMIT" | cut -c1-7)"
 
     return 0
 }
@@ -1550,7 +1574,9 @@ is_clone_updated() {
 
 ############################################################
 # Clone the URL `$GITHOOKS_CLONE_URL` into the install
-# folder `$GITHOOKS_CLONE_DIR` for further updates.
+#   folder `$GITHOOKS_CLONE_DIR` for further updates.
+#   Sets `GITHOOKS_CLONE_CURRENT_COMMIT` to the SHA hash
+#   of the current HEAD.
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
@@ -1588,6 +1614,8 @@ clone_release_repository() {
         echo "$CLONE_OUTPUT" >&2
         return 1
     fi
+
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
 
     git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
     git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"

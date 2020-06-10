@@ -4,7 +4,8 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.100030-fce8db
+# Legacy version number. Not used anymore, but old installs read it.
+# Version: 9912.310000-000000
 
 #####################################################
 # Execute the current hook,
@@ -820,6 +821,7 @@ fetch_latest_updates() {
             # We have an update available
             # install.sh deals with updating ...
             GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
+            GITHOOKS_CLONE_UPDATE_COMMIT="$UPDATE_COMMIT"
         fi
 
     else
@@ -828,6 +830,7 @@ fetch_latest_updates() {
         # shellcheck disable=SC2034
         GITHOOKS_CLONE_CREATED="true"
         GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
+        GITHOOKS_CLONE_UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
     fi
 
     return 0
@@ -956,7 +959,7 @@ should_run_update() {
     if is_update_available; then
 
         MESSAGE="$(printf "%s\n%s" \
-            "* There is a new Githooks update available: Forward-merge to commit \"$(echo "$UPDATE_COMMIT" | cut -c1-7)\"" \
+            "* There is a new Githooks update available: Forward-merge to commit \"$(echo "$GITHOOKS_CLONE_UPDATE_COMMIT" | cut -c1-7)\"" \
             "Would you like to install it now?")"
         show_prompt EXECUTE_UPDATE "$MESSAGE" "(Yes, no)" "Y/n" "Yes" "no"
 
@@ -990,9 +993,6 @@ execute_update() {
     else
         sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
     fi
-
-    LATEST_VERSION=$(grep -E "^# Version: .*" <"$INSTALL_SCRIPT" | head -1 | sed -E "s/^# Version: //")
-    echo "Githooks install script now at version: $LATEST_VERSION"
 
     return 0
 }
