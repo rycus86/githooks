@@ -4,7 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 #
-# Version: 2006.062037-dd10de
+# Version: 2006.100030-fce8db
 
 #####################################################
 # Execute the current hook,
@@ -796,8 +796,8 @@ fetch_latest_updates() {
     GITHOOKS_CLONE_CREATED="false"
     GITHOOKS_CLONE_UPDATE_AVAILABLE="false"
 
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+    GITHOOKS_CLONE_URL=$(git config --global githooks.cloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.cloneBranch)
 
     # We do a fresh clone if there is not repository
     if is_git_repo "$GITHOOKS_CLONE_DIR"; then
@@ -841,8 +841,8 @@ fetch_latest_updates() {
 # Returns: 0 if successful, 1 otherwise
 ############################################################
 clone_release_repository() {
-    GITHOOKS_CLONE_URL=$(git config --global githooks.autoupdate.updateCloneUrl)
-    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.autoupdate.updateCloneBranch)
+    GITHOOKS_CLONE_URL=$(git config --global githooks.cloneUrl)
+    GITHOOKS_CLONE_BRANCH=$(git config --global githooks.cloneBranch)
 
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
         GITHOOKS_CLONE_URL="https://github.com/rycus86/githooks.git"
@@ -876,8 +876,8 @@ clone_release_repository() {
         return 1
     fi
 
-    git config --global githooks.autoupdate.updateCloneUrl "$GITHOOKS_CLONE_URL"
-    git config --global githooks.autoupdate.updateCloneBranch "$GITHOOKS_CLONE_BRANCH"
+    git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
+    git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
 
     return 0
 }

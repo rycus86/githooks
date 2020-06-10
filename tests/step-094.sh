@@ -22,7 +22,7 @@ if grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
     exit 1
 fi
 
-git config --global githooks.previous.searchdir /tmp
+git config --global githooks.previousSearchDir /tmp
 
 if ! sh /var/lib/githooks/cli.sh install --global; then
     echo "! Failed to run the global installation"
