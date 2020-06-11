@@ -840,7 +840,9 @@ fetch_latest_updates() {
             # We have an update available
             # install.sh deals with updating ...
             GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
-            GITHOOKS_CLONE_UPDATE_COMMIT="$UPDATE_COMMIT"
+            UPDATED_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short=6 "origin/$GITHOOKS_CLONE_BRANCH")
+            UPDATED_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "origin/$GITHOOKS_CLONE_BRANCH")
+            GITHOOKS_CLONE_UPDATE_VERSION="${UPDATED_COMMIT_DATE}-${UPDATED_COMMIT}"
         fi
 
     else
@@ -849,7 +851,9 @@ fetch_latest_updates() {
         # shellcheck disable=SC2034
         GITHOOKS_CLONE_CREATED="true"
         GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
-        GITHOOKS_CLONE_UPDATE_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
+        UPDATED_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short=6 "$GITHOOKS_CLONE_BRANCH")
+        UPDATED_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_BRANCH")
+        GITHOOKS_CLONE_UPDATE_VERSION="${UPDATED_COMMIT_DATE}-${UPDATED_COMMIT}"
     fi
 
     return 0
@@ -978,7 +982,7 @@ should_run_update() {
     if is_update_available; then
 
         MESSAGE="$(printf "%s\n%s" \
-            "* There is a new Githooks update available: Forward-merge to commit \"$(echo "$GITHOOKS_CLONE_UPDATE_COMMIT" | cut -c1-7)\"" \
+            "* There is a new Githooks update available: Forward-merge to version \"${GITHOOKS_CLONE_UPDATE_VERSION}\"" \
             "Would you like to install it now?")"
         show_prompt EXECUTE_UPDATE "$MESSAGE" "(Yes, no)" "Y/n" "Yes" "no"
 

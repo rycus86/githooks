@@ -2541,7 +2541,7 @@ git hooks version
 
     CURRENT_VERSION=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short=6 HEAD)
     CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" HEAD)
-    CURRENT_COMMIT_LOG=$(execute_git "$GITHOOKS_CLONE_DIR" log --pretty=reference -1)
+    CURRENT_COMMIT_LOG=$(execute_git "$GITHOOKS_CLONE_DIR" log --pretty="format:%h (%s, %ad)" --date=short -1)
     print_help_header
 
     echo
