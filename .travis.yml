@@ -15,7 +15,7 @@ env:
   - TEST_INSTANCE=test-debian-user
   - TEST_INSTANCE=test-ubuntu
   - TEST_INSTANCE=test-centos
-  - TEST_INSTANCE=test-arch # Test 103/109 have permission problems -> travis bug
+  - TEST_INSTANCE=test-arch
   - TEST_INSTANCE=test-fedora
   - TEST_INSTANCE=test-opensuse
   - TEST_INSTANCE=test-corehookspath

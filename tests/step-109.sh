@@ -41,7 +41,7 @@ for hook in pre-push pre-receive update post-receive post-update push-to-checkou
     fi
 done
 # shellcheck disable=SC2012
-count=$(ls /tmp/test109/p001/hooks | wc -l)
+count=$(find /tmp/test109/p001/hooks/ -type f | wc -l)
 if [ "$count" != "7" ]; then
     echo "! Expected only server hooks to be installed ($count)"
     exit 1
@@ -80,7 +80,7 @@ for hook in pre-push pre-receive update post-receive post-update push-to-checkou
     fi
 done
 # shellcheck disable=SC2012
-count="$(ls -1 "$templateDir/hooks/" | wc -l)"
+count="$(find "$templateDir/hooks/" -type f | wc -l)"
 if [ "$count" != "7" ]; then
     echo "! Expected only server hooks to be installed ($count)"
     exit 1

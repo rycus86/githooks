@@ -23,7 +23,7 @@ git add .githooks/.shared
 git hooks shared update
 
 # shellcheck disable=SC2012
-RESULT=$(ls -1 ~/.githooks/shared 2>/dev/null | wc -l)
+RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)
 if [ "$RESULT" = "0" ]; then
     echo "! Expected shared hooks to be installed."
     exit 1
@@ -85,7 +85,7 @@ cd /tmp || exit 1
 git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
 
 # shellcheck disable=SC2012
-RESULT=$(ls -1 ~/.githooks/shared 2>/dev/null | wc -l)
+RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)
 if [ "$RESULT" = "0" ]; then
     echo "! Expected shared hooks to be installed. $RESULT"
     exit 1
