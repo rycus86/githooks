@@ -208,15 +208,15 @@ $ git hooks config [reset|print] update-time
 Resets the last Githooks update time with the `reset` option, causing the update check to run next time if it is enabled. Use `git hooks update [enable|disable]` to change that setting. The `print` option outputs the current value of it.
 
 ```shell
-git hooks config set update-clone-url <git-url>
-git hooks config [set|print] update-clone-url
+git hooks config set clone-url <git-url>
+git hooks config [set|print] clone-url
 ```
 
 Sets or prints the configured githooks clone url used for any update.
 
 ```shell
-git hooks config set update-clone-branch <branch-name>
-git hooks config print update-clone-branch
+git hooks config set clone-branch <branch-name>
+git hooks config print clone-branch
 ```
 
 Sets or prints the configured branch of the update clone used for any update.

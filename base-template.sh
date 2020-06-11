@@ -814,8 +814,8 @@ fetch_latest_updates() {
             echo "  \`$URL\`" >&2
             echo "  on branch \`$BRANCH\`" >&2
             echo "  which is not configured." >&2
-            echo "  See \`git hooks config [set|print] update-clone-url\` and" >&2
-            echo "      \`git hooks config [set|print] update-clone-branch\`" >&2
+            echo "  See \`git hooks config [set|print] clone-url\` and" >&2
+            echo "      \`git hooks config [set|print] clone-branch\`" >&2
             echo "  Either fix this or delete the clone" >&2
             echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
             echo "  to trigger a new checkout." >&2

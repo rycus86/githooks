@@ -216,7 +216,7 @@ $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --use-core-hookspat
 If you want to install from another repository (e.g. from your own fork), you can specify the update repository url as well as the branch name (default: `master`) when installing with:
 
 ```shell
-$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --update-clone-url "https://server.com/my-githooks-fork.git" --update-clone-branch "release"
+$ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --clone-url "https://server.com/my-githooks-fork.git" --clone-branch "release"
 ```
 
 This will be then used for installation and further updates.
