@@ -803,6 +803,25 @@ fetch_latest_updates() {
     # We do a fresh clone if there is not repository
     if is_git_repo "$GITHOOKS_CLONE_DIR"; then
 
+        URL=$(execute_git "$GITHOOKS_CLONE_DIR" config remote.origin.url 2>/dev/null)
+        BRANCH=$(execute_git "$GITHOOKS_CLONE_DIR" symbolic-ref -q --short HEAD 2>/dev/null)
+
+        if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
+            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ]; then
+            echo "! Cannot fetch updates because \`origin\` of update clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  points to url:" >&2
+            echo "  \`$URL\`" >&2
+            echo "  on branch \`$BRANCH\`" >&2
+            echo "  which is not configured." >&2
+            echo "  See \`git hooks config [set|print] clone-url\` and" >&2
+            echo "      \`git hooks config [set|print] clone-branch\`" >&2
+            echo "  Either fix this or delete the clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  to trigger a new checkout." >&2
+            return 1
+        fi
+
         FETCH_OUTPUT=$(
             execute_git "$GITHOOKS_CLONE_DIR" fetch origin "$GITHOOKS_CLONE_BRANCH" 2>&1
         )

@@ -278,13 +278,13 @@ parse_command_line_arguments() {
             USE_CORE_HOOKSPATH="true"
             # No point in installing into existing when using core.hooksPath
             SKIP_INSTALL_INTO_EXISTING="true"
-        elif [ "$p" = "--update-clone-url" ]; then
+        elif [ "$p" = "--clone-url" ]; then
             : # nothing to do here
-        elif [ "$prev_p" = "--update-clone-url" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+        elif [ "$prev_p" = "--clone-url" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             GITHOOKS_CLONE_URL="$p"
-        elif [ "$p" = "--update-clone-branch" ]; then
+        elif [ "$p" = "--clone-branch" ]; then
             : # nothing to do here
-        elif [ "$prev_p" = "--update-clone-branch" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+        elif [ "$prev_p" = "--clone-branch" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             GITHOOKS_CLONE_BRANCH="$p"
         else
             echo "! Unknown argument \`$p\`" >&2
@@ -1470,8 +1470,8 @@ update_release_clone() {
                 echo "  \`$URL\`" >&2
                 echo "  on branch \`$BRANCH\`" >&2
                 echo "  which is not configured." >&2
-                echo "  See \`git hooks config [set|print] update-clone-url\` and" >&2
-                echo "      \`git hooks config [set|print] update-clone-branch\`" >&2
+                echo "  See \`git hooks config [set|print] clone-url\` and" >&2
+                echo "      \`git hooks config [set|print] clone-branch\`" >&2
                 echo "  Either fix this or delete the clone" >&2
                 echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
                 echo "  to trigger a new checkout." >&2

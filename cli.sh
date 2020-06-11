@@ -1951,14 +1951,14 @@ git hooks config [enable|disable|reset|print] update
     The \`reset\` option clears this setting.
     The \`print\` option outputs the current setting.
 
-git hooks config set update-clone-url <git-url>
-git hooks config [set|print] update-clone-url
+git hooks config set clone-url <git-url>
+git hooks config [set|print] clone-url
 
     Sets or prints the configured githooks clone url used
     for any update.
 
-git hooks config set update-clone-branch <branch-name>
-git hooks config print update-clone-branch
+git hooks config set clone-branch <branch-name>
+git hooks config print clone-branch
 
     Sets or prints the configured branch of the update clone
     used for any update.
@@ -2027,10 +2027,10 @@ The \`print\` option outputs the current behavior.
     "update")
         config_update_state "$CONFIG_OPERATION" "$@"
         ;;
-    "update-clone-url")
+    "clone-url")
         config_update_clone_url "$CONFIG_OPERATION" "$@"
         ;;
-    "update-clone-branch")
+    "clone-branch")
         config_update_clone_branch "$CONFIG_OPERATION" "$@"
         ;;
     "update-time")
