@@ -243,6 +243,11 @@ uninstall_from_registered_repositories() {
         # Remove the registered list since we
         # uninstalled from all registered repos.
         rm -f "$LIST" >/dev/null 2>&1
+
+        # Remove legacy list
+        if [ -d "$INSTALL_DIR/autoupdate" ]; then
+            rm -rf "$INSTALL_DIR/autoupdate"
+        fi
     fi
 
     return 0
