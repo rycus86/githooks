@@ -15,7 +15,8 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    set_main_variables "$@"
+    set_main_variables "$@" && shift && shift
+
     register_installation_if_needed
 
     if are_githooks_disabled; then
@@ -61,17 +62,22 @@ are_githooks_disabled() {
 # Returns: None
 #####################################################
 load_install_dir() {
-    INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+    # INSTALL_DIR might be set from base-template-symlink.sh
 
     if [ -z "${INSTALL_DIR}" ]; then
-        # install dir not defined, use default
-        INSTALL_DIR=~/".githooks"
-    elif [ ! -d "$INSTALL_DIR" ]; then
-        echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
-        INSTALL_DIR=~/".githooks"
-        echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
-        echo "  Please run the Githooks install script again to fix it." >&2
+        INSTALL_DIR=$(git config --global --get githooks.installDir)
+
+        if [ -z "${INSTALL_DIR}" ]; then
+            # install dir not defined, use default
+            INSTALL_DIR=~/".githooks"
+        elif [ ! -d "$INSTALL_DIR" ]; then
+            echo "! Githooks installation is corrupt! " >&2
+            echo "  Install directory at ${INSTALL_DIR} is missing." >&2
+            INSTALL_DIR=~/".githooks"
+            echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
+            echo "  Please run the Githooks install script again to fix it." >&2
+        fi
     fi
 
     GITHOOKS_CLONE_DIR="$INSTALL_DIR/release"
@@ -89,8 +95,11 @@ load_install_dir() {
 # Returns: None
 #####################################################
 set_main_variables() {
-    HOOK_NAME=$(basename "$0")
-    HOOK_FOLDER=$(dirname "$0")
+
+    INSTALL_DIR="$1"
+    HOOK_NAME=$(basename "$2")
+    HOOK_FOLDER=$(dirname "$2")
+
     ACCEPT_CHANGES=
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
