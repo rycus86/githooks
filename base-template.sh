@@ -15,7 +15,7 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    set_main_variables
+    set_main_variables "$@"
     register_installation_if_needed
 
     if are_githooks_disabled; then
@@ -106,32 +106,27 @@ set_main_variables() {
 }
 
 ############################################################
-# We register this repository for future potential
-# autoupdates if all of the following is true
-#   - core.hooksPath is not defined, meaning this hook
-#     needs to be in `.git/hooks`.
-#   - its not yet registered.
-#   - its a non-single install.
+# We register this repository in the global install list
+# if it is not registered.
 #
 # Returns: None
 ############################################################
 register_installation_if_needed() {
-    if ! git config --local githooks.autoupdate.registered >/dev/null 2>&1 &&
-        [ "$(git config --local githooks.single.install)" != "yes" ] &&
+    if ! git config --local githooks.registered >/dev/null 2>&1 &&
         [ ! -d "$(git config --global core.hooksPath)" ]; then
         register_repo "$CURRENT_GIT_DIR"
     fi
 }
 
 ############################################################
-# Adds the repository to the list `autoupdate.registered`
-#  for future potential autoupdate.
+# Adds the repository to the global list of all repos which
+#   use githooks
 #
 # Returns: None
 ############################################################
 register_repo() {
     CURRENT_REPO="$(cd "$1" && pwd)"
-    LIST="$INSTALL_DIR/autoupdate/registered"
+    LIST="$INSTALL_DIR/registered"
 
     # Remove
     if [ -f "$LIST" ]; then
@@ -150,7 +145,7 @@ register_repo() {
     # Add at the bottom
     echo "$CURRENT_REPO" >>"$LIST"
     # Mark this repo as registered
-    git config --local githooks.autoupdate.registered "true"
+    git config --local githooks.registered "true"
 }
 
 #####################################################
@@ -959,18 +954,6 @@ is_clone_created() {
 }
 
 #####################################################
-# Checks if the hooks in the current
-#   local repository were installed in
-#   single repository install mode.
-#
-# Returns:
-#   0 if they were, 1 otherwise
-#####################################################
-is_single_repo() {
-    [ "$(git config --get --local githooks.single.install)" = "yes" ] || return 1
-}
-
-#####################################################
 # Prompts the user whether the new update
 #   should be installed or not.
 #
@@ -1011,12 +994,7 @@ execute_update() {
         return 1
     fi
 
-    if is_single_repo; then
-        sh -s -- --single --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
-    else
-        sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
-    fi
-
+    sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
     return 0
 }
 

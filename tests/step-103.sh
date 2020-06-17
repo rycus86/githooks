@@ -28,6 +28,7 @@ if [ "$RESULT" = "0" ]; then
     echo "! Expected shared hooks to be installed."
     exit 1
 fi
+
 git commit -m "Test" || exit 1
 
 # Remove all shared hooks and make it fail

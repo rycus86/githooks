@@ -35,7 +35,7 @@ if ! grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
 fi
 
 if (cd /tmp/test094/c && sh /var/lib/githooks/cli.sh install); then
-    echo "! Single install expected to fail outside a repository"
+    echo "! Install expected to fail outside a repository"
     exit 1
 fi
 
@@ -45,6 +45,8 @@ if ! (cd ~/.githooks/release && git status && git reset --hard HEAD^); then
     exit 1
 fi
 
+# Set deprecated single install flag
+git config --local githooks.single.install "Y"
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 OUT=$(git hooks install 2>&1)
 # shellcheck disable=SC2181

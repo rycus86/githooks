@@ -22,13 +22,7 @@ if ! sh /var/lib/githooks/install.sh --single; then
     exit 1
 fi
 
-SETUP_AS_SINGLE_REPO=$(git config --get --local githooks.single.install)
-if [ "$SETUP_AS_SINGLE_REPO" != "yes" ]; then
-    echo "! Expected to be a single-repo install"
-    exit 1
-fi
-
-ARE_UPDATES_ENABLED=$(git config --local --get githooks.autoupdate.enabled)
+ARE_UPDATES_ENABLED=$(git config --global --get githooks.autoupdate.enabled)
 if [ "$ARE_UPDATES_ENABLED" != "true" ]; then
     echo "! Auto updates were expected to be enabled"
     exit 1
@@ -46,6 +40,8 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
     exit 1
 fi
 
+# Test update again with deprecated single flag
+git config --local githooks.single.install "true" || exit 1
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
         sh /var/lib/githooks/base-template.sh 2>&1
