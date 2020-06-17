@@ -1380,7 +1380,7 @@ git hooks uninstall [--global]
         return
     fi
 
-    UNINSTALL_ARGS="--local"
+    UNINSTALL_ARGS="--single"
     if [ "$1" = "--global" ]; then
         UNINSTALL_ARGS="--global"
     elif [ -n "$1" ]; then

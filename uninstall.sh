@@ -460,22 +460,41 @@ load_install_dir() {
 #
 # Returns: 0 if uninstall is local, 1 otherwise
 #####################################################
-is_local_uninstall() {
-    [ "$UNINSTALL_LOCAL" = "true" ] || return 1
+is_single_repo_uninstall() {
+    [ "$SINGLE_REPO_UNINSTALL" = "true" ] || return 1
+}
+
+#####################################################
+# Check we are running inside the release clone
+#
+# Returns: 0 if `true`, 1 otherwise
+#####################################################
+is_running_internal_uninstall() {
+    [ "$INTERNAL_UNINSTALL" = "true" ] || return 1
 }
 
 #####################################################
 # Parse command line args.
 #
-# Returns: None
+# Returns: 0 if successful, 1 otherhwise
 #####################################################
 parse_command_line_args() {
-    # Global or local uninstall
-    if [ "$1" = "--local" ]; then
-        UNINSTALL_LOCAL="true"
-    else
-        UNINSTALL_LOCAL="false"
-    fi
+
+    SINGLE_REPO_UNINSTALL="false"
+    INTERNAL_UNINSTALL="false"
+
+    for p in "$@"; do
+        if [ "$p" = "--internal-uninstall" ]; then
+            INTERNAL_UNINSTALL="true"
+        elif [ "$p" = "--single" ] ||
+            [ "$p" = "--local" ]; then # legacy flag from old uninstall.sh
+            SINGLE_REPO_UNINSTALL="true"
+        else
+            echo "! Unknown argument \`$p\`" >&2
+            return 1
+        fi
+    done
+    return 0
 }
 
 #####################################################
@@ -525,7 +544,14 @@ uninstall() {
     set_main_variables || return 1
     parse_command_line_args "$@"
 
-    if [ "$UNINSTALL_LOCAL" = "true" ]; then
+    if ! is_running_internal_uninstall &&
+        [ -f "$INSTALL_DIR/release/uninstall.sh" ]; then
+        # Dispatch to install script inside the clone
+        sh "$INSTALL_DIR/release/uninstall.sh" --internal-uninstall "$@" || return 1
+        return 0
+    fi
+
+    if is_single_repo_uninstall; then
         # Uninstall the hooks from the current repository
         if uninstall_from_current_repository; then
             return 0
