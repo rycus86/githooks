@@ -5,7 +5,8 @@
 # its hooks to execute on various Git triggers.
 #
 
-INSTALL_DIR=$(git config --global githooks.installDir)
+# Auto-generated: do not edit!
+INSTALL_DIR=$(cd "$(dirname "$0")/../" && pwd)
 GITHOOKS_SCRIPT="$INSTALL_DIR/release/base-template.sh"
 
 if [ ! -d "$INSTALL_DIR" ]; then
