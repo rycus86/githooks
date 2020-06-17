@@ -1553,8 +1553,73 @@ fetch_latest_updates() {
     GITHOOKS_CLONE_URL=$(git config --global githooks.cloneUrl)
     GITHOOKS_CLONE_BRANCH=$(git config --global githooks.cloneBranch)
 
-    # We do a fresh clone if there is not repository
+    # We do a fresh clone if there is not a repository
+    # or wrong url/branch configured and the user agrees.
     if is_git_repo "$GITHOOKS_CLONE_DIR"; then
+
+        URL=$(execute_git "$GITHOOKS_CLONE_DIR" config remote.origin.url 2>/dev/null)
+        BRANCH=$(execute_git "$GITHOOKS_CLONE_DIR" symbolic-ref -q --short HEAD 2>/dev/null)
+
+        if [ "$URL" != "$GITHOOKS_CLONE_URL" ] ||
+            [ "$BRANCH" != "$GITHOOKS_CLONE_BRANCH" ]; then
+
+            CREATE_NEW_CLONE="false"
+
+            echo "! Cannot fetch updates because \`origin\` of update clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  points to url:" >&2
+            echo "  \`$URL\`" >&2
+            echo "  on branch \`$BRANCH\`" >&2
+            echo "  which is not configured." >&2
+
+            echo "Do you want to delete and reclone the existing update clone? [N/y]"
+            read -r ANSWER </dev/tty
+
+            if [ "$ANSWER" = "y" ] || [ "$ANSWER" = "Y" ]; then
+                CREATE_NEW_CLONE="true"
+            fi
+
+            if [ "$CREATE_NEW_CLONE" != "true" ]; then
+                echo "! See \`git hooks config [set|print] clone-url\` and" >&2
+                echo "      \`git hooks config [set|print] clone-branch\`" >&2
+                echo "  Either fix this or delete the clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  to trigger a new checkout." >&2
+                return 1
+            fi
+        fi
+
+        # Check if the update clone is dirty which it really should not.
+        if ! execute_git "$GITHOOKS_CLONE_DIR" diff-index --quiet HEAD >/dev/null 2>&1; then
+            echo "! Cannot pull updates because the update clone" >&2
+            echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+            echo "  is dirty!" >&2
+
+            echo "Do you want to delete and reclone the existing update clone? [N/y]"
+            read -r ANSWER </dev/tty
+
+            if [ "$ANSWER" = "y" ] || [ "$ANSWER" = "Y" ]; then
+                CREATE_NEW_CLONE="true"
+            fi
+
+            if [ "$CREATE_NEW_CLONE" != "true" ]; then
+                echo "! Either fix this or delete the clone" >&2
+                echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
+                echo "  to trigger a new checkout." >&2
+                return 1
+            fi
+        fi
+    else
+        CREATE_NEW_CLONE="true"
+    fi
+
+    if [ "$CREATE_NEW_CLONE" = "true" ]; then
+        clone_release_repository || return 1
+
+        # shellcheck disable=SC2034
+        GITHOOKS_CLONE_CREATED="true"
+        GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
+    else
 
         FETCH_OUTPUT=$(
             execute_git "$GITHOOKS_CLONE_DIR" fetch origin "$GITHOOKS_CLONE_BRANCH" 2>&1
@@ -1575,13 +1640,6 @@ fetch_latest_updates() {
             # install.sh deals with updating ...
             GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
         fi
-
-    else
-        clone_release_repository || return 1
-
-        # shellcheck disable=SC2034
-        GITHOOKS_CLONE_CREATED="true"
-        GITHOOKS_CLONE_UPDATE_AVAILABLE="true"
     fi
 
     return 0
