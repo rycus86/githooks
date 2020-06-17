@@ -1689,18 +1689,6 @@ is_autoupdate_enabled() {
 }
 
 #####################################################
-# Checks if the hooks in the current
-#   local repository were installed in
-#   single repository install mode.
-#
-# Returns:
-#   1 if they were, 0 otherwise
-#####################################################
-is_single_repo() {
-    [ "$(git config --get --local githooks.single.install)" = "yes" ] || return 1
-}
-
-#####################################################
 # Performs the installation of the previously
 #   fetched install script.
 #
@@ -2012,9 +2000,6 @@ The \`print\` option outputs the current behavior.
     "disable")
         config_disable "$CONFIG_OPERATION"
         ;;
-    "single")
-        config_single_install "$CONFIG_OPERATION"
-        ;;
     "search-dir")
         config_search_dir "$CONFIG_OPERATION" "$@"
         ;;
@@ -2071,50 +2056,6 @@ config_disable() {
             echo "Githooks is disabled in the current repository"
         else
             echo "Githooks is NOT disabled in the current repository"
-        fi
-    else
-        echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
-        exit 1
-    fi
-}
-
-#####################################################
-# Manages Githooks single installation setting
-#   for the current repository.
-# Prints or modifies the \`githooks.single.install\`
-#   local Git configuration.
-#####################################################
-config_single_install() {
-    if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
-        exit 1
-    fi
-
-    if [ "$1" = "set" ]; then
-
-        echo "" >&2
-        echo "! DEPRECATION WARNING: Single install repositories will be " >&2
-        echo "  completely deprecated in future updates:" >&2
-        echo "" >&2
-        echo "    The hooks will still work but will not be" >&2
-        echo "    supported anymore in the next update." >&2
-        echo "" >&2
-        echo "    You should migrate to a non-single install by" >&2
-        echo "    resetting this option with" >&2
-        echo "      \`git hooks config reset single\`" >&2
-        echo "    in order to use this repository with the next updates!" >&2
-        echo "" >&2
-
-        git config --unset githooks.autoupdate.registered
-        git config githooks.single.install yes
-    elif [ "$1" = "reset" ]; then
-        git config --unset githooks.single.install
-        # the repository is registered in the next hooks run
-    elif [ "$1" = "print" ]; then
-        if is_single_repo; then
-            echo "The current repository is marked as a single installation"
-        else
-            echo "The current repository is NOT marked as a single installation"
         fi
     else
         echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2

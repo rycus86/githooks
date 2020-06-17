@@ -64,18 +64,11 @@ execute_installation() {
     fi
 
     # Find the directory to install to
-    if is_single_repo_install; then
-        get_cwd_git_dir || return 1
-        mark_as_single_install_repo
-    else
-        prepare_target_template_directory || return 1
-    fi
+    prepare_target_template_directory || return 1
 
     # Install the hook templates if needed
-    if ! is_single_repo_install; then
-        setup_hook_templates || return 1
-        echo # For visual separation
-    fi
+    setup_hook_templates || return 1
+    echo # For visual separation
 
     # Install the command line helper tool
     install_command_line_tool
@@ -88,6 +81,7 @@ execute_installation() {
 
     if ! should_skip_install_into_existing_repositories; then
         if is_single_repo_install; then
+            get_cwd_git_dir || return 1
             install_hooks_into_repo "$CWD_GIT_DIR" || return 1
         else
             if ! is_autoupdate; then
@@ -106,7 +100,9 @@ execute_installation() {
     fi
 
     # Legacy transformations
-    legacy_transformations_end || return 1
+    if ! is_dry_run; then
+        legacy_transformations_end || return 1
+    fi
 
     thank_you
 
@@ -120,12 +116,10 @@ execute_installation() {
 #   1 if the install should be aborted, 0 otherwise
 ############################################################
 check_deprecation() {
-    if is_single_repo_install; then
+    if is_single_repo_install || is_autoupdate; then
         if ! check_not_deprecated_single_install; then
             echo "! Install failed due to deprecated single install" >&2
             return 1
-        else
-            warn_deprecated_single_install
         fi
     fi
     return 0
@@ -159,6 +153,11 @@ legacy_transformations_start() {
         git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE"
     fi
 
+    # Copy legacy file to new location
+    if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
+        cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered"
+    fi
+
     return 0
 }
 
@@ -176,6 +175,24 @@ legacy_transformations_end() {
     git config --global --unset githooks.autoupdate.updateCloneUrl
     git config --global --unset githooks.autoupdate.updateCloneBranch
     git config --global --unset githooks.previous.searchdir
+
+    # Remove legacy registration file (we moved it to another location)
+    if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
+        rm -rf "$INSTALL_DIR/autoupdate"
+    fi
+    return 0
+}
+
+############################################################
+# Function to dispatch to all legacy transformations
+#   at the end of a install into a repository
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transformations_repo_end() {
+
+    git -C "$1" config --local --unset githooks.autoupdate.registered
 
     return 0
 }
@@ -307,43 +324,33 @@ parse_command_line_arguments() {
 }
 
 ############################################################
-# Install flag `--single` will behave differently in
-# future versions.
-#
-# Returns: None
-############################################################
-warn_deprecated_single_install() {
-    echo "" >&2
-    echo "! FEATURE CHANGE WARNING: The single installation feature" >&2
-    echo "  with \`--single\` will be changed to the following only" >&2
-    echo "  behavior in future updates:" >&2
-    echo "" >&2
-    echo "    - install Githooks hooks into the current repository" >&2
-    echo "    - the installed hooks are not standalone anymore" >&2
-    echo "      and behave exactly the same as current non-single" >&2
-    echo "      installs" >&2
-    echo "" >&2
-}
-
-############################################################
 # Check if this repo is not a deprecated single install.
 #
 # Returns: 1 if deprecated single install, 0 otherwise
 ############################################################
 check_not_deprecated_single_install() {
     if is_git_repo "$(pwd)" && git config --local githooks.single.install >/dev/null 2>&1; then
+        echo >&2
+        echo "! DEPRECATION WARNING: Single install repositories are" >&2
+        echo "  deprecated!" >&2
+        echo >&2
+        echo "  The single installation feature" >&2
+        echo "  with \`--single\` was changed to the following only" >&2
+        echo "  behavior:" >&2
         echo "" >&2
-        echo "! DEPRECATION WARNING: Single install repositories will be " >&2
-        echo "  completely deprecated in future updates:" >&2
-        echo "" >&2
+        echo "    - install Githooks hooks into the current repository" >&2
+        echo "    - the installed hooks are not standalone anymore" >&2
+        echo "      and behave exactly the same as current non-single" >&2
+        echo "      installs" >&2
+        echo >&2
         echo "    You appear to have setup this repo as a single install." >&2
-        echo "    The hooks will still work with this install but will not be" >&2
-        echo "    supported anymore in the next update." >&2
-        echo "" >&2
-        echo "    You need to reset this option by running" >&2
+        echo "    The hooks in this repository are not supported anymore." >&2
+        echo >&2
+        echo "    To install the latest hooks you need to reset this option"
+        echo "    by running" >&2
         echo "      \`git hooks config reset single\`" >&2
-        echo "    in order to use this repository with the next updates!" >&2
-        echo "" >&2
+        echo "    in order to use this repository with githooks." >&2
+        echo >&2
         return 1 # DeprecateSingleInstall
     fi
     return 0
@@ -478,21 +485,6 @@ get_cwd_git_dir() {
         CWD_GIT_DIR="$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)"
     fi
     return 0
-}
-
-############################################################
-# Marks the repository in the current working directory
-#   as a single install project for future Githooks
-#   install or update runs.
-#
-# Sets the 'githooks.single.install' configuration.
-#
-# Returns:
-#   None
-############################################################
-mark_as_single_install_repo() {
-    git config --local githooks.single.install yes
-    git config --local --unset githooks.autoupdate.registered
 }
 
 ############################################################
@@ -848,13 +840,9 @@ setup_automatic_update_checks() {
     fi
 
     if [ -z "$DO_AUTO_UPDATES" ] || [ "$DO_AUTO_UPDATES" = "y" ] || [ "$DO_AUTO_UPDATES" = "Y" ]; then
-        if ! is_single_repo_install; then
-            GLOBAL_CONFIG="--global"
-        fi
-
         if is_dry_run; then
             echo "[Dry run] Automatic update checks would have been enabled"
-        elif git config ${GLOBAL_CONFIG} githooks.autoupdate.enabled true; then
+        elif git config --global githooks.autoupdate.enabled true; then
             echo "Automatic update checks are now enabled"
         else
             echo "! Failed to enable automatic update checks" >&2
@@ -1044,7 +1032,7 @@ disable_lfs_hook_if_detected() {
 ############################################################
 install_into_registered_repositories() {
 
-    LIST="$INSTALL_DIR/autoupdate/registered"
+    LIST="$INSTALL_DIR/registered"
     if [ -f "$LIST" ]; then
 
         # Filter list according to
@@ -1064,11 +1052,6 @@ install_into_registered_repositories() {
             if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
                 # Not existing git dir -> skip.
                 true
-
-            elif (cd "$INSTALLED_REPO" && [ "$(git config --local githooks.single.install)" = "yes" ]); then
-                # Found a registed repo which is now a single install:
-                # For safety: Remove registered flag and skip.
-                git -C "$INSTALLED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
 
             elif echo "$EXISTING_REPOSITORY_LIST" | grep -q "$INSTALLED_REPO"; then
                 # We already installed to this repository, don't install
@@ -1192,29 +1175,29 @@ install_hooks_into_repo() {
     else
         # Getting the working tree (no external .git directories)
         # see https://stackoverflow.com/a/38852055/293195
-        TARGET_ROOT=$(git -C "${TARGET}" rev-parse --show-toplevel 2>/dev/null)
+        TARGET_ROOT=$(git -C "$TARGET" rev-parse --show-toplevel 2>/dev/null)
         if [ -z "$TARGET_ROOT" ]; then
-            TARGET_ROOT=$(cd "${TARGET}" && cd "$(git rev-parse --git-common-dir 2>/dev/null)/.." && pwd)
+            TARGET_ROOT=$(cd "$TARGET" && cd "$(git rev-parse --git-common-dir 2>/dev/null)/.." && pwd)
         fi
 
-        if [ -d "${TARGET_ROOT}" ] && is_git_repo "$TARGET_ROOT" &&
-            [ ! -f "${TARGET_ROOT}/.githooks/README.md" ]; then
+        if [ -d "$TARGET_ROOT" ] && is_git_repo "$TARGET_ROOT" &&
+            [ ! -f "$TARGET_ROOT/.githooks/README.md" ]; then
             if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
                 true # OK, we already said we want to skip all
 
             elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
                 mkdir -p "${TARGET_ROOT}/.githooks" &&
-                    cp "$GITHOOKS_CLONE_DIR/.githooks/README.md" "${TARGET_ROOT}/.githooks/README.md"
+                    cp "$GITHOOKS_CLONE_DIR/.githooks/README.md" "$TARGET_ROOT/.githooks/README.md"
 
             else
-                if [ ! -d "${TARGET_ROOT}/.githooks" ]; then
+                if [ ! -d "$TARGET_ROOT/.githooks" ]; then
                     echo "Looks like you don't have a .githooks folder"
-                    echo "in the ${TARGET_ROOT} repository yet."
+                    echo "in the \`$TARGET_ROOT\` repository yet."
                     echo "  Would you like to create one with a README"
                     printf "  containing a brief overview of Githooks? (Yes, no, all, skip all) [Y/n/a/s] "
                 else
                     echo "Looks like you don't have a README.md in the"
-                    echo "${TARGET_ROOT}/.githooks folder yet."
+                    echo "  \`$TARGET_ROOT/.githooks\` folder yet."
                     echo "  A README file might help contributors and"
                     echo "  other team members learn about what is this for."
                     echo "  Would you like to add one now with"
@@ -1234,15 +1217,13 @@ install_hooks_into_repo() {
         fi
     fi
 
-    # Register the repo
-    [ "$INSTALLED" = "true" ] &&
-        ! is_single_repo_install &&
-        register_repo "$TARGET"
-
     if [ "$INSTALLED" = "true" ]; then
         if is_dry_run; then
             echo "[Dry run] Hooks would have been installed into $TARGET"
         else
+            register_repo "$TARGET"
+            legacy_transformations_repo_end "$TARGET"
+
             echo "Hooks installed into $TARGET"
         fi
     fi
@@ -1255,14 +1236,14 @@ install_hooks_into_repo() {
 }
 
 ############################################################
-# Adds the repository to the list `autoupdate.registered`
-#  for potential future autoupdates.
+# Adds the repository to the registration list
+#  `githooks.registered`
 #
 # Returns: 0
 ############################################################
 register_repo() {
     CURRENT_REPO="$(cd "$1" && pwd)"
-    LIST="$INSTALL_DIR/autoupdate/registered"
+    LIST="$INSTALL_DIR/registered"
 
     # Remove
     if [ -f "$LIST" ]; then
@@ -1282,7 +1263,7 @@ register_repo() {
     echo "$CURRENT_REPO" >>"$LIST"
 
     # Mark the repo as registered.
-    (git -C "$CURRENT_REPO" config --local githooks.autoupdate.registered "true")
+    (git -C "$CURRENT_REPO" config --local githooks.registered "true")
 
     return 0
 }
@@ -1617,6 +1598,7 @@ clone_release_repository() {
     fi
 
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
+    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_CURRENT_COMMIT")
 
     git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
     git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
