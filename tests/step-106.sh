@@ -56,7 +56,7 @@ fi
 
 # an extra invocation for coverage
 HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh /var/lib/githooks/base-template.sh unused ||
+    sh /var/lib/githooks/base-template.sh "" "" unused ||
     exit 12
 
 if ! grep -q 'post-merge' lfs.out; then

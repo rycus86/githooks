@@ -96,9 +96,9 @@ load_install_dir() {
 #####################################################
 set_main_variables() {
 
-    INSTALL_DIR="$1"
-    HOOK_NAME=$(basename "$2")
-    HOOK_FOLDER=$(dirname "$2")
+    HOOK_NAME=$(basename "$1")
+    HOOK_FOLDER=$(dirname "$1")
+    INSTALL_DIR="$2"
 
     ACCEPT_CHANGES=
 
