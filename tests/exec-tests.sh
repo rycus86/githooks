@@ -9,10 +9,16 @@ else
     STEPS_TO_RUN="step-*"
 fi
 
+if echo "$IMAGE_TYPE" | grep -q "-user"; then
+    OS_USER="test"
+else
+    OS_USER="root"
+fi
+
 cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
-ADD base-template.sh base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+COPY --chown=${OS_USER}:${OS_USER} base-template.sh base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
 RUN chmod +x /var/lib/githooks/*.sh
 ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
