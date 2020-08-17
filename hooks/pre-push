@@ -3,22 +3,17 @@
 #
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
-#
 
 # Auto-generated: do not edit!
-INSTALL_DIR=$(cd "$(dirname "$0")/../" && pwd)
-GITHOOKS_SCRIPT="$INSTALL_DIR/release/base-template.sh"
+GITHOOKS_RUNNER="$(cd "$(dirname "$0")/../" && pwd)/base-template.sh"
 
-if [ ! -d "$INSTALL_DIR" ]; then
-    echo "! Githooks installation is corrupt! " >&2
-    echo "  Install directory at '${INSTALL_DIR}' is missing." >&2
-    echo "  Please run the Githooks install script again to fix it." >&2
-    exit 1
-elif [ ! -f "$GITHOOKS_SCRIPT" ]; then
-    echo "! Githooks link to '$GITHOOKS_SCRIPT' is broken!"
-    echo "  Please run the Githooks install script again to fix it." >&2
+if [ ! -x "$GITHOOKS_RUNNER" ]; then
+    echo "! Githooks runner points to non existing location:" >&2
+    echo "   \`$GITHOOKS_RUNNER\`" >&2
+    echo "  or it is not executable!" >&2
+    echo " Please run the Githooks install script again to fix it." >&2
     exit 1
 fi
-
-# shellcheck disable=SC1090
-sh "$GITHOOKS_SCRIPT" "$INSTALL_DIR" "$0" "$@"
+GITHOOKS_HOOK_NAME=$(basename "$0") \
+GITHOOKS_HOOK_FOLDER=$(dirname "$0") \
+    "$GITHOOKS_RUNNER" "$@"

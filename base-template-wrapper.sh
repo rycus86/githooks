@@ -4,8 +4,7 @@
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
 
-# Auto-generated: do not edit!
-GITHOOKS_RUNNER="$(cd "$(dirname "$0")/../" && pwd)/base-template.sh"
+GITHOOKS_RUNNER=$(git config --global githooks.runner)
 
 if [ ! -x "$GITHOOKS_RUNNER" ]; then
     echo "! Githooks runner points to non existing location:" >&2

@@ -10,7 +10,7 @@ mkdir -p .githooks/pre-commit &&
     echo 'echo "Trusted hook" > /tmp/test34.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS=Y ACCEPT_CHANGES=N \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if ! grep -q "Trusted hook" /tmp/test34.out; then
     echo "! Expected hook was not run"
@@ -20,7 +20,7 @@ fi
 echo 'echo "Changed hook" > /tmp/test34.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS="" ACCEPT_CHANGES=N \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if ! grep -q "Changed hook" /tmp/test34.out; then
     echo "! Changed hook was not run"

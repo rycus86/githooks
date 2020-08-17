@@ -72,6 +72,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.disable
     git config --global --unset alias.hooks
     git config --global --unset githooks.installDir
+    git config --global --unset githooks.runner
 
     cp -r /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
 

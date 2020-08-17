@@ -16,11 +16,11 @@ git init || exit 1
 mkdir -p .githooks &&
     echo '/tmp/shared/hooks-018.git' >.githooks/.shared &&
     HOOK_NAME='.githooks.shared.trigger' \
-        sh /var/lib/githooks/base-template.sh ||
+        sh /var/lib/githooks/base-template-wrapper.sh ||
     exit 1
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh /var/lib/githooks/base-template.sh
+    sh /var/lib/githooks/base-template-wrapper.sh
 
 if [ $? -ne 1 ]; then
     echo "! Expected to fail on shared hook execution"

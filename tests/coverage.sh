@@ -16,7 +16,8 @@ RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.lis
     && (apt-get update || true) \
     && apt-get install -y git
 
-ADD base-template.sh base-template-symlink.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+ADD base-template.sh base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+RUN chmod +x /var/lib/githooks/*.sh
 ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
 
@@ -39,8 +40,9 @@ RUN \\
 # Do not use the terminal in tests
     sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 # Change the base template so we can pass in the hook name and accept flags
-    sed -i 's|HOOK_NAME=.*|HOOK_NAME=\${HOOK_NAME:-\$(basename "\$0")}|' /var/lib/githooks/base-template.sh && \\
-    sed -i 's|HOOK_FOLDER=.*|HOOK_FOLDER=\${HOOK_FOLDER:-\$(dirname "\$0")}|' /var/lib/githooks/base-template.sh && \\
+    sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-/var/lib/githooks/base-template.sh}"|' /var/lib/githooks/base-template-wrapper.sh && \\
+    sed -i -E 's|GITHOOKS_HOOK_FOLDER=(.*)\\\|GITHOOKS_HOOK_FOLDER=\1 GITHOOKS_HOOK_FOLDER="\${HOOK_FOLDER:-\$GITHOOKS_HOOK_FOLDER}" \\\|' /var/lib/githooks/base-template-wrapper.sh && \\
+    sed -i -E 's|GITHOOKS_HOOK_NAME=(.*)\\\|GITHOOKS_HOOK_NAME=\1 GITHOOKS_HOOK_NAME="\${HOOK_NAME:-\$GITHOOKS_HOOK_NAME}" \\\|' /var/lib/githooks/base-template-wrapper.sh && \\
     sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh && \\
     sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh

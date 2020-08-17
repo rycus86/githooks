@@ -1,27 +1,22 @@
 #!/bin/sh
 
-if ! echo "$STAGED_FILES" | grep -q "base-template-symlink|update-templates"; then
-    # stop here if there are no changes for this commit
-    exit 0
-fi
-
 # Patch the hooks
-HOOK_NAMES=$(sed -e '1,/MANAGED_HOOK_NAMES="/d;/"/,$d' install.sh)
+HOOK_NAMES=$(sed -e '1,/MANAGED_HOOK_NAMES="/d;/"/,$d' install.sh) ||
+    {
+        echo "update-templates:: Replacement command failed!"
+        exit 1
+    }
 
 for HOOK_NAME in $HOOK_NAMES; do
-    if ! echo "$HOOK_NAMES" | grep -q "$HOOK_NAME"; then
-        echo "! You changed the managed hooks types" >&2
-        echo "  you need to adjust them in \`$0\`" >&2
-        exit 1
-    fi
-
-    cp base-template-symlink.sh "hooks/$HOOK_NAME"
-    if ! sed -i "s|INSTALL_DIR=.*|# Auto-generated: do not edit!\nINSTALL_DIR=\$(cd \"\$(dirname \"\$0\")/../\" \&\& pwd)|" "hooks/$HOOK_NAME" ||
-        ! chmod u+x "hooks/$HOOK_NAME" ||
-        ! git add hooks/*; then
-        echo "Failed to update \`hooks/$HOOK_NAME\`" >&2
-        exit 2
-    fi
+    # shellcheck disable=SC2015
+    sed "s|GITHOOKS_RUNNER=.*|# Auto-generated: do not edit!\nGITHOOKS_RUNNER=\"\$(cd \"\$(dirname \"\$0\")/../\" \&\& pwd)/base-template.sh\"|" \
+        <base-template-wrapper.sh >"hooks/$HOOK_NAME" &&
+        chmod u+x "hooks/$HOOK_NAME" &&
+        git add hooks/* ||
+        {
+            echo "Failed to update \`hooks/$HOOK_NAME\`" >&2
+            exit 2
+        }
 done
 
 echo "* Updated all hooks in 'hooks/*'"

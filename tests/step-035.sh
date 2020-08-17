@@ -10,7 +10,7 @@ mkdir -p .githooks/pre-commit &&
     echo 'echo "Accepted hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS=N ACCEPT_CHANGES=Y \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if ! grep -q "Accepted hook" /tmp/test35.out; then
     echo "! Expected hook was not run"
@@ -20,7 +20,7 @@ fi
 echo 'echo "Changed hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS="" ACCEPT_CHANGES=N \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if grep -q "Changed hook" /tmp/test35.out; then
     echo "! Changed hook was unexpectedly run"

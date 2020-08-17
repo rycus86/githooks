@@ -83,7 +83,7 @@ fi
 # Clone a new one
 echo "Cloning"
 cd /tmp || exit 1
-GIT_TRACE=1 git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
+git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
 
 # shellcheck disable=SC2012
 RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)

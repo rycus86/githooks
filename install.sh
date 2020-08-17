@@ -231,6 +231,11 @@ load_install_dir() {
         return 1
     fi
 
+    if ! git config --global githooks.runner "$INSTALL_DIR/release/base-template.sh"; then
+        echo "! Could not set \`githooks.runner\`"
+        return 1
+    fi
+
     return 0
 }
 
@@ -768,7 +773,7 @@ setup_hook_templates() {
             fi
         fi
 
-        if cp "$GITHOOKS_CLONE_DIR/base-template-symlink.sh" "$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
+        if cp "$GITHOOKS_CLONE_DIR/base-template-wrapper.sh" "$HOOK_TEMPLATE" && chmod +x "$HOOK_TEMPLATE"; then
             echo "Git hook template ready: $HOOK_TEMPLATE"
         else
             echo "! Failed to setup the $HOOK template at $HOOK_TEMPLATE" >&2
@@ -1159,7 +1164,7 @@ install_hooks_into_repo() {
             rm -f "$TARGET_HOOK" >/dev/null 2>&1
         fi
 
-        if cp "$GITHOOKS_CLONE_DIR/base-template-symlink.sh" "$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
+        if cp "$GITHOOKS_CLONE_DIR/base-template-wrapper.sh" "$TARGET_HOOK" && chmod +x "$TARGET_HOOK"; then
             INSTALLED="true"
         else
             HAD_FAILURE=Y
@@ -1313,7 +1318,7 @@ setup_shared_hook_repositories() {
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
         # Trigger the shared hook repository checkout manually
-        cp "$GITHOOKS_CLONE_DIR/base-template-symlink.sh" ".githooks.shared.trigger" &&
+        cp "$GITHOOKS_CLONE_DIR/base-template-wrapper.sh" ".githooks.shared.trigger" &&
             chmod +x ".githooks.shared.trigger" &&
             ./.githooks.shared.trigger
         rm -f .githooks.shared.trigger

@@ -23,7 +23,7 @@ EOF
 git add sub f*
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh /var/lib/githooks/base-template.sh
+    sh /var/lib/githooks/base-template-wrapper.sh
 
 if [ "$(wc -l </tmp/test096.out)" != "4" ]; then
     echo "! Unexpected number of output rows"
