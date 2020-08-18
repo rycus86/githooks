@@ -15,7 +15,8 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    set_main_variables
+    set_main_variables "$@" || return 1
+    shift 1
 
     register_installation_if_needed
 
@@ -88,18 +89,18 @@ load_install_dir() {
 # Resets the ${ACCEPT_CHANGES} variable
 # Sets the ${CURRENT_GIT_DIR} variable
 #
-# Returns: None
+# Returns: 0 if succesful, 1 otherwise
 #####################################################
 set_main_variables() {
-
-    HOOK_NAME="$GITHOOKS_HOOK_NAME"
-    HOOK_FOLDER="$GITHOOKS_HOOK_FOLDER"
+    HOOK_NAME="$(basename "$1")"
+    HOOK_FOLDER="$(dirname "$1")"
 
     ACCEPT_CHANGES=
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ ! -d "${CURRENT_GIT_DIR}" ]; then
-        echo "! Hook not run inside a git repository" >&2 && exit 1
+        echo "! Hook not run inside a git repository" >&2
+        return 1
     fi
 
     load_install_dir
@@ -107,6 +108,7 @@ set_main_variables() {
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
 "
+    return 0
 }
 
 ############################################################

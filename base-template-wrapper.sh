@@ -13,6 +13,5 @@ if [ ! -x "$GITHOOKS_RUNNER" ]; then
     echo " Please run the Githooks install script again to fix it." >&2
     exit 1
 fi
-GITHOOKS_HOOK_NAME=$(basename "$0") \
-GITHOOKS_HOOK_FOLDER=$(dirname "$0") \
-    "$GITHOOKS_RUNNER" "$@"
+
+exec "$GITHOOKS_RUNNER" "$0" "$@"
