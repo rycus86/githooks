@@ -31,7 +31,6 @@ ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 # Do not use the terminal in tests
 RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
     # Change the base template so we can pass in the hook name and accept flags
-    sed -i -E 's|echo.*Hook not run inside a git repository.*|CURRENT_GIT_DIR=".git"|' /var/lib/githooks/base-template.sh && \\
     sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-/var/lib/githooks/base-template.sh}"|' /var/lib/githooks/base-template-wrapper.sh && \\
     sed -i -E 's|HOOK_FOLDER=(.*)|HOOK_FOLDER="\${HOOK_FOLDER:-\1}"|' /var/lib/githooks/base-template.sh && \\
     sed -i -E 's|HOOK_NAME=(.*)|HOOK_NAME="\${HOOK_NAME:-\1}"|' /var/lib/githooks/base-template.sh && \\

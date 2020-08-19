@@ -15,7 +15,8 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    set_main_variables "$@" || return 1
+
+    set_main_variables "$1" || return 1
     shift 1
 
     register_installation_if_needed

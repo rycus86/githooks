@@ -31,7 +31,6 @@ sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh || exit 4
 # shellcheck disable=SC2016
 sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh &&
     # Change the base template so we can pass in the hook name and accept flags
-    sed -i -E 's|echo.*Hook not run inside a git repository.*|CURRENT_GIT_DIR=".git"|' "$ROOT_DIR"/base-template.sh "$ROOT_DIR"/install.sh &&
     sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-/var/lib/githooks/base-template.sh}"|' "$ROOT_DIR"/base-template-wrapper.sh &&
     sed -i -E 's|HOOK_FOLDER=(.*)|HOOK_FOLDER="\${HOOK_FOLDER:-\1}"|' "$ROOT_DIR"/base-template.sh &&
     sed -i -E 's|HOOK_NAME=(.*)|HOOK_NAME="\${HOOK_NAME:-\1}"|' "$ROOT_DIR"/base-template.sh &&
