@@ -7,7 +7,7 @@ FROM alpine
 RUN apk add --no-cache git curl ca-certificates && \
     adduser -D -u 1099 test && \
     mkdir -p /var/lib/githooks /var/backup/githooks /usr/share/git-core/templates/hooks && \
-    chown -R test /var/lib/githooks /var/backup/githooks /usr/share/git-core
+    chown -R test:test /var/lib/githooks /var/backup/githooks /usr/share/git-core
 USER test
 EOF
 

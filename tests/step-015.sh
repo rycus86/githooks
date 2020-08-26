@@ -15,7 +15,7 @@ mkdir -p .githooks/pre-commit &&
     echo '*.first' >.githooks/.ignore &&
     echo '*.second' >.githooks/pre-commit/.ignore &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh /var/lib/githooks/base-template.sh ||
+        sh /var/lib/githooks/base-template-wrapper.sh ||
     exit 1
 
 grep -q 'Third was run' /tmp/test015.out &&

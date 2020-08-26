@@ -27,11 +27,11 @@ mkdir -p .githooks &&
     git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
     echo '/tmp/shared/hooks-016-b.git' >.githooks/.shared &&
     HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh /var/lib/githooks/base-template.sh unused ||
+        sh /var/lib/githooks/base-template-wrapper.sh unused ||
     exit 1
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh /var/lib/githooks/base-template.sh ||
+    sh /var/lib/githooks/base-template-wrapper.sh ||
     exit 1
 
 if ! grep -q 'From shared hook A' /tmp/test-016.out; then

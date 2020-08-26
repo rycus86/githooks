@@ -11,7 +11,7 @@ mkdir -p .githooks &&
     echo 'exit 1' >.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -20,5 +20,5 @@ fi
 
 echo '*.replaced.githook' >.githooks/.ignore &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh /var/lib/githooks/base-template.sh ||
+        sh /var/lib/githooks/base-template-wrapper.sh ||
     exit 1

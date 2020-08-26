@@ -11,7 +11,7 @@ mkdir -p .githooks/pre-commit &&
     echo 'echo "Accepted hook" > /tmp/test48.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     ACCEPT_CHANGES=Y \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if [ -f /tmp/test48.out ]; then
     echo "! Hook was unexpectedly run"
@@ -23,7 +23,7 @@ git config --global --unset githooks.disable || exit 1
 echo 'echo "Changed hook" > /tmp/test48.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     ACCEPT_CHANGES=Y \
-        sh /var/lib/githooks/base-template.sh
+        sh /var/lib/githooks/base-template-wrapper.sh
 
 if ! grep -q "Changed hook" /tmp/test48.out; then
     echo "! Changed hook was not run"

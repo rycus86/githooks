@@ -15,7 +15,10 @@
 #   0 when successfully finished, 1 otherwise
 #####################################################
 process_git_hook() {
-    set_main_variables "$@"
+
+    set_main_variables "$1" || return 1
+    shift 1
+
     register_installation_if_needed
 
     if are_githooks_disabled; then
@@ -61,6 +64,7 @@ are_githooks_disabled() {
 # Returns: None
 #####################################################
 load_install_dir() {
+
     INSTALL_DIR=$(git config --global --get githooks.installDir)
 
     if [ -z "${INSTALL_DIR}" ]; then
@@ -68,9 +72,9 @@ load_install_dir() {
         INSTALL_DIR=~/".githooks"
     elif [ ! -d "$INSTALL_DIR" ]; then
         echo "! Githooks installation is corrupt! " >&2
-        echo "  Install directory at ${INSTALL_DIR} is missing." >&2
+        echo "  Install directory at \`$INSTALL_DIR\` is missing." >&2
         INSTALL_DIR=~/".githooks"
-        echo "  Falling back to default directory at ${INSTALL_DIR}" >&2
+        echo "  Falling back to default directory at \`$INSTALL_DIR\`" >&2
         echo "  Please run the Githooks install script again to fix it." >&2
     fi
 
@@ -86,16 +90,18 @@ load_install_dir() {
 # Resets the ${ACCEPT_CHANGES} variable
 # Sets the ${CURRENT_GIT_DIR} variable
 #
-# Returns: None
+# Returns: 0 if succesful, 1 otherwise
 #####################################################
 set_main_variables() {
-    HOOK_NAME=$(basename "$0")
-    HOOK_FOLDER=$(dirname "$0")
+    HOOK_NAME="$(basename "$1")"
+    HOOK_FOLDER="$(dirname "$1")"
+
     ACCEPT_CHANGES=
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
     if [ ! -d "${CURRENT_GIT_DIR}" ]; then
-        echo "! Hook not run inside a git repository" >&2 && exit 1
+        echo "! Hook not run inside a git repository" >&2
+        return 1
     fi
 
     load_install_dir
@@ -103,6 +109,7 @@ set_main_variables() {
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
 "
+    return 0
 }
 
 ############################################################

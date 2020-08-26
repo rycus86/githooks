@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Patch the hooks
+HOOK_NAMES=$(sed -e '1,/MANAGED_HOOK_NAMES="/d;/"/,$d' install.sh) ||
+    {
+        echo "update-templates:: Replacement command failed!"
+        exit 1
+    }
+
+for HOOK_NAME in $HOOK_NAMES; do
+    # shellcheck disable=SC2015
+    sed "s|GITHOOKS_RUNNER=.*|# Auto-generated: do not edit!\nGITHOOKS_RUNNER=\"\$(cd \"\$(dirname \"\$0\")/../\" \&\& pwd)/base-template.sh\"|" \
+        <base-template-wrapper.sh >"hooks/$HOOK_NAME" &&
+        chmod u+x "hooks/$HOOK_NAME" &&
+        git add hooks/* ||
+        {
+            echo "Failed to update \`hooks/$HOOK_NAME\`" >&2
+            exit 2
+        }
+done
+
+echo "* Updated all hooks in 'hooks/*'"
+exit 0
