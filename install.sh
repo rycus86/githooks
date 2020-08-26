@@ -1527,13 +1527,14 @@ update_release_clone() {
 
             # shellcheck disable=SC2034
             GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURRENT_COMMIT"
-            GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse --short=6 "$UPDATE_COMMIT")
-            GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$UPDATE_COMMIT")
             GITHOOKS_CLONE_UPDATED="true"
         fi
     fi
 
-    echo "Githooks clone updated to version: $(echo "${GITHOOKS_CLONE_CURRENT_COMMIT_DATE}-${GITHOOKS_CLONE_CURRENT_COMMIT}")"
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
+    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_BRANCH")
+
+    echo "Githooks clone updated to version: $(echo "$GITHOOKS_CLONE_CURRENT_COMMIT_DATE" | cut -c -6)-$GITHOOKS_CLONE_CURRENT_COMMIT"
 
     return 0
 }
@@ -1562,8 +1563,6 @@ is_clone_updated() {
 ############################################################
 # Clone the URL `$GITHOOKS_CLONE_URL` into the install
 #   folder `$GITHOOKS_CLONE_DIR` for further updates.
-#   Sets `GITHOOKS_CLONE_CURRENT_COMMIT` to the SHA hash
-#   of the current HEAD.
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
@@ -1601,9 +1600,6 @@ clone_release_repository() {
         echo "$CLONE_OUTPUT" >&2
         return 1
     fi
-
-    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH" 2>/dev/null)
-    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_CURRENT_COMMIT")
 
     git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
     git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
