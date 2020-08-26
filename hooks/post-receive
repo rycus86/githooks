@@ -3,9 +3,10 @@
 #
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
+#
+# This file is auto-generated, do not edit!
 
 # Read the runner script from the local/global or system config
-# Auto-generated: do not edit!
 GITHOOKS_RUNNER="$(cd "$(dirname "$0")/../" && pwd)/base-template.sh"
 
 if [ ! -x "$GITHOOKS_RUNNER" ]; then
