@@ -2,6 +2,8 @@
 # Test:
 #   Direct template execution: fail on shared hooks
 
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
+
 mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/shared/hooks-018.git/pre-commit &&
     echo 'exit 1' >/tmp/shared/hooks-018.git/pre-commit/fail &&
@@ -15,7 +17,7 @@ mkdir -p /tmp/test18 && cd /tmp/test18 || exit 1
 git init || exit 1
 
 mkdir -p .githooks &&
-    echo '/tmp/shared/hooks-018.git' >.githooks/.shared &&
+    echo 'file:///tmp/shared/hooks-018.git' >.githooks/.shared &&
     HOOK_NAME='.githooks.shared.trigger' \
         sh ~/.githooks/release/base-template-wrapper.sh ||
     exit 1

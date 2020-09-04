@@ -1,7 +1,6 @@
 #!/bin/sh
 # Test:
 #   Run an install with shared hooks set up, and verify those trigger properly
-
 mkdir -p /tmp/shared/hooks-005.git/pre-commit &&
     echo 'echo "From shared hook" > /tmp/test-005.out' \
         >/tmp/shared/hooks-005.git/pre-commit/say-hello || exit 1
@@ -15,14 +14,14 @@ cd /tmp/shared/hooks-005.git &&
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo 'n
 y
-/tmp/shared/hooks-005.git
+file:///tmp/shared/hooks-005.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 else
     echo 'n
 n
 y
-/tmp/shared/hooks-005.git
+file:///tmp/shared/hooks-005.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 fi

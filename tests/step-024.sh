@@ -3,7 +3,7 @@
 #   Run an install that unsets shared repositories
 
 # change it and expect it to reset it
-git config --global githooks.shared /tmp/shared/some-previous-example
+git config --global githooks.shared file:///tmp/shared/some-previous-example
 
 # run the install, and set up shared repos
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then

@@ -106,7 +106,7 @@ For this reason, you can place a `.shared` file inside the `.githooks` repositor
 ```shell
 $ git config --global --get githooks.shared
 git@github.com:shared/hooks-python.git,git@github.com:shared/hooks-maven.git
-$ git hooks shared list --with-url
+$ git hooks shared list
 ...
 ```
 

@@ -2,6 +2,8 @@
 # Test:
 #   Direct template execution: update shared hooks
 
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
+
 mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/shared/hooks-016-a.git/pre-commit &&
     echo 'echo "From shared hook A" >> /tmp/test-016.out' \
@@ -25,8 +27,8 @@ mkdir -p /tmp/test16 && cd /tmp/test16 || exit 1
 git init || exit 1
 
 mkdir -p .githooks &&
-    git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
-    echo '/tmp/shared/hooks-016-b.git' >.githooks/.shared &&
+    git config --global githooks.shared 'file:///tmp/shared/hooks-016-a.git' &&
+    echo 'file:///tmp/shared/hooks-016-b.git' >.githooks/.shared &&
     HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
         sh ~/.githooks/release/base-template-wrapper.sh unused ||
     exit 1

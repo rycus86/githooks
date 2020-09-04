@@ -89,7 +89,7 @@ Manages the shared hook repositories set either globally, or locally within the 
 $ git hooks shared [add|remove] [--global|--local] <git-url>
 $ git hooks shared clear [--global|--local|--all]
 $ git hooks shared purge
-$ git hooks shared list [--global|--local|--all] [--with-url]
+$ git hooks shared list [--global|--local|--all]
 $ git hooks shared [update|pull]
 ```
 
@@ -97,7 +97,7 @@ The `add` or `remove` subcommands adds or removes an item, given as `git-url` fr
 
 The `clear` subcommand deletes every item on either the global or the local list, or both when the `--all` option is given. The `purge` subcommand deletes the shared hook repositories already pulled locally.
 
-The `list` subcommand list the global, local or all (default) shared hooks repositories, and optionally prints the Git URL for them, when the `--with-url` option is used.
+The `list` subcommand list the global, local or all (default) shared hooks repositories.
 
 The `update` or `pull` subcommands update all the shared repositories, both global and local, either by running `git pull` on existing ones or `git clone` on new ones.
 
