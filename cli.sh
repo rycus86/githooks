@@ -1265,17 +1265,34 @@ git hooks pull
 }
 
 #####################################################
+# Check is not a supported git clone url and
+#   is treated as local path.
+# Returns:
+#   none
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -Eq "[a-zA-Z]+://"; then
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
 # Sets the SHARED_ROOT and NORMALIZED_NAME
 #   for the shared hook repo url `$1`.
 #
 # Returns:
-#   0 when successfully finished, 1 otherwise
+#   none
 #####################################################
 set_shared_root() {
-    NORMALIZED_NAME=$(echo "$1" |
-        sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-        sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
+    if ! is_local_url "$1"; then
+        NORMALIZED_NAME=$(echo "$1" |
+            sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+            sed -E "s/[^a-zA-Z0-9]/_/g")
+        SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
+    else
+        SHARED_ROOT="$1"
+    fi
 }
 
 #####################################################
@@ -1290,6 +1307,12 @@ update_shared_hooks_in() {
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
+
+        if is_local_url "$SHARED_REPO"; then
+            # We only update external urls
+            # which have been cloned
+            continue
+        fi
 
         mkdir -p "$INSTALL_DIR/shared"
 

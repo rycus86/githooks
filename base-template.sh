@@ -492,6 +492,19 @@ process_shared_hooks() {
 }
 
 #####################################################
+# Check is not a supported git clone url and
+#   is treated as local path.
+# Returns:
+#   none
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -Eq "[a-zA-Z]+://"; then
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
 # Sets the SHARED_ROOT and NORMALIZED_NAME
 #   for the shared hook repo url `$1`.
 #
@@ -499,10 +512,14 @@ process_shared_hooks() {
 #   none
 #####################################################
 set_shared_root() {
-    NORMALIZED_NAME=$(echo "$1" |
-        sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-        sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
+    if ! is_local_url "$1"; then
+        NORMALIZED_NAME=$(echo "$1" |
+            sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
+            sed -E "s/[^a-zA-Z0-9]/_/g")
+        SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
+    else
+        SHARED_ROOT="$1"
+    fi
 }
 
 #####################################################
@@ -527,6 +544,13 @@ update_shared_hooks_if_appropriate() {
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
+
+            if is_local_url "$SHARED_REPO"; then
+                # We only update external urls
+                # which have been cloned
+                continue
+            fi
+
             mkdir -p "$INSTALL_DIR/shared"
 
             set_shared_root "$SHARED_REPO"
@@ -588,22 +612,23 @@ execute_shared_hooks() {
             fi
         fi
 
-        # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
-        # which means we really need a `-f` to sepcify the actual config!
-        REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
-        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
-        if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
-            echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
-            echo "  The URL \`$REMOTE_URL\` is different." >&2
-            echo "  To fix it, run:" >&2
-            echo "    \$ git hooks shared purge" >&2
-            echo "    \$ git hooks shared update" >&2
+        if ! is_local_url "$1"; then
+            # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
+            # which means we really need a `-f` to sepcify the actual config!
+            REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
+            if ! echo "$SHARED_REPOS_LIST" | grep -q "$REMOTE_URL"; then
+                echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+                echo "  The remote url \`$REMOTE_URL\` is different." >&2
+                echo "  To fix it, run:" >&2
+                echo "    \$ git hooks shared purge" >&2
+                echo "    \$ git hooks shared update" >&2
 
-            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
-                return 1
-            else
-                echo "  Continuing..." >&2
-                continue
+                if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+                    return 1
+                else
+                    echo "  Continuing..." >&2
+                    continue
+                fi
             fi
         fi
 
