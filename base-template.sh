@@ -238,7 +238,7 @@ execute_global_shared_hooks() {
     SHARED_HOOKS=$(git config --global --get githooks.shared)
 
     if [ -n "$SHARED_HOOKS" ]; then
-        process_shared_hooks "$SHARED_HOOKS" "$@" || return 1
+        process_shared_hooks --global "$SHARED_HOOKS" "$@" || return 1
     fi
 }
 
@@ -253,7 +253,7 @@ execute_global_shared_hooks() {
 execute_local_shared_hooks() {
     if [ -f "$(pwd)/.githooks/.shared" ]; then
         SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-        process_shared_hooks "$SHARED_HOOKS" "$@" || return 1
+        process_shared_hooks --local "$SHARED_HOOKS" "$@" || return 1
     fi
 }
 
@@ -484,8 +484,9 @@ run_hook_file() {
 #   1 in case a hook fails, 0 otherwise
 #####################################################
 process_shared_hooks() {
-    SHARED_REPOS_LIST="$1"
-    shift
+    SHARED_HOOKS_TYPE="$1"
+    SHARED_REPOS_LIST="$2"
+    shift 2
 
     update_shared_hooks_if_appropriate "$@"
     execute_shared_hooks "$@" || return 1
@@ -612,7 +613,13 @@ execute_shared_hooks() {
             fi
         fi
 
-        if ! is_local_url "$1"; then
+        if is_local_url "$1"; then
+            if [ "$SHARED_HOOKS_TYPE" = "--local" ]; then
+                echo "! Warning: Local shared hooks contain a local path" >&2
+                echo "  which is ignored due to security risks!" >&2
+                continue
+            fi
+        else
             # Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
             # which means we really need a `-f` to sepcify the actual config!
             REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
