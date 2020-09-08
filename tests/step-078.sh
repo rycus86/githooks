@@ -8,12 +8,12 @@ if ! sh /var/lib/githooks/install.sh; then
 fi
 
 git config --global --unset githooks.autoupdate.enabled &&
-    sh /var/lib/githooks/cli.sh update enable &&
+    git hooks update enable &&
     [ "$(git config --get githooks.autoupdate.enabled)" = "true" ] ||
     exit 1
 
 git config --global --unset githooks.autoupdate.enabled &&
-    sh /var/lib/githooks/cli.sh update disable &&
+    git hooks update disable &&
     [ "$(git config --get githooks.autoupdate.enabled)" = "false" ] ||
     exit 1
 

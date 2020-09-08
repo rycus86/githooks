@@ -9,12 +9,12 @@ mkdir -p /tmp/test062 &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh update force; then
+if ! git hooks update force; then
     echo "! Failed to run the update"
     exit 1
 fi
 
-if sh /var/lib/githooks/cli.sh update unknown; then
+if git hooks update unknown; then
     echo "! Expected to fail on unknown operation"
     exit 1
 fi

@@ -9,18 +9,18 @@ fi
 
 mkdir -p /tmp/not/a/git/repo && cd /tmp/not/a/git/repo || exit 1
 
-if sh /var/lib/githooks/cli.sh readme add; then
+if git hooks readme add; then
     echo "! Expected to fail"
     exit 1
 fi
 
 mkdir -p /tmp/test080 && cd /tmp/test080 && git init || exit 1
 
-sh /var/lib/githooks/cli.sh readme update &&
+git hooks readme update &&
     [ -f .githooks/README.md ] ||
     exit 1
 
-if sh /var/lib/githooks/cli.sh readme add; then
+if git hooks readme add; then
     echo "! Expected to fail"
     exit 1
 fi

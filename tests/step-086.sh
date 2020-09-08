@@ -9,19 +9,19 @@ fi
 
 # Unknown configuration
 
-! sh /var/lib/githooks/cli.sh config set unknown || exit 2
+! git hooks config set unknown || exit 2
 
 # List configuration
 
 mkdir -p /tmp/test086 && cd /tmp/test086 || exit 3
 
-! sh /var/lib/githooks/cli.sh config list --local || exit 4 # not a Git repo
+! git hooks config list --local || exit 4 # not a Git repo
 
 git init || exit 4
 
-sh /var/lib/githooks/cli.sh config enable update || exit 7
-sh /var/lib/githooks/cli.sh config list --global | grep 'githooks.autoupdate.enabled' || exit 8
-sh /var/lib/githooks/cli.sh config list | grep 'githooks.autoupdate.enabled' || exit 9
+git hooks config enable update || exit 7
+git hooks config list --global | grep 'githooks.autoupdate.enabled' || exit 8
+git hooks config list | grep 'githooks.autoupdate.enabled' || exit 9
 
 # Check the Git alias
 ! git hooks config set unknown || exit 10

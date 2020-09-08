@@ -2,6 +2,7 @@
 # Test:
 #   Direct template execution: list of staged files (simple)
 
+mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/test095/.githooks/pre-commit &&
     cd /tmp/test095 && git init ||
     exit 1
@@ -18,7 +19,7 @@ EOF
 git add sample.txt second.txt
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh /var/lib/githooks/base-template-wrapper.sh
+    sh ~/.githooks/release/base-template-wrapper.sh
 
 if ! grep 'staged: sample.txt' /tmp/test095.out; then
     echo "! Failed to find expected output (1)"

@@ -20,22 +20,22 @@ mkdir -p /tmp/test061/.githooks &&
     git init ||
     exit 1
 
-if sh /var/lib/githooks/cli.sh list | grep -q "sample"; then
+if git hooks list | grep -q "sample"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh pull; then
+if ! git hooks pull; then
     echo "! Failed to update the shared hook repositories"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep -q "sample"; then
+if ! git hooks list | grep -q "sample"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh pull help | grep -q "deprecated"; then
+if ! git hooks pull help | grep -q "deprecated"; then
     echo "! Missing deprecation warning"
     exit 1
 fi

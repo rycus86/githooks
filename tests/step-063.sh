@@ -16,7 +16,7 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
 fi
 
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
-if ! sh /var/lib/githooks/cli.sh update; then
+if ! git hooks update; then
     echo "! Failed to run the update"
     exit 1
 fi

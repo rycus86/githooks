@@ -12,17 +12,17 @@ mkdir -p /tmp/test054/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list pre-commit | grep "\\- pre-example"; then
+if ! git hooks list pre-commit | grep "\\- pre-example"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list post-commit | grep "\\- post-example"; then
+if ! git hooks list post-commit | grep "\\- post-example"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list post-commit | grep -v "pre-example"; then
+if ! git hooks list post-commit | grep -v "pre-example"; then
     echo "! Unexpected cli list output"
     exit 1
 fi

@@ -11,42 +11,42 @@ mkdir -p /tmp/test058/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -q "pending"; then
+if ! git hooks list | grep "first" | grep -q "pending"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "pending"; then
+if ! git hooks list | grep "second" | grep -q "pending"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh accept pre-commit/first; then
+if ! git hooks accept pre-commit/first; then
     echo "! Failed to accept a hook by relative path"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -q "active"; then
+if ! git hooks list | grep "first" | grep -q "active"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "pending"; then
+if ! git hooks list | grep "second" | grep -q "pending"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh accept .; then
+if ! git hooks accept .; then
     echo "! Failed to accept all hooks"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -q "active"; then
+if ! git hooks list | grep "first" | grep -q "active"; then
     echo "! Unexpected cli list output (5)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "active"; then
+if ! git hooks list | grep "second" | grep -q "active"; then
     echo "! Unexpected cli list output (6)"
     exit 1
 fi

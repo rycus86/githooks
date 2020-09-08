@@ -20,36 +20,36 @@ mkdir -p /tmp/test112.repo &&
     git init ||
     exit 3
 
-sh /var/lib/githooks/cli.sh shared add --local /tmp/test112.shared/shared-repo.git &&
-    sh /var/lib/githooks/cli.sh shared list | grep "shared_repo" | grep "pending" &&
-    sh /var/lib/githooks/cli.sh shared pull ||
+git hooks shared add --local /tmp/test112.shared/shared-repo.git &&
+    git hooks shared list | grep "shared_repo" | grep "pending" &&
+    git hooks shared pull ||
     exit 4
 
-if ! sh /var/lib/githooks/cli.sh list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
-    sh /var/lib/githooks/cli.sh list
+if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
+    git hooks list
     exit 5
 fi
 
-sh /var/lib/githooks/cli.sh disable --shared 'test-shared' ||
+git hooks disable --shared 'test-shared' ||
     exit 6
 
-if ! sh /var/lib/githooks/cli.sh list | grep 'test-shared' | grep 'shared:local' | grep 'disabled'; then
-    sh /var/lib/githooks/cli.sh list
+if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'disabled'; then
+    git hooks list
     exit 7
 fi
 
-sh /var/lib/githooks/cli.sh enable --shared 'test-shared' ||
+git hooks enable --shared 'test-shared' ||
     exit 8
 
-if ! sh /var/lib/githooks/cli.sh list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
-    sh /var/lib/githooks/cli.sh list
+if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
+    git hooks list
     exit 9
 fi
 
-sh /var/lib/githooks/cli.sh accept --shared pre-commit 'test-shared' ||
+git hooks accept --shared pre-commit 'test-shared' ||
     exit 10
 
-if ! sh /var/lib/githooks/cli.sh list | grep 'test-shared' | grep 'shared:local' | grep 'active'; then
-    sh /var/lib/githooks/cli.sh list
+if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'active'; then
+    git hooks list
     exit 11
 fi

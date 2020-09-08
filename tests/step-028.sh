@@ -2,6 +2,7 @@
 # Test:
 #   Direct template execution: accept changes to hooks
 
+mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/test28 && cd /tmp/test28 || exit 1
 git init || exit 1
 
@@ -9,7 +10,7 @@ mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
     echo 'echo "First execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-        sh /var/lib/githooks/base-template-wrapper.sh
+        sh ~/.githooks/release/base-template-wrapper.sh
 
 if ! grep -q "First execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the first time"
@@ -24,7 +25,7 @@ fi
 
 echo 'echo "Second execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
     HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=Y \
-        sh /var/lib/githooks/base-template-wrapper.sh
+        sh ~/.githooks/release/base-template-wrapper.sh
 
 if ! grep -q "Second execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the second time"

@@ -2,8 +2,11 @@
 
 RUN_DIR="${RUN_DIR:-"$PWD"}"
 
-if [ -n "$1" ]; then
-    STEPS_TO_RUN="$1.sh"
+TEST_STEP="$1"
+
+# Test only sepcific tests
+if [ -n "$TEST_STEP" ]; then
+    STEPS_TO_RUN="step-${TEST_STEP}.sh"
 else
     STEPS_TO_RUN="step-*"
 fi
@@ -14,7 +17,7 @@ FROM kcov/kcov:v36
 
 RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.list \
     && (apt-get update || true) \
-    && apt-get install -y git python
+    && apt-get install -y git
 
 ADD base-template.sh base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
 RUN chmod +x /var/lib/githooks/*.sh
@@ -24,7 +27,7 @@ ADD examples /var/lib/githooks/examples
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
 
-ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} tests/replace-inline-content.py /var/lib/tests/
+ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 
 # Some fixup below:
 # We overwrite the download to use the current install.sh in all scripts
@@ -33,10 +36,11 @@ RUN \\
     find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
     find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i 's|"!sh |"!bash |g' {} \\; && \\
 # Revert changed shell script filenames
     find /var/lib -name '*.sh' -exec sed -E -i "s|/var/lib/githooks/([a-z-]+)\\.bash|/var/lib/githooks/\\1.sh|g" {} \\; && \\
-# Replace the inline content with loading the source file
-    python /var/lib/tests/replace-inline-content.py /var/lib/githooks && \\
+# Changed any \`git hooks\` invocation to the shell script for better code coverage
+    find /var/lib -name '*.sh' -exec sed -E -i "s|git\s+hooks|bash /home/coverage/.githooks/release/cli.sh|g" {} \\; && \\
 # Do not use the terminal in tests
     sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 # Change the base template so we can pass in the hook name and accept flags

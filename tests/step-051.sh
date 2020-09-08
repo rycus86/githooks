@@ -4,7 +4,7 @@
 
 sh /var/lib/githooks/install.sh || exit 1
 
-if ! sh /var/lib/githooks/cli.sh version | grep -q "Version: "; then
+if ! git hooks version | grep -q "Version: "; then
     echo "! Unexpected cli version output"
     exit 1
 fi

@@ -9,15 +9,15 @@ fi
 
 # Update time configuration
 
-! sh /var/lib/githooks/cli.sh config unknown update-time || exit 2
+! git hooks config unknown update-time || exit 2
 
-sh /var/lib/githooks/cli.sh config print update-time | grep 'never' || exit 3
+git hooks config print update-time | grep 'never' || exit 3
 
 git config --global githooks.autoupdate.lastrun 123 &&
-    sh /var/lib/githooks/cli.sh config print update-time | grep -v 'never' || exit 4
+    git hooks config print update-time | grep -v 'never' || exit 4
 
-sh /var/lib/githooks/cli.sh config reset update-time &&
-    sh /var/lib/githooks/cli.sh config print update-time | grep 'never' || exit 5
+git hooks config reset update-time &&
+    git hooks config print update-time | grep 'never' || exit 5
 
 # Check the Git alias
 git hooks config print update-time | grep 'never' || exit 10

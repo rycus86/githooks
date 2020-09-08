@@ -7,17 +7,17 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
-sh /var/lib/githooks/cli.sh shared unknown && exit 2
+git hooks shared unknown && exit 2
 rm -rf ~/.githooks/shared &&
-    sh /var/lib/githooks/cli.sh shared purge && exit 3
-sh /var/lib/githooks/cli.sh shared add && exit 4
-sh /var/lib/githooks/cli.sh shared remove && exit 5
-sh /var/lib/githooks/cli.sh shared add --local /tmp/some/repo.git && exit 6
-sh /var/lib/githooks/cli.sh shared remove --local /tmp/some/repo.git && exit 7
-sh /var/lib/githooks/cli.sh shared clear && exit 8
-sh /var/lib/githooks/cli.sh shared clear unknown && exit 9
-sh /var/lib/githooks/cli.sh shared list unknown && exit 10
-if sh /var/lib/githooks/cli.sh shared list --local; then
+    git hooks shared purge && exit 3
+git hooks shared add && exit 4
+git hooks shared remove && exit 5
+git hooks shared add --local /tmp/some/repo.git && exit 6
+git hooks shared remove --local /tmp/some/repo.git && exit 7
+git hooks shared clear && exit 8
+git hooks shared clear unknown && exit 9
+git hooks shared list unknown && exit 10
+if git hooks shared list --local; then
     exit 11
 fi
 

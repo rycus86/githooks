@@ -2,6 +2,7 @@
 # Test:
 #   Direct template execution: choose to ignore the update
 
+mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/test32 && cd /tmp/test32 || exit 1
 git init || exit 1
 
@@ -9,7 +10,7 @@ git config --global githooks.autoupdate.enabled true || exit 1
 
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
-        sh /var/lib/githooks/base-template-wrapper.sh
+        sh ~/.githooks/release/base-template-wrapper.sh
 )
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then

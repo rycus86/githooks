@@ -24,7 +24,7 @@ fi
 
 git config --global githooks.previousSearchDir /tmp
 
-if ! sh /var/lib/githooks/cli.sh install --global; then
+if ! git hooks install --global; then
     echo "! Failed to run the global installation"
     exit 1
 fi
@@ -34,7 +34,7 @@ if ! grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
     exit 1
 fi
 
-if (cd /tmp/test094/c && sh /var/lib/githooks/cli.sh install); then
+if (cd /tmp/test094/c && git hooks install); then
     echo "! Install expected to fail outside a repository"
     exit 1
 fi
