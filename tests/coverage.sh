@@ -33,14 +33,21 @@ ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 # We overwrite the download to use the current install.sh in all scripts
 RUN \\
 # Make sure we're using Bash for kcov
-    find /var/lib -name '*.sh' -exec sed -i 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
-    find /var/lib -name '*.sh' -exec sed -i 's|sh /|bash /|g' {} \\; && \\
-    find /var/lib -name '*.sh' -exec sed -i 's|sh "|bash "|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i -E 's|#!/bin/sh|#!/bin/bash|g' {} \\; && \\
+    # at the beginnig of line
+    find /var/lib -name '*.sh' -exec sed -i -E 's|^( *)sh /|\1bash /|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i -E 's|^( *)sh "|\1bash "|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i -E 's|^( *)sh ~/|\1bash /home/coverage/|g' {} \\; && \\
+    # in between line
+    find /var/lib -name '*.sh' -exec sed -i -E 's|( +)sh /|\1bash /|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i -E 's|( +)sh "|\1bash "|g' {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -i -E 's|( +)sh ~/|\1bash /home/coverage/|g' {} \\; && \\
+    # git hooks alias
     find /var/lib -name '*.sh' -exec sed -i 's|"!sh |"!bash |g' {} \\; && \\
 # Revert changed shell script filenames
     find /var/lib -name '*.sh' -exec sed -E -i "s|/var/lib/githooks/([a-z-]+)\\.bash|/var/lib/githooks/\\1.sh|g" {} \\; && \\
 # Changed any \`git hooks\` invocation to the shell script for better code coverage
-    find /var/lib -name '*.sh' -exec sed -E -i "s|git\s+hooks|bash /home/coverage/.githooks/release/cli.sh|g" {} \\; && \\
+    find /var/lib -name '*.sh' -exec sed -E -i "s|git +hooks|bash /home/coverage/.githooks/release/cli.sh|g" {} \\; && \\
 # Do not use the terminal in tests
     sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 # Change the base template so we can pass in the hook name and accept flags

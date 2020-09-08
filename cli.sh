@@ -137,12 +137,13 @@ find_hook_path_to_enable_or_disable() {
         shift
 
         if [ -z "$1" ]; then
-            echo "For shared repositories, either the trigger type, the hook name or both needs to be given"
+            echo "! For shared repositories, either the trigger type" >&2
+            echo "  the hook name or both needs to be given" >&2
             return 1
         fi
 
         if [ ! -d "$INSTALL_DIR/shared" ]; then
-            echo "No shared repositories found"
+            echo "! No shared repositories found" >&2
             return 1
         fi
 
@@ -184,7 +185,7 @@ find_hook_path_to_enable_or_disable() {
             IFS="$IFS_NEWLINE"
         done
 
-        echo "Sorry, cannot find any shared hooks that would match that"
+        echo "! Sorry, cannot find any shared hooks that would match that" >&2
         return 1
     fi
 
@@ -240,13 +241,13 @@ find_hook_path_to_enable_or_disable() {
     fi
 
     if [ -z "$HOOK_PATH" ]; then
-        echo "Sorry, cannot find any hooks that would match that"
+        echo "! Sorry, cannot find any hooks that would match that" >&2
         return 1
     elif echo "$HOOK_PATH" | grep -qv "/.githooks"; then
         if [ -d "$HOOK_PATH/.githooks" ]; then
             HOOK_PATH="$HOOK_PATH/.githooks"
         else
-            echo "Sorry, cannot find any hooks that would match that"
+            echo "! Sorry, cannot find any hooks that would match that" >&2
             return 1
         fi
     fi
@@ -293,7 +294,8 @@ git hooks disable [-r|--reset]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "! The current directory ($(pwd)) does not seem" >&2
+        echo " to be the root of a Git repository!" >&2
         exit 1
     fi
 
