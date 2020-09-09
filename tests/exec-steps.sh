@@ -60,6 +60,16 @@ for STEP in /var/lib/tests/step-*.sh; do
         echo "! Uninstall failed in $STEP, output:"
         echo "$UNINSTALL_OUTPUT"
         FAILED=$((FAILED + 1))
+        break # Fail es early as possible
+    fi
+
+    # Check if no githooks settings are present anymore
+    if [ -n "$(git config --global --get-regexp "^githooks.*")" ]; then
+        echo "! Uninstall left setting artefacts behind!" >&2
+        echo "  You need to fix this!" >&2
+        echo " $(git config --global --get-regexp "^githooks.*")" >&2
+        FAILED=$((FAILED + 1))
+        break # Fail es early as possible
     fi
 
     git config --global --unset init.templateDir

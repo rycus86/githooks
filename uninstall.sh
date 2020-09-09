@@ -603,6 +603,7 @@ uninstall() {
     remove_core_hooks_path
 
     # Unset global Githooks variables
+    git config --global --unset githooks.runner
     git config --global --unset githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
     git config --global --unset githooks.maintainOnlyServerHooks
