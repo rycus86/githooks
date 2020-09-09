@@ -46,8 +46,11 @@ RUN \\
     find /var/lib -name '*.sh' -exec sed -i 's|"!sh |"!bash |g' {} \\; && \\
 # Revert changed shell script filenames
     find /var/lib -name '*.sh' -exec sed -E -i "s|/var/lib/githooks/([a-z-]+)\\.bash|/var/lib/githooks/\\1.sh|g" {} \\; && \\
-# Changed any \`git hooks\` invocation to the shell script for better code coverage
-    find /var/lib -name '*.sh' -exec sed -E -i "s|git +hooks|bash /home/coverage/.githooks/release/cli.sh|g" {} \\; && \\
+# Change any \`git hooks\` invocation to the shell script for better code coverage
+    find /var/lib/tests/ -name '*.sh' -exec sed -i -E 's|([^"])git +hooks|\1bash /home/coverage/.githooks/release/cli.sh|g' {} \\; && \\
+    find /var/lib/tests/ -name '*.sh' -exec sed -i -E 's|^( +)git +hooks|\1bash /home/coverage/.githooks/release/cli.sh|g' {} \\; && \\
+# Change multiline echos to line-wise echos for kcov
+    sed -i -E '/echo "$/,/^"/{  s/echo "/echo ""/ ; s/^"$/echo ""/  ;  /^\s*echo/! { s/(.*)/echo "\1"/ } }' /var/lib/githooks/cli.sh && \\
 # Do not use the terminal in tests
     sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
 # Change the base template so we can pass in the hook name and accept flags
@@ -72,6 +75,16 @@ USER coverage
 WORKDIR /home/coverage
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
+
+
+## Debugging #########################################
+# If you run into failing coverage, run all tests, and
+# inspect the failing test
+
+# RUN mkdir -p ~/cover && cp "/var/lib/tests/"${STEPS_TO_RUN} ~/cover && \
+#     /var/lib/tests/exec-steps.sh
+
+######################################################
 
 RUN kcov \
     --coveralls-id="$TRAVIS_JOB_ID" \

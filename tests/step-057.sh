@@ -11,7 +11,7 @@ mkdir -p /tmp/test057/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! git hooks enable update | grep 'git hooks update enable'; then
+if ! git hooks enable update | grep "git hooks update enable"; then
     echo "! Could not find expected output"
     exit 1
 fi
