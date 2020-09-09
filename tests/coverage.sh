@@ -13,7 +13,7 @@ fi
 
 # Build a Docker image on top of kcov with our scripts
 cat <<EOF | docker build --force-rm -t githooks:coverage -f - .
-FROM kcov/kcov:v36
+FROM kcov/kcov:latest
 
 RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.list \
     && (apt-get update || true) \
