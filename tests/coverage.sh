@@ -17,7 +17,7 @@ FROM kcov/kcov:latest
 
 RUN echo 'deb http://deb.debian.org/debian stretch main' >> /etc/apt/sources.list \
     && (apt-get update || true) \
-    && apt-get install -y git
+    && apt-get install -y git git-lfs
 
 ADD base-template.sh base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
 RUN chmod +x /var/lib/githooks/*.sh
@@ -79,7 +79,8 @@ RUN git config --global user.email "githook@test.com" && \
 
 ## Debugging #########################################
 # If you run into failing coverage, run all tests, and
-# inspect the failing test
+# inspect the failing test.
+# Uncomment the kvoc run below!
 
 # RUN mkdir -p ~/cover && cp "/var/lib/tests/"${STEPS_TO_RUN} ~/cover && \
 #     /var/lib/tests/exec-steps.sh
