@@ -295,7 +295,7 @@ git hooks disable [-r|--reset]
 
     if ! is_running_in_git_repo_root; then
         echo "! The current directory ($(pwd)) does not seem" >&2
-        echo " to be the root of a Git repository!" >&2
+        echo "  to be the root of a Git repository!" >&2
         exit 1
     fi
 
