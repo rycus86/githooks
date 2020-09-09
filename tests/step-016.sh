@@ -44,3 +44,11 @@ if ! grep -q 'From shared hook B' /tmp/test-016.out; then
     echo "! The second shared hook was not run"
     exit 1
 fi
+
+# Trigger the shared hooks update
+OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
+    sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
+if ! echo "$OUT" | grep -q "Updating shared hooks from"; then
+    echo "! Expected shared hooks update"
+    exit 1
+fi
