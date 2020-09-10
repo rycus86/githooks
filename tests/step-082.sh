@@ -28,7 +28,7 @@ git hooks shared add --global file:///tmp/shared/first-shared.git &&
     git hooks shared add --global file:///tmp/shared/third-shared.git &&
     git hooks shared list --global | grep "second-shared" | grep "pending" &&
     git hooks shared list --all | grep "third-shared" | grep "pending" &&
-    (ls -al ~/.githooks/shared/ && cd ~/.githooks/shared/*tmp-shared-first-shared-git* &&
+    (cd ~/.githooks/shared/*tmp-shared-first-shared-git* &&
         git remote rm origin &&
         git remote add origin /some/other/url.git) &&
     git hooks shared list | grep "first-shared" | grep "invalid" &&

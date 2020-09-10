@@ -59,7 +59,9 @@ RUN \\
     sed -i -E 's|HOOK_NAME=(.*)|HOOK_NAME="\${HOOK_NAME:-\1}"|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' /var/lib/githooks/base-template.sh && \\
     sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh && \\
-    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh
+    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh && \\
+# Conditionally allow file:// for local shared hooks simulating http:// protocol
+    sed -i -E 's|if(.*grep.*file://.*)|if [ "\$(git config --global githooks.testingTreatFileProtocolAsRemote)" != "true" ] \&\& \1|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh
 
 # Commit everything
 RUN echo "Make test gitrepo to clone from ..." && \
@@ -82,8 +84,8 @@ RUN git config --global user.email "githook@test.com" && \
 # inspect the failing test.
 # Uncomment the kvoc run below!
 
-# RUN mkdir -p ~/cover && cp "/var/lib/tests/"${STEPS_TO_RUN} ~/cover && \
-#     /var/lib/tests/exec-steps.sh
+# RUN mkdir -p ~/cover && cp "/var/lib/tests/"${STEPS_TO_RUN} ~/cover
+# RUN sh /var/lib/tests/exec-steps.sh
 
 ######################################################
 
