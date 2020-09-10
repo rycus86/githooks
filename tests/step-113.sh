@@ -27,7 +27,7 @@ y
 ' | sh /var/lib/githooks/install.sh --template-dir ~/.githooks/templates || exit 3
 
 # check if hooks are inside the template folder.
-if ! sh /var/lib/githooks/cli.sh list | grep test-hook; then
+if ! git hooks list | grep test-hook; then
     echo "! Hooks were not installed successfully"
     exit 4
 fi

@@ -60,19 +60,21 @@ for STEP in /var/lib/tests/step-*.sh; do
         echo "! Uninstall failed in $STEP, output:"
         echo "$UNINSTALL_OUTPUT"
         FAILED=$((FAILED + 1))
+        break # Fail es early as possible
+    fi
+
+    # Check if no githooks settings are present anymore
+    if [ -n "$(git config --global --get-regexp "^githooks.*")" ]; then
+        echo "! Uninstall left setting artefacts behind!" >&2
+        echo "  You need to fix this!" >&2
+        echo " $(git config --global --get-regexp "^githooks.*")" >&2
+        FAILED=$((FAILED + 1))
+        break # Fail es early as possible
     fi
 
     git config --global --unset init.templateDir
-    git config --global --unset githooks.shared
-    git config --global --unset githooks.autoupdate.enabled
-    git config --global --unset githooks.autoupdate.lastrun
-    git config --global --unset githooks.cloneUrl
-    git config --global --unset githooks.cloneBranch
-    git config --global --unset githooks.previousSearchDir
-    git config --global --unset githooks.disable
-    git config --global --unset alias.hooks
-    git config --global --unset githooks.installDir
-    git config --global --unset githooks.runner
+    git config --global --unset core.hooksPath
+    rm -rf ~/.githooks 2>/dev/null
 
     cp -r /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
 

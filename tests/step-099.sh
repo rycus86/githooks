@@ -29,7 +29,7 @@ ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 git worktree add -b example-a ../test099-A master || exit 2
 cd ../test099-A || exit 2
 
-if ! sh /var/lib/githooks/cli.sh list | grep "example" | grep -q "pending"; then
+if ! git hooks list | grep "example" | grep -q "pending"; then
     echo "! Unexpected cli list output"
     exit 3
 fi

@@ -2,6 +2,7 @@
 # Test:
 #   Direct template execution: auto-update is not due yet
 
+mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 CURRENT_TIME=$(date +%s)
 MOCK_LAST_RUN=$((CURRENT_TIME - 5))
 
@@ -13,7 +14,7 @@ git init || exit 1
 git config --global githooks.autoupdate.enabled true || exit 1
 
 HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh /var/lib/githooks/base-template-wrapper.sh
+    sh ~/.githooks/release/base-template-wrapper.sh
 
 # shellcheck disable=SC2181
 if cd ~/.githooks/release && git rev-parse HEAD; then

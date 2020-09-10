@@ -44,7 +44,7 @@ fi
 git config --local githooks.single.install "true" || exit 1
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
-        sh /var/lib/githooks/base-template-wrapper.sh 2>&1
+        sh ~/.githooks/release/base-template-wrapper.sh 2>&1
 )
 if ! echo "$OUTPUT" | grep -iq "DEPRECATION WARNING: Single install" ||
     ! echo "$OUTPUT" | grep -iq "Install failed due to deprecated single install"; then
@@ -59,7 +59,7 @@ git config --global --unset githooks.autoupdate.lastrun
 
 OUTPUT=$(
     HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks EXECUTE_UPDATE=Y \
-        sh /var/lib/githooks/base-template-wrapper.sh 2>&1
+        sh ~/.githooks/release/base-template-wrapper.sh 2>&1
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then

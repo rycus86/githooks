@@ -13,12 +13,12 @@ mkdir -p /tmp/test059/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -q "ignored"; then
+if ! git hooks list | grep "first" | grep -q "ignored"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "ignored"; then
+if ! git hooks list | grep "second" | grep -q "ignored"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi

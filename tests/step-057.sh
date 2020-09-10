@@ -11,54 +11,54 @@ mkdir -p /tmp/test057/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh enable update | grep 'git hooks update enable'; then
+if ! git hooks enable update | grep "git hooks update enable"; then
     echo "! Could not find expected output"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh disable; then
+if ! git hooks disable; then
     echo "! Failed to disable all hooks"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -q "disabled"; then
+if ! git hooks list | grep "first" | grep -q "disabled"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "disabled"; then
+if ! git hooks list | grep "second" | grep -q "disabled"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh enable .githooks/pre-commit/first; then
+if ! git hooks enable .githooks/pre-commit/first; then
     echo "! Failed to enable a hook by path"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -qv "disabled"; then
+if ! git hooks list | grep "first" | grep -qv "disabled"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -q "disabled"; then
+if ! git hooks list | grep "second" | grep -q "disabled"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh enable pre-commit second; then
+if ! git hooks enable pre-commit second; then
     echo
     echo
     echo "! Failed to enable a hook by type and name"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "first" | grep -qv "disabled"; then
+if ! git hooks list | grep "first" | grep -qv "disabled"; then
     echo "! Unexpected cli list output (5)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list | grep "second" | grep -qv "disabled"; then
+if ! git hooks list | grep "second" | grep -qv "disabled"; then
     echo "! Unexpected cli list output (6)"
     exit 1
 fi

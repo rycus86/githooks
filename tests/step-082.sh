@@ -20,27 +20,27 @@ mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
 
 mkdir -p /tmp/test082 && cd /tmp/test082 && git init || exit 1
 
-sh /var/lib/githooks/cli.sh shared add --global /tmp/shared/first-shared.git &&
-    sh /var/lib/githooks/cli.sh shared list | grep "first_shared" | grep "pending" &&
-    sh /var/lib/githooks/cli.sh shared pull &&
-    sh /var/lib/githooks/cli.sh shared list | grep "first_shared" | grep "active" &&
-    sh /var/lib/githooks/cli.sh shared add --global /tmp/shared/second-shared.git &&
-    sh /var/lib/githooks/cli.sh shared add --global /tmp/shared/third-shared.git &&
-    sh /var/lib/githooks/cli.sh shared list --global | grep "second_shared" | grep "pending" &&
-    sh /var/lib/githooks/cli.sh shared list --all | grep "third_shared" | grep "pending" &&
+git hooks shared add --global /tmp/shared/first-shared.git &&
+    git hooks shared list | grep "first_shared" | grep "pending" &&
+    git hooks shared pull &&
+    git hooks shared list | grep "first_shared" | grep "active" &&
+    git hooks shared add --global /tmp/shared/second-shared.git &&
+    git hooks shared add --global /tmp/shared/third-shared.git &&
+    git hooks shared list --global | grep "second_shared" | grep "pending" &&
+    git hooks shared list --all | grep "third_shared" | grep "pending" &&
     (cd ~/.githooks/shared/shared_first_shared &&
         git remote rm origin &&
         git remote add origin /some/other/url.git) &&
-    sh /var/lib/githooks/cli.sh shared list --with-url | grep "first_shared" | grep "invalid" &&
-    sh /var/lib/githooks/cli.sh shared remove --global /tmp/shared/first-shared.git &&
-    ! sh /var/lib/githooks/cli.sh shared list | grep "first_shared" &&
-    sh /var/lib/githooks/cli.sh shared remove --global /tmp/shared/second-shared.git &&
-    sh /var/lib/githooks/cli.sh shared remove --global /tmp/shared/third-shared.git &&
+    git hooks shared list | grep "first_shared" | grep "invalid" &&
+    git hooks shared remove --global /tmp/shared/first-shared.git &&
+    ! git hooks shared list | grep "first_shared" &&
+    git hooks shared remove --global /tmp/shared/second-shared.git &&
+    git hooks shared remove --global /tmp/shared/third-shared.git &&
     [ -z "$(git config --global --get githooks.shared)" ] ||
     exit 2
 
-sh /var/lib/githooks/cli.sh shared clear --all &&
-    sh /var/lib/githooks/cli.sh shared purge ||
+git hooks shared clear --all &&
+    git hooks shared purge ||
     exit 8
 
 # Check the Git alias

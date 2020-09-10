@@ -9,11 +9,11 @@ fi
 
 mkdir -p /tmp/test079 && cd /tmp/test079 && git init || exit 1
 
-sh /var/lib/githooks/cli.sh disable --all &&
+git hooks disable --all &&
     [ "$(git config --get githooks.disable)" = "true" ] ||
     exit 1
 
-sh /var/lib/githooks/cli.sh disable --reset &&
+git hooks disable --reset &&
     [ "$(git config --get githooks.disable)" != "true" ] ||
     exit 1
 

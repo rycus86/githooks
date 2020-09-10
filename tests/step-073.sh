@@ -14,7 +14,7 @@ mkdir -p /tmp/test073/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if sh /var/lib/githooks/cli.sh list pre-commit | grep -i 'trusted'; then
+if git hooks list pre-commit | grep -i 'trusted'; then
     echo "! Unexpected list result"
     exit 1
 fi

@@ -10,14 +10,14 @@ mkdir -p /tmp/test053/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list | grep "\\- example" | grep "pending"; then
+if ! git hooks list | grep "\\- example" | grep "pending"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
 
 git commit -m ''
 
-if ! sh /var/lib/githooks/cli.sh list | grep "\\- example" | grep "active"; then
+if ! git hooks list | grep "\\- example" | grep "active"; then
     echo "! Unexpected cli list output"
     exit 1
 fi

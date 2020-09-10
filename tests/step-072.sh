@@ -13,12 +13,12 @@ mkdir -p /tmp/test072/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list pre-commit; then
+if ! git hooks list pre-commit; then
     echo "! Failed to execute a valid list"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list invalid-type | grep -i 'no active hooks'; then
+if ! git hooks list invalid-type | grep -i 'no active hooks'; then
     echo "! Unexpected list result"
     exit 1
 fi

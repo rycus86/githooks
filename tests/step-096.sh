@@ -2,6 +2,7 @@
 # Test:
 #   Direct template execution: list of staged files (special paths)
 
+mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/test096/.githooks/pre-commit &&
     cd /tmp/test096 && git init ||
     exit 1
@@ -23,7 +24,7 @@ EOF
 git add sub f*
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh /var/lib/githooks/base-template-wrapper.sh
+    sh ~/.githooks/release/base-template-wrapper.sh
 
 if [ "$(wc -l </tmp/test096.out)" != "4" ]; then
     echo "! Unexpected number of output rows"

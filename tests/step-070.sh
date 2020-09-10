@@ -9,17 +9,17 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
-if sh /var/lib/githooks/cli.sh enable not-found; then
+if git hooks enable not-found; then
     echo "! Unexpected enable result"
     exit 1
 fi
 
-if sh /var/lib/githooks/cli.sh disable not-found; then
+if git hooks disable not-found; then
     echo "! Unexpected disable result"
     exit 1
 fi
 
-if sh /var/lib/githooks/cli.sh accept not-found; then
+if git hooks accept not-found; then
     echo "! Unexpected accept result"
     exit 1
 fi

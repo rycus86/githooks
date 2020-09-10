@@ -33,42 +33,42 @@ mkdir -p /tmp/test055/.githooks/pre-commit &&
     chmod +x .git/hooks/pre-commit.replaced.githook ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh list pre-commit | grep -q "previous / file"; then
+if ! git hooks list pre-commit | grep -q "previous / file"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list pre-commit | grep -q "shared:global"; then
+if ! git hooks list pre-commit | grep -q "shared:global"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list pre-commit | grep -q "local-pre"; then
+if ! git hooks list pre-commit | grep -q "local-pre"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list commit-msg | grep -q "shared:global"; then
+if ! git hooks list commit-msg | grep -q "shared:global"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list post-commit | grep -q "shared:local"; then
+if ! git hooks list post-commit | grep -q "shared:local"; then
     echo "! Unexpected cli list output (5)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list post-commit | grep -q "local-post"; then
+if ! git hooks list post-commit | grep -q "local-post"; then
     echo "! Unexpected cli list output (6)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list post-merge | grep -q "file /"; then
+if ! git hooks list post-merge | grep -q "file /"; then
     echo "! Unexpected cli list output (7)"
     exit 1
 fi
 
-if ! sh /var/lib/githooks/cli.sh list pre-push | grep -q "shared:local"; then
+if ! git hooks list pre-push | grep -q "shared:local"; then
     echo "! Unexpected cli list output (8)"
     exit 1
 fi

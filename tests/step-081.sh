@@ -9,27 +9,27 @@ fi
 
 mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
-sh /var/lib/githooks/cli.sh trust &&
+git hooks trust &&
     [ -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
     exit 1
 
-sh /var/lib/githooks/cli.sh trust revoke &&
+git hooks trust revoke &&
     [ -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
     exit 2
 
-sh /var/lib/githooks/cli.sh trust delete &&
+git hooks trust delete &&
     [ ! -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
     exit 3
 
-sh /var/lib/githooks/cli.sh trust forget &&
+git hooks trust forget &&
     [ -z "$(git config --local --get githooks.trust.all)" ] &&
-    sh /var/lib/githooks/cli.sh trust forget ||
+    git hooks trust forget ||
     exit 4
 
-sh /var/lib/githooks/cli.sh trust invalid && exit 5
+git hooks trust invalid && exit 5
 
 # Check the Git alias
 git hooks trust &&
