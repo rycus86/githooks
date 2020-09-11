@@ -63,9 +63,6 @@ for STEP in /var/lib/tests/step-*.sh; do
         break # Fail es early as possible
     fi
 
-    # Unset mock settings
-    git config --global --unset githooks.testingTreatFileProtocolAsRemote
-
     # Check if no githooks settings are present anymore
     if [ -n "$(git config --global --get-regexp "^githooks.*")" ]; then
         echo "! Uninstall left setting artefacts behind!" >&2

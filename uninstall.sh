@@ -343,7 +343,8 @@ uninstall_hooks_from_repo() {
         cd "${TARGET}" &&
             git config --local --unset githooks.single.install >/dev/null &&             # legacy setting (deperecated)
             git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1 && # legacy settings (deprecated)
-            git config --local --unset githooks.install.registered >/dev/null 2>&1
+            git config --local --unset githooks.install.registered >/dev/null 2>&1 &&
+            git config --local --unset githooks.allowLocalPathsInLocalSharedHooks >/dev/null 2>&1
     )
 
     if [ "$UNINSTALLED" = "true" ]; then
@@ -617,6 +618,7 @@ uninstall() {
     git config --global --unset githooks.deleteDetectedLFSHooks
     git config --global --unset githooks.pathForUseCoreHooksPath
     git config --global --unset githooks.useCoreHooksPath
+    git config --global --unset githooks.allowLocalPathsInLocalSharedHooks
     git config --global --unset alias.hooks
 
     # Legacy

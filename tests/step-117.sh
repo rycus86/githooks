@@ -16,7 +16,7 @@ git init &&
     git commit -a -m 'Initial commit' ||
     exit 1
 
-# Simulate shared hook repo (server)
+# Simulate a shared hook repo on the server
 mkdir -p /tmp/shared/shared-server.git &&
     cd /tmp/shared/shared-server.git &&
     git init --bare &&
@@ -45,15 +45,15 @@ git clone /tmp/shared/shared.git --branch testbranch /tmp/shared/shared-clone.gi
 cd /tmp/test117 || exit 1
 OUT=$(git hooks shared add --local /tmp/shared/shared-clone.git 2>&1)
 # shellcheck disable=SC2181
-if ! echo "$OUT" | grep -q "to the local shared hooks does not make sense"; then
+if ! echo "$OUT" | grep -q "to the local shared hooks is discouraged"; then
     echo "! Expected adding local path to local shared hooks to fail: $OUT" >&2
     exit 1
 fi
 
 OUT=$(git hooks shared add --local file:///tmp/shared/shared-clone.git 2>&1)
 # shellcheck disable=SC2181
-if ! echo "$OUT" | grep -q "to the local shared hooks does not make sense"; then
-    echo "! Expected adding hook repository url to local shared hooks to fail: $OUT" >&2
+if ! echo "$OUT" | grep -q "to the local shared hooks is discouraged"; then
+    echo "! Expected adding local url to local shared hooks to fail: $OUT" >&2
     exit 1
 fi
 
@@ -95,16 +95,16 @@ if [ -d ~/.githooks/shared ] || [ "$RESULT" != "0" ]; then
     exit 1
 fi
 
-MD5SUM_NOW="$(find /tmp/shared/shared-clone.git -type f -exec md5sum {} \; | md5sum)"
-if [ "$MD5SUM" != "$MD5SUM_NOW" ]; then
-    echo "! Expected local hooks repository to be not touched $MD5SUM, $MD5SUM_NOW" >&2
-    exit 1
-fi
-
 OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
 # shellcheck disable=SC2181
 if ! echo "$OUT" | grep -q "Shared hook: test1"; then
     echo "! Expected global shared hook to be run: $OUT" >&2
+    exit 1
+fi
+
+MD5SUM_NOW="$(find /tmp/shared/shared-clone.git -type f -exec md5sum {} \; | md5sum)"
+if [ "$MD5SUM" != "$MD5SUM_NOW" ]; then
+    echo "! Expected local hooks repository to be not touched $MD5SUM, $MD5SUM_NOW" >&2
     exit 1
 fi
 

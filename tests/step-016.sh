@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: update shared hooks
 
-git config --global githooks.testingTreatFileProtocolAsRemote "true"
+git config --global githooks.allowLocalPathsInLocalSharedHooks "true"
 
 mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
 mkdir -p /tmp/shared/hooks-016-a.git/pre-commit &&

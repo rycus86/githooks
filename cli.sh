@@ -957,11 +957,13 @@ add_shared_hook_repo() {
         fi
 
         if is_local_path "$SHARED_REPO_URL" ||
-            is_local_url "$SHARED_REPO_URL"; then
+            is_local_url "$SHARED_REPO_URL" &&
+            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
             echo "! Adding a local path:" >&2
-            echo " \`$SHARED_REPO_URL\`" >&2
-            echo "  to the local shared hooks does not make sense." >&2
-            echo "  It is only valid for global shared hooks" >&2
+            echo "  \`$SHARED_REPO_URL\`" >&2
+            echo "  to the local shared hooks is discouraged and currently disallowed." >&2
+            echo "  To allow this (e.g. on server repositories) you can run:" >&2
+            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
             exit 1
         fi
 
@@ -1171,22 +1173,18 @@ list_shared_hook_repos() {
 
                 set_shared_root "$LIST_ITEM"
 
+                LIST_ITEM_STATE="invalid"
+
                 if [ "$SHARED_REPO_IS_CLONED" = "true" ]; then
-                    if [ -d "$SHARED_ROOT/.git" ]; then
+                    if [ -d "$SHARED_ROOT" ]; then
                         if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
                             LIST_ITEM_STATE="active"
-                        else
-                            LIST_ITEM_STATE="invalid"
                         fi
                     else
                         LIST_ITEM_STATE="pending"
                     fi
                 else
-                    if [ -d "$SHARED_ROOT/.git" ]; then
-                        LIST_ITEM_STATE="active"
-                    else
-                        LIST_ITEM_STATE="invalid"
-                    fi
+                    [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
                 fi
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
@@ -1214,18 +1212,22 @@ list_shared_hook_repos() {
 
                 set_shared_root "$LIST_ITEM"
 
-                if [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-                    LIST_ITEM_STATE="invalid - skipped"
+                LIST_ITEM_STATE="invalid"
 
-                elif [ -d "$SHARED_ROOT/.git" ]; then
-
-                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
-                        LIST_ITEM_STATE="active"
+                if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
+                    if [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
+                        LIST_ITEM_STATE="invalid - skipped"
                     else
-                        LIST_ITEM_STATE="invalid"
+                        [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
                     fi
                 else
-                    LIST_ITEM_STATE="pending"
+                    if [ -d "$SHARED_ROOT" ]; then
+                        if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
+                            LIST_ITEM_STATE="active"
+                        fi
+                    else
+                        LIST_ITEM_STATE="pending"
+                    fi
                 fi
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
@@ -1366,10 +1368,14 @@ update_shared_hooks_in() {
         if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
             # Non-cloned roots are ignored
             continue
-        elif [ "$SHARED_HOOKS_TYPE" = "--local" ] && [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-            # It does not make sense to add a local repository path
-            # to the local shared hooks list.
-            # We disabled this also to security reasons.
+        elif [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
+            [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
+            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
+            echo "! Warning: Local shared hooks contain a local path" >&2
+            echo "  \`$SHARED_REPO\`" >&2
+            echo "  which is discouraged. It will be skipped." >&2
+            echo "  To allow this (e.g. on server repositories) you can run:" >&2
+            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
             continue
         fi
 

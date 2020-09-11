@@ -595,10 +595,13 @@ update_shared_hooks_if_appropriate() {
                 # Non-cloned roots are ignored
                 continue
             elif [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
-                [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
+                [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
+                [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
                 echo "! Warning: Local shared hooks contain a local path" >&2
                 echo "  \`$SHARED_REPO\`" >&2
-                echo "  to a local repository which is non-sense." >&2
+                echo "  which is discouraged. It will be skipped." >&2
+                echo "  To allow this (e.g. on server repositories) you can run:" >&2
+                echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
                 continue
             fi
 
@@ -669,11 +672,14 @@ execute_shared_hooks() {
 
         set_shared_root "$SHARED_REPO"
 
-        if [ "$SHARED_HOOKS_TYPE" = "--local" ] && [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
+        if [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
+            [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
+            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
             echo "! Warning: Local shared hooks contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
-            echo "  to a local repository which is non-sense and" >&2
-            echo "  will be ignored." >&2
+            echo "  which is discouraged. It will be skipped." >&2
+            echo "  To allow this (e.g. on server repositories) you can run:" >&2
+            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
             continue
         fi
 
