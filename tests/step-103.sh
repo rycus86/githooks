@@ -2,7 +2,7 @@
 # Test:
 #   Fail on not available shared hooks.
 
-git config --global githooks.allowLocalPathsInLocalSharedHooks "true"
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"

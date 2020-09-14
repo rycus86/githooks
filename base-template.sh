@@ -109,6 +109,10 @@ set_main_variables() {
     # Global IFS for loops
     IFS_COMMA_NEWLINE=",
 "
+
+    # Fail if the shared root is not available (if enabled)
+    FAIL_ON_NOT_EXISTING_SHARED_HOOK=$(git config --get githooks.failOnNonExistingSharedHooks)
+
     return 0
 }
 
@@ -595,13 +599,10 @@ update_shared_hooks_if_appropriate() {
                 # Non-cloned roots are ignored
                 continue
             elif [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
-                [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
-                [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
+                [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
                 echo "! Warning: Local shared hooks contain a local path" >&2
                 echo "  \`$SHARED_REPO\`" >&2
-                echo "  which is discouraged. It will be skipped." >&2
-                echo "  To allow this (e.g. on server repositories) you can run:" >&2
-                echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
+                echo "  which is forbidden. It will be skipped." >&2
                 continue
             fi
 
@@ -664,23 +665,18 @@ execute_shared_hooks() {
     # split on comma and newline
     IFS="$IFS_COMMA_NEWLINE"
 
-    # Fail if the shared root is not available (if enabled)
-    FAIL_ON_NOT_EXISTING=$(git config --get githooks.failOnNonExistingSharedHooks)
-
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
         set_shared_root "$SHARED_REPO"
 
         if [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
-            [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
-            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
-            echo "! Warning: Local shared hooks contain a local path" >&2
+            [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
+            echo "! Local shared hooks contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
-            echo "  which is discouraged. It will be skipped." >&2
-            echo "  To allow this (e.g. on server repositories) you can run:" >&2
-            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
-            continue
+            echo "  which is forbidden." >&2
+            return 1
+
         fi
 
         if [ ! -d "$SHARED_ROOT" ]; then
@@ -693,7 +689,7 @@ execute_shared_hooks() {
                 echo "    \$ git hooks shared update" >&2
             fi
 
-            if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+            if [ "$FAIL_ON_NOT_EXISTING_SHARED_HOOK" = "true" ]; then
                 return 1
             else
                 echo "  Continuing..." >&2
@@ -712,7 +708,7 @@ execute_shared_hooks() {
                 echo "    \$ git hooks shared purge" >&2
                 echo "    \$ git hooks shared update" >&2
 
-                if [ "$FAIL_ON_NOT_EXISTING" = "true" ]; then
+                if [ "$FAIL_ON_NOT_EXISTING_SHARED_HOOK" = "true" ]; then
                     return 1
                 else
                     echo "  Continuing..." >&2

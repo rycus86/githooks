@@ -192,9 +192,59 @@ legacy_transformations_end() {
 ############################################################
 legacy_transformations_repo_end() {
 
+    # Legacy values
     git -C "$1" config --local --unset githooks.autoupdate.registered
 
+    legacy_transformation_adjust_local_paths "$1" || return 1
+
     return 0
+}
+
+############################################################
+# Function to adjust local paths in `.githooks/.shared`
+#   file which are forbidden.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transformation_adjust_local_paths() {
+
+    if [ "$(git -C "$1" rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
+        SHARED_FILE="$1/.githooks/.shared"
+    else
+        SHARED_FILE="$1/../.githooks/.shared"
+    fi
+
+    if [ -f "$SHARED_FILE" ]; then
+
+        NON_URLS=$(grep -E "^[^#].+$" <"$SHARED_FILE" | grep -vE "^[^/]+://")
+
+        if [ -n "$NON_URLS" ]; then
+
+            echo "! Warning: The shared hooks in \`$(pwd)/.githooks/.shared\` contain" >&2
+            echo "  local paths which are not supported any more:" >&2
+            echo "$NON_URLS" | sed -E "s/^/   - /" >&2
+            echo "  These are now changed to \`file://...\` and the local git config" >&2
+            echo "  \`githooks.failOnNonExistingSharedHooks\` is turned on." >&2
+            echo "  This means you are forced to update the shared hooks in \`$(pwd)\` by running:" >&2
+            echo "    \$ git hooks shared update" >&2
+            echo "  Once updated you can turn \`githooks.failOnNonExistingSharedHooks\` off again by running:" >&2
+            echo "    \$ git hooks config disable fail-on-non-existing-shared-hooks --local" >&2
+
+            git -C "$1" config githooks.failOnNonExistingSharedHooks true >/dev/null 2>&1
+
+            # Add to all non-URLS a `file://` (https://www.gnu.org/software/sed/manual/sed.html#Branching-and-flow-control)
+            # Explanation:
+            # - select first all non-comment lines
+            # - then select the ones which are not starting with <protocol>://
+            # - then adding file:// to them...
+            TEMP=$(mktemp)
+            sed -E '/^[^#].+$/ { /[^\/]+:\/\//! { s/^/file:\/\//g } }' <"$SHARED_FILE" >"$TEMP" &&
+                cp -f "$TEMP" "$SHARED_FILE" &&
+                rm -rf "$TEMP" >/dev/null 2>&1 || return 1
+
+        fi
+    fi
 }
 
 ############################################################
@@ -267,6 +317,11 @@ parse_command_line_arguments() {
             INTERNAL_INSTALL="true"
         elif [ "$p" = "--internal-postupdate" ]; then
             INTERNAL_POSTUPDATE="true"
+        elif [ "$p" = "--internal-updated-from" ]; then
+            : # nothing to do here
+        elif [ "$prev_p" = "--internal-updated-from" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+            # INTERNAL_UPDATED_FROM_COMMIT="$p" # not yet used !
+            true
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
@@ -353,7 +408,7 @@ check_not_deprecated_single_install() {
         echo >&2
         echo "    To install the latest hooks you need to reset this option"
         echo "    by running" >&2
-        echo "      \`git hooks config reset single\`" >&2
+        echo "      \`git config --local --unset githooks.single.install\`" >&2
         echo "    in order to use this repository with githooks." >&2
         echo >&2
         return 1 # DeprecateSingleInstall
@@ -1619,7 +1674,12 @@ run_internal_install() {
         return 1
     fi
 
-    sh "$INSTALL_SCRIPT" --internal-install "$@" || return 1
+    ADD_ARGS=""
+    [ -n "$GITHOOKS_CLONE_UPDATED_FROM_COMMIT" ] &&
+        ADD_ARGS="--internal-updated-from $GITHOOKS_CLONE_UPDATED_FROM_COMMIT"
+
+    # shellcheck disable=SC2086
+    sh "$INSTALL_SCRIPT" $ADD_ARGS --internal-install "$@" || return 1
 }
 
 ############################################################

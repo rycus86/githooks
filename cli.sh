@@ -957,13 +957,10 @@ add_shared_hook_repo() {
         fi
 
         if is_local_path "$SHARED_REPO_URL" ||
-            is_local_url "$SHARED_REPO_URL" &&
-            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
+            is_local_url "$SHARED_REPO_URL"; then
             echo "! Adding a local path:" >&2
             echo "  \`$SHARED_REPO_URL\`" >&2
-            echo "  to the local shared hooks is discouraged and currently disallowed." >&2
-            echo "  To allow this (e.g. on server repositories) you can run:" >&2
-            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
+            echo "  to the local shared hooks is forbidden." >&2
             exit 1
         fi
 
@@ -1215,11 +1212,7 @@ list_shared_hook_repos() {
                 LIST_ITEM_STATE="invalid"
 
                 if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
-                    if [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
-                        LIST_ITEM_STATE="invalid - skipped"
-                    else
-                        [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
-                    fi
+                    [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
                 else
                     if [ -d "$SHARED_ROOT" ]; then
                         if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
@@ -1250,7 +1243,7 @@ update_shared_hook_repos() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks pull
+git hooks shared pull
 
     Updates the shared repositories found either
     in the global Git configuration, or in the
@@ -1263,12 +1256,12 @@ git hooks pull
 
     SHARED_HOOKS=$(git config --global --get githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
-        update_shared_hooks_in "$SHARED_HOOKS"
+        update_shared_hooks_in --global "$SHARED_HOOKS"
     fi
 
     if [ -f "$(pwd)/.githooks/.shared" ]; then
         SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-        update_shared_hooks_in "$SHARED_HOOKS"
+        update_shared_hooks_in --local "$SHARED_HOOKS"
     fi
 
     echo "Finished"
@@ -1355,7 +1348,8 @@ set_shared_root() {
 #   on the list passed in on the first argument.
 #####################################################
 update_shared_hooks_in() {
-    SHARED_REPOS_LIST="$1"
+    SHARED_HOOKS_TYPE="$1"
+    SHARED_REPOS_LIST="$2"
 
     # split on comma and newline
     IFS="$IFS_COMMA_NEWLINE"
@@ -1369,13 +1363,10 @@ update_shared_hooks_in() {
             # Non-cloned roots are ignored
             continue
         elif [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
-            [ "$SHARED_REPO_IS_LOCAL" = "true" ] &&
-            [ "$(git config githooks.allowLocalPathsInLocalSharedHooks 2>/dev/null)" != "true" ]; then
+            [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
             echo "! Warning: Local shared hooks contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
-            echo "  which is discouraged. It will be skipped." >&2
-            echo "  To allow this (e.g. on server repositories) you can run:" >&2
-            echo "    \$ git config githooks.allowLocalPathsInLocalSharedHooks \"true\"" >&2
+            echo "  which is forbidden. It will be skipped." >&2
             continue
         fi
 
