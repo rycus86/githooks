@@ -31,8 +31,7 @@ process_git_hook() {
     check_for_updates_if_needed
     execute_lfs_hook_if_appropriate "$@" || return 1
     execute_old_hook_if_available "$@" || return 1
-    execute_global_shared_hooks "$@" || return 1
-    execute_local_shared_hooks "$@" || return 1
+    execute_all_shared_hooks "$@" || return 1
     execute_all_hooks_in "$(pwd)/.githooks" "$@" || return 1
 }
 
@@ -238,7 +237,7 @@ execute_lfs_hook_if_appropriate() {
 # Returns:
 #   1 if the hooks fail, 0 otherwise
 #####################################################
-execute_global_shared_hooks() {
+execute_config_shared_hooks() {
     SHARED_HOOKS=$(git config --global --get githooks.shared)
 
     if [ -n "$SHARED_HOOKS" ]; then
@@ -254,10 +253,23 @@ execute_global_shared_hooks() {
 # Returns:
 #   1 if the hooks fail, 0 otherwise
 #####################################################
-execute_local_shared_hooks() {
+execute_all_shared_hooks() {
+    # track all executed hooks, to reject double execution
+    EXECUTED_SHARED_HOOKS=""
+
     if [ -f "$(pwd)/.githooks/.shared" ]; then
         SHARED_HOOKS=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
+        process_shared_hooks --shared "$SHARED_HOOKS" "$@" || return 1
+    fi
+
+    SHARED_HOOKS=$(git config --local --get githooks.shared)
+    if [ -n "$SHARED_HOOKS" ]; then
         process_shared_hooks --local "$SHARED_HOOKS" "$@" || return 1
+    fi
+
+    SHARED_HOOKS=$(git config --global --get githooks.shared)
+    if [ -n "$SHARED_HOOKS" ]; then
+        process_shared_hooks --global "$SHARED_HOOKS" "$@" || return 1
     fi
 }
 
@@ -602,9 +614,9 @@ update_shared_hooks_if_appropriate() {
             if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
                 # Non-cloned roots are ignored
                 continue
-            elif [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
+            elif [ "$SHARED_HOOKS_TYPE" = "--shared" ] &&
                 [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-                echo "! Warning: Local shared hooks contain a local path" >&2
+                echo "! Warning: Shared hooks in \`.githooks/.shared\` contain a local path" >&2
                 echo "  \`$SHARED_REPO\`" >&2
                 echo "  which is forbidden. It will be skipped." >&2
                 echo ""
@@ -682,9 +694,17 @@ execute_shared_hooks() {
 
         set_shared_root "$SHARED_REPO"
 
-        if [ "$SHARED_HOOKS_TYPE" = "--local" ] &&
+        if echo "$EXECUTED_SHARED_HOOKS" | grep "$SHARED_ROOT"; then
+            echo "! Warning: Shared hooks in (type: \`$SHARED_HOOKS_TYPE\`):" >&2
+            echo "  \`$SHARED_REPO\`" >&2
+            echo "  is listed twice and is skipped." >&2
+            ehco "  Check duplicated entries by running:" >&2
+            echo "    \$ git hooks shared list --all" >&2
+        fi
+
+        if [ "$SHARED_HOOKS_TYPE" = "--shared" ] &&
             [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-            echo "! Local shared hooks contain a local path" >&2
+            echo "! Warning: Shared hooks in \`.githooks/.shared\` contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
             echo "  which is forbidden." >&2
             return 1
@@ -734,6 +754,8 @@ execute_shared_hooks() {
         elif [ -d "$SHARED_ROOT" ]; then
             execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
+
+        EXECUTED_SHARED_HOOKS="$SHARED_ROOT,$EXECUTED_SHARED_HOOKS"
 
         IFS="$IFS_COMMA_NEWLINE"
     done

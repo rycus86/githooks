@@ -43,14 +43,14 @@ git clone /tmp/shared/shared.git --branch testbranch /tmp/shared/shared-clone.gi
     exit 1
 
 cd /tmp/test117 || exit 1
-OUT=$(git hooks shared add --local /tmp/shared/shared-clone.git 2>&1)
+OUT=$(git hooks shared add --shared /tmp/shared/shared-clone.git 2>&1)
 # shellcheck disable=SC2181
 if ! echo "$OUT" | grep -q "to the local shared hooks is forbidden"; then
     echo "! Expected adding local path to local shared hooks to fail: $OUT" >&2
     exit 1
 fi
 
-OUT=$(git hooks shared add --local file:///tmp/shared/shared-clone.git 2>&1)
+OUT=$(git hooks shared add --shared file:///tmp/shared/shared-clone.git 2>&1)
 # shellcheck disable=SC2181
 if ! echo "$OUT" | grep -q "to the local shared hooks is forbidden"; then
     echo "! Expected adding local url to local shared hooks to fail: $OUT" >&2
@@ -61,14 +61,14 @@ echo "/tmp/shared/shared-cloned.git" >.githooks/.shared || exit 1
 OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
 # shellcheck disable=SC2181
 if echo "$OUT" | grep -q "Shared hook: test1" ||
-    ! echo "$OUT" | grep -q "Local shared hooks contain a local path"; then
+    ! echo "$OUT" | grep -q "Warning: Shared hooks in.*contain a local path"; then
     echo "! Expected hooks to be not run: $OUT" >&2
     exit 1
 fi
 rm -f .githooks/.shared || exit 1
 
 # Test listing output
-if git hooks shared list --local | grep -q "shared-clone" ||
+if git hooks shared list --shared | grep -q "shared-clone" ||
     git hooks shared list --all | grep -q "shared-clone"; then
     echo "! Expected to have an empty shared hooks list" >&2
     exit 1
@@ -79,7 +79,7 @@ if ! git hooks shared add --global /tmp/shared/shared-clone.git; then
     exit 1
 fi
 
-if git hooks shared list --local | grep -q "shared-clone" >/dev/null 2>&1 ||
+if git hooks shared list --shared | grep -q "shared-clone" >/dev/null 2>&1 ||
     git hooks shared list | grep "shared-clone" | grep -qv "active"; then
     echo "! Expected global shared hook repo to be active" >&2
     exit 1
@@ -115,7 +115,7 @@ if [ -n "$(git config --global --get githooks.shared)" ]; then
 fi
 
 # Add local non-bare repo url to the global shared hooks
-git hooks shared add --global /tmp/shared/shared-clone.git || exit 1
+git hooks shared add --local /tmp/shared/shared-clone.git || exit 1
 git hooks shared add --global file:///tmp/shared/shared-server.git@testbranch2 || exit 1
 git hooks shared update || exit 1
 git hooks shared list --all
@@ -140,10 +140,16 @@ git hooks shared purge || exit 1
 git config --global --unset githooks.shared || exit 1
 rm -rf /tmp/shared/shared-clone.git/.git || exit 1
 
-git hooks shared add --global /tmp/shared/shared-clone.git || exit 1
+git hooks shared add --local /tmp/shared/shared-clone.git || exit 1
 OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
 # shellcheck disable=SC2181
 if ! echo "$OUT" | grep -q "Shared hook: test1"; then
     echo "! Expected 1 global shared hook to be run: $OUT" >&2
+    exit 1
+fi
+
+if git config --local githooks.shared | grep "shared-clone.git" &&
+    git config --global githooks.shared | grep "shared-clone.git"; then
+    echo "! Expected shared hook to be added only to local Git config" >&2
     exit 1
 fi

@@ -22,7 +22,7 @@ mkdir -p /tmp/test112.repo &&
     git init ||
     exit 3
 
-git hooks shared add --local file:///tmp/test112.shared/shared-repo.git &&
+git hooks shared add --shared file:///tmp/test112.shared/shared-repo.git &&
     git hooks shared list | grep "shared-repo" | grep "pending" &&
     git hooks shared pull ||
     exit 4
