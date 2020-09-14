@@ -142,6 +142,7 @@ Supported entries for shared hooks are:
   because it makes little sense and is a security risk.
 
 Shared hooks repositories specified by *URLs* and *local paths to bare repository* will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. Any other local path will be used **directly and will not be updated or modified**.
+Additionally, the update can also be triggered on other hook names by setting a comma-separated list of additional hook names in the Git configuration parameter `githooks.sharedHooksUpdateTriggers` on any configuration level.
 
 The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
 

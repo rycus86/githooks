@@ -1590,8 +1590,7 @@ register_repo() {
 }
 
 ############################################################
-# Optionally setup shared hook repositories locally
-#   with their related Git config variables.
+# Optionally setup global shared hook repositories.
 #
 # Returns:
 #   None
@@ -1644,8 +1643,13 @@ setup_shared_hook_repositories() {
     elif [ "$PROVIDED" = "true" ]; then
         # Trigger the shared hook repository checkout manually
         sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
-        echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
-        echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
+
+        echo "Shared hook repositories have been set up."
+        echo "You can change them any time by running this script"
+        echo "again, or manually by changing the 'githooks.shared'"
+        echo "Git config variable."
+        echo "Note: you can also list the shared hook repos per"
+        echo "project within the .githooks/.shared file"
     else
         echo "! Failed to set up the shared hook repositories" >&2
         git config --global --unset-all githooks.shared >/dev/null 2>&1
