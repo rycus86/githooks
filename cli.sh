@@ -1408,7 +1408,7 @@ update_shared_hooks_in() {
             echo "  This can be achieved by running" >&2
             echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
             echo "  and deleting it from the \`.shared\` file by" >&2
-            echo "    \$ git hooks shared remove \"$SHARED_REPO\"" >&2
+            echo "    \$ git hooks shared remove --shared \"$SHARED_REPO\"" >&2
             continue
         fi
 

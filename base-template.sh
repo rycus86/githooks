@@ -626,7 +626,7 @@ update_shared_hooks_if_appropriate() {
                 echo "  This can be achieved by running" >&2
                 echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
                 echo "  and deleting it from the \`.shared\` file by" >&2
-                echo "    \$ git hooks shared remove \"$SHARED_REPO\"" >&2
+                echo "    \$ git hooks shared remove --shared \"$SHARED_REPO\"" >&2
                 continue
             fi
 
@@ -704,19 +704,18 @@ execute_shared_hooks() {
 
         if [ "$SHARED_HOOKS_TYPE" = "--shared" ] &&
             [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-            echo "! Warning: Shared hooks in \`.githooks/.shared\` contain a local path" >&2
+            echo "! Shared hooks in \`.githooks/.shared\` contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
             echo "  which is forbidden." >&2
             echo ""
             echo "  You can only have local paths in shared hooks defined" >&2
             echo "  in the local or global Git configuration." >&2
             echo ""
-            echo "  This can be achieved by running" >&2
+            echo "  You need to fix this by running" >&2
             echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
             echo "  and deleting it from the \`.shared\` file by" >&2
-            echo "    \$ git hooks shared remove \"$SHARED_REPO\"" >&2
+            echo "    \$ git hooks shared remove --shared \"$SHARED_REPO\"" >&2
             return 1
-
         fi
 
         if [ ! -d "$SHARED_ROOT" ]; then
