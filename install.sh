@@ -200,6 +200,33 @@ legacy_transformations_repo_end() {
     return 0
 }
 
+#####################################################
+# Check if `$1` is not a supported git clone url and
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
+# Returns: 0 if it is a local path, 1 otherwise
+#####################################################
+is_local_path() {
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
+# Check if url `$1` is a local url, e.g `file://`.
+#
+# Returns: 0 if it is a local url, 1 otherwise
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -Eq "^\s*file://"; then
+        return 0
+    fi
+    return 1
+}
+
 ############################################################
 # Function to adjust local paths in `.githooks/.shared`
 #   file which are forbidden.
@@ -217,34 +244,48 @@ legacy_transformation_adjust_local_paths() {
 
     if [ -f "$SHARED_FILE" ]; then
 
-        NON_URLS=$(grep -E "^[^#].+$" <"$SHARED_FILE" | grep -vE "^[^/]+://")
+        NEW_SHARED_LIST=$(mktemp)
+        MOVED_URLS=$(mktemp)
 
-        if [ -n "$NON_URLS" ]; then
+        MOVED="false"
+        IFS="$IFS_NEWLINE"
+        while read -r LINE; do
+            unset IFS
 
-            echo "! Warning: The shared hooks in \`$(pwd)/.githooks/.shared\` contain" >&2
-            echo "  local paths which are not supported any more:" >&2
-            echo "$NON_URLS" | sed -E "s/^/   - /" >&2
-            echo "  These are now changed to \`file://...\` and the local git config" >&2
-            echo "  \`githooks.failOnNonExistingSharedHooks\` is turned on." >&2
-            echo "  This means you are forced to update the shared hooks in \`$(pwd)\` by running:" >&2
-            echo "    \$ git hooks shared update" >&2
-            echo "  Once updated you can turn \`githooks.failOnNonExistingSharedHooks\` off again by running:" >&2
-            echo "    \$ git hooks config disable fail-on-non-existing-shared-hooks --local" >&2
+            if echo "$LINE" | grep -qE "^ *#"; then
+                echo "$LINE" >>"$TEMP"
+            fi
 
-            git -C "$1" config githooks.failOnNonExistingSharedHooks true >/dev/null 2>&1
+            if is_local_path "$LINE" || is_local_url "$LINE"; then
+                VALUE=$(git -C "$1" config --local githooks.shared)
+                git -C "$1" config --local githooks.shared "$VALUE,$LINE"
 
-            # Add to all non-URLS a `file://` (https://www.gnu.org/software/sed/manual/sed.html#Branching-and-flow-control)
-            # Explanation:
-            # - select first all non-comment lines
-            # - then select the ones which are not starting with <protocol>://
-            # - then adding file:// to them...
-            TEMP=$(mktemp)
-            sed -E '/^[^#].+$/ { /[^\/]+:\/\//! { s/^/file:\/\//g } }' <"$SHARED_FILE" >"$TEMP" &&
-                cp -f "$TEMP" "$SHARED_FILE" &&
-                rm -rf "$TEMP" >/dev/null 2>&1 || return 1
+                echo "$LINE" >>"$MOVED_URLS"
+                MOVED="true"
+            else
+                echo "$LINE" >>"$NEW_SHARED_LIST"
+            fi
 
+            IFS="$IFS_NEWLINE"
+        done <"$SHARED_FILE"
+
+        cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
+            rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
+
+        if [ "$MOVED" = "true" ]; then
+            echo "! Warning: The shared hooks configuration in" >&2
+            echo "  \`$SHARED_FILE\`" >&2
+            echo "  contains local paths which are not supported" >&2
+            echo "  any more:" >&2
+            sed -E "s/^/   - /" "$MOVED_URLS" >&2
+            echo "  These paths are now moved to the local Git" >&2
+            echo "  configuration value \`githooks.shared\`." >&2
         fi
+
+        rm -rf "$MOVED_URLS" >/dev/null 2>&1
+
     fi
+
 }
 
 ############################################################

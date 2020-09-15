@@ -157,7 +157,7 @@ find_hook_path_to_enable_or_disable() {
 
             REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
-            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_LOCAL_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
             ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
 
             ACTIVE_GLOBAL_REPO=$(git config --global --get githooks.shared | grep -o "$REMOTE_URL")
@@ -604,7 +604,7 @@ git hooks list [type]
 
         # local shared hooks
         if [ -f "$(pwd)/.githooks/.shared" ]; then
-            SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
 
             IFS="$IFS_NEWLINE"
             for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
@@ -1047,7 +1047,7 @@ remove_shared_hook_repo() {
             exit 1
         fi
 
-        CURRENT_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+        CURRENT_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
         NEW_LIST=""
 
         IFS="$IFS_COMMA_NEWLINE"
@@ -1201,9 +1201,9 @@ list_shared_hook_repos() {
         elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
             echo "  - None"
         else
-            SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
 
-            IFS="$IFS_COMMA_NEWLINE"
+            IFS="$IFS_NEWLINE"
             echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
                 unset IFS
 
@@ -1225,7 +1225,7 @@ list_shared_hook_repos() {
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_COMMA_NEWLINE"
+                IFS="$IFS_NEWLINE"
             done
             unset IFS
         fi
@@ -1260,7 +1260,7 @@ git hooks shared pull
     fi
 
     if [ -f "$(pwd)/.githooks/.shared" ]; then
-        SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+        SHARED_HOOKS=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
         update_shared_hooks_in --local "$SHARED_HOOKS"
     fi
 
@@ -1268,13 +1268,15 @@ git hooks shared pull
 }
 
 #####################################################
-# Check if url `$1`is treated as a local path
-# to a repository
-#
+# Check if `$1` is not a supported git clone url and
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^/]+://"; then
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a URL `<scheme>://...``
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
     return 0
@@ -1317,6 +1319,7 @@ set_shared_root() {
         if is_bare_repo "$1"; then
             DO_SPLIT="false"
         else
+            # We have a local path to a non-bare repo
             SHARED_REPO_IS_CLONED="false"
             SHARED_ROOT="$1"
             return
@@ -1325,8 +1328,8 @@ set_shared_root() {
         SHARED_REPO_IS_LOCAL="true"
     fi
 
-    # Here we have now a `<protocol>:/.*(@<tag>)?` or
-    # local bare-repo `<localpath>`
+    # Here we have now supported Git URL or
+    # a local bare-repo `<localpath>`
 
     # Split "...@(.*)"
     if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
@@ -1367,6 +1370,14 @@ update_shared_hooks_in() {
             echo "! Warning: Local shared hooks contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
             echo "  which is forbidden. It will be skipped." >&2
+            echo ""
+            echo "  You can only have local paths in shared repository defined" >&2
+            echo "  in the local or global Git configuration." >&2
+            echo ""
+            echo "  This can be achieved by running" >&2
+            echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
+            echo "  and deleting it from the \`.shared\` file by" >&2
+            echo "    \$ git hooks shared remove \"$SHARED_REPO\"" >&2
             continue
         fi
 

@@ -256,7 +256,7 @@ execute_global_shared_hooks() {
 #####################################################
 execute_local_shared_hooks() {
     if [ -f "$(pwd)/.githooks/.shared" ]; then
-        SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+        SHARED_HOOKS=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
         process_shared_hooks --local "$SHARED_HOOKS" "$@" || return 1
     fi
 }
@@ -497,19 +497,21 @@ process_shared_hooks() {
 
 #####################################################
 # Check if `$1` is not a supported git clone url and
-#   is treated as a local path to a repository
-#
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^/]+://"; then
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
     return 0
 }
 
 #####################################################
-# Check if url `$1`is a local url, e.g `file://`.
+# Check if url `$1` is a local url, e.g `file://`.
 #
 # Returns: 0 if it is a local url, 1 otherwise
 #####################################################
@@ -545,6 +547,7 @@ set_shared_root() {
         if is_bare_repo "$1"; then
             DO_SPLIT="false"
         else
+            # We have a local path to a non-bare repo
             SHARED_REPO_IS_CLONED="false"
             SHARED_ROOT="$1"
             return
@@ -553,8 +556,8 @@ set_shared_root() {
         SHARED_REPO_IS_LOCAL="true"
     fi
 
-    # Here we have now a `<protocol>:/.*(@<tag>)?` or
-    # local bare-repo `<localpath>`
+    # Here we now have a supported Git URL or
+    # a local bare-repo `<localpath>`
 
     # Split "...@(.*)"
     if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
@@ -570,6 +573,7 @@ set_shared_root() {
     NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
     SHARED_ROOT="$INSTALL_DIR/shared/$CHECKSUM-$NAME"
 }
+
 #####################################################
 # Update the shared hooks that are on the
 #   ${SHARED_REPOS_LIST} variable.
@@ -603,6 +607,14 @@ update_shared_hooks_if_appropriate() {
                 echo "! Warning: Local shared hooks contain a local path" >&2
                 echo "  \`$SHARED_REPO\`" >&2
                 echo "  which is forbidden. It will be skipped." >&2
+                echo ""
+                echo "  You can only have local paths in shared repository defined" >&2
+                echo "  in the local or global Git configuration." >&2
+                echo ""
+                echo "  This can be achieved by running" >&2
+                echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
+                echo "  and deleting it from the \`.shared\` file by" >&2
+                echo "    \$ git hooks shared remove \"$SHARED_REPO\"" >&2
                 continue
             fi
 
