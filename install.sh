@@ -248,7 +248,7 @@ legacy_transformation_adjust_local_paths() {
         MOVED_URLS=$(mktemp)
 
         MOVED="false"
-        IFS="$IFS_NEWLINE"
+        IFS="$IFS_COMMA_NEWLINE"
         while read -r LINE; do
             unset IFS
 
@@ -266,7 +266,7 @@ legacy_transformation_adjust_local_paths() {
                 echo "$LINE" >>"$NEW_SHARED_LIST"
             fi
 
-            IFS="$IFS_NEWLINE"
+            IFS="$IFS_COMMA_NEWLINE"
         done <"$SHARED_FILE"
 
         cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&

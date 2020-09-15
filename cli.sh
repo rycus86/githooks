@@ -1203,7 +1203,7 @@ list_shared_hook_repos() {
         else
             SHARED_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
 
-            IFS="$IFS_NEWLINE"
+            IFS="$IFS_COMMA_NEWLINE"
             echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
                 unset IFS
 
@@ -1225,7 +1225,7 @@ list_shared_hook_repos() {
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_NEWLINE"
+                IFS="$IFS_COMMA_NEWLINE"
             done
             unset IFS
         fi
@@ -1371,7 +1371,7 @@ update_shared_hooks_in() {
             echo "  \`$SHARED_REPO\`" >&2
             echo "  which is forbidden. It will be skipped." >&2
             echo ""
-            echo "  You can only have local paths in shared repository defined" >&2
+            echo "  You can only have local paths for shared hooks defined" >&2
             echo "  in the local or global Git configuration." >&2
             echo ""
             echo "  This can be achieved by running" >&2
