@@ -57,7 +57,19 @@ if ! echo "$OUT" | grep -q "to the local shared hooks is forbidden"; then
     exit 1
 fi
 
-echo "/tmp/shared/shared-cloned.git" >.githooks/.shared || exit 1
+echo "file://///tmp/shared/shared-cloned.git" >.githooks/.shared || exit 1
+
+# Invoke shared hooks update
+OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
+    sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
+# shellcheck disable=SC2181
+if echo "$OUT" | grep -q "Shared hook: test1" ||
+    ! echo "$OUT" | grep -q "Update will be skipped" ||
+    ! echo "$OUT" | grep -q "Local shared hooks contain a local path"; then
+    echo "! Expected triggered shared hooks update to notify skipping local paths: $OUT" >&2
+    exit 1
+fi
+
 OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
 # shellcheck disable=SC2181
 if echo "$OUT" | grep -q "Shared hook: test1" ||
