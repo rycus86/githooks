@@ -436,16 +436,11 @@ git hooks accept [--shared] [trigger]
 }
 
 #####################################################
-# Returns the MD5 checksum of the hook file
+# Returns the SHA1 hash of the hook file
 #   passed in as the first argument.
 #####################################################
 get_hook_checksum() {
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$1" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$1" 2>/dev/null)
-    fi
-
-    echo "$MD5_HASH" | awk "{ print \$1 }"
+    git hash-object "$1" 2>/dev/null
 }
 
 #####################################################
@@ -771,17 +766,13 @@ is_trusted_repo() {
 get_hook_enabled_or_disabled_state() {
     HOOK_PATH="$1"
 
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
-    fi
-    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+    SHA_HASH=$(get_hook_checksum "$HOOK_PATH")
     CURRENT_HASHES=$(grep "$HOOK_PATH" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null)
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
         echo "disabled"
-    elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+    elif ! echo "$CURRENT_HASHES" | grep -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
         if [ -z "$CURRENT_HASHES" ]; then
             echo "pending / new"
         else
@@ -1372,7 +1363,7 @@ set_shared_root() {
     fi
 
     # Define the shared clone folder
-    SHAHASH=$(echo "$1" | git hash-object --stdin)
+    SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
     NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
     SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
 }

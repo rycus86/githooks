@@ -422,10 +422,7 @@ is_trusted_repo() {
 #####################################################
 execute_opt_in_checks() {
     # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
-    fi
-    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+    SHA_HASH=$(git hash-object "$HOOK_PATH" 2>/dev/null)
     CURRENT_HASHES=$(grep "$HOOK_PATH" "$CURRENT_GIT_DIR/.githooks.checksum" 2>/dev/null)
 
     # check against the previous hash
@@ -435,7 +432,7 @@ execute_opt_in_checks() {
         echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
         return 1
 
-    elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+    elif ! echo "$CURRENT_HASHES" | grep -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
         if [ -z "$CURRENT_HASHES" ]; then
             MESSAGE="New hook file found"
         else
@@ -465,7 +462,7 @@ execute_opt_in_checks() {
         fi
 
         # save the new accepted checksum
-        echo "$MD5_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
+        echo "$SHA_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
 }
 
@@ -581,7 +578,7 @@ set_shared_root() {
     fi
 
     # Define the shared clone folder
-    SHAHASH=$(echo "$1" | git hash-object --stdin)
+    SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
     NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
     SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
 }

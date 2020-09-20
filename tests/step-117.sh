@@ -39,7 +39,7 @@ mkdir -p /tmp/shared/shared-server.git &&
 git clone /tmp/shared/shared.git --branch testbranch /tmp/shared/shared-clone.git &&
     cd /tmp/shared/shared-clone.git &&
     git reset --hard HEAD~ &&
-    MD5SUM=$(find /tmp/shared/shared-clone.git -type f -exec md5sum {} \; | md5sum) ||
+    CHECKSUM=$(find /tmp/shared/shared-clone.git -type f -exec git hash-object {} \; | git hash-object --stdin) ||
     exit 1
 
 cd /tmp/test117 || exit 1
@@ -114,9 +114,9 @@ if ! echo "$OUT" | grep -q "Shared hook: test1"; then
     exit 1
 fi
 
-MD5SUM_NOW="$(find /tmp/shared/shared-clone.git -type f -exec md5sum {} \; | md5sum)"
-if [ "$MD5SUM" != "$MD5SUM_NOW" ]; then
-    echo "! Expected local hooks repository to be not touched $MD5SUM, $MD5SUM_NOW" >&2
+CHECKSUM_NOW="$(find /tmp/shared/shared-clone.git -type f -exec git hash-object {} \; | git hash-object --stdin)"
+if [ "$CHECKSUM" != "$CHECKSUM_NOW" ]; then
+    echo "! Expected local hooks repository to be not touched $CHECKSUM, $CHECKSUM_NOW" >&2
     exit 1
 fi
 
