@@ -21,22 +21,22 @@ mkdir -p /tmp/shared/hooks-023-b.git/pre-commit &&
     exit 1
 
 # change it and expect it to change it back
-git config --global githooks.shared file:///tmp/shared/some-previous-example
+git config --global githooks.shared /tmp/shared/some-previous-example
 
 # run the install, and set up shared repos
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo 'n
 y
-file:///tmp/shared/hooks-023-a.git
-file:///tmp/shared/hooks-023-b.git
+/tmp/shared/hooks-023-a.git
+/tmp/shared/hooks-023-b.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 else
     echo 'n
 n
 y
-file:///tmp/shared/hooks-023-a.git
-file:///tmp/shared/hooks-023-b.git
+/tmp/shared/hooks-023-a.git
+/tmp/shared/hooks-023-b.git
 ' | sh /var/lib/githooks/install.sh || exit 1
 
 fi

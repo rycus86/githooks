@@ -221,7 +221,7 @@ is_local_path() {
 # Returns: 0 if it is a local url, 1 otherwise
 #####################################################
 is_local_url() {
-    if echo "$1" | grep -Eq "^\s*file://"; then
+    if echo "$1" | grep -iEq "^\s*file://"; then
         return 0
     fi
     return 1
@@ -248,7 +248,7 @@ legacy_transformation_adjust_local_paths() {
         MOVED_URLS=$(mktemp)
 
         MOVED="false"
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS="$IFS_NEWLINE"
         while read -r LINE; do
             unset IFS
 
@@ -266,7 +266,7 @@ legacy_transformation_adjust_local_paths() {
                 echo "$LINE" >>"$NEW_SHARED_LIST"
             fi
 
-            IFS="$IFS_COMMA_NEWLINE"
+            IFS="$IFS_NEWLINE"
         done <"$SHARED_FILE"
 
         cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
@@ -362,7 +362,7 @@ parse_command_line_arguments() {
             : # nothing to do here
         elif [ "$prev_p" = "--internal-updated-from" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
             # INTERNAL_UPDATED_FROM_COMMIT="$p" # not yet used !
-            true
+            : # nothing to do here
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
@@ -1414,10 +1414,7 @@ setup_shared_hook_repositories() {
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
         # Trigger the shared hook repository checkout manually
-        cp "$GITHOOKS_CLONE_DIR/base-template-wrapper.sh" ".githooks.shared.trigger" &&
-            chmod +x ".githooks.shared.trigger" &&
-            ./.githooks.shared.trigger
-        rm -f .githooks.shared.trigger
+        "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
 
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"

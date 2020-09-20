@@ -147,7 +147,7 @@ if ! echo "$OUT" | grep -q "Shared hook: test1" ||
     exit 1
 fi
 
-# Make normals shared hooks folder (no git)
+# Make normal shared hooks folder (no checkout)
 git hooks shared purge || exit 1
 git config --global --unset githooks.shared || exit 1
 rm -rf /tmp/shared/shared-clone.git/.git || exit 1
@@ -160,8 +160,19 @@ if ! echo "$OUT" | grep -q "Shared hook: test1"; then
     exit 1
 fi
 
-if git config --local githooks.shared | grep "shared-clone.git" &&
-    git config --global githooks.shared | grep "shared-clone.git"; then
+if git config --global githooks.shared | grep "shared-clone.git"; then
     echo "! Expected shared hook to be added only to local Git config" >&2
+    exit 1
+fi
+
+# Duplicat to global shared hooks
+git hooks shared add --global /tmp/shared/shared-clone.git || exit 1
+OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
+echo "$OUT" | grep -qo "Shared hook: test1" | wc -l
+
+# shellcheck disable=SC2181
+if [ "$(echo "$OUT" | grep -o "Shared hook: test1" | wc -l)" != "1" ] ||
+    ! echo "$OUT" | grep -q "is already listed and will be skipped"; then
+    echo "! Expected 1 global shared hook to be run: $OUT" >&2
     exit 1
 fi

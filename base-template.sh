@@ -528,7 +528,7 @@ is_local_path() {
 # Returns: 0 if it is a local url, 1 otherwise
 #####################################################
 is_local_url() {
-    if echo "$1" | grep -Eq "^\s*file://"; then
+    if echo "$1" | grep -iEq "^\s*file://"; then
         return 0
     fi
     return 1
@@ -573,17 +573,17 @@ set_shared_root() {
 
     # Split "...@(.*)"
     if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
-        SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.*)@.*$|\\1|")"
-        SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.*@(.*)$|\\1|")"
+        SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.+)@.+$|\\1|")"
+        SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
     else
         SHARED_REPO_CLONE_URL="$1"
         SHARED_REPO_CLONE_BRANCH=""
     fi
 
     # Define the shared clone folder
-    CHECKSUM=$(echo "$1" | md5sum | awk "{ print \$1 }")
+    SHAHASH=$(echo "$1" | git hash-object --stdin)
     NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$CHECKSUM-$NAME"
+    SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
 }
 
 #####################################################
@@ -603,8 +603,11 @@ update_shared_hooks_if_appropriate() {
     [ "$HOOK_NAME" = "post-checkout" ] && [ "$1" = "$GIT_NULL_REF" ] && RUN_UPDATE="true"
 
     if [ "$RUN_UPDATE" = "true" ]; then
+
         # split on comma and newline
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS_TMP="$IFS_COMMA_NEWLINE"
+        [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
+        IFS="$IFS_TMP"
 
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
@@ -619,13 +622,13 @@ update_shared_hooks_if_appropriate() {
                 echo "! Warning: Shared hooks in \`.githooks/.shared\` contain a local path" >&2
                 echo "  \`$SHARED_REPO\`" >&2
                 echo "  which is forbidden. Update will be skipped." >&2
-                echo ""
+                echo "" >&2
                 echo "  You can only have local paths for shared hooks defined" >&2
                 echo "  in the local or global Git configuration." >&2
-                echo ""
+                echo "" >&2
                 echo "  This can be achieved by running" >&2
                 echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
-                echo "  and deleting it from the \`.shared\` file by" >&2
+                echo "  and deleting it from the \`.shared\` file manually by" >&2
                 echo "    \$ git hooks shared remove --shared \"$SHARED_REPO\"" >&2
                 continue
             fi
@@ -671,7 +674,7 @@ update_shared_hooks_if_appropriate() {
                     echo "$CLONE_OUTPUT" >&2
                 fi
             fi
-            IFS="$IFS_COMMA_NEWLINE"
+            IFS="$IFS_TMP"
         done
 
         unset IFS
@@ -687,19 +690,20 @@ update_shared_hooks_if_appropriate() {
 #####################################################
 execute_shared_hooks() {
     # split on comma and newline
-    IFS="$IFS_COMMA_NEWLINE"
+    IFS_TMP="$IFS_COMMA_NEWLINE"
+    [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
+    IFS="$IFS_TMP"
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
         set_shared_root "$SHARED_REPO"
 
-        if echo "$EXECUTED_SHARED_HOOKS" | grep "$SHARED_ROOT"; then
-            echo "! Warning: Shared hooks in (type: \`$SHARED_HOOKS_TYPE\`):" >&2
+        if echo "$EXECUTED_SHARED_HOOKS" | grep -q "$SHARED_ROOT"; then
+            echo "! Note: Shared hooks entrys:" >&2
             echo "  \`$SHARED_REPO\`" >&2
-            echo "  is listed twice and is skipped." >&2
-            ehco "  Check duplicated entries by running:" >&2
-            echo "    \$ git hooks shared list --all" >&2
+            echo "  is already listed and will be skipped." >&2
+            continue
         fi
 
         if [ "$SHARED_HOOKS_TYPE" = "--shared" ] &&
@@ -762,9 +766,10 @@ execute_shared_hooks() {
             execute_all_hooks_in "$SHARED_ROOT" "$@" || return 1
         fi
 
-        EXECUTED_SHARED_HOOKS="$SHARED_ROOT,$EXECUTED_SHARED_HOOKS"
+        EXECUTED_SHARED_HOOKS="$SHARED_ROOT,
+$EXECUTED_SHARED_HOOKS"
 
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS="$IFS_TMP"
     done
     unset IFS
 }

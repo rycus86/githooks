@@ -999,7 +999,7 @@ remove_shared_hook_repo() {
     fi
 
     if [ -z "$SHARED_REPO_URL" ]; then
-        echo "! Usage: \`git hooks shared add [--shared|--local|--global] <git-url>\`" >&2
+        echo "! Usage: \`git hooks shared remove [--shared|--local|--global] <git-url>\`" >&2
         exit 1
     fi
 
@@ -1319,7 +1319,7 @@ is_local_path() {
 # Returns: 0 if it is a local url, 1 otherwise
 #####################################################
 is_local_url() {
-    if echo "$1" | grep -Eq "^\s*file://"; then
+    if echo "$1" | grep -iEq "^\s*file://"; then
         return 0
     fi
     return 1
@@ -1364,17 +1364,17 @@ set_shared_root() {
 
     # Split "...@(.*)"
     if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
-        SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.*)@.*$|\\1|")"
-        SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.*@(.*)$|\\1|")"
+        SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.+)@.+$|\\1|")"
+        SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
     else
         SHARED_REPO_CLONE_URL="$1"
         SHARED_REPO_CLONE_BRANCH=""
     fi
 
     # Define the shared clone folder
-    CHECKSUM=$(echo "$1" | md5sum | awk "{ print \$1 }")
+    SHAHASH=$(echo "$1" | git hash-object --stdin)
     NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$CHECKSUM-$NAME"
+    SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
 }
 
 #####################################################
@@ -1386,7 +1386,9 @@ update_shared_hooks_in() {
     SHARED_REPOS_LIST="$2"
 
     # split on comma and newline
-    IFS="$IFS_COMMA_NEWLINE"
+    IFS_TMP="$IFS_COMMA_NEWLINE"
+    [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
+    IFS="$IFS_TMP"
 
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
@@ -1454,7 +1456,7 @@ update_shared_hooks_in() {
             fi
         fi
 
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS="$IFS_TMP"
     done
 
     unset IFS
@@ -2215,7 +2217,7 @@ The \`print\` option outputs the current behavior.
         config_search_dir "$CONFIG_OPERATION" "$@"
         ;;
     "shared")
-        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        config_shared_hook_repos "$CONFIG_OPERATION" "$@"
         ;;
     "trusted")
         config_trust_all_hooks "$CONFIG_OPERATION"
@@ -2310,15 +2312,12 @@ config_search_dir() {
 # Prints or modifies the \`githooks.shared\`
 #   global Git configuration.
 #####################################################
-config_global_shared_hook_repos() {
+config_shared_hook_repos() {
 
     if [ "$1" = "set" ]; then
 
         SHARED_TYPE="--global"
-        if echo "$2" | grep -qE "\-\-(local)"; then
-            SHARED_TYPE="$2"
-            shift
-        fi
+        [ "$2" = "--local" ] && SHARED_TYPE="$2" && shift
 
         if [ -z "$2" ]; then
             manage_configuration "help"
@@ -2345,7 +2344,7 @@ config_global_shared_hook_repos() {
             SHARED_TYPE="$2"
         elif [ -n "$2" ]; then
             manage_configuration "help"
-            echo "! Wrong argument $($2)" >&2
+            echo "! Wrong argument \`$2\`" >&2
         fi
 
         git config "$SHARED_TYPE" --unset githooks.shared
