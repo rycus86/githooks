@@ -93,8 +93,9 @@ set_main_variables() {
     load_install_dir
 
     # Global IFS for loops
-    IFS_COMMA_NEWLINE=",
+    IFS_NEWLINE="
 "
+    IFS_COMMA_NEWLINE=",$IFS_NEWLINE"
 }
 
 #####################################################
@@ -157,8 +158,8 @@ find_hook_path_to_enable_or_disable() {
 
             REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
-            SHARED_LOCAL_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
-            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
+            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
+            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
 
             ACTIVE_GLOBAL_REPO=$(git config --global --get githooks.shared | grep -o "$REMOTE_URL")
 
@@ -243,7 +244,7 @@ find_hook_path_to_enable_or_disable() {
     if [ -z "$HOOK_PATH" ]; then
         echo "! Sorry, cannot find any hooks that would match that" >&2
         return 1
-    elif echo "$HOOK_PATH" | grep -qv "/.githooks"; then
+    elif echo "$HOOK_PATH" | grep -F -qv "/.githooks"; then
         if [ -d "$HOOK_PATH/.githooks" ]; then
             HOOK_PATH="$HOOK_PATH/.githooks"
         else
@@ -599,7 +600,7 @@ git hooks list [type]
 
         # local shared hooks
         if [ -f "$(pwd)/.githooks/.shared" ]; then
-            SHARED_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
 
             IFS="$IFS_NEWLINE"
             for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
@@ -772,7 +773,7 @@ get_hook_enabled_or_disabled_state() {
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
         echo "disabled"
-    elif ! echo "$CURRENT_HASHES" | grep -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
+    elif ! echo "$CURRENT_HASHES" | grep -F -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
         if [ -z "$CURRENT_HASHES" ]; then
             echo "pending / new"
         else
@@ -805,7 +806,7 @@ list_hooks_in_shared_repos() {
         fi
 
         REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
-        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
+        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -F -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
         fi
@@ -1040,29 +1041,40 @@ remove_shared_hook_repo() {
             exit 1
         fi
 
-        CURRENT_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
+        if [ ! -f "$(pwd)/.githooks/.shared" ]; then
+            echo "! No \`.githooks/.shared\` in current repository" >&2
+            return
+        fi
+
         NEW_LIST=""
-
-        IFS="$IFS_COMMA_NEWLINE"
-
-        for SHARED_REPO_ITEM in $CURRENT_LIST; do
+        ONLY_COMMENTS="true"
+        IFS="$IFS_NEWLINE"
+        while read -r LINE || [ -n "$LINE" ]; do
             unset IFS
-            if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
-                continue
+
+            if echo "$LINE" | grep -qE "^[^#\n\r ].*$"; then
+                if [ "$LINE" = "$SHARED_REPO_URL" ]; then
+                    continue
+                fi
+                ONLY_COMMENTS="false"
+            elif echo "$LINE" | grep -qE "^ *[#].*$"; then
+                : # nothing to do for comments ...
+            else
+                : # skip empty lines
             fi
 
             if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
+                NEW_LIST="$LINE"
             else
                 NEW_LIST="${NEW_LIST}
-${SHARED_REPO_ITEM}"
+${LINE}"
             fi
-            IFS="$IFS_COMMA_NEWLINE"
-        done
 
+            IFS="$IFS_NEWLINE"
+        done <"$(pwd)/.githooks/.shared"
         unset IFS
 
-        if [ -z "$NEW_LIST" ]; then
+        if [ -z "$NEW_LIST" ] || [ "$ONLY_COMMENTS" = "true" ]; then
             clear_shared_hook_repos "$SET_SHARED_TYPE" && return || exit 1
         fi
 
@@ -1218,10 +1230,10 @@ list_shared_hook_repos() {
         elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
             echo "  - None"
         else
-            SHARED_REPOS_LIST=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
 
-            IFS="$IFS_COMMA_NEWLINE"
-            echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
+            IFS="$IFS_NEWLINE"
+            for LIST_ITEM in $SHARED_REPOS_LIST; do
                 unset IFS
 
                 set_shared_root "$LIST_ITEM"
@@ -1242,7 +1254,7 @@ list_shared_hook_repos() {
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_COMMA_NEWLINE"
+                IFS="$IFS_NEWLINE"
             done
             unset IFS
         fi
@@ -1272,7 +1284,7 @@ git hooks shared pull
     fi
 
     if [ -f "$(pwd)/.githooks/.shared" ]; then
-        SHARED_HOOKS=$(grep -E "^ *[^#].+$" <"$(pwd)/.githooks/.shared")
+        SHARED_HOOKS=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
         update_shared_hooks_in --shared "$SHARED_HOOKS"
     fi
 
@@ -1329,6 +1341,7 @@ is_local_url() {
 #####################################################
 set_shared_root() {
 
+    SHARED_ROOT=""
     SHARED_REPO_CLONE_URL=""
     SHARED_REPO_CLONE_BRANCH=""
     SHARED_REPO_IS_LOCAL="false"
@@ -1350,22 +1363,24 @@ set_shared_root() {
         SHARED_REPO_IS_LOCAL="true"
     fi
 
-    # Here we have now supported Git URL or
-    # a local bare-repo `<localpath>`
+    if [ "$SHARED_REPO_IS_CLONED" = "true" ]; then
+        # Here we now have a supported Git URL or
+        # a local bare-repo `<localpath>`
 
-    # Split "...@(.*)"
-    if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
-        SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.+)@.+$|\\1|")"
-        SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
-    else
-        SHARED_REPO_CLONE_URL="$1"
-        SHARED_REPO_CLONE_BRANCH=""
+        # Split "...@(.*)"
+        if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
+            SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.+)@.+$|\\1|")"
+            SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
+        else
+            SHARED_REPO_CLONE_URL="$1"
+            SHARED_REPO_CLONE_BRANCH=""
+        fi
+
+        # Define the shared clone folder
+        SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
+        NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
+        SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
     fi
-
-    # Define the shared clone folder
-    SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
-    NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
 }
 
 #####################################################
@@ -1407,7 +1422,15 @@ update_shared_hooks_in() {
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT="$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
+
+            # shellcheck disable=SC2086
+            PULL_OUTPUT="$(git -C "$SHARED_ROOT" \
+                --work-tree="$SHARED_ROOT" \
+                --git-dir="$SHARED_ROOT/.git" \
+                -c core.hooksPath=/dev/null \
+                pull \
+                2>&1)"
+
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
@@ -1416,12 +1439,12 @@ update_shared_hooks_in() {
         else
             echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL"
 
+            ADD_ARGS=""
+            [ "$SHARED_REPO_IS_LOCAL" != "true" ] && ADD_ARGS="--depth=1"
+
             [ -d "$SHARED_ROOT" ] &&
                 rm -rf "$SHARED_ROOT" &&
                 mkdir -p "$SHARED_ROOT"
-
-            ADD_ARGS=""
-            [ "$SHARED_REPO_IS_LOCAL" != "true" ] && ADD_ARGS="--depth 1"
 
             if [ -n "$SHARED_REPO_CLONE_BRANCH" ]; then
                 # shellcheck disable=SC2086
@@ -1864,7 +1887,7 @@ clone_release_repository() {
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
-        --depth 1 \
+        --depth=1 \
         --single-branch \
         --branch "$GITHOOKS_CLONE_BRANCH" \
         "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1)

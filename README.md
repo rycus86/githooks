@@ -128,6 +128,8 @@ Supported entries for shared hooks are:
   - `file:///local/path/to/bare-repo.git@mybranch`
 
   All URLs can include a tag specification syntax at the end like `...@<tag>`, where `<tag>` is a Git tag, branch or commit hash.
+  The `file://` protocol is treated the same as a local path to a bare repository, see *local paths* below.
+
 - **Local paths** to bare and non-bare repositories such as:
 
   - `/local/path/to/checkout` (gets used directly)

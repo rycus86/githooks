@@ -249,16 +249,20 @@ legacy_transformation_adjust_local_paths() {
 
         MOVED="false"
         IFS="$IFS_NEWLINE"
-        while read -r LINE; do
+        while read -r LINE || [ -n "$LINE" ]; do
             unset IFS
 
-            if echo "$LINE" | grep -qE "^ *#"; then
-                echo "$LINE" >>"$TEMP"
-            fi
+            if echo "$LINE" | grep -qE "^\s*(#.*)?$"; then
 
-            if is_local_path "$LINE" || is_local_url "$LINE"; then
+                echo "$LINE" >>"$NEW_SHARED_LIST"
+
+            elif is_local_path "$LINE" || is_local_url "$LINE"; then
+
                 VALUE=$(git -C "$1" config --local githooks.shared)
-                git -C "$1" config --local githooks.shared "$VALUE,$LINE"
+                NEWSHARED="$LINE"
+                [ -n "$VALUE" ] && NEWSHARED="$VALUE,$NEWSHARED"
+
+                git -C "$1" config --local githooks.shared "$NEWSHARED"
 
                 echo "$LINE" >>"$MOVED_URLS"
                 MOVED="true"
@@ -985,7 +989,7 @@ find_existing_git_dirs() {
         # e.g. spourious HEAD file or .git dir which does not mark a repository
         REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
 
-        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -1150,11 +1154,11 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
+            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
                 # Not existing git dir -> skip.
                 true
 
-            elif echo "$EXISTING_REPOSITORY_LIST" | grep -q "$INSTALLED_REPO"; then
+            elif echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$INSTALLED_REPO"; then
                 # We already installed to this repository, don't install
                 echo "$INSTALLED_REPO" >>"$NEW_LIST"
 
@@ -1603,7 +1607,7 @@ update_release_clone() {
         if [ "$CURRENT_COMMIT" != "$UPDATE_COMMIT" ]; then
             # Fast forward merge in the changes if possible
             echo "Merging Githooks updates ..."
-            PULL_OUTPUT=$(
+            MERGE_OUTPUT=$(
                 execute_git "$GITHOOKS_CLONE_DIR" merge --ff-only "origin/$GITHOOKS_CLONE_BRANCH" 2>&1
             )
 
@@ -1613,7 +1617,7 @@ update_release_clone() {
                 echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
                 echo "  failed with:" >&2
                 echo "  -------------------" >&2
-                echo "$PULL_OUTPUT" >&2
+                echo "$MERGE_OUTPUT" >&2
                 echo "  -------------------" >&2
                 return 1
             fi
@@ -1681,7 +1685,7 @@ clone_release_repository() {
     CLONE_OUTPUT=$(
         git clone \
             -c core.hooksPath=/dev/null \
-            --depth 1 \
+            --depth=1 \
             --single-branch \
             --branch "$GITHOOKS_CLONE_BRANCH" \
             "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1
