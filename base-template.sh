@@ -583,7 +583,6 @@ update_shared_hooks_if_appropriate() {
 
     RUN_UPDATE="false"
     [ "$HOOK_NAME" = "post-merge" ] && RUN_UPDATE="true"
-    [ "$HOOK_NAME" = ".githooks.shared.trigger" ] && RUN_UPDATE="true"
     [ "$HOOK_NAME" = "post-checkout" ] && [ "$1" = "$GIT_NULL_REF" ] && RUN_UPDATE="true"
 
     if [ "$RUN_UPDATE" = "true" ]; then

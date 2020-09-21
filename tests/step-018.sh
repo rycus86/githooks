@@ -18,8 +18,7 @@ git init || exit 1
 
 mkdir -p .githooks &&
     echo 'file:///tmp/shared/hooks-018.git' >.githooks/.shared &&
-    HOOK_NAME='.githooks.shared.trigger' \
-        sh ~/.githooks/release/base-template-wrapper.sh ||
+    ~/.githooks/release/cli.sh shared update ||
     exit 1
 
 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
