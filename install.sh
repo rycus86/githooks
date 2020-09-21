@@ -35,12 +35,11 @@ execute_installation() {
 
     load_install_dir || return 1
 
-    # Legacy transformations
-    legacy_transformations_start || return 1
-
     if ! is_postupdate; then
 
         check_deprecation || return 1
+
+        legacy_transformations_before_update || return 1
 
         update_release_clone || return 1
 
@@ -58,6 +57,8 @@ execute_installation() {
     # meaning the `--internal-postupdate` flag is set
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
+
+    legacy_transformations_after_update || return 1
 
     if is_non_interactive; then
         disable_tty_input
@@ -133,7 +134,7 @@ check_deprecation() {
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
-legacy_transformations_start() {
+legacy_transformations_before_update() {
 
     LEGACY_TRANSFORM_FAILURES="false"
 
@@ -159,12 +160,69 @@ legacy_transformations_start() {
         cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
+    # Check if we need to move .shared files entries to `--local githooks.shared`
+    # and split comma-separated `--global githooks.shared`
+
     if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
         echo "! There were legacy transform errors: check stderr"
         return 1
     fi
 
     return 0
+}
+
+############################################################
+# Tests if the commit before a feature is introduced `$2`
+#   is after or equal the commit before the update `$1`.
+#   Note: Any feature that this install.sh knows about
+#   is an ancestor of the current version.
+#
+# Returns: 0 if succesful, 1 otherwise
+############################################################
+legacy_transformation_update_includes() {
+    LAST_COMMIT="$1"    # Last commit of before the update.
+    FEATURE_BEFORE="$2" # The commit right before the feature is introduced.
+
+    if [ -n "$LAST_COMMIT" ] &&
+        execute_git "$GITHOOKS_CLONE_DIR" merge-base --is-ancestor \
+            "$LAST_COMMIT" "$FEATURE_BEFORE" >/dev/null 2>&1; then
+        # feature-before >= last commit
+        return 0
+    fi
+
+    return 1
+}
+
+############################################################
+# Function to dispatch to all legacy transformations
+#   right after the update.
+#
+# Returns: 0 if succesful, 1 otherwise
+############################################################
+legacy_transformations_after_update() {
+    COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
+
+    if [ "$COMMIT_COUNT" != "1" ] && [ -z "$INTERNAL_UPDATED_FROM_COMMIT" ]; then
+        # If the clone dir has been updated (commit count != 1) and
+        # we do not have the update commit yet (meaning we are updating from an old version )
+        # we set it to the last commit where this feature (INTERNAL_UPDATED_FROM_COMMIT)
+        # was not yet available
+        INTERNAL_UPDATED_FROM_COMMIT="ab86d2a529f58744a71e79227e434f19b84589e6"
+    fi
+
+    # Check if we need transforms for:
+    # - `--global githooks.shared` is split into
+    #    multiple config values.
+    # which was introduced by PR #125 right after commit ab86d2a5:
+    if legacy_transformation_update_includes \
+        "$INTERNAL_UPDATED_FROM_COMMIT" \
+        "ab86d2a529f58744a71e79227e434f19b84589e6"; then
+        # We jumped over this feature during update
+        # and we need legacy transforms:
+        legacy_transformations_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
+    fi
+
 }
 
 ############################################################
@@ -185,8 +243,6 @@ legacy_transformations_end() {
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
         rm -rf "$INSTALL_DIR/autoupdate" || LEGACY_TRANSFORM_FAILURES="true"
     fi
-
-    legacy_transformations_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
 
     if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
         echo "! There were legacy transform errors: check stderr"
@@ -232,9 +288,6 @@ legacy_transformations_split_global_shared_entries() {
             IFS="$IFS_COMMA_NEWLINE"
         done
         unset IFS
-
-    else
-        git config --global --add githooks.shared "$CURRENT_LIST" || FAILURE="true"
     fi
 
     if [ "$FAILURE" = "true" ]; then
@@ -261,36 +314,16 @@ legacy_transformations_repo_end() {
     # Legacy values
     git -C "$1" config --local --unset githooks.autoupdate.registered
 
-    legacy_transformation_adjust_local_paths "$1" || return 1
+    # Check if we need transforms for:
+    # - .shared files: put local paths into `--local githooks.shared`.
+    # which was introduced by PR #125 right after commit ab86d2a5:
+    if legacy_transformation_update_includes \
+        "$INTERNAL_UPDATED_FROM_COMMIT" \
+        "ab86d2a529f58744a71e79227e434f19b84589e6"; then
+        legacy_transformation_adjust_local_paths "$1" || LEGACY_TRANSFORM_FAILURES="true"
+    fi
 
     return 0
-}
-
-#####################################################
-# Check if `$1` is not a supported git clone url and
-#   is treated as a local path to a repository.
-#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
-
-# Returns: 0 if it is a local path, 1 otherwise
-#####################################################
-is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
-        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
-        return 1
-    fi
-    return 0
-}
-
-#####################################################
-# Check if url `$1` is a local url, e.g `file://`.
-#
-# Returns: 0 if it is a local url, 1 otherwise
-#####################################################
-is_local_url() {
-    if echo "$1" | grep -iEq "^\s*file://"; then
-        return 0
-    fi
-    return 1
 }
 
 ############################################################
@@ -351,6 +384,34 @@ legacy_transformation_adjust_local_paths() {
 
     fi
 
+    return 0
+}
+
+#####################################################
+# Check if `$1` is not a supported git clone url and
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
+# Returns: 0 if it is a local path, 1 otherwise
+#####################################################
+is_local_path() {
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
+# Check if url `$1` is a local url, e.g `file://`.
+#
+# Returns: 0 if it is a local url, 1 otherwise
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -iEq "^\s*file://"; then
+        return 0
+    fi
+    return 1
 }
 
 ############################################################
@@ -426,8 +487,7 @@ parse_command_line_arguments() {
         elif [ "$p" = "--internal-updated-from" ]; then
             : # nothing to do here
         elif [ "$prev_p" = "--internal-updated-from" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
-            # INTERNAL_UPDATED_FROM_COMMIT="$p" # not yet used !
-            : # nothing to do here
+            INTERNAL_UPDATED_FROM_COMMIT="$p"
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
@@ -1700,8 +1760,8 @@ update_release_clone() {
         fi
     fi
 
-    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
-    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_BRANCH")
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
+    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" HEAD)
 
     echo "Githooks clone updated to version: $GITHOOKS_CLONE_CURRENT_COMMIT_DATE-$(echo "$GITHOOKS_CLONE_CURRENT_COMMIT" | cut -c -6)"
 
