@@ -1405,12 +1405,7 @@ update_shared_hooks_in() {
             echo "* Updating shared hooks from: $SHARED_REPO"
 
             # shellcheck disable=SC2086
-            PULL_OUTPUT="$(git -C "$SHARED_ROOT" \
-                --work-tree="$SHARED_ROOT" \
-                --git-dir="$SHARED_ROOT/.git" \
-                -c core.hooksPath=/dev/null \
-                pull \
-                2>&1)"
+            PULL_OUTPUT="$(execute_git "$SHARED_ROOT" pull 2>&1)"
 
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then

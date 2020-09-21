@@ -101,14 +101,16 @@ Hooks in individual repositories can be disabled as well, running `git hooks dis
 
 The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
 
-For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line or separated by comma, which hold common and shared hooks. Alternatively, you can have a comma-separated list of shared repositories set in the `githooks.shared` local or global Git configuration variable, and the hooks in these repositories will execute for all local projects where Githooks is installed. Below are example values for these setting.
+For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line, which hold common and shared hooks. Alternatively, you can have a shared repositories set by multiple `githooks.shared` local or global Git configuration variables, and the hooks in these repositories will execute for all local projects where Githooks is installed. Below are example values for these setting.
 
 ```shell
-$ git config --global --get githooks.shared # shared hooks in global config (for all repositories)
-https://github.com/shared/hooks-python.git,git@github.com:shared/repo.git@mybranch
+$ git config --global --get-all githooks.shared # shared hooks in global config (for all repositories)
+https://github.com/shared/hooks-python.git
+git@github.com:shared/repo.git@mybranch
 $ cd myrepo
-$ git config --local --get githooks.shared # shared hooks in local config (for specific repository)
-ssh://user@github.com/shared/special-hooks.git@v3.3.3,/opt/myspecialhooks
+$ git config --local --get-all githooks.shared # shared hooks in local config (for specific repository)
+ssh://user@github.com/shared/special-hooks.git@v3.3.3
+/opt/myspecialhooks
 $ cat .githooks/shared
 ssh://user@github.com/shared/special-hooks.git@otherbranch
 $ git hooks shared list

@@ -620,11 +620,7 @@ update_shared_hooks_if_appropriate() {
                 echo "* Updating shared hooks from: $SHARED_REPO"
 
                 # shellcheck disable=SC2086
-                PULL_OUTPUT=$(git -C "$SHARED_ROOT" \
-                    --work-tree="$SHARED_ROOT" \
-                    --git-dir="$SHARED_ROOT/.git" \
-                    -c core.hooksPath=/dev/null \
-                    pull 2>&1)
+                PULL_OUTPUT=$(execute_git "$SHARED_ROOT" pull 2>&1)
 
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
@@ -1079,7 +1075,7 @@ is_bare_repo() {
 }
 
 #####################################################
-# Safely execute a git command in the standard
+# Safely execute a git command in the
 #   clone dir `$1`.
 #
 # Returns: Error code from `git`
@@ -1158,7 +1154,7 @@ execute_update() {
         return 1
     fi
 
-    sh -s -- --internal-autoupdate <"$INSTALL_SCRIPT" || return 1
+    sh -s -- --internal-autoupdate --internal-install <"$INSTALL_SCRIPT" || return 1
     return 0
 }
 
