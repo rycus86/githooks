@@ -131,31 +131,37 @@ check_deprecation() {
 #   We are not yet deleting  old values since the install
 #   could go wrong.
 #
-# Returns:
-#   1 when failed, 0 otherwise
+# Returns: 0 if succesful, 1 otherwise
 ############################################################
 legacy_transformations_start() {
+
+    LEGACY_TRANSFORM_FAILURES="false"
 
     # Variable transformations in global git config
     # Can be applied to all versions without any problem
     OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneUrl)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.cloneUrl "$OLD_CONFIG_VALUE"
+        git config --global githooks.cloneUrl "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneBranch)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.cloneBranch "$OLD_CONFIG_VALUE"
+        git config --global githooks.cloneBranch "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     OLD_CONFIG_VALUE=$(git config --global githooks.previous.searchdir)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE"
+        git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     # Copy legacy file to new location
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
-        cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered"
+        cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered" || LEGACY_TRANSFORM_FAILURES="true"
+    fi
+
+    if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
+        echo "! There were legacy transform errors: check stderr"
+        return 1
     fi
 
     return 0
@@ -165,8 +171,7 @@ legacy_transformations_start() {
 # Function to dispatch to all legacy transformations
 #   at the end
 #
-# Returns:
-#   1 when failed, 0 otherwise
+# Returns: 0
 ############################################################
 legacy_transformations_end() {
 
@@ -178,8 +183,69 @@ legacy_transformations_end() {
 
     # Remove legacy registration file (we moved it to another location)
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
-        rm -rf "$INSTALL_DIR/autoupdate"
+        rm -rf "$INSTALL_DIR/autoupdate" || LEGACY_TRANSFORM_FAILURES="true"
     fi
+
+    legacy_transformations_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
+
+    if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
+        echo "! There were legacy transform errors: check stderr"
+        return 1
+    fi
+
+    return 0
+}
+
+############################################################
+# Transform all comma-delimited global \`githooks.shared\`
+#   values into multiple git config values.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transformations_split_global_shared_entries() {
+
+    CURRENT_LIST=$(git config --global --get-all githooks.shared)
+
+    # If we have more then one of these githooks.shared values
+    # we have passed this install update already.
+    if [ "$(echo "$CURRENT_LIST" | wc -l)" != "1" ]; then
+        return
+    fi
+
+    FAILURE="false"
+
+    # If it contains a comma, split it...
+    if echo "$CURRENT_LIST" | grep ","; then
+
+        git config --global --unset githooks.shared
+
+        # Split it and add all back
+        IFS="$IFS_COMMA_NEWLINE"
+        for ITEM in $CURRENT_LIST; do
+            unset IFS
+
+            if [ -n "$ITEM" ]; then
+                git config --global --add githooks.shared "$ITEM" || FAILURE="true"
+            fi
+
+            IFS="$IFS_COMMA_NEWLINE"
+        done
+        unset IFS
+
+    else
+        git config --global --add githooks.shared "$CURRENT_LIST" || FAILURE="true"
+    fi
+
+    if [ "$FAILURE" = "true" ]; then
+        echo "! Warning: Could not migrate the global shared hook repositories setting:" >&2
+        echo "\`$CURRENT_LIST\`" >&2
+        echo " Please check \`githooks.shared\` and add all comma-speparated" >&2
+        echo " values manually by running:" >&2
+        echo "  \$ git config --global --add githooks.shared <value>" >&2
+        LEGACY_TRANSFORM_FAILURES="true"
+    fi
+
     return 0
 }
 
