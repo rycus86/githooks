@@ -121,7 +121,7 @@ if [ "$CHECKSUM" != "$CHECKSUM_NOW" ]; then
 fi
 
 git hooks shared remove --global /tmp/shared/shared-clone.git
-if [ -n "$(git config --global --get githooks.shared)" ]; then
+if [ -n "$(git config --global --get-all githooks.shared)" ]; then
     echo "! Expected to not have any global shared hooks repository set" >&2
     exit 1
 fi
@@ -149,7 +149,7 @@ fi
 
 # Make normal shared hooks folder (no checkout)
 git hooks shared purge || exit 1
-git config --global --unset githooks.shared || exit 1
+git config --global --unset-all githooks.shared || exit 1
 rm -rf /tmp/shared/shared-clone.git/.git || exit 1
 
 git hooks shared add --local /tmp/shared/shared-clone.git || exit 1
@@ -160,7 +160,7 @@ if ! echo "$OUT" | grep -q "Shared hook: test1"; then
     exit 1
 fi
 
-if git config --global githooks.shared | grep "shared-clone.git"; then
+if git config --global --get-all githooks.shared | grep "shared-clone.git"; then
     echo "! Expected shared hook to be added only to local Git config" >&2
     exit 1
 fi

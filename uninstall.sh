@@ -344,6 +344,7 @@ uninstall_hooks_from_repo() {
             git config --local --unset githooks.single.install >/dev/null &&             # legacy setting (deperecated)
             git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1 && # legacy settings (deprecated)
             git config --local --unset githooks.install.registered >/dev/null 2>&1
+        git config --local --unset-all githooks.shared >/dev/null 2>&1
     )
 
     if [ "$UNINSTALLED" = "true" ]; then
@@ -604,7 +605,7 @@ uninstall() {
 
     # Unset global Githooks variables
     git config --global --unset githooks.runner
-    git config --global --unset githooks.shared
+    git config --global --unset-all githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled

@@ -37,7 +37,7 @@ testShared() {
         ! git hooks shared list | grep "first-shared" &&
         git hooks shared remove --global file:///tmp/shared/second-shared.git &&
         git hooks shared remove --global file:///tmp/shared/third-shared.git &&
-        [ -z "$(git config --global --get githooks.shared)" ] ||
+        [ -z "$(git config --global --get-all githooks.shared)" ] ||
         return 1
 }
 

@@ -93,7 +93,7 @@ $ git hooks shared list [--shared|--local|--global|--all]
 $ git hooks shared [update|pull]
 ```
 
-The `add` or `remove` subcommands adds or removes an item, given as `git-url` from the list. If `--global` is given, then the `githooks.shared` global Git configuration is modified, or if the `--local` option (default) is set, the `.githooks/.shared` file is modified in the local repository.
+The `add` or `remove` subcommands adds or removes an item, given as `git-url` from the list. If `--global` is given, then the `githooks.shared` global Git configuration variables are modified, or if the `--local` option (default) is set, the `.githooks/.shared` file is modified in the local repository.
 
 The `clear` subcommand deletes every item on either the global or the local list, or both when the `--all` option is given. The `purge` subcommand deletes the shared hook repositories already pulled locally.
 

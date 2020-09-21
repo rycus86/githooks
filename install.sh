@@ -257,12 +257,7 @@ legacy_transformation_adjust_local_paths() {
                 echo "$LINE" >>"$NEW_SHARED_LIST"
 
             elif is_local_path "$LINE" || is_local_url "$LINE"; then
-
-                VALUE=$(git -C "$1" config --local githooks.shared)
-                NEWSHARED="$LINE"
-                [ -n "$VALUE" ] && NEWSHARED="$VALUE,$NEWSHARED"
-
-                git -C "$1" config --local githooks.shared "$NEWSHARED"
+                git -C "$1" config --local --add githooks.shared "$NEWSHARED"
 
                 echo "$LINE" >>"$MOVED_URLS"
                 MOVED="true"
@@ -1381,7 +1376,7 @@ register_repo() {
 #   None
 ############################################################
 setup_shared_hook_repositories() {
-    if [ -n "$(git config --global --get githooks.shared)" ]; then
+    if [ -n "$(git config --global --get-all githooks.shared)" ]; then
         echo "Looks like you already have shared hook"
         printf "repositories setup, do you want to change them now? [y/N] "
     else
@@ -1400,31 +1395,42 @@ setup_shared_hook_repositories() {
 
     echo "OK, let's input them one-by-one and leave the input empty to stop."
 
-    SHARED_REPOS_LIST=""
+    set -x
+    PROVIDED="false"
     while true; do
         printf "Enter the clone URL of a shared repository: "
         read -r SHARED_REPO </dev/tty
         if [ -z "$SHARED_REPO" ]; then break; fi
 
-        if [ -n "$SHARED_REPOS_LIST" ]; then
-            SHARED_REPOS_LIST="${SHARED_REPOS_LIST},${SHARED_REPO}"
-        else
-            SHARED_REPOS_LIST="$SHARED_REPO"
+        if [ -n "$SHARED_REPO" ]; then
+
+            if [ "$PROVIDED" = "false" ]; then
+                git config --global --unset-all githooks.shared
+            fi
+
+            if git config --global --add githooks.shared "$SHARED_REPO"; then
+                PROVIDED="true"
+            else
+                PROVIDED="error"
+                break
+            fi
         fi
     done
 
-    if [ -z "$SHARED_REPOS_LIST" ] && git config --global --unset githooks.shared; then
+    if [ "$PROVIDED" = "false" ] &&
+        git config --global --unset githooks.shared; then
         echo "Shared hook repositories are now unset. If you want to set them up again in the future, run this script again, or change the 'githooks.shared' Git config variable manually."
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
-    elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
+    elif [ "$PROVIDED" = "true" ]; then
         # Trigger the shared hook repository checkout manually
         "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
-
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
         echo "! Failed to set up the shared hook repositories" >&2
+        git config --global --unset-all githooks.shared >/dev/null 2>&1
     fi
+    set +x
 }
 
 ############################################################

@@ -161,7 +161,7 @@ find_hook_path_to_enable_or_disable() {
             SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
             ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
 
-            ACTIVE_GLOBAL_REPO=$(git config --global --get githooks.shared | grep -o "$REMOTE_URL")
+            ACTIVE_GLOBAL_REPO=$(git config --global --get-all githooks.shared | grep -o "$REMOTE_URL")
 
             if [ "$ACTIVE_LOCAL_REPO" != "$REMOTE_URL" ] && [ "$ACTIVE_GLOBAL_REPO" != "$REMOTE_URL" ]; then
                 continue
@@ -577,7 +577,7 @@ git hooks list [type]
         fi
 
         # global shared hooks
-        SHARED_REPOS_LIST=$(git config --global --get githooks.shared)
+        SHARED_REPOS_LIST=$(git config --global --get-all githooks.shared)
         IFS="$IFS_NEWLINE"
         for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
             unset IFS
@@ -928,15 +928,7 @@ add_shared_hook_repo() {
             exit 1
         fi
 
-        CURRENT_LIST=$(git config "$SET_SHARED_TYPE" --get githooks.shared)
-
-        if [ -n "$CURRENT_LIST" ]; then
-            NEW_LIST="${CURRENT_LIST},${SHARED_REPO_URL}"
-        else
-            NEW_LIST="$SHARED_REPO_URL"
-        fi
-
-        git config "$SET_SHARED_TYPE" githooks.shared "$NEW_LIST" &&
+        git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_URL" &&
             echo "The new shared hook repository is successfully added" &&
             return
 
@@ -1003,37 +995,25 @@ remove_shared_hook_repo() {
             exit 1
         fi
 
-        CURRENT_LIST=$(git config "$SET_SHARED_TYPE" --get githooks.shared)
-        NEW_LIST=""
+        CURRENT_LIST=$(git config "$SET_SHARED_TYPE" --get-all githooks.shared)
 
-        IFS="$IFS_COMMA_NEWLINE"
+        # Unset all and add them back
+        git config "$SET_SHARED_TYPE" --unset-all githooks.shared
 
+        IFS="$IFS_NEWLINE"
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
             unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
 
-            if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
-            else
-                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
-            fi
-            IFS="$IFS_COMMA_NEWLINE"
+            git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_ITEM"
+            IFS="$IFS_NEWLINE"
         done
-
         unset IFS
 
-        if [ -z "$NEW_LIST" ]; then
-            clear_shared_hook_repos "$SET_SHARED_TYPE" && return || exit 1
-        fi
-
-        git config "$SET_SHARED_TYPE" githooks.shared "$NEW_LIST" &&
-            echo "The list of shared hook repositories is successfully changed" &&
-            return
-
-        echo "! Failed to remove a shared hook repository" >&2
-        exit 1
+        echo "The list of shared hook repositories is successfully changed"
+        return
 
     else
         if ! is_running_in_git_repo_root; then
@@ -1127,13 +1107,13 @@ clear_shared_hook_repos() {
             echo "  seem to be the root of a Git repository!" >&2
             CLEAR_REPOS_FAILED=1
         else
-            git config --local --unset githooks.shared
+            git config --local --unset-all githooks.shared
             echo "Shared hook repository list in local Git config cleared"
         fi
     fi
 
     if [ -n "$CLEAR_GLOBAL_REPOS" ]; then
-        git config --global --unset githooks.shared
+        git config --global --unset-all githooks.shared
         echo "Shared hook repository list in global Git config cleared"
     fi
 
@@ -1185,13 +1165,14 @@ list_shared_hook_repos() {
         unset IFS
 
         echo "Shared hook repositories in $LIST_CONFIG Git config:"
+        SHARED_REPOS_LIST=$(git config "--$LIST_CONFIG" --get-all githooks.shared)
 
-        if [ -z "$(git config "--$LIST_CONFIG" --get githooks.shared)" ]; then
+        if [ -z "$SHARED_REPOS_LIST" ]; then
             echo "  - None"
         else
 
-            IFS="$IFS_COMMA_NEWLINE"
-            for LIST_ITEM in $(git config "--$LIST_CONFIG" --get githooks.shared); do
+            IFS="$IFS_NEWLINE"
+            for LIST_ITEM in $SHARED_REPOS_LIST; do
                 unset IFS
 
                 set_shared_root "$LIST_ITEM"
@@ -1288,12 +1269,12 @@ git hooks shared pull
         update_shared_hooks_in --shared "$SHARED_HOOKS"
     fi
 
-    SHARED_HOOKS=$(git config --local --get githooks.shared)
+    SHARED_HOOKS=$(git config --local --get-all githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
         update_shared_hooks_in --local "$SHARED_HOOKS"
     fi
 
-    SHARED_HOOKS=$(git config --global --get githooks.shared)
+    SHARED_HOOKS=$(git config --global --get-all githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
         update_shared_hooks_in --global "$SHARED_HOOKS"
     fi
@@ -2341,16 +2322,9 @@ config_shared_hook_repos() {
 
         shift
 
-        NEW_LIST=""
         for SHARED_REPO_ITEM in "$@"; do
-            if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
-            else
-                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
-            fi
+            git config "$SHARED_TYPE" --add githooks.shared "$SHARED_REPO_ITEM"
         done
-
-        git config "$SHARED_TYPE" githooks.shared "$NEW_LIST"
 
     elif [ "$1" = "reset" ]; then
         SHARED_TYPE="--global"
@@ -2361,7 +2335,7 @@ config_shared_hook_repos() {
             echo "! Wrong argument \`$2\`" >&2
         fi
 
-        git config "$SHARED_TYPE" --unset githooks.shared
+        git config "$SHARED_TYPE" --unset-all githooks.shared
 
     elif [ "$1" = "print" ]; then
         SHARED_TYPE="--global"

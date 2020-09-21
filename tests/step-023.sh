@@ -41,7 +41,7 @@ y
 
 fi
 
-git config --global --get githooks.shared | grep -v 'some-previous-example' || exit 1
+git config --global --get-all githooks.shared | grep -v 'some-previous-example' || exit 1
 
 mkdir -p /tmp/test023 && cd /tmp/test023 || exit 1
 git init || exit 1

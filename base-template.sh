@@ -247,12 +247,12 @@ execute_all_shared_hooks() {
         process_shared_hooks --shared "$SHARED_HOOKS" "$@" || return 1
     fi
 
-    SHARED_HOOKS=$(git config --local --get githooks.shared)
+    SHARED_HOOKS=$(git config --local --get-all githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
         process_shared_hooks --local "$SHARED_HOOKS" "$@" || return 1
     fi
 
-    SHARED_HOOKS=$(git config --global --get githooks.shared)
+    SHARED_HOOKS=$(git config --global --get-all githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
         process_shared_hooks --global "$SHARED_HOOKS" "$@" || return 1
     fi
