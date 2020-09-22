@@ -1424,7 +1424,9 @@ update_shared_hooks_in() {
 
             if [ -n "$SHARED_REPO_CLONE_BRANCH" ]; then
                 # shellcheck disable=SC2086
-                CLONE_OUTPUT=$(git -c core.hooksPath=/dev/null clone \
+                CLONE_OUTPUT=$(git clone \
+                    -c core.hooksPath=/dev/null \
+                    --template=/dev/null \
                     --single-branch \
                     --branch "$SHARED_REPO_CLONE_BRANCH" \
                     $ADD_ARGS \
@@ -1432,7 +1434,9 @@ update_shared_hooks_in() {
                     "$SHARED_ROOT" 2>&1)
             else
                 # shellcheck disable=SC2086
-                CLONE_OUTPUT=$(git -c core.hooksPath=/dev/null clone \
+                CLONE_OUTPUT=$(git clone \
+                    -c core.hooksPath=/dev/null \
+                    --template=/dev/null \
                     --single-branch \
                     $ADD_ARGS \
                     "$SHARED_REPO_CLONE_URL" \
@@ -1863,6 +1867,7 @@ clone_release_repository() {
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
+        --template=/dev/null \
         --depth=1 \
         --single-branch \
         --branch "$GITHOOKS_CLONE_BRANCH" \

@@ -1809,6 +1809,7 @@ clone_release_repository() {
     CLONE_OUTPUT=$(
         git clone \
             -c core.hooksPath=/dev/null \
+            --template=/dev/null \
             --depth=1 \
             --single-branch \
             --branch "$GITHOOKS_CLONE_BRANCH" \
