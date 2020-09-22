@@ -39,7 +39,7 @@ execute_installation() {
 
         check_deprecation || return 1
 
-        legacy_transformations_before_update || return 1
+        legacy_transform_before_update || return 1
 
         update_release_clone || return 1
 
@@ -58,7 +58,7 @@ execute_installation() {
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
 
-    legacy_transformations_after_update || return 1
+    legacy_transform_after_update || return 1
 
     if is_non_interactive; then
         disable_tty_input
@@ -102,7 +102,7 @@ execute_installation() {
 
     # Legacy transformations
     if ! is_dry_run; then
-        legacy_transformations_end || return 1
+        legacy_transform_end || return 1
     fi
 
     thank_you
@@ -134,7 +134,7 @@ check_deprecation() {
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
-legacy_transformations_before_update() {
+legacy_transform_before_update() {
 
     LEGACY_TRANSFORM_FAILURES="false"
 
@@ -172,21 +172,16 @@ legacy_transformations_before_update() {
 }
 
 ############################################################
-# Tests if the commit before a feature is introduced `$2`
-#   is after or equal the commit before the update `$1`.
-#   Note: Any feature that this install.sh knows about
-#   is an ancestor of the current version.
+# Tests if the commit sha `$1`
+#   is before or equal of the commit sha `$2`.
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
-legacy_transformation_update_includes() {
-    LAST_COMMIT="$1"    # Last commit of before the update.
-    FEATURE_BEFORE="$2" # The commit right before the feature is introduced.
-
-    if [ -n "$LAST_COMMIT" ] &&
+legacy_transform_is_ancestor() {
+    if [ -n "$1" ] && [ -n "$2" ] &&
         execute_git "$GITHOOKS_CLONE_DIR" merge-base --is-ancestor \
-            "$LAST_COMMIT" "$FEATURE_BEFORE" >/dev/null 2>&1; then
-        # feature-before >= last commit
+            "$1" "$2" >/dev/null 2>&1; then
+        # commit 1 <= commit 2
         return 0
     fi
 
@@ -199,7 +194,7 @@ legacy_transformation_update_includes() {
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
-legacy_transformations_after_update() {
+legacy_transform_after_update() {
     COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
 
@@ -211,16 +206,13 @@ legacy_transformations_after_update() {
         INTERNAL_UPDATED_FROM_COMMIT="ab86d2a529f58744a71e79227e434f19b84589e6"
     fi
 
-    # Check if we need transforms for:
-    # - `--global githooks.shared` is split into
-    #    multiple config values.
+    # Check if we need transforms for `--global githooks.shared`
+    # to be split into multiple config values
     # which was introduced by PR #125 right after commit ab86d2a5:
-    if legacy_transformation_update_includes \
+    if legacy_transform_is_ancestor \
         "$INTERNAL_UPDATED_FROM_COMMIT" \
         "ab86d2a529f58744a71e79227e434f19b84589e6"; then
-        # We jumped over this feature during update
-        # and we need legacy transforms:
-        legacy_transformations_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
+        legacy_transform_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
 }
@@ -231,7 +223,7 @@ legacy_transformations_after_update() {
 #
 # Returns: 0
 ############################################################
-legacy_transformations_end() {
+legacy_transform_end() {
 
     # Variable transformations in global git config
     # Can be applied to all versions without any problem
@@ -259,7 +251,7 @@ legacy_transformations_end() {
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transformations_split_global_shared_entries() {
+legacy_transform_split_global_shared_entries() {
 
     CURRENT_LIST=$(git config --global --get-all githooks.shared)
 
@@ -309,18 +301,18 @@ legacy_transformations_split_global_shared_entries() {
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transformations_repo_end() {
+legacy_transform_repo_end() {
 
     # Legacy values
     git -C "$1" config --local --unset githooks.autoupdate.registered
 
-    # Check if we need transforms for:
-    # - .shared files: put local paths into `--local githooks.shared`.
+    # Check if we need transforms for `.shared` files:
+    # Put local paths into `--local githooks.shared`.
     # which was introduced by PR #125 right after commit ab86d2a5:
-    if legacy_transformation_update_includes \
+    if legacy_transform_is_ancestor \
         "$INTERNAL_UPDATED_FROM_COMMIT" \
         "ab86d2a529f58744a71e79227e434f19b84589e6"; then
-        legacy_transformation_adjust_local_paths "$1" || LEGACY_TRANSFORM_FAILURES="true"
+        legacy_transform_adjust_local_paths "$1" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     return 0
@@ -333,7 +325,7 @@ legacy_transformations_repo_end() {
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transformation_adjust_local_paths() {
+legacy_transform_adjust_local_paths() {
 
     if [ "$(git -C "$1" rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
         SHARED_FILE="$1/.githooks/.shared"
@@ -1448,7 +1440,7 @@ install_hooks_into_repo() {
             echo "[Dry run] Hooks would have been installed into $TARGET"
         else
             register_repo "$TARGET"
-            legacy_transformations_repo_end "$TARGET"
+            legacy_transform_repo_end "$TARGET"
 
             echo "Hooks installed into $TARGET"
         fi
