@@ -31,6 +31,8 @@ execute_installation() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
+    IFS_COMMA_NEWLINE=",$IFS_NEWLINE"
+
     parse_command_line_arguments "$@" || return 1
 
     load_install_dir || return 1
@@ -256,9 +258,9 @@ legacy_transform_split_global_shared_entries() {
     CURRENT_LIST=$(git config --global --get-all githooks.shared)
 
     # If we have more then one of these githooks.shared values
-    # we have passed this install update already.
+    # we have surely passed this install update already.
     if [ "$(echo "$CURRENT_LIST" | wc -l)" != "1" ]; then
-        return
+        return 0
     fi
 
     FAILURE="false"
@@ -348,7 +350,7 @@ legacy_transform_adjust_local_paths() {
                 echo "$LINE" >>"$NEW_SHARED_LIST"
 
             elif is_local_path "$LINE" || is_local_url "$LINE"; then
-                git -C "$1" config --local --add githooks.shared "$NEWSHARED"
+                git -C "$1" config --local --add githooks.shared "$LINE"
 
                 echo "$LINE" >>"$MOVED_URLS"
                 MOVED="true"
