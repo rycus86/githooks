@@ -264,7 +264,7 @@ legacy_transform_split_global_shared_entries() {
     FAILURE="false"
 
     # If it contains a comma, split it...
-    if echo "$CURRENT_LIST" | grep ","; then
+    if echo "$CURRENT_LIST" | grep -q ","; then
 
         git config --global --unset githooks.shared
 
@@ -1513,7 +1513,6 @@ setup_shared_hook_repositories() {
 
     echo "OK, let's input them one-by-one and leave the input empty to stop."
 
-    set -x
     PROVIDED="false"
     while true; do
         printf "Enter the clone URL of a shared repository: "
@@ -1548,7 +1547,6 @@ setup_shared_hook_repositories() {
         echo "! Failed to set up the shared hook repositories" >&2
         git config --global --unset-all githooks.shared >/dev/null 2>&1
     fi
-    set +x
 }
 
 ############################################################
