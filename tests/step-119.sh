@@ -13,16 +13,16 @@ cleanup() {
 
 trap 'cleanup' EXIT
 
-git clone https://github.com/rycus86/githooks.git /var/lib/githooks-original
+git clone -c core.hooksPath=/dev/null https://github.com/rycus86/githooks.git ~/githooks-original
 
-cd /var/lib/githooks-original &&
+cd ~/githooks-original &&
     git checkout master &&
     git checkout -b master-old &&
     git checkout master &&
     git reset --hard 49464f09f0 || exit 1
 
 # Install old version
-if ! sh /var/lib/githooks/install.sh --clone-url /var/lib/githooks-original --clone-branch "master"; then
+if ! sh /var/lib/githooks/install.sh --clone-url ~/githooks-original --clone-branch "master"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -75,14 +75,19 @@ fi
 # Update to new version
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-cd /var/lib/githooks-original &&
+cd ~/githooks-original &&
     git reset --hard master-old &&
     cp -r /var/lib/githooks/* ./ &&
     git commit -a -m "Current Changes: Simulating a merge with this feature branch" || exit 11
 
 # Trigger update
-cd /tmp/test119 &&
-    git hooks update || exit 12
+cd /tmp/test119 || exit 12
+UPDATE_OUT=$(git hooks update 2>&1)
+# shellcheck disable=SC2181
+if [ $? -ne 0 ]; then
+    echo "! Expected update to succeed: $UPDATE_OUT"
+    exit 1
+fi
 
 # Check if we have multiple githook.shared values now
 COUNT=$(git config --global --get-all githooks.shared | wc -l)
@@ -92,24 +97,33 @@ if [ "$COUNT" != "2" ]; then
     exit 1
 fi
 
-# Check if local path got moved to --local githooks.shared
-if grep "shared4" /tmp/test119/.githooks/.shared ||
-    ! git config --local githooks.shared | grep -q "shared4"; then
-    echo "! Expected local path to be moved after legacy transform"
-    cat /tmp/test119/.githooks/.shared
-    echo "githooks.shared: $(git config --local githooks.shared)"
-    exit 1
-fi
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    if ! echo "$UPDATE_OUT" | grep "DEPRECATION WARNING: Local paths for shared hook repositories"; then
+        echo "! Expected deprecation warning to move local paths manually"
+        exit 1
+    fi
+    # We are finished here, since we need to manually clean up...
+else
 
-# We need a hooks update (folder naming has changed)
-git hooks shared update || exit 13
+    # Check if local path got moved to --local githooks.shared
+    if grep "shared4" /tmp/test119/.githooks/.shared ||
+        ! git config --local githooks.shared | grep -q "shared4"; then
+        echo "! Expected local path to be moved after legacy transform"
+        cat /tmp/test119/.githooks/.shared
+        echo "githooks.shared: $(git config --local githooks.shared)"
+        exit 1
+    fi
 
-# Check again if all hooks get executed
-OUT=$(git commit --allow-empty -m "Testing" 2>&1)
-if ! echo "$OUT" | grep -q "Shared repo 1: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 2: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 3: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 4: pre-commit"; then
-    echo "! Expected to have run 4 shared hooks: $OUT" >&2
-    exit 10
+    # We need a hooks update (folder naming has changed)
+    git hooks shared update || exit 13
+
+    # Check again if all hooks get executed
+    OUT=$(git commit --allow-empty -m "Testing" 2>&1)
+    if ! echo "$OUT" | grep -q "Shared repo 1: pre-commit" ||
+        ! echo "$OUT" | grep -q "Shared repo 2: pre-commit" ||
+        ! echo "$OUT" | grep -q "Shared repo 3: pre-commit" ||
+        ! echo "$OUT" | grep -q "Shared repo 4: pre-commit"; then
+        echo "! Expected to have run 4 shared hooks: $OUT" >&2
+        exit 10
+    fi
 fi

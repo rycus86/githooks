@@ -238,6 +238,8 @@ legacy_transform_end() {
         rm -rf "$INSTALL_DIR/autoupdate" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
+    legacy_transform_registered_repos || LEGACY_TRANSFORM_FAILURES="true"
+
     if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
         echo "! There were legacy transform errors: check stderr"
         return 1
@@ -298,23 +300,59 @@ legacy_transform_split_global_shared_entries() {
 
 ############################################################
 # Function to dispatch to all legacy transformations
-#   at the end of a install into a repository
+#   for all registered repos.
 #
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transform_repo_end() {
-
-    # Legacy values
-    git -C "$1" config --local --unset githooks.autoupdate.registered
+legacy_transform_registered_repos() {
 
     # Check if we need transforms for `.shared` files:
     # Put local paths into `--local githooks.shared`.
     # which was introduced by PR #125 right after commit ab86d2a5:
+    MOVE_PATHS="false"
     if legacy_transform_is_ancestor \
         "$INTERNAL_UPDATED_FROM_COMMIT" \
         "ab86d2a529f58744a71e79227e434f19b84589e6"; then
-        legacy_transform_adjust_local_paths "$1" || LEGACY_TRANSFORM_FAILURES="true"
+        MOVE_PATHS="true"
+    fi
+
+    if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
+
+        echo >&2
+        echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
+        echo "  configured with \`.githooks/.shared\` files per repository" >&2
+        echo "  are no more supported and need" >&2
+        echo "  to be moved manually to the local Git configuration variable" >&2
+        echo "  \`githooks.shared\` by running:" >&2
+        echo "    \$ git hooks shared add --local <local path>" >&2
+        echo >&3
+
+    else
+
+        LIST="$INSTALL_DIR/registered"
+        if [ -f "$LIST" ]; then
+            IFS="$IFS_NEWLINE"
+            while read -r REGISTERED_REPO; do
+                unset IFS
+
+                if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+                    # Not existing git dir -> skip.
+                    true
+                else
+                    # Remove legacy values
+                    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
+
+                    if [ "$MOVE_PATHS" = "true" ]; then
+                        legacy_transform_adjust_local_paths "$REGISTERED_REPO" ||
+                            LEGACY_TRANSFORM_FAILURES="true"
+                    fi
+                fi
+
+                IFS="$IFS_NEWLINE"
+            done <"$LIST"
+        fi
+
     fi
 
     return 0
@@ -1444,8 +1482,6 @@ install_hooks_into_repo() {
             echo "[Dry run] Hooks would have been installed into $TARGET"
         else
             register_repo "$TARGET"
-            legacy_transform_repo_end "$TARGET"
-
             echo "Hooks installed into $TARGET"
         fi
     fi
