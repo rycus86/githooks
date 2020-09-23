@@ -16,13 +16,12 @@ trap 'cleanup' EXIT
 git clone -c core.hooksPath=/dev/null https://github.com/rycus86/githooks.git ~/githooks-original
 
 cd ~/githooks-original &&
-    git checkout master &&
-    git checkout -b master-old &&
+    git branch master-old origin/master &&
     git checkout master &&
     git reset --hard 49464f09f0 || exit 1
 
 # Install old version
-if ! sh /var/lib/githooks/install.sh --clone-url ~/githooks-original --clone-branch "master"; then
+if ! sh ~/githooks-original/install.sh --clone-url ~/githooks-original --clone-branch "master"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -35,7 +34,7 @@ makeShared() {
         git init &&
         mkdir -p .githooks/pre-commit &&
         git config core.hooksPath "/dev/null" && # dont execute hooks in this repo!
-        echo "echo 'Shared repo $idx: pre-commit'" >.githooks/pre-commit/sample-one &&
+        echo "printf 'Shared repo $idx: pre-commit,'" >.githooks/pre-commit/sample-one &&
         git add . &&
         git commit -a -m 'Testing 1' ||
         return 1
@@ -64,10 +63,7 @@ git hooks config accept trusted || exit 9
 git hooks shared update || exit 10
 
 OUT=$(git commit -a -m "Testing" 2>&1)
-if ! echo "$OUT" | grep -q "Shared repo 1: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 2: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 3: pre-commit" ||
-    ! echo "$OUT" | grep -q "Shared repo 4: pre-commit"; then
+if ! echo "$OUT" | grep -q "Shared repo 1: pre-commit,Shared repo 2: pre-commit,Shared repo 3: pre-commit,Shared repo 4: pre-commit"; then
     echo "! Expected to have run 4 shared hooks: $OUT" >&2
     exit 10
 fi
@@ -99,7 +95,7 @@ fi
 
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     if ! echo "$UPDATE_OUT" | grep "DEPRECATION WARNING: Local paths for shared hook repositories"; then
-        echo "! Expected deprecation warning to move local paths manually"
+        echo "! Expected deprecation warning to move local paths manually: $UPDATE_OUT"
         exit 1
     fi
     # We are finished here, since we need to manually clean up...

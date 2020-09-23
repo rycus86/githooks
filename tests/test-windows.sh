@@ -39,8 +39,7 @@ sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh &&
     sed -i -E "s|GITHOOKS_CLONE_URL=\"http.*\"|GITHOOKS_CLONE_URL=\"$ROOT_DIR\"|" "$ROOT_DIR"/cli.sh "$ROOT_DIR"/base-template.sh "$ROOT_DIR"/install.sh | exit 5
 
 if [ -n "${EXTRA_INSTALL_ARGS}" ]; then
-    sed -i "s|sh \"$ROOT_DIR\"/install.sh|sh \"$ROOT_DIR\"/install.sh \${EXTRA_INSTALL_ARGS}|g" "$GITHOOKS_TESTS"/step-* || exit 6
-    sed -i -E "s|sh -c (.*) -- |sh -c \1 -- \${EXTRA_INSTALL_ARGS} |g" "$GITHOOKS_TESTS"/step-* || exit 7
+    sed -i -E "s|sh (.*)/install.sh|sh \1/install.sh \${EXTRA_INSTALL_ARGS}|g" "$GITHOOKS_TESTS"/step-* || exit 6
 fi
 
 # Patch all paths to use windows base path

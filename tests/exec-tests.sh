@@ -48,8 +48,7 @@ RUN echo "Make test gitrepo to clone from ..." && \
 
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
-        sed -i "s|sh /var/lib/githooks/install.sh|sh /var/lib/githooks/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
-        sed -i -E "s|sh -c (.*) -- |sh -c \\1 -- \${EXTRA_INSTALL_ARGS} |g" /var/lib/tests/step-* ; \\
+        sed -i -E "s|sh (.*)/install.sh|sh \1/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
     fi
 
 # Always don't delete LFS Hooks (for testing, default is unset, but cumbersome for tests)

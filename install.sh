@@ -318,16 +318,16 @@ legacy_transform_registered_repos() {
     fi
 
     if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
-
-        echo >&2
-        echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
-        echo "  configured with \`.githooks/.shared\` files per repository" >&2
-        echo "  are no more supported and need" >&2
-        echo "  to be moved manually to the local Git configuration variable" >&2
-        echo "  \`githooks.shared\` by running:" >&2
-        echo "    \$ git hooks shared add --local <local path>" >&2
-        echo >&3
-
+        if [ "$MOVE_PATHS" = "true" ]; then
+            echo >&2
+            echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
+            echo "  configured with \`.githooks/.shared\` files per repository" >&2
+            echo "  are no more supported and need" >&2
+            echo "  to be moved manually to the local Git configuration variable" >&2
+            echo "  \`githooks.shared\` by running:" >&2
+            echo "    \$ git hooks shared add --local <local path>" >&2
+            echo >&2
+        fi
     else
 
         LIST="$INSTALL_DIR/registered"
