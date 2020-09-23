@@ -606,7 +606,9 @@ is_non_interactive() {
 #   0 if we should skip, 1 otherwise
 ############################################################
 should_skip_install_into_existing_repositories() {
-    [ "$SKIP_INSTALL_INTO_EXISTING" = "true" ] || return 1
+    [ "$SKIP_INSTALL_INTO_EXISTING" = "true" ] ||
+        use_core_hookspath ||
+        [ "$(git config --global githooks.useCoreHooksPath)" = "true" ] || return 1
 }
 
 ############################################################
