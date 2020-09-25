@@ -716,7 +716,7 @@ execute_shared_hooks() {
 
             echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
             if [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
-                echo "  It is not existing." >&2
+                echo "  It does not exist." >&2
             else
                 echo "  It is not available. To fix, run:" >&2
                 echo "    \$ git hooks shared update" >&2
