@@ -106,7 +106,7 @@ set_main_variables() {
     load_install_dir
 
     # Global IFS for loops
-    IFS_COMMA_NEWLINE=",
+    IFS_NEWLINE="
 "
 
     # Fail if the shared root is not available (if enabled)
@@ -564,9 +564,9 @@ set_shared_root() {
         fi
 
         # Define the shared clone folder
-        SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
+        SHA_HASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
         NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
-        SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
+        SHARED_ROOT="$INSTALL_DIR/shared/$SHA_HASH-$NAME"
     fi
 }
 
@@ -587,11 +587,7 @@ update_shared_hooks_if_appropriate() {
 
     if [ "$RUN_UPDATE" = "true" ]; then
 
-        # split on comma and newline
-        IFS_TMP="$IFS_COMMA_NEWLINE"
-        [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
-        IFS="$IFS_TMP"
-
+        IFS="$IFS_NEWLINE"
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
 
@@ -664,7 +660,7 @@ update_shared_hooks_if_appropriate() {
                     echo "$CLONE_OUTPUT" >&2
                 fi
             fi
-            IFS="$IFS_TMP"
+            IFS="$IFS_NEWLINE"
         done
 
         unset IFS
@@ -679,18 +675,15 @@ update_shared_hooks_if_appropriate() {
 #   1 in case a hook fails, 0 otherwise
 #####################################################
 execute_shared_hooks() {
-    # split on comma and newline
-    IFS_TMP="$IFS_COMMA_NEWLINE"
-    [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
-    IFS="$IFS_TMP"
 
+    IFS="$IFS_NEWLINE"
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
         set_shared_root "$SHARED_REPO"
 
         if echo "$EXECUTED_SHARED_HOOKS" | grep -F -q "$SHARED_ROOT"; then
-            echo "! Note: Shared hooks entrys:" >&2
+            echo "! Note: Shared hooks entry:" >&2
             echo "  \`$SHARED_REPO\`" >&2
             echo "  is already listed and will be skipped." >&2
             continue
@@ -759,7 +752,7 @@ execute_shared_hooks() {
         EXECUTED_SHARED_HOOKS="$SHARED_ROOT
 $EXECUTED_SHARED_HOOKS"
 
-        IFS="$IFS_TMP"
+        IFS="$IFS_NEWLINE"
     done
     unset IFS
 }

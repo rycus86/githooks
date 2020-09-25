@@ -31,8 +31,6 @@ execute_installation() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
-    IFS_COMMA_NEWLINE=",$IFS_NEWLINE"
-
     parse_command_line_arguments "$@" || return 1
 
     load_install_dir || return 1
@@ -257,13 +255,7 @@ legacy_transform_end() {
 ############################################################
 legacy_transform_split_global_shared_entries() {
 
-    CURRENT_LIST=$(git config --global --get-all githooks.shared)
-
-    # If we have more then one of these githooks.shared values
-    # we have surely passed this install update already.
-    if [ "$(echo "$CURRENT_LIST" | wc -l)" != "1" ]; then
-        return 0
-    fi
+    CURRENT_LIST=$(git config --global --get githooks.shared)
 
     FAILURE="false"
 
@@ -273,7 +265,7 @@ legacy_transform_split_global_shared_entries() {
         git config --global --unset githooks.shared
 
         # Split it and add all back
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS=",$IFS_NEWLINE"
         for ITEM in $CURRENT_LIST; do
             unset IFS
 
@@ -281,7 +273,7 @@ legacy_transform_split_global_shared_entries() {
                 git config --global --add githooks.shared "$ITEM" || FAILURE="true"
             fi
 
-            IFS="$IFS_COMMA_NEWLINE"
+            IFS=",$IFS_NEWLINE"
         done
         unset IFS
     fi
@@ -1580,7 +1572,7 @@ setup_shared_hook_repositories() {
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif [ "$PROVIDED" = "true" ]; then
         # Trigger the shared hook repository checkout manually
-        "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
+        sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else

@@ -95,7 +95,6 @@ set_main_variables() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
-    IFS_COMMA_NEWLINE=",$IFS_NEWLINE"
 }
 
 #####################################################
@@ -1160,7 +1159,7 @@ list_shared_hook_repos() {
         esac
     done
 
-    IFS="$IFS_COMMA_NEWLINE"
+    IFS=","
     for LIST_CONFIG in $LIST_CONFIGS; do
         unset IFS
 
@@ -1193,12 +1192,12 @@ list_shared_hook_repos() {
 
                 echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_COMMA_NEWLINE"
+                IFS="$IFS_NEWLINE"
             done
             unset IFS
         fi
 
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS=","
     done
     unset IFS
 
@@ -1358,9 +1357,9 @@ set_shared_root() {
         fi
 
         # Define the shared clone folder
-        SHAHASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
+        SHA_HASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
         NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
-        SHARED_ROOT="$INSTALL_DIR/shared/$SHAHASH-$NAME"
+        SHARED_ROOT="$INSTALL_DIR/shared/$SHA_HASH-$NAME"
     fi
 }
 
@@ -1372,11 +1371,7 @@ update_shared_hooks_in() {
     SHARED_HOOKS_TYPE="$1"
     SHARED_REPOS_LIST="$2"
 
-    # split on comma and newline
-    IFS_TMP="$IFS_COMMA_NEWLINE"
-    [ "$SHARED_HOOKS_TYPE" = "--shared" ] && IFS_TMP="$IFS_NEWLINE"
-    IFS="$IFS_TMP"
-
+    IFS="$IFS_NEWLINE"
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
@@ -1450,7 +1445,7 @@ update_shared_hooks_in() {
             fi
         fi
 
-        IFS="$IFS_TMP"
+        IFS="$IFS_NEWLINE"
     done
 
     unset IFS

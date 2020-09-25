@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test:
-#   Test local urls of shared hooks to not be cloned and updated
+#   Test urls and local paths in shared hooks
 
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
@@ -165,7 +165,7 @@ if git config --global --get-all githooks.shared | grep "shared-clone.git"; then
     exit 1
 fi
 
-# Duplicat to global shared hooks
+# Duplicate to global shared hooks
 git hooks shared add --global /tmp/shared/shared-clone.git || exit 1
 OUT=$(git commit --allow-empty -m "Test shared hooks" 2>&1)
 echo "$OUT" | grep -qo "Shared hook: test1" | wc -l
