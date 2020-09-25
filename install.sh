@@ -206,13 +206,24 @@ legacy_transform_after_update() {
         INTERNAL_UPDATED_FROM_COMMIT="ab86d2a529f58744a71e79227e434f19b84589e6"
     fi
 
-    # Check if we need transforms for `--global githooks.shared`
-    # to be split into multiple config values
-    # which was introduced by PR #125 right after commit ab86d2a5:
+    # Because of changes in PR #125 right after commit ab86d2a5:
+    # - Check if we need transforms for `--global githooks.shared`
+    #   to be split into multiple config values
+    # - Show info that all hook hashes are differently computed now
+    #   and every hooks needs to be trusted again.
+    # - Show info that `githooks.failOnNonExistingHooks` is enabled due to renaming
+    #   internal cloned shared hooks repositories.
     if legacy_transform_is_ancestor \
         "$INTERNAL_UPDATED_FROM_COMMIT" \
         "ab86d2a529f58744a71e79227e434f19b84589e6"; then
+
         legacy_transform_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
+
+        echo >&2
+        echo "! Info: Because the hash algorithm changed from" >&2
+        echo "  $(md5sum) to $(git hash-object)," >&2
+        echo "  you unfortunately need to retrust all hooks again." >&2
+        echo >&2
     fi
 
 }
@@ -302,15 +313,15 @@ legacy_transform_registered_repos() {
     # Check if we need transforms for `.shared` files:
     # Put local paths into `--local githooks.shared`.
     # which was introduced by PR #125 right after commit ab86d2a5:
-    MOVE_PATHS="false"
+    PR_125="false"
     if legacy_transform_is_ancestor \
         "$INTERNAL_UPDATED_FROM_COMMIT" \
         "ab86d2a529f58744a71e79227e434f19b84589e6"; then
-        MOVE_PATHS="true"
+        PR_125="true"
     fi
 
     if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
-        if [ "$MOVE_PATHS" = "true" ]; then
+        if [ "$PR_125" = "true" ]; then
             echo >&2
             echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
             echo "  configured with \`.githooks/.shared\` files per repository" >&2
@@ -319,6 +330,17 @@ legacy_transform_registered_repos() {
             echo "  \`githooks.shared\` by running:" >&2
             echo "    \$ git hooks shared add --local <local path>" >&2
             echo >&2
+
+            echo >&2
+            echo "! DEPRECATION WARNING: Because of renaming of internal cloned shared" >&2
+            echo "  hook repositories, you should update all shared hook repositories" >&2
+            echo "  by running in all repositories using Githooks:"
+            echo "    \$ git hooks shared update"
+            echo "  The Git config variable \`githooks.failOnNonExistingSharedHooks\` has been" >&2
+            echo "  enabled globally to safely fail if you forgot to update them." >&2
+            echo >&2
+            git config --global githooks.failOnNonExistingSharedHooks "true"
+
         fi
     else
 
@@ -335,8 +357,12 @@ legacy_transform_registered_repos() {
                     # Remove legacy values
                     git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
 
-                    if [ "$MOVE_PATHS" = "true" ]; then
+                    if [ "$PR_125" = "true" ]; then
+
                         legacy_transform_adjust_local_paths "$REGISTERED_REPO" ||
+                            LEGACY_TRANSFORM_FAILURES="true"
+
+                        legacy_transform_update_shared_hooks "$REGISTERED_REPO" ||
                             LEGACY_TRANSFORM_FAILURES="true"
                     fi
                 fi
@@ -409,6 +435,19 @@ legacy_transform_adjust_local_paths() {
     fi
 
     return 0
+}
+
+############################################################
+# Function to update shared hooks repos in configured by
+#   `.shared` file in repo `$1`.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transform_update_shared_hooks() {
+    # Could be more efficient if we have a "--shared,--local,--global"
+    # flag on this command.
+    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update)
 }
 
 #####################################################
