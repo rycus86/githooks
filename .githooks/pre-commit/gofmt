@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if ! command -v gofmt >/dev/null 2>&1; then
+    echo "! Skipping gofmt - not installed"
+    exit 0
+fi
+
+if gofmt -l githooks/runner githooks/cli githooks/installer githooks/common; then
+    echo "* gofmt OK"
+else
+    echo "! gofmt problems detected"
+    exit 1
+fi

@@ -2,7 +2,7 @@
 TODO_FOUND="no"
 
 OFFENDING_FILES=$(
-    grep -rE "(TODO|FIXME)" ./* .githooks/ examples/* |
+    grep -rE "(TODO|FIXME)" ./*.sh .githooks/ examples/* |
         grep -vE '(/cover/|/pre-commit/no-todo-or-fixme)' |
         tr ':' ' ' | awk '{ print $1 }' |
         sort | uniq
