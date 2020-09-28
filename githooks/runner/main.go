@@ -5,16 +5,16 @@ import (
 	path "path/filepath"
 	cm "rycus86/githooks/common"
 
-	"github.com/go-git/go-git/v5"
+	"github.com/mitchellh/go-homedir"
 )
 
 type hookSettings struct {
+	repositoryPath string
+	installDir     string
+
 	hookPath   string
 	hookName   string
 	hookFolder string
-
-	repository *git.Repository
-	installDir string
 }
 
 func setMainVariables() hookSettings {
@@ -28,24 +28,39 @@ func setMainVariables() hookSettings {
 	cwd, err := os.Getwd()
 	cm.AssertNoErrorF(err, "Could not get current working dir")
 
-	repository, err := git.PlainOpenWithOptions(
-		cwd,
-		&git.PlainOpenOptions{DetectDotGit: true})
-
-	cm.AssertNoErrorF(err,
-		cm.Fmt("Could not open current working dir Git repository '%s'", cwd))
-
 	return hookSettings{
-		hookPath:   os.Args[1],
-		hookName:   path.Base(os.Args[1]),
-		hookFolder: path.Dir(os.Args[1]),
-		repository: repository,
-		installDir: installDir}
-
+		repositoryPath: cwd,
+		installDir:     installDir,
+		hookPath:       os.Args[1],
+		hookName:       path.Base(os.Args[1]),
+		hookFolder:     path.Dir(os.Args[1])}
 }
 
 func getInstallDir() string {
-	return ""
+	installDir := cm.GitConfigGet("githooks.installDir", cm.GlobalScope)
+
+	setDefault := func() {
+		usr, err := homedir.Dir()
+		cm.AssertNoErrorF(err, "Could not get home directory")
+		installDir = path.Join(usr, ".githooks")
+	}
+
+	if installDir == "" {
+		setDefault()
+	} else if !cm.PathExists(installDir) {
+		cm.LogWarn(
+			"Githooks installation is corrupt! ",
+			cm.Fmt("Install directory at '%s' is missing.", installDir))
+
+		setDefault()
+
+		cm.LogWarn(
+			cm.Fmt("Falling back to default directory at '%s'", installDir),
+			"Please run the Githooks install script again to fix it.")
+	}
+
+	cm.LogDebug(cm.Fmt("Install dir set to: '%s'", installDir))
+	return installDir
 }
 
 func main() {
