@@ -221,7 +221,7 @@ legacy_transform_after_update() {
 
         echo >&2
         echo "! Info: Because the hash algorithm changed from" >&2
-        echo "  $(md5sum) to $(git hash-object)," >&2
+        echo "  \$(md5sum) to \$(git hash-object)," >&2
         echo "  you unfortunately need to retrust all hooks again." >&2
         echo >&2
     fi
