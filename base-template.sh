@@ -123,7 +123,7 @@ set_main_variables() {
 ############################################################
 register_installation_if_needed() {
     if ! git config --local githooks.registered >/dev/null 2>&1 &&
-        [ ! -d "$(git config --global core.hooksPath)" ]; then
+        [ ! -d "$(git config core.hooksPath)" ]; then
         register_repo "$CURRENT_GIT_DIR"
     fi
 }
