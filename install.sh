@@ -319,17 +319,17 @@ legacy_transform_registered_repos() {
         PR_125="true"
     fi
 
-    if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
-        if [ "$PR_125" = "true" ]; then
-            echo >&2
-            echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
-            echo "  configured with \`.githooks/.shared\` files per repository" >&2
-            echo "  are no more supported and need" >&2
-            echo "  to be moved manually to the local Git configuration variable" >&2
-            echo "  \`githooks.shared\` by running:" >&2
-            echo "    \$ git hooks shared add --local <local path>" >&2
-            echo >&2
+    if [ "$PR_125" = "true" ]; then
+        echo >&2
+        echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
+        echo "  configured with \`.githooks/.shared\` files per repository" >&2
+        echo "  are no more supported and need" >&2
+        echo "  to be moved manually to the local Git configuration variable" >&2
+        echo "  \`githooks.shared\` by running:" >&2
+        echo "    \$ git hooks shared add --local <local path>" >&2
+        echo >&2
 
+        if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
             echo >&2
             echo "! DEPRECATION WARNING: Because of renaming of internal cloned shared" >&2
             echo "  hook repositories, you should update all shared hook repositories" >&2
@@ -339,40 +339,55 @@ legacy_transform_registered_repos() {
             echo "  enabled globally to safely fail if you forgot to update them." >&2
             echo >&2
             git config --global githooks.failOnNonExistingSharedHooks "true"
-
         fi
-    else
+    fi
 
-        LIST="$INSTALL_DIR/registered"
-        if [ -f "$LIST" ]; then
-            IFS="$IFS_NEWLINE"
-            while read -r REGISTERED_REPO; do
-                unset IFS
+    LIST="$INSTALL_DIR/registered"
+    if [ -f "$LIST" ]; then
+        IFS="$IFS_NEWLINE"
+        while read -r REGISTERED_REPO; do
+            unset IFS
 
-                if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
-                    # Not existing git dir -> skip.
-                    true
-                else
-                    # Remove legacy values
-                    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
+            if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+                # Not existing git dir -> skip.
+                true
+            else
+                WORKTREES=$(get_repo_worktrees "$REGISTERED_REPO")
+
+                IFS="$IFS_NEWLINE"
+                for TREE in $WORKTREES; do
+
+                    if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+                        continue
+                    fi
+
+                    legacy_transform_remove_legacy_config "$TREE"
 
                     if [ "$PR_125" = "true" ]; then
 
-                        legacy_transform_adjust_local_paths "$REGISTERED_REPO" ||
+                        legacy_transform_adjust_local_paths "$TREE" ||
                             LEGACY_TRANSFORM_FAILURES="true"
 
-                        legacy_transform_update_shared_hooks "$REGISTERED_REPO" ||
+                        legacy_transform_update_shared_hooks "$TREE" ||
                             LEGACY_TRANSFORM_FAILURES="true"
                     fi
-                fi
+                done
+            fi
 
-                IFS="$IFS_NEWLINE"
-            done <"$LIST"
-        fi
-
+            IFS="$IFS_NEWLINE"
+        done <"$LIST"
     fi
 
     return 0
+}
+
+############################################################
+# Remove legacy config values in repo `$1`.
+#
+# Returns: None
+############################################################
+legacy_transform_remove_legacy_config() {
+    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
 }
 
 ############################################################
@@ -384,11 +399,7 @@ legacy_transform_registered_repos() {
 ############################################################
 legacy_transform_adjust_local_paths() {
 
-    if [ "$(git -C "$1" rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
-        SHARED_FILE="$1/.githooks/.shared"
-    else
-        SHARED_FILE="$1/../.githooks/.shared"
-    fi
+    SHARED_FILE="$1/.githooks/.shared"
 
     if [ -f "$SHARED_FILE" ]; then
 
@@ -396,7 +407,7 @@ legacy_transform_adjust_local_paths() {
         MOVED_URLS=$(mktemp)
 
         MOVED="false"
-        IFS="$IFS_NEWLINE"
+        IFS=",$IFS_NEWLINE" # legacy split also with comma -> put it on a new line
         while read -r LINE || [ -n "$LINE" ]; do
             unset IFS
 
@@ -413,13 +424,13 @@ legacy_transform_adjust_local_paths() {
                 echo "$LINE" >>"$NEW_SHARED_LIST"
             fi
 
-            IFS="$IFS_NEWLINE"
+            IFS=",$IFS_NEWLINE"
         done <"$SHARED_FILE"
 
-        if [ "$MOVED" = "true" ]; then
+        cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
+            rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
 
-            cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
-                rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
+        if [ "$MOVED" = "true" ]; then
 
             echo "! Warning: The shared hooks configuration in" >&2
             echo "  \`$SHARED_FILE\`" >&2
@@ -778,6 +789,16 @@ get_cwd_git_dir() {
         CWD_GIT_DIR="$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)"
     fi
     return 0
+}
+
+############################################################
+# Gets all worktrees attached to the given repository `$1`
+#   and sets `REPO_WORKTREES`
+#
+# Returns: None
+############################################################
+get_repo_worktrees() {
+    git -C "$1" worktree list --porcelain | grep "worktree" | sed "s/worktree //g"
 }
 
 ############################################################

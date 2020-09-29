@@ -77,7 +77,7 @@ cd ~/githooks-original &&
     git commit -a -m "Current Changes: Simulating a merge with this feature branch" || exit 11
 
 # Trigger update
-git hooks shared purge || exit 12 # Just to make sure we really update the shared hooks during update
+git hooks shared purge || exit 12 # Purge hooks: To make sure we really update the shared hooks during update
 cd /tmp/test119 || exit 13
 UPDATE_OUT=$(git hooks update 2>&1)
 # shellcheck disable=SC2181
@@ -117,9 +117,8 @@ else
         exit 1
     fi
 
-    # We  dont need a hooks update
+    # We dont need a `git hooks shared update` hooks update
     # It should have been run by the update
-    # git hooks shared update || exit 13
 
     # Check again if all hooks get executed
     OUT=$(git commit --allow-empty -m "Testing" 2>&1)
