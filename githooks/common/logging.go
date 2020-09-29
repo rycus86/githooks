@@ -1,86 +1,122 @@
 package common
 
 import (
+	"errors"
 	"fmt"
-	"io"
+	"log"
 	"os"
 	"strings"
+
+	"github.com/gookit/color"
 )
 
-// Fmt Return a formatted string.
-func Fmt(format string, a ...interface{}) string {
-	return fmt.Sprintf(format, a...)
+const (
+	githooksSuffix = "Githooks:"
+)
+
+// LogContext Data for a log context
+type LogContext struct {
+	debug *log.Logger
+	info  *log.Logger
+	warn  *log.Logger
+	error *log.Logger
+
+	isColorSupported bool
+
+	renderInfo  func(string) string
+	renderError func(string) string
 }
 
-// AssertFatal Assert a condition is `true`, otherwise panic.
-func AssertFatal(condition bool, lines ...string) {
-	if condition {
-		panic(Error(lines...))
+// GetLogContext Gets the log context
+func GetLogContext() *LogContext {
+	var debug *log.Logger
+	if DebugLog {
+		debug = log.New(os.Stderr, "", 0)
 	}
-}
 
-// AssertWarn Assert a condition is `true`, otherwise log the warning.
-func AssertWarn(condition bool, lines ...string) {
-	if condition {
-		LogWarn(lines...)
-	}
-}
+	info := log.New(os.Stdout, "", 0)
+	warn := log.New(os.Stderr, "", 0)
+	error := log.New(os.Stderr, "", 0)
 
-// AssertNoErrorF Assert no error otherwise panic.
-func AssertNoErrorF(err error, lines ...string) {
-	if err == nil {
-		return
-	}
-	lines = append(lines, "-> error: ["+err.Error()+"]")
-	panic(Error(lines...))
-}
+	hasColors := color.IsSupportColor()
 
-// AssertNoErrorW Assert no error and otherwise
-// log the error.
-func AssertNoErrorW(err error) {
-	if err == nil {
-		return
+	var renderInfo func(string) string
+	var renderError func(string) string
+	if hasColors {
+		renderInfo = func(s string) string { return color.FgLightBlue.Render(s) }
+		renderError = func(s string) string { return color.FgRed.Render(s) }
+	} else {
+		renderInfo = func(s string) string { return s }
+		renderError = func(s string) string { return s }
 	}
-	LogError(err)
+
+	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError}
 }
 
 // Error Make an error message.
 func Error(lines ...string) error {
-	return formatError("⚠ Githooks:: ", "  ", lines...)
+	return errors.New(strings.Join(lines, "\n"))
 }
 
-// LogError Log an error to stderr.
-func LogError(err error) {
-	os.Stderr.WriteString(err.Error() + "\n")
-}
-
-// LogDebug Log a debug message to stdout.
-func LogDebug(lines ...string) {
+// LogDebug logs a debug message.
+func (c *LogContext) LogDebug(lines ...string) {
 	if DebugLog {
-		printMessage(os.Stdout, "🛠  Githooks:: ", "   ", lines...)
+		c.debug.Printf(c.renderInfo(formatMessage("🛠  "+githooksSuffix+" ", "   ", lines...)))
 	}
 }
 
-// LogInfo Log a info message to stdout.
-func LogInfo(lines ...string) {
-	printMessage(os.Stdout, "ℹ Githooks:: ", "  ", lines...)
+// LogInfo logs a info message.
+func (c *LogContext) LogInfo(lines ...string) {
+	c.info.Printf(c.renderInfo(formatMessage("ℹ "+githooksSuffix+" ", "   ", lines...)))
 }
 
-// LogWarn Log a warning message to stdout.
-func LogWarn(lines ...string) {
-	printMessage(os.Stdout, "⚠ Githooks:: ", "  ", lines...)
+// LogWarn logs a warning message.
+func (c *LogContext) LogWarn(lines ...string) {
+	c.warn.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
 }
 
-func formatError(suffix string, indent string, lines ...string) error {
-	return fmt.Errorf(
-		"%s%s",
-		suffix,
-		strings.Join(lines, "\n"+indent))
+// LogError logs an error.
+func (c *LogContext) LogError(lines ...string) {
+	c.error.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
 }
 
-func printMessage(writer io.Writer, suffix string, indent string, lines ...string) {
-	fmt.Printf(
-		"%s%s\n",
-		suffix,
-		strings.Join(lines, "\n"+indent))
+// LogPanic logs an error.
+func (c *LogContext) LogPanic(lines ...string) {
+	c.error.Panic(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
+}
+
+// LogDebugF logs a debug message.
+func (c *LogContext) LogDebugF(format string, args ...interface{}) {
+	if DebugLog {
+		c.debug.Printf(c.renderInfo(formatMessageF("🛠  "+githooksSuffix+" ", "   ", format, args...)))
+	}
+}
+
+// LogInfoF logs a info message.
+func (c *LogContext) LogInfoF(format string, args ...interface{}) {
+	c.info.Printf(c.renderInfo(formatMessageF("ℹ "+githooksSuffix+" ", "   ", format, args...)))
+}
+
+// LogWarnF logs a warning message.
+func (c *LogContext) LogWarnF(format string, args ...interface{}) {
+	c.warn.Printf(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
+}
+
+// LogErrorF logs an error.
+func (c *LogContext) LogErrorF(format string, args ...interface{}) {
+	c.error.Printf(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
+}
+
+// LogPanicF logs an error.
+func (c *LogContext) LogPanicF(format string, args ...interface{}) {
+	c.error.Panic(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
+}
+
+func formatMessage(suffix string, indent string, lines ...string) string {
+	return suffix + strings.Join(lines, "\n"+indent)
+}
+
+func formatMessageF(suffix string, indent string, format string, args ...interface{}) string {
+	s := suffix + fmt.Sprintf(format, args...)
+	return strings.ReplaceAll(s, "\n", indent+"\n")
 }

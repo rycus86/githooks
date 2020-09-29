@@ -1,6 +1,6 @@
 package common
 
 const (
-	// RunnerDebugLog If debug output is written when executing the Githooks
+	// DebugLog set to `true` will turn on debug logging.
 	DebugLog = true
 )
