@@ -707,7 +707,7 @@ execute_shared_hooks() {
 
         if [ ! -d "$SHARED_ROOT" ]; then
 
-            echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+            echo "! Failed to execute shared hooks in \`$SHARED_REPO\`" >&2
             if [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
                 echo "  It does not exist." >&2
             else
@@ -728,7 +728,7 @@ execute_shared_hooks() {
             # which means we really need a `-f` to sepcify the actual config!
             REMOTE_URL=$(git -C "$SHARED_ROOT" config -f "$SHARED_ROOT/.git/config" --get remote.origin.url)
             if ! echo "$SHARED_REPOS_LIST" | grep -F -q "$REMOTE_URL"; then
-                echo "! Failed to execute shared hooks in $SHARED_REPO" >&2
+                echo "! Failed to execute shared hooks in \`$SHARED_REPO\`" >&2
                 echo "  The remote URL \`$REMOTE_URL\` is different." >&2
                 echo "  To fix it, run:" >&2
                 echo "    \$ git hooks shared purge" >&2

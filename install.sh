@@ -58,7 +58,9 @@ execute_installation() {
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
 
-    legacy_transform_after_update || return 1
+    if ! is_dry_run; then
+        legacy_transform_after_update || return 1
+    fi
 
     if is_non_interactive; then
         disable_tty_input
@@ -130,7 +132,7 @@ check_deprecation() {
 # Function to dispatch to all legacy transformations
 #   at the start.
 #   We are not yet deleting  old values since the install
-#   could go wrong.
+#   could go wrong and dry-run could also be activated.
 #
 # Returns: 0 if succesful, 1 otherwise
 ############################################################
@@ -159,9 +161,6 @@ legacy_transform_before_update() {
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
         cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered" || LEGACY_TRANSFORM_FAILURES="true"
     fi
-
-    # Check if we need to move .shared files entries to `--local githooks.shared`
-    # and split comma-separated `--global githooks.shared`
 
     if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
         echo "! There were legacy transform errors: check stderr"
@@ -334,8 +333,8 @@ legacy_transform_registered_repos() {
             echo >&2
             echo "! DEPRECATION WARNING: Because of renaming of internal cloned shared" >&2
             echo "  hook repositories, you should update all shared hook repositories" >&2
-            echo "  by running in all repositories using Githooks:"
-            echo "    \$ git hooks shared update"
+            echo "  by running in all repositories using Githooks:" >&2
+            echo "    \$ git hooks shared update" >&2
             echo "  The Git config variable \`githooks.failOnNonExistingSharedHooks\` has been" >&2
             echo "  enabled globally to safely fail if you forgot to update them." >&2
             echo >&2
@@ -417,10 +416,11 @@ legacy_transform_adjust_local_paths() {
             IFS="$IFS_NEWLINE"
         done <"$SHARED_FILE"
 
-        cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
-            rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
-
         if [ "$MOVED" = "true" ]; then
+
+            cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
+                rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
+
             echo "! Warning: The shared hooks configuration in" >&2
             echo "  \`$SHARED_FILE\`" >&2
             echo "  contains local paths which are not supported" >&2
@@ -428,6 +428,8 @@ legacy_transform_adjust_local_paths() {
             sed -E "s/^/   - /" "$MOVED_URLS" >&2
             echo "  These paths are now moved to the local Git" >&2
             echo "  configuration value \`githooks.shared\`." >&2
+            echo "  The file \`$SHARED_FILE\` has been changed and" >&2
+            echo "  should be commited!" >&2
         fi
 
         rm -rf "$MOVED_URLS" >/dev/null 2>&1

@@ -77,7 +77,8 @@ cd ~/githooks-original &&
     git commit -a -m "Current Changes: Simulating a merge with this feature branch" || exit 11
 
 # Trigger update
-cd /tmp/test119 || exit 12
+git hooks shared purge || exit 12 # Just to make sure we really update the shared hooks during update
+cd /tmp/test119 || exit 13
 UPDATE_OUT=$(git hooks update 2>&1)
 # shellcheck disable=SC2181
 if [ $? -ne 0 ]; then
@@ -116,8 +117,9 @@ else
         exit 1
     fi
 
-    # We need a hooks update (folder naming has changed)
-    git hooks shared update || exit 13
+    # We  dont need a hooks update
+    # It should have been run by the update
+    # git hooks shared update || exit 13
 
     # Check again if all hooks get executed
     OUT=$(git commit --allow-empty -m "Testing" 2>&1)
@@ -126,6 +128,6 @@ else
         ! echo "$OUT" | grep -q "Shared repo 3: pre-commit" ||
         ! echo "$OUT" | grep -q "Shared repo 4: pre-commit"; then
         echo "! Expected to have run 4 shared hooks: $OUT" >&2
-        exit 10
+        exit 14
     fi
 fi
