@@ -319,17 +319,17 @@ legacy_transform_registered_repos() {
         PR_125="true"
     fi
 
-    if [ "$PR_125" = "true" ]; then
-        echo >&2
-        echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
-        echo "  configured with \`.githooks/.shared\` files per repository" >&2
-        echo "  are no more supported and need" >&2
-        echo "  to be moved manually to the local Git configuration variable" >&2
-        echo "  \`githooks.shared\` by running:" >&2
-        echo "    \$ git hooks shared add --local <local path>" >&2
-        echo >&2
+    if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
+        if [ "$PR_125" = "true" ]; then
+            echo >&2
+            echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
+            echo "  configured with \`.githooks/.shared\` files per repository" >&2
+            echo "  are no more supported and need" >&2
+            echo "  to be moved manually to the local Git configuration variable" >&2
+            echo "  \`githooks.shared\` by running:" >&2
+            echo "    \$ git hooks shared add --local <local path>" >&2
+            echo >&2
 
-        if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
             echo >&2
             echo "! DEPRECATION WARNING: Because of renaming of internal cloned shared" >&2
             echo "  hook repositories, you should update all shared hook repositories" >&2
@@ -339,11 +339,14 @@ legacy_transform_registered_repos() {
             echo "  enabled globally to safely fail if you forgot to update them." >&2
             echo >&2
             git config --global githooks.failOnNonExistingSharedHooks "true"
-        fi
-    fi
 
-    LIST="$INSTALL_DIR/registered"
-    if [ -f "$LIST" ]; then
+        fi
+    else
+
+        LIST="$INSTALL_DIR/registered"
+        if [ ! -f "$LIST" ]; then
+            return 0
+        fi
         IFS="$IFS_NEWLINE"
         while read -r REGISTERED_REPO; do
             unset IFS
@@ -356,8 +359,9 @@ legacy_transform_registered_repos() {
 
                 IFS="$IFS_NEWLINE"
                 for TREE in $WORKTREES; do
+                    unset IFS
 
-                    if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+                    if [ "$(git -C "$TREE" rev-parse --is-inside-git-dir 2>/dev/null)" = "true" ]; then
                         continue
                     fi
 
@@ -371,6 +375,8 @@ legacy_transform_registered_repos() {
                         legacy_transform_update_shared_hooks "$TREE" ||
                             LEGACY_TRANSFORM_FAILURES="true"
                     fi
+
+                    IFS="$IFS_NEWLINE"
                 done
             fi
 
@@ -798,7 +804,10 @@ get_cwd_git_dir() {
 # Returns: None
 ############################################################
 get_repo_worktrees() {
-    git -C "$1" worktree list --porcelain | grep "worktree" | sed "s/worktree //g"
+    # This feature is kind of buggy in earlier version of git < 2.28.0
+    # it returns a git directory instead of the work tree
+    # We strip "/.git" from the output.
+    git -C "$1" worktree list --porcelain | grep "worktree" | sed "s/worktree //g" | sed "s@/\.git@@"
 }
 
 ############################################################
