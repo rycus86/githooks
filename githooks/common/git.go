@@ -17,22 +17,22 @@ const (
 	Traverse    ConfigScope = ""
 )
 
-// GitContext Context to execute git commands
+// GitContext defines the context to execute git commands
 type GitContext struct {
 	cwd string
 }
 
-// GitC Get git command execution context with current working dir.
+// GitC Creates a git command execution context with current working dir.
 func GitC(cwd string) *GitContext {
 	return &GitContext{cwd: cwd}
 }
 
-// Git Get git command execution context with current working dir.
+// Git creates a git command execution context with current working dir.
 func Git() *GitContext {
 	return &GitContext{}
 }
 
-// GetConfig Get Git configuration values
+// GetConfig gets a Git configuration values.
 func (c *GitContext) GetConfig(key string, scope ConfigScope) string {
 	var out string
 	var err error
@@ -41,13 +41,13 @@ func (c *GitContext) GetConfig(key string, scope ConfigScope) string {
 	} else {
 		out, err = c.Get("config", key)
 	}
-	if err != nil {
+	if err == nil {
 		return out
 	}
 	return ""
 }
 
-// IsConfigSet Is a git config set.
+// IsConfigSet tells if a git config is set.
 func (c *GitContext) IsConfigSet(key string, scope ConfigScope) bool {
 	var err error
 	if scope != Traverse {
@@ -58,13 +58,13 @@ func (c *GitContext) IsConfigSet(key string, scope ConfigScope) bool {
 	return err == nil
 }
 
-// GetSplit Execute git command and split the output by newlines.
+// GetSplit executes a git command and splits the output by newlines.
 func (c *GitContext) GetSplit(args ...string) ([]string, error) {
 	out, err := c.Get(args...)
 	return strs.SplitLines(out), err
 }
 
-// Get Execute git command and get the output.
+// Get executes a git command and gets the output.
 func (c *GitContext) Get(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
@@ -72,7 +72,7 @@ func (c *GitContext) Get(args ...string) (string, error) {
 	return strings.TrimSpace(string(stdout)), err
 }
 
-// Check Check if a git command executed successful.
+// Check checks if a git command executed successfully.
 func (c *GitContext) Check(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd

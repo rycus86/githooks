@@ -35,9 +35,9 @@ func Index(vs []string, t string) int {
 	return -1
 }
 
-// Include returns `true` if the target string t is in the
+// Includes returns `true` if the string t is in the
 // slice.
-func Include(vs []string, t string) bool {
+func Includes(vs []string, t string) bool {
 	return Index(vs, t) >= 0
 }
 

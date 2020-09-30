@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
+	strs "rycus86/githooks/strings"
 	"strings"
 
 	"github.com/gookit/color"
@@ -56,6 +58,11 @@ func GetLogContext() *LogContext {
 // Error Make an error message.
 func Error(lines ...string) error {
 	return errors.New(strings.Join(lines, "\n"))
+}
+
+// ErrorF Make an error message.
+func ErrorF(format string, args ...interface{}) error {
+	return fmt.Errorf(format, args...)
 }
 
 // LogDebug logs a debug message.
@@ -112,11 +119,23 @@ func (c *LogContext) LogPanicF(format string, args ...interface{}) {
 	c.error.Panic(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
 }
 
+// LogErrorWithStacktrace logs and error with the stack trace.
+func (c *LogContext) LogErrorWithStacktrace(lines ...string) {
+	stackLines := strs.SplitLines(string(debug.Stack()))
+	l := append(lines, "", "Stacktrace:", "-----------")
+	c.LogError(append(l, stackLines...)...)
+}
+
+// LogErrorWithStacktraceF logs and error with the stack trace.
+func (c *LogContext) LogErrorWithStacktraceF(format string, args ...interface{}) {
+	c.LogErrorWithStacktrace(strs.Fmt(format, args...))
+}
+
 func formatMessage(suffix string, indent string, lines ...string) string {
 	return suffix + strings.Join(lines, "\n"+indent)
 }
 
 func formatMessageF(suffix string, indent string, format string, args ...interface{}) string {
-	s := suffix + fmt.Sprintf(format, args...)
+	s := suffix + strs.Fmt(format, args...)
 	return strings.ReplaceAll(s, "\n", indent+"\n")
 }

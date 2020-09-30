@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 	strs "rycus86/githooks/strings"
 )
 
@@ -11,6 +12,26 @@ import (
 // in the install folder.
 type RegisterRepos struct {
 	GitDirs []string
+}
+
+// RegisterRepo registers the Git directory in the install directory.
+func RegisterRepo(gitDir string, installDir string) error {
+
+	var registerFile = path.Join(installDir, "registered.yml")
+
+	repos, err := GetRegisteredRepos(registerFile)
+	if err != nil {
+		return err
+	}
+
+	repos.Insert(gitDir)
+
+	err = SetRegisteredRepos(repos, registerFile)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetRegisteredRepos gets the registered repos from a file
@@ -21,17 +42,17 @@ func GetRegisteredRepos(file string) (RegisterRepos, error) {
 
 		jsonFile, err := os.Open(file)
 		if err != nil {
-			return repos, err
+			return repos, ErrorF("Could not open registered file '%s'.", file)
 		}
 		defer jsonFile.Close()
 
 		bytes, err := ioutil.ReadAll(jsonFile)
 		if err != nil {
-			return repos, err
+			return repos, ErrorF("Could not read registered file '%s'.", file)
 		}
 
 		if err := json.Unmarshal(bytes, &repos); err != nil {
-			return repos, err
+			return repos, ErrorF("Could not parse registered file '%s'.", file)
 		}
 	}
 

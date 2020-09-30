@@ -1,8 +1,17 @@
+// Base Git hook template from https://github.com/rycus86/githooks
+//
+// It allows you to have a .githooks folder per-project that contains
+// its hooks to execute on various Git triggers.
+//
+// Legacy version number. Not used anymore, but old installs read it.
+// Version: 9912.310000-000000
+
 package main
 
 import (
 	"os"
 	path "path/filepath"
+	"runtime"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 
@@ -12,24 +21,22 @@ import (
 var log = cm.GetLogContext()
 
 type hookSettings struct {
-	git            *cm.GitContext
-	repositoryPath string
-	gitDir         string
-	installDir     string
+	args           []string       // Rest arguments.
+	git            *cm.GitContext // Git context to execute commands (working dir is this repository)
+	repositoryPath string         // Repository path.
+	gitDir         string         // Git directory.
+	installDir     string         // Install directory.
 
-	hookPath   string
-	hookName   string
-	hookFolder string
+	hookPath   string // Path of the hook executing this runner.
+	hookName   string // Name of the hook.
+	hookFolder string // Directory of the hook.
 }
 
-func setMainVariables() hookSettings {
+func setMainVariables(cwd string) hookSettings {
 
 	log.AssertFatal(
-		len(os.Args) <= 1,
+		len(os.Args) >= 2,
 		"Hook name not specified as first argument -> Abort")
-
-	cwd, err := os.Getwd()
-	log.AssertNoErrorFatal(err, "Could not get current working dir.")
 
 	git := cm.Git() // Current git context, in current working dir.
 
@@ -40,6 +47,7 @@ func setMainVariables() hookSettings {
 	installDir := getInstallDir(git)
 
 	return hookSettings{
+		args:           os.Args[2:],
 		git:            git,
 		repositoryPath: cwd,
 		gitDir:         gitDir,
@@ -76,49 +84,83 @@ func getInstallDir(git *cm.GitContext) string {
 	return installDir
 }
 
-func assertRegistered(settings hookSettings) {
+func assertRegistered(git *cm.GitContext, installDir string, gitDir string) {
 
-	if !settings.git.IsConfigSet("githooks.registered", cm.LocalScope) &&
-		!settings.git.IsConfigSet("core.hooksPath", cm.Traverse) {
+	if !git.IsConfigSet("githooks.registered", cm.LocalScope) &&
+		!git.IsConfigSet("core.hooksPath", cm.Traverse) {
 
-		registerRepo(settings.gitDir, settings.installDir)
+		err := cm.RegisterRepo(gitDir, installDir)
+
+		log.AssertNoErrorWarn(err,
+			strs.Fmt("Could not register repo '%s'.", gitDir))
 
 	} else {
-		log.LogDebug("Repository already registered or using 'core.hooksPath'.")
+		log.LogDebug(
+			"Repository already registered",
+			"or using 'core.hooksPath'.")
 	}
 }
 
-func registerRepo(gitDir string, installDir string) {
+func executeLFSHooksIfAppropriate(settings hookSettings) {
 
-	var registerFile = path.Join(installDir, "registered.yml")
-	log.LogDebugF("Registering repo in '%s'", registerFile)
+	if !strs.Includes(cm.LFSHookNames[:], settings.hookName) {
+		return
+	}
 
-	repos, err := cm.GetRegisteredRepos(registerFile)
+	lfsIsAvailable := cm.IsLFSAvailable()
+	lfsIsRequired := cm.PathExists(path.Join(
+		settings.repositoryPath, ".githooks", ".lfs-required"))
 
-	log.AssertWarn(err != nil,
-		strs.Fmt("Could not load registered file '%s'.", registerFile))
+	if lfsIsAvailable {
 
-	repos.Insert(gitDir)
-	log.LogDebugF("%s", gitDir)
-	err = cm.SetRegisteredRepos(repos, registerFile)
+		err := settings.git.Check(
+			append(
+				[]string{"lfs", settings.hookName},
+				settings.args...,
+			)...)
 
-	log.AssertNoErrorWarn(err,
-		strs.Fmt("Could not save registered file '%s'.", registerFile))
+		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
+
+	} else {
+		log.FatalIf(lfsIsRequired,
+			"This repository requires Git LFS, but 'git-lfs' was",
+			"not found on your PATH. If you no longer want to use",
+			"Git LFS, remove the '.githooks/.lfs-required' file.",
+		)
+	}
 }
 
 func main() {
 
+	cwd, err := os.Getwd()
+	log.AssertNoErrorFatal(err, "Could not get current working dir.")
+
 	// Handle all panics and report the error
 	defer func() {
 		if r := recover(); r != nil {
-			err := r.(error)
-			log.LogError(strs.Fmt("Panic received -> Abort [error: '%s']", err))
+			switch v := r.(type) {
+			case runtime.Error:
+				log.LogErrorWithStacktrace(
+					strs.Fmt("Panic: ['%s']", v.Error()),
+					"",
+					cm.GetBugReportingInfo(cwd))
+			case error:
+				log.LogDebug(strs.Fmt("Error received -> Abort"))
+			}
 		}
 	}()
 
-	settings := setMainVariables()
+	err = nil
+	s := err.Error()
+	log.LogDebug(s)
 
-	assertRegistered(settings)
+	settings := setMainVariables(cwd)
+
+	assertRegistered(settings.git, settings.installDir, settings.gitDir)
+
+	if cm.IsGithooksDisabled(settings.git) {
+		executeLFSHooksIfAppropriate(settings)
+	}
 
 	log.LogDebug(strs.Fmt(
 		"Running hook: '%s'", settings.hookPath),
