@@ -466,7 +466,7 @@ legacy_transform_adjust_local_paths() {
 legacy_transform_update_shared_hooks() {
     # Could be more efficient if we have a "--shared,--local,--global"
     # flag on this command.
-    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update)
+    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update >/dev/null 2>&1)
 }
 
 #####################################################
