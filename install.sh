@@ -35,12 +35,11 @@ execute_installation() {
 
     load_install_dir || return 1
 
-    # Legacy transformations
-    legacy_transformations_start || return 1
-
     if ! is_postupdate; then
 
         check_deprecation || return 1
+
+        legacy_transform_before_update || return 1
 
         update_release_clone || return 1
 
@@ -58,6 +57,10 @@ execute_installation() {
     # meaning the `--internal-postupdate` flag is set
     # and we are running inside the release clone
     # meaning the `--internal-install` flag is set.
+
+    if ! is_dry_run; then
+        legacy_transform_after_update || return 1
+    fi
 
     if is_non_interactive; then
         disable_tty_input
@@ -101,7 +104,7 @@ execute_installation() {
 
     # Legacy transformations
     if ! is_dry_run; then
-        legacy_transformations_end || return 1
+        legacy_transform_end || return 1
     fi
 
     thank_you
@@ -129,46 +132,108 @@ check_deprecation() {
 # Function to dispatch to all legacy transformations
 #   at the start.
 #   We are not yet deleting  old values since the install
-#   could go wrong.
+#   could go wrong and dry-run could also be activated.
 #
-# Returns:
-#   1 when failed, 0 otherwise
+# Returns: 0 if succesful, 1 otherwise
 ############################################################
-legacy_transformations_start() {
+legacy_transform_before_update() {
+
+    LEGACY_TRANSFORM_FAILURES="false"
 
     # Variable transformations in global git config
     # Can be applied to all versions without any problem
     OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneUrl)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.cloneUrl "$OLD_CONFIG_VALUE"
+        git config --global githooks.cloneUrl "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     OLD_CONFIG_VALUE=$(git config --global githooks.autoupdate.updateCloneBranch)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.cloneBranch "$OLD_CONFIG_VALUE"
+        git config --global githooks.cloneBranch "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     OLD_CONFIG_VALUE=$(git config --global githooks.previous.searchdir)
     if [ -n "$OLD_CONFIG_VALUE" ]; then
-        git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE"
+        git config --global githooks.previousSearchDir "$OLD_CONFIG_VALUE" || LEGACY_TRANSFORM_FAILURES="true"
     fi
 
     # Copy legacy file to new location
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
-        cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered"
+        cp "$INSTALL_DIR/autoupdate/registered" "$INSTALL_DIR/registered" || LEGACY_TRANSFORM_FAILURES="true"
+    fi
+
+    if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
+        echo "! There were legacy transform errors: check stderr"
+        return 1
     fi
 
     return 0
 }
 
 ############################################################
+# Tests if the commit sha `$1`
+#   is before or equal of the commit sha `$2`.
+#
+# Returns: 0 if succesful, 1 otherwise
+############################################################
+legacy_transform_is_ancestor() {
+    if [ -n "$1" ] && [ -n "$2" ] &&
+        execute_git "$GITHOOKS_CLONE_DIR" merge-base --is-ancestor \
+            "$1" "$2" >/dev/null 2>&1; then
+        # commit 1 <= commit 2
+        return 0
+    fi
+
+    return 1
+}
+
+############################################################
+# Function to dispatch to all legacy transformations
+#   right after the update.
+#
+# Returns: 0 if succesful, 1 otherwise
+############################################################
+legacy_transform_after_update() {
+    COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
+
+    if [ "$COMMIT_COUNT" != "1" ] && [ -z "$INTERNAL_UPDATED_FROM_COMMIT" ]; then
+        # If the clone dir has been updated (commit count != 1) and
+        # we do not have the update commit yet (meaning we are updating from an old version )
+        # we set it to the last commit where this feature (INTERNAL_UPDATED_FROM_COMMIT)
+        # was not yet available
+        INTERNAL_UPDATED_FROM_COMMIT="ab86d2a529f58744a71e79227e434f19b84589e6"
+    fi
+
+    # Because of changes in PR #125 right after commit ab86d2a5:
+    # - Check if we need transforms for `--global githooks.shared`
+    #   to be split into multiple config values
+    # - Show info that all hook hashes are differently computed now
+    #   and every hooks needs to be trusted again.
+    # - Show info that `githooks.failOnNonExistingHooks` is enabled due to renaming
+    #   internal cloned shared hooks repositories.
+    if legacy_transform_is_ancestor \
+        "$INTERNAL_UPDATED_FROM_COMMIT" \
+        "ab86d2a529f58744a71e79227e434f19b84589e6"; then
+
+        legacy_transform_split_global_shared_entries || LEGACY_TRANSFORM_FAILURES="true"
+
+        echo >&2
+        echo "! Info: Because the hash algorithm changed from" >&2
+        echo "  \$(md5sum) to \$(git hash-object)," >&2
+        echo "  you unfortunately need to retrust all hooks again." >&2
+        echo >&2
+    fi
+
+}
+
+############################################################
 # Function to dispatch to all legacy transformations
 #   at the end
 #
-# Returns:
-#   1 when failed, 0 otherwise
+# Returns: 0
 ############################################################
-legacy_transformations_end() {
+legacy_transform_end() {
 
     # Variable transformations in global git config
     # Can be applied to all versions without any problem
@@ -178,23 +243,257 @@ legacy_transformations_end() {
 
     # Remove legacy registration file (we moved it to another location)
     if [ -f "$INSTALL_DIR/autoupdate/registered" ]; then
-        rm -rf "$INSTALL_DIR/autoupdate"
+        rm -rf "$INSTALL_DIR/autoupdate" || LEGACY_TRANSFORM_FAILURES="true"
     fi
+
+    legacy_transform_registered_repos || LEGACY_TRANSFORM_FAILURES="true"
+
+    if [ "$LEGACY_TRANSFORM_FAILURES" = "true" ]; then
+        echo "! There were legacy transform errors: check stderr"
+        return 1
+    fi
+
+    return 0
+}
+
+############################################################
+# Transform all comma-delimited global \`githooks.shared\`
+#   values into multiple git config values.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transform_split_global_shared_entries() {
+
+    CURRENT_LIST=$(git config --global --get githooks.shared)
+
+    FAILURE="false"
+
+    # If it contains a comma, split it...
+    if echo "$CURRENT_LIST" | grep -q ","; then
+
+        git config --global --unset githooks.shared
+
+        # Split it and add all back
+        IFS=",$IFS_NEWLINE"
+        for ITEM in $CURRENT_LIST; do
+            unset IFS
+
+            if [ -n "$ITEM" ]; then
+                git config --global --add githooks.shared "$ITEM" || FAILURE="true"
+            fi
+
+            IFS=",$IFS_NEWLINE"
+        done
+        unset IFS
+    fi
+
+    if [ "$FAILURE" = "true" ]; then
+        echo "! Warning: Could not migrate the global shared hook repositories setting:" >&2
+        echo "\`$CURRENT_LIST\`" >&2
+        echo " Please check \`githooks.shared\` and add all comma-speparated" >&2
+        echo " values manually by running:" >&2
+        echo "  \$ git config --global --add githooks.shared <value>" >&2
+        LEGACY_TRANSFORM_FAILURES="true"
+    fi
+
     return 0
 }
 
 ############################################################
 # Function to dispatch to all legacy transformations
-#   at the end of a install into a repository
+#   for all registered repos.
 #
 # Returns:
 #   1 when failed, 0 otherwise
 ############################################################
-legacy_transformations_repo_end() {
+legacy_transform_registered_repos() {
 
-    git -C "$1" config --local --unset githooks.autoupdate.registered
+    # Check if we need transforms for `.shared` files:
+    # Put local paths into `--local githooks.shared`.
+    # which was introduced by PR #125 right after commit ab86d2a5:
+    PR_125="false"
+    if legacy_transform_is_ancestor \
+        "$INTERNAL_UPDATED_FROM_COMMIT" \
+        "ab86d2a529f58744a71e79227e434f19b84589e6"; then
+        PR_125="true"
+    fi
+
+    if [ "$(git config --global githooks.useCoreHooksPath)" = "true" ]; then
+        if [ "$PR_125" = "true" ]; then
+            echo >&2
+            echo "! DEPRECATION WARNING: Local paths for shared hook repositories" >&2
+            echo "  configured with \`.githooks/.shared\` files per repository" >&2
+            echo "  are no more supported and need" >&2
+            echo "  to be moved manually to the local Git configuration variable" >&2
+            echo "  \`githooks.shared\` by running:" >&2
+            echo "    \$ git hooks shared add --local <local path>" >&2
+            echo >&2
+
+            echo >&2
+            echo "! DEPRECATION WARNING: Because of renaming of internal cloned shared" >&2
+            echo "  hook repositories, you should update all shared hook repositories" >&2
+            echo "  by running in all repositories using Githooks:" >&2
+            echo "    \$ git hooks shared update" >&2
+            echo "  The Git config variable \`githooks.failOnNonExistingSharedHooks\` has been" >&2
+            echo "  enabled globally to safely fail if you forgot to update them." >&2
+            echo >&2
+            git config --global githooks.failOnNonExistingSharedHooks "true"
+
+        fi
+    else
+
+        LIST="$INSTALL_DIR/registered"
+        if [ ! -f "$LIST" ]; then
+            return 0
+        fi
+        IFS="$IFS_NEWLINE"
+        while read -r REGISTERED_REPO; do
+            unset IFS
+
+            if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+                # Not existing git dir -> skip.
+                true
+            else
+                WORKTREES=$(get_repo_worktrees "$REGISTERED_REPO")
+
+                IFS="$IFS_NEWLINE"
+                for TREE in $WORKTREES; do
+                    unset IFS
+
+                    if [ "$(git -C "$TREE" rev-parse --is-inside-git-dir 2>/dev/null)" = "true" ]; then
+                        continue
+                    fi
+
+                    legacy_transform_remove_legacy_config "$TREE"
+
+                    if [ "$PR_125" = "true" ]; then
+
+                        legacy_transform_adjust_local_paths "$TREE" ||
+                            LEGACY_TRANSFORM_FAILURES="true"
+
+                        legacy_transform_update_shared_hooks "$TREE" ||
+                            LEGACY_TRANSFORM_FAILURES="true"
+                    fi
+
+                    IFS="$IFS_NEWLINE"
+                done
+            fi
+
+            IFS="$IFS_NEWLINE"
+        done <"$LIST"
+    fi
 
     return 0
+}
+
+############################################################
+# Remove legacy config values in repo `$1`.
+#
+# Returns: None
+############################################################
+legacy_transform_remove_legacy_config() {
+    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
+}
+
+############################################################
+# Function to adjust local paths in `.githooks/.shared`
+#   file which are forbidden.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transform_adjust_local_paths() {
+
+    SHARED_FILE="$1/.githooks/.shared"
+
+    if [ -f "$SHARED_FILE" ]; then
+
+        NEW_SHARED_LIST=$(mktemp)
+        MOVED_URLS=$(mktemp)
+
+        MOVED="false"
+        IFS=",$IFS_NEWLINE" # legacy split also with comma -> put it on a new line
+        while read -r LINE || [ -n "$LINE" ]; do
+            unset IFS
+
+            if echo "$LINE" | grep -qE "^\s*(#.*)?$"; then
+
+                echo "$LINE" >>"$NEW_SHARED_LIST"
+
+            elif is_local_path "$LINE" || is_local_url "$LINE"; then
+                git -C "$1" config --local --add githooks.shared "$LINE"
+
+                echo "$LINE" >>"$MOVED_URLS"
+                MOVED="true"
+            else
+                echo "$LINE" >>"$NEW_SHARED_LIST"
+            fi
+
+            IFS=",$IFS_NEWLINE"
+        done <"$SHARED_FILE"
+
+        cp -f "$NEW_SHARED_LIST" "$SHARED_FILE" &&
+            rm -rf "$NEW_SHARED_LIST" >/dev/null 2>&1
+
+        if [ "$MOVED" = "true" ]; then
+
+            echo "! Warning: The shared hooks configuration in" >&2
+            echo "  \`$SHARED_FILE\`" >&2
+            echo "  contains local paths which are not supported" >&2
+            echo "  any more:" >&2
+            sed -E "s/^/   - /" "$MOVED_URLS" >&2
+            echo "  These paths are now moved to the local Git" >&2
+            echo "  configuration value \`githooks.shared\`." >&2
+            echo "  The file \`$SHARED_FILE\` has been changed and" >&2
+            echo "  should be commited!" >&2
+        fi
+
+        rm -rf "$MOVED_URLS" >/dev/null 2>&1
+
+    fi
+
+    return 0
+}
+
+############################################################
+# Function to update shared hooks repos in configured by
+#   `.shared` file in repo `$1`.
+#
+# Returns:
+#   1 when failed, 0 otherwise
+############################################################
+legacy_transform_update_shared_hooks() {
+    # Could be more efficient if we have a "--shared,--local,--global"
+    # flag on this command.
+    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update)
+}
+
+#####################################################
+# Check if `$1` is not a supported git clone url and
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
+# Returns: 0 if it is a local path, 1 otherwise
+#####################################################
+is_local_path() {
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
+# Check if url `$1` is a local url, e.g `file://`.
+#
+# Returns: 0 if it is a local url, 1 otherwise
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -iEq "^\s*file://"; then
+        return 0
+    fi
+    return 1
 }
 
 ############################################################
@@ -267,6 +566,10 @@ parse_command_line_arguments() {
             INTERNAL_INSTALL="true"
         elif [ "$p" = "--internal-postupdate" ]; then
             INTERNAL_POSTUPDATE="true"
+        elif [ "$p" = "--internal-updated-from" ]; then
+            : # nothing to do here
+        elif [ "$prev_p" = "--internal-updated-from" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
+            INTERNAL_UPDATED_FROM_COMMIT="$p"
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
         elif [ "$p" = "--non-interactive" ]; then
@@ -353,7 +656,7 @@ check_not_deprecated_single_install() {
         echo >&2
         echo "    To install the latest hooks you need to reset this option"
         echo "    by running" >&2
-        echo "      \`git hooks config reset single\`" >&2
+        echo "      \`git config --local --unset githooks.single.install\`" >&2
         echo "    in order to use this repository with githooks." >&2
         echo >&2
         return 1 # DeprecateSingleInstall
@@ -391,7 +694,9 @@ is_non_interactive() {
 #   0 if we should skip, 1 otherwise
 ############################################################
 should_skip_install_into_existing_repositories() {
-    [ "$SKIP_INSTALL_INTO_EXISTING" = "true" ] || return 1
+    [ "$SKIP_INSTALL_INTO_EXISTING" = "true" ] ||
+        use_core_hookspath ||
+        [ "$(git config --global githooks.useCoreHooksPath)" = "true" ] || return 1
 }
 
 ############################################################
@@ -490,6 +795,19 @@ get_cwd_git_dir() {
         CWD_GIT_DIR="$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)"
     fi
     return 0
+}
+
+############################################################
+# Gets all worktrees attached to the given repository `$1`
+#   and sets `REPO_WORKTREES`
+#
+# Returns: None
+############################################################
+get_repo_worktrees() {
+    # This feature is kind of buggy in earlier version of git < 2.28.0
+    # it returns a git directory instead of the work tree
+    # We strip "/.git" from the output.
+    git -C "$1" worktree list --porcelain | grep "worktree" | sed "s/worktree //g" | sed "s@/\.git@@"
 }
 
 ############################################################
@@ -889,7 +1207,7 @@ find_existing_git_dirs() {
         # e.g. spourious HEAD file or .git dir which does not mark a repository
         REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
 
-        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -1054,11 +1372,11 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir)" = "false" ]; then
+            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
                 # Not existing git dir -> skip.
                 true
 
-            elif echo "$EXISTING_REPOSITORY_LIST" | grep -q "$INSTALLED_REPO"; then
+            elif echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$INSTALLED_REPO"; then
                 # We already installed to this repository, don't install
                 echo "$INSTALLED_REPO" >>"$NEW_LIST"
 
@@ -1227,8 +1545,6 @@ install_hooks_into_repo() {
             echo "[Dry run] Hooks would have been installed into $TARGET"
         else
             register_repo "$TARGET"
-            legacy_transformations_repo_end "$TARGET"
-
             echo "Hooks installed into $TARGET"
         fi
     fi
@@ -1281,7 +1597,7 @@ register_repo() {
 #   None
 ############################################################
 setup_shared_hook_repositories() {
-    if [ -n "$(git config --global --get githooks.shared)" ]; then
+    if [ -n "$(git config --global --get-all githooks.shared)" ]; then
         echo "Looks like you already have shared hook"
         printf "repositories setup, do you want to change them now? [y/N] "
     else
@@ -1300,33 +1616,39 @@ setup_shared_hook_repositories() {
 
     echo "OK, let's input them one-by-one and leave the input empty to stop."
 
-    SHARED_REPOS_LIST=""
+    PROVIDED="false"
     while true; do
         printf "Enter the clone URL of a shared repository: "
         read -r SHARED_REPO </dev/tty
         if [ -z "$SHARED_REPO" ]; then break; fi
 
-        if [ -n "$SHARED_REPOS_LIST" ]; then
-            SHARED_REPOS_LIST="${SHARED_REPOS_LIST},${SHARED_REPO}"
-        else
-            SHARED_REPOS_LIST="$SHARED_REPO"
+        if [ -n "$SHARED_REPO" ]; then
+
+            if [ "$PROVIDED" = "false" ]; then
+                git config --global --unset-all githooks.shared
+            fi
+
+            if git config --global --add githooks.shared "$SHARED_REPO"; then
+                PROVIDED="true"
+            else
+                PROVIDED="error"
+                break
+            fi
         fi
     done
 
-    if [ -z "$SHARED_REPOS_LIST" ] && git config --global --unset githooks.shared; then
+    if [ "$PROVIDED" = "false" ] &&
+        git config --global --unset githooks.shared; then
         echo "Shared hook repositories are now unset. If you want to set them up again in the future, run this script again, or change the 'githooks.shared' Git config variable manually."
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
-    elif git config --global githooks.shared "$SHARED_REPOS_LIST"; then
+    elif [ "$PROVIDED" = "true" ]; then
         # Trigger the shared hook repository checkout manually
-        cp "$GITHOOKS_CLONE_DIR/base-template-wrapper.sh" ".githooks.shared.trigger" &&
-            chmod +x ".githooks.shared.trigger" &&
-            ./.githooks.shared.trigger
-        rm -f .githooks.shared.trigger
-
+        sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
         echo "Shared hook repositories have been set up. You can change them any time by running this script again, or manually by changing the 'githooks.shared' Git config variable."
         echo "Note: you can also list the shared hook repos per project within the .githooks/.shared file"
     else
         echo "! Failed to set up the shared hook repositories" >&2
+        git config --global --unset-all githooks.shared >/dev/null 2>&1
     fi
 }
 
@@ -1510,7 +1832,7 @@ update_release_clone() {
         if [ "$CURRENT_COMMIT" != "$UPDATE_COMMIT" ]; then
             # Fast forward merge in the changes if possible
             echo "Merging Githooks updates ..."
-            PULL_OUTPUT=$(
+            MERGE_OUTPUT=$(
                 execute_git "$GITHOOKS_CLONE_DIR" merge --ff-only "origin/$GITHOOKS_CLONE_BRANCH" 2>&1
             )
 
@@ -1520,7 +1842,7 @@ update_release_clone() {
                 echo "  \`$GITHOOKS_CLONE_DIR\`" >&2
                 echo "  failed with:" >&2
                 echo "  -------------------" >&2
-                echo "$PULL_OUTPUT" >&2
+                echo "$MERGE_OUTPUT" >&2
                 echo "  -------------------" >&2
                 return 1
             fi
@@ -1531,8 +1853,8 @@ update_release_clone() {
         fi
     fi
 
-    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse "$GITHOOKS_CLONE_BRANCH")
-    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" "$GITHOOKS_CLONE_BRANCH")
+    GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
+    GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" HEAD)
 
     echo "Githooks clone updated to version: $GITHOOKS_CLONE_CURRENT_COMMIT_DATE-$(echo "$GITHOOKS_CLONE_CURRENT_COMMIT" | cut -c -6)"
 
@@ -1588,7 +1910,8 @@ clone_release_repository() {
     CLONE_OUTPUT=$(
         git clone \
             -c core.hooksPath=/dev/null \
-            --depth 1 \
+            --template=/dev/null \
+            --depth=1 \
             --single-branch \
             --branch "$GITHOOKS_CLONE_BRANCH" \
             "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1
@@ -1619,7 +1942,12 @@ run_internal_install() {
         return 1
     fi
 
-    sh "$INSTALL_SCRIPT" --internal-install "$@" || return 1
+    ADD_ARGS=""
+    [ -n "$GITHOOKS_CLONE_UPDATED_FROM_COMMIT" ] &&
+        ADD_ARGS="--internal-updated-from $GITHOOKS_CLONE_UPDATED_FROM_COMMIT"
+
+    # shellcheck disable=SC2086
+    sh "$INSTALL_SCRIPT" $ADD_ARGS --internal-install "$@" || return 1
 }
 
 ############################################################

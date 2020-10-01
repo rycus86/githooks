@@ -2,6 +2,8 @@
 # Test:
 #   Disable, enable and accept a shared hook (no .githooks directory)
 
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
+
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1
@@ -20,8 +22,8 @@ mkdir -p /tmp/test115.repo &&
     git init ||
     exit 3
 
-git hooks shared add --local /tmp/test115.shared/shared-repo.git &&
-    git hooks shared list | grep "shared_repo" | grep "pending" &&
+git hooks shared add --shared file:///tmp/test115.shared/shared-repo.git &&
+    git hooks shared list | grep "shared-repo" | grep "pending" &&
     git hooks shared pull || exit 4
 
 if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then

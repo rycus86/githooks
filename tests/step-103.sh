@@ -2,6 +2,8 @@
 # Test:
 #   Fail on not available shared hooks.
 
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
+
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1
@@ -18,7 +20,7 @@ mkdir -p /tmp/shared/hooks-103.git/pre-commit &&
 # Install shared hook url into a repo.
 mkdir -p /tmp/test103 && cd /tmp/test103 || exit 1
 git init || exit 1
-mkdir -p .githooks && echo '/tmp/shared/hooks-103.git' >.githooks/.shared || exit 1
+mkdir -p .githooks && echo 'file:///tmp/shared/hooks-103.git' >.githooks/.shared || exit 1
 git add .githooks/.shared
 git hooks shared update
 
@@ -88,7 +90,7 @@ git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
 # shellcheck disable=SC2012
 RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)
 if [ "$RESULT" = "0" ]; then
-    echo "! Expected shared hooks to be installed. $RESULT"
+    echo "! Expected shared hooks to be installed."
     exit 1
 fi
 
@@ -111,7 +113,7 @@ fi
 git hooks shared pull || exit 1
 
 # Change url and try to make it fail
-(cd ~/.githooks/shared/shared_hooks_103* &&
+(cd ~/.githooks/shared/*shared-hooks-103* &&
     git remote rm origin &&
     git remote add origin /some/other/url.git) || exit 1
 # Make a commit
@@ -119,7 +121,7 @@ echo A >>A || exit 1
 OUTPUT=$(git commit -a -m "Test" 2>&1)
 
 # shellcheck disable=SC2181
-if [ $? -eq 0 ] || ! (echo "$OUTPUT" | grep "The URL" | grep -q "is different"); then
+if [ $? -eq 0 ] || ! (echo "$OUTPUT" | grep "The remote" | grep -q "is different"); then
     echo "! Expected to fail on not matching url. output:"
     echo "$OUTPUT"
     exit 1

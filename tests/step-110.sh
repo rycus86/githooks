@@ -2,6 +2,8 @@
 # Test:
 #   Trigger hooks on a bare repo with a push from a local repo.
 
+git config --global githooks.testingTreatFileProtocolAsRemote "true"
+
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1
@@ -33,7 +35,7 @@ git commit -a -m "Hooks" || exit 1
 
 echo "Setup shared hook in server repo"
 cd /tmp/test110/server || exit 1
-git hooks shared add /tmp/test110/hooks || exit 1
+git hooks shared add file:///tmp/test110/hooks || exit 1
 echo "Setup shared hook in server repo: set trusted"
 git hooks config accept trusted || exit 1
 echo "Setup shared hook in server repo: update shared"

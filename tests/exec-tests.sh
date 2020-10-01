@@ -36,8 +36,9 @@ RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
     sed -i -E 's|HOOK_NAME=(.*)|HOOK_NAME="\${HOOK_NAME:-\1}"|' /var/lib/githooks/base-template.sh && \\
     sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|'  /var/lib/githooks/base-template.sh && \\
     sed -i 's%read -r "\$VARIABLE"%eval "\$VARIABLE=\\\\\$\$(eval echo "\\\\\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"%' /var/lib/githooks/base-template.sh && \\
-    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh
-
+    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh && \\
+# Conditionally allow file:// for local shared hooks simulating http:// protocol
+    sed -i -E 's|if(.*grep.*file://.*)|if [ "\$(git config --global githooks.testingTreatFileProtocolAsRemote)" != "true" ] \&\& \1|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh
 # Commit everything
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
@@ -47,8 +48,7 @@ RUN echo "Make test gitrepo to clone from ..." && \
 
 
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
-        sed -i "s|sh /var/lib/githooks/install.sh|sh /var/lib/githooks/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
-        sed -i -E "s|sh -c (.*) -- |sh -c \\1 -- \${EXTRA_INSTALL_ARGS} |g" /var/lib/tests/step-* ; \\
+        sed -i -E "s|sh (.*)/install.sh|sh \1/install.sh \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
     fi
 
 # Always don't delete LFS Hooks (for testing, default is unset, but cumbersome for tests)

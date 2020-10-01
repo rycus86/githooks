@@ -115,7 +115,7 @@ find_existing_git_dirs() {
         # e.g. spourious HEAD file or .git dir which does not mark a repository
         REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
 
-        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -q "$REPO_GIT_DIR"; then
+        if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$REPO_GIT_DIR"; then
             EXISTING_REPOSITORY_LIST="$REPO_GIT_DIR
 $EXISTING_REPOSITORY_LIST"
         fi
@@ -344,6 +344,7 @@ uninstall_hooks_from_repo() {
             git config --local --unset githooks.single.install >/dev/null &&             # legacy setting (deperecated)
             git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1 && # legacy settings (deprecated)
             git config --local --unset githooks.install.registered >/dev/null 2>&1
+        git config --local --unset-all githooks.shared >/dev/null 2>&1
     )
 
     if [ "$UNINSTALLED" = "true" ]; then
@@ -452,7 +453,7 @@ load_install_dir() {
     fi
 
     # Final check since we are going to delete folders
-    if ! echo "$INSTALL_DIR" | grep -q ".githooks"; then
+    if ! echo "$INSTALL_DIR" | grep -F -q ".githooks"; then
         echo "! Uninstall path at $INSTALL_DIR needs to contain \`.githooks\`" >&2
         return 1
     fi
@@ -604,7 +605,7 @@ uninstall() {
 
     # Unset global Githooks variables
     git config --global --unset githooks.runner
-    git config --global --unset githooks.shared
+    git config --global --unset-all githooks.shared
     git config --global --unset githooks.failOnNonExistingSharedHooks
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled

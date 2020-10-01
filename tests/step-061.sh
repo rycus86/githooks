@@ -12,7 +12,7 @@ mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
     (cd /tmp/shared/second-shared.git && git init && git add . && git commit -m 'Testing') ||
     exit 1
 
-git config --global githooks.shared '/tmp/shared/first-shared.git' || exit 1
+git config --global githooks.shared 'file:///tmp/shared/first-shared.git' || exit 1
 
 mkdir -p /tmp/test061/.githooks &&
     echo '/tmp/shared/second-shared.git' >/tmp/test061/.githooks/.shared &&

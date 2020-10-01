@@ -1,0 +1,20 @@
+#!/bin/sh
+SETX_FOUND="no"
+
+OFFENDING_FILES=$(
+    grep -rE "(set.*[-+]x)" ./*.sh .githooks/ examples/* |
+        grep -v '/pre-commit/no-set-x' |
+        tr ':' ' ' | awk '{ print $1 }' |
+        sort | uniq
+)
+
+for FILE in $OFFENDING_FILES; do
+    echo "! set -x or set +x found in: $FILE"
+    SETX_FOUND="yes"
+done
+
+if [ "$SETX_FOUND" = "no" ]; then
+    echo "* No set -x or set +x detected"
+else
+    exit 1
+fi

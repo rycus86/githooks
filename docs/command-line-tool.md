@@ -86,18 +86,18 @@ Lists the active hooks in the current repository along with their state. If `typ
 Manages the shared hook repositories set either globally, or locally within the repository.
 
 ```shell
-$ git hooks shared [add|remove] [--global|--local] <git-url>
-$ git hooks shared clear [--global|--local|--all]
+$ git hooks shared [add|remove] [--shared|--local|--global] <git-url>
+$ git hooks shared clear [--shared|--local|--global|--all]
 $ git hooks shared purge
-$ git hooks shared list [--global|--local|--all] [--with-url]
+$ git hooks shared list [--shared|--local|--global|--all]
 $ git hooks shared [update|pull]
 ```
 
-The `add` or `remove` subcommands adds or removes an item, given as `git-url` from the list. If `--global` is given, then the `githooks.shared` global Git configuration is modified, or if the `--local` option (default) is set, the `.githooks/.shared` file is modified in the local repository.
+The `add` or `remove` subcommands adds or removes an item, given as `git-url` from the list. If `--local` or `--global` is given, then either the `githooks.shared` local or global Git configuration variable is modified, or if the `--shared` option (default) is set, the `.githooks/.shared` file is modified in the local repository.
 
 The `clear` subcommand deletes every item on either the global or the local list, or both when the `--all` option is given. The `purge` subcommand deletes the shared hook repositories already pulled locally.
 
-The `list` subcommand list the global, local or all (default) shared hooks repositories, and optionally prints the Git URL for them, when the `--with-url` option is used.
+The `list` subcommand list the global, local or all (default) shared hooks repositories.
 
 The `update` or `pull` subcommands update all the shared repositories, both global and local, either by running `git pull` on existing ones or `git clone` on new ones.
 
@@ -177,11 +177,11 @@ $ git hooks config [reset|print] search-dir
 Changes the previous search directory setting used during installation. The `set` option changes the value, and the `reset` option clears it. The `print` option outputs the current setting of it.
 
 ```shell
-$ git hooks config set shared <git-url...>
-$ git hooks config [reset|print] shared
+$ git hooks config set shared [--local] <git-url...>
+$ git hooks config [reset|print] shared [--local]
 ```
 
-Updates the list of global shared hook repositories when the `set` option is used, which accepts multiple `<git-url>` arguments, each containing a clone URL of a hook repository. The `reset` option clears this setting. The `print` option outputs the current setting.
+Updates the list of shared hook repositories in the global or local Git config when the `set` option is used, which accepts multiple `<git-url>` arguments, each containing a clone URL of a hook repository. The `reset` option clears this setting. The `print` option outputs the current setting.
 
 ```shell
 $ git hooks config [accept|deny|reset|print] trusted

@@ -93,7 +93,7 @@ set_main_variables() {
     load_install_dir
 
     # Global IFS for loops
-    IFS_COMMA_NEWLINE=",
+    IFS_NEWLINE="
 "
 }
 
@@ -157,10 +157,10 @@ find_hook_path_to_enable_or_disable() {
 
             REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
-            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -o "$REMOTE_URL")
+            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
+            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
 
-            ACTIVE_GLOBAL_REPO=$(git config --global --get githooks.shared | grep -o "$REMOTE_URL")
+            ACTIVE_GLOBAL_REPO=$(git config --global --get-all githooks.shared | grep -o "$REMOTE_URL")
 
             if [ "$ACTIVE_LOCAL_REPO" != "$REMOTE_URL" ] && [ "$ACTIVE_GLOBAL_REPO" != "$REMOTE_URL" ]; then
                 continue
@@ -243,7 +243,7 @@ find_hook_path_to_enable_or_disable() {
     if [ -z "$HOOK_PATH" ]; then
         echo "! Sorry, cannot find any hooks that would match that" >&2
         return 1
-    elif echo "$HOOK_PATH" | grep -qv "/.githooks"; then
+    elif echo "$HOOK_PATH" | grep -F -qv "/.githooks"; then
         if [ -d "$HOOK_PATH/.githooks" ]; then
             HOOK_PATH="$HOOK_PATH/.githooks"
         else
@@ -294,7 +294,7 @@ git hooks disable [-r|--reset]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "! The current directory ($(pwd)) does not seem" >&2
+        echo "! The current directory \`$(pwd)\` does not seem" >&2
         echo "  to be the root of a Git repository!" >&2
         exit 1
     fi
@@ -367,7 +367,7 @@ git hooks enable [--shared] [trigger]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -414,7 +414,7 @@ git hooks accept [--shared] [trigger]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -436,16 +436,11 @@ git hooks accept [--shared] [trigger]
 }
 
 #####################################################
-# Returns the MD5 checksum of the hook file
+# Returns the SHA1 hash of the hook file
 #   passed in as the first argument.
 #####################################################
 get_hook_checksum() {
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$1" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$1" 2>/dev/null)
-    fi
-
-    echo "$MD5_HASH" | awk "{ print \$1 }"
+    git hash-object "$1" 2>/dev/null
 }
 
 #####################################################
@@ -476,7 +471,7 @@ git hooks trust [forget]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -554,7 +549,7 @@ git hooks list [type]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -581,7 +576,7 @@ git hooks list [type]
         fi
 
         # global shared hooks
-        SHARED_REPOS_LIST=$(git config --global --get githooks.shared)
+        SHARED_REPOS_LIST=$(git config --global --get-all githooks.shared)
         IFS="$IFS_NEWLINE"
         for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
             unset IFS
@@ -604,7 +599,7 @@ git hooks list [type]
 
         # local shared hooks
         if [ -f "$(pwd)/.githooks/.shared" ]; then
-            SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
 
             IFS="$IFS_NEWLINE"
             for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
@@ -771,17 +766,13 @@ is_trusted_repo() {
 get_hook_enabled_or_disabled_state() {
     HOOK_PATH="$1"
 
-    # get hash of the hook contents
-    if ! MD5_HASH=$(md5 -r "$HOOK_PATH" 2>/dev/null); then
-        MD5_HASH=$(md5sum "$HOOK_PATH" 2>/dev/null)
-    fi
-    MD5_HASH=$(echo "$MD5_HASH" | awk "{ print \$1 }")
+    SHA_HASH=$(get_hook_checksum "$HOOK_PATH")
     CURRENT_HASHES=$(grep "$HOOK_PATH" "${CURRENT_GIT_DIR}/.githooks.checksum" 2>/dev/null)
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
         echo "disabled"
-    elif ! echo "$CURRENT_HASHES" | grep -q "$MD5_HASH $HOOK_PATH" >/dev/null 2>&1; then
+    elif ! echo "$CURRENT_HASHES" | grep -F -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
         if [ -z "$CURRENT_HASHES" ]; then
             echo "pending / new"
         else
@@ -814,7 +805,7 @@ list_hooks_in_shared_repos() {
         fi
 
         REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
-        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -o "$REMOTE_URL")
+        ACTIVE_REPO=$(echo "$SHARED_REPOS_LIST" | grep -F -o "$REMOTE_URL")
         if [ "$ACTIVE_REPO" != "$REMOTE_URL" ]; then
             continue
         fi
@@ -843,22 +834,23 @@ manage_shared_hook_repos() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks shared [add|remove] [--global|--local] <git-url>
-git hooks shared clear [--global|--local|--all]
+git hooks shared [add|remove] [--shared|--local|--global] <git-url>
+git hooks shared clear [--shared|--local|--global|--all]
 git hooks shared purge
-git hooks shared list [--global|--local|--all] [--with-url]
+git hooks shared list [--shared|--local|--global|--all]
 git hooks shared [update|pull]
 
-    Manages the shared hook repositories set either globally, or locally within the repository.
+    Manages the shared hook repositories set either in the \`.githooks.shared\` file locally in the repository or
+    in the local or global Git configuration \`githooks.shared\`.
     The \`add\` or \`remove\` subcommands adds or removes an item, given as \`git-url\` from the list.
-    If \`--global\` is given, then the \`githooks.shared\` global Git configuration is modified, or if the
-    \`--local\` option (default) is set, the \`.githooks/.shared\` file is modified in the local repository.
+    If \`--local|--global\` is given, then the \`githooks.shared\` local/global Git configuration
+    is modified, or if the \`--shared\` option (default) is set, the \`.githooks/.shared\`
+    file is modified in the local repository.
     The \`clear\` subcommand deletes every item on either the global or the local list,
     or both when the \`--all\` option is given.
     The \`purge\` subcommand deletes the shared hook repositories already pulled locally.
-    The \`list\` subcommand list the global, local or all (default) shared hooks repositories,
-    and optionally prints the Git URL for them, when the \`--with-url\` option is used.
-    The \`update\` or \`pull\` subcommands update all the shared repositories, both global and local, either by
+    The \`list\` subcommand list the shared, local, global or all (default) shared hooks repositories.
+    The \`update\` or \`pull\` subcommands update all the shared repositories, either by
     running \`git pull\` on existing ones or \`git clone\` on new ones.
 "
         return
@@ -912,38 +904,30 @@ git hooks shared [update|pull]
 #   the global or local list.
 #####################################################
 add_shared_hook_repo() {
-    SET_SHARED_GLOBAL=
+    SET_SHARED_TYPE="--shared"
     SHARED_REPO_URL=
 
-    case "$1" in
-    "--global")
-        SET_SHARED_GLOBAL=1
+    if echo "$1" | grep -qE "\-\-(shared|local|global)"; then
+        SET_SHARED_TYPE="$1"
         SHARED_REPO_URL="$2"
-        ;;
-    "--local")
-        SET_SHARED_GLOBAL=
-        SHARED_REPO_URL="$2"
-        ;;
-    *)
+    else
         SHARED_REPO_URL="$1"
-        ;;
-    esac
+    fi
 
     if [ -z "$SHARED_REPO_URL" ]; then
-        echo "! Usage: \`git hooks shared add [--global|--local] <git-url>\`" >&2
+        echo "! Usage: \`git hooks shared add [--shared|--local|--global] <git-url>\`" >&2
         exit 1
     fi
 
-    if [ -n "$SET_SHARED_GLOBAL" ]; then
-        CURRENT_LIST=$(git config --global --get githooks.shared)
+    if [ "$SET_SHARED_TYPE" != "--shared" ]; then
 
-        if [ -n "$CURRENT_LIST" ]; then
-            NEW_LIST="${CURRENT_LIST},${SHARED_REPO_URL}"
-        else
-            NEW_LIST="$SHARED_REPO_URL"
+        if [ "$SET_SHARED_TYPE" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! The current directory \`$(pwd)\` does not" >&2
+            echo "  seem to be the root of a Git repository!" >&2
+            exit 1
         fi
 
-        git config --global githooks.shared "$NEW_LIST" &&
+        git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_URL" &&
             echo "The new shared hook repository is successfully added" &&
             return
 
@@ -952,7 +936,16 @@ add_shared_hook_repo() {
 
     else
         if ! is_running_in_git_repo_root; then
-            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+            echo "! The current directory \`$(pwd)\` does not" >&2
+            echo "  seem to be the root of a Git repository!" >&2
+            exit 1
+        fi
+
+        if is_local_path "$SHARED_REPO_URL" ||
+            is_local_url "$SHARED_REPO_URL"; then
+            echo "! Adding a local path:" >&2
+            echo "  \`$SHARED_REPO_URL\`" >&2
+            echo "  to the local shared hooks is forbidden." >&2
             exit 1
         fi
 
@@ -978,91 +971,90 @@ add_shared_hook_repo() {
 #   the global or local list.
 #####################################################
 remove_shared_hook_repo() {
-    SET_SHARED_GLOBAL=
+    SET_SHARED_TYPE="--shared"
     SHARED_REPO_URL=
 
-    case "$1" in
-    "--global")
-        SET_SHARED_GLOBAL=1
+    if echo "$1" | grep -qE "\-\-(shared|local|global)"; then
+        SET_SHARED_TYPE="$1"
         SHARED_REPO_URL="$2"
-        ;;
-    "--local")
-        SET_SHARED_GLOBAL=
-        SHARED_REPO_URL="$2"
-        ;;
-    *)
+    else
         SHARED_REPO_URL="$1"
-        ;;
-    esac
+    fi
 
     if [ -z "$SHARED_REPO_URL" ]; then
-        echo "! Usage: \`git hooks shared remove [--global|--local] <git-url>\`" >&2
+        echo "! Usage: \`git hooks shared remove [--shared|--local|--global] <git-url>\`" >&2
         exit 1
     fi
 
-    if [ -n "$SET_SHARED_GLOBAL" ]; then
-        CURRENT_LIST=$(git config --global --get githooks.shared)
-        NEW_LIST=""
+    if [ "$SET_SHARED_TYPE" != "--shared" ]; then
 
-        IFS="$IFS_COMMA_NEWLINE"
-
-        for SHARED_REPO_ITEM in $CURRENT_LIST; do
-            unset IFS
-            if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
-                continue
-            fi
-
-            if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
-            else
-                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
-            fi
-            IFS="$IFS_COMMA_NEWLINE"
-        done
-
-        unset IFS
-
-        if [ -z "$NEW_LIST" ]; then
-            clear_shared_hook_repos "--global" && return || exit 1
-        fi
-
-        git config --global githooks.shared "$NEW_LIST" &&
-            echo "The list of shared hook repositories is successfully changed" &&
-            return
-
-        echo "! Failed to remove a shared hook repository" >&2
-        exit 1
-
-    else
-        if ! is_running_in_git_repo_root; then
-            echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        if [ "$SET_SHARED_TYPE" = "--local" ] && ! is_running_in_git_repo_root; then
+            echo "! The current directory \`$(pwd)\` does not" >&2
+            echo "  seem to be the root of a Git repository!" >&2
             exit 1
         fi
 
-        CURRENT_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-        NEW_LIST=""
+        CURRENT_LIST=$(git config "$SET_SHARED_TYPE" --get-all githooks.shared)
 
-        IFS="$IFS_COMMA_NEWLINE"
+        # Unset all and add them back
+        git config "$SET_SHARED_TYPE" --unset-all githooks.shared
 
+        IFS="$IFS_NEWLINE"
         for SHARED_REPO_ITEM in $CURRENT_LIST; do
             unset IFS
             if [ "$SHARED_REPO_ITEM" = "$SHARED_REPO_URL" ]; then
                 continue
             fi
 
-            if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
-            else
-                NEW_LIST="${NEW_LIST}
-${SHARED_REPO_ITEM}"
-            fi
-            IFS="$IFS_COMMA_NEWLINE"
+            git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_ITEM"
+            IFS="$IFS_NEWLINE"
         done
-
         unset IFS
 
-        if [ -z "$NEW_LIST" ]; then
-            clear_shared_hook_repos "--local" && return || exit 1
+        echo "The list of shared hook repositories is successfully changed"
+        return
+
+    else
+        if ! is_running_in_git_repo_root; then
+            echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
+            exit 1
+        fi
+
+        if [ ! -f "$(pwd)/.githooks/.shared" ]; then
+            echo "! No \`.githooks/.shared\` in current repository" >&2
+            return
+        fi
+
+        NEW_LIST=""
+        ONLY_COMMENTS="true"
+        IFS="$IFS_NEWLINE"
+        while read -r LINE || [ -n "$LINE" ]; do
+            unset IFS
+
+            if echo "$LINE" | grep -qE "^[^#\n\r ].*$"; then
+                if [ "$LINE" = "$SHARED_REPO_URL" ]; then
+                    continue
+                fi
+                ONLY_COMMENTS="false"
+            elif echo "$LINE" | grep -qE "^ *[#].*$"; then
+                : # nothing to do for comments ...
+            else
+                : # skip empty lines
+            fi
+
+            if [ -z "$NEW_LIST" ]; then
+                NEW_LIST="$LINE"
+            else
+                NEW_LIST="${NEW_LIST}
+${LINE}"
+            fi
+
+            IFS="$IFS_NEWLINE"
+        done <"$(pwd)/.githooks/.shared"
+        unset IFS
+
+        if [ -z "$NEW_LIST" ] || [ "$ONLY_COMMENTS" = "true" ]; then
+            clear_shared_hook_repos "$SET_SHARED_TYPE" && return || exit 1
         fi
 
         echo "$NEW_LIST" >"$(pwd)/.githooks/.shared" &&
@@ -1081,38 +1073,52 @@ ${SHARED_REPO_ITEM}"
 #   from the global or local list, or both.
 #####################################################
 clear_shared_hook_repos() {
-    CLEAR_GLOBAL_REPOS=
-    CLEAR_LOCAL_REPOS=
+    CLEAR_GLOBAL_REPOS=""
+    CLEAR_LOCAL_REPOS=""
+    CLEAR_SHARED_REPOS=""
+    CLEAR_REPOS_FAILED=""
 
     case "$1" in
-    "--global")
-        CLEAR_GLOBAL_REPOS=1
+    "--shared")
+        CLEAR_SHARED_REPOS=1
         ;;
     "--local")
         CLEAR_LOCAL_REPOS=1
         ;;
-    "--all")
+    "--global")
         CLEAR_GLOBAL_REPOS=1
+        ;;
+    "--all")
+        CLEAR_SHARED_REPOS=1
         CLEAR_LOCAL_REPOS=1
+        CLEAR_GLOBAL_REPOS=1
         ;;
     *)
-        echo "! One of the following must be used:" >&2
-        echo "    \$ git hooks shared clear --global" >&2
-        echo "    \$ git hooks shared clear --local" >&2
-        echo "    \$ git hooks shared clear --all" >&2
+        echo "! Unknown clear option \`$1\`" >&2
+        echo "  Usage: \`git hooks shared clear [--shared|--local|--global|--all]\`" >&2
         exit 1
         ;;
     esac
 
-    if [ -n "$CLEAR_GLOBAL_REPOS" ] && [ -n "$(git config --global --get githooks.shared)" ]; then
-        git config --global --unset githooks.shared &&
-            echo "Global shared hook repository list cleared" ||
+    if [ -n "$CLEAR_LOCAL_REPOS" ]; then
+        if ! is_running_in_git_repo_root; then
+            echo "! The current directory \`$(pwd)\` does not" >&2
+            echo "  seem to be the root of a Git repository!" >&2
             CLEAR_REPOS_FAILED=1
+        else
+            git config --local --unset-all githooks.shared
+            echo "Shared hook repository list in local Git config cleared"
+        fi
     fi
 
-    if [ -n "$CLEAR_LOCAL_REPOS" ] && [ -f "$(pwd)/.githooks/.shared" ]; then
+    if [ -n "$CLEAR_GLOBAL_REPOS" ]; then
+        git config --global --unset-all githooks.shared
+        echo "Shared hook repository list in global Git config cleared"
+    fi
+
+    if [ -n "$CLEAR_SHARED_REPOS" ] && [ -f "$(pwd)/.githooks/.shared" ]; then
         rm -f "$(pwd)/.githooks/.shared" &&
-            echo "Local shared hook repository list cleared" ||
+            echo "Shared hook repository list in \".githooks/.shared\` file cleared" ||
             CLEAR_REPOS_FAILED=1
     fi
 
@@ -1128,101 +1134,107 @@ clear_shared_hook_repos() {
 #   the global or local list, or both.
 #####################################################
 list_shared_hook_repos() {
-    LIST_GLOBAL=1
-    LIST_LOCAL=1
-    LIST_WITH_URL=
+    LIST_SHARED=1
+    LIST_CONFIGS="global,local"
 
     for ARG in "$@"; do
         case "$ARG" in
-        "--global")
-            LIST_LOCAL=
+        "--shared")
+            LIST_CONFIGS=""
             ;;
         "--local")
-            LIST_GLOBAL=
+            LIST_CONFIGS="local"
+            LIST_SHARED=""
             ;;
-        "--all")
-            # leave both list options on
+        "--global")
+            LIST_CONFIGS="global"
+            LIST_SHARED=""
             ;;
-        "--with-url")
-            LIST_WITH_URL=1
-            ;;
+        "--all") ;;
         *)
-            echo "! Unknown list option: $ARG" >&2
+            echo "! Unknown list option \`$ARG\`" >&2
+            echo "  Usage: \`git hooks shared list [--shared|--local|--global|--all]\`" >&2
             exit 1
             ;;
         esac
     done
 
-    if [ -n "$LIST_GLOBAL" ]; then
-        echo "Global shared hook repositories:"
+    IFS=","
+    for LIST_CONFIG in $LIST_CONFIGS; do
+        unset IFS
 
-        if [ -z "$(git config --global --get githooks.shared)" ]; then
+        echo "Shared hook repositories in $LIST_CONFIG Git config:"
+        SHARED_REPOS_LIST=$(git config "--$LIST_CONFIG" --get-all githooks.shared)
+
+        if [ -z "$SHARED_REPOS_LIST" ]; then
             echo "  - None"
         else
 
-            IFS="$IFS_COMMA_NEWLINE"
-            for LIST_ITEM in $(git config --global --get githooks.shared); do
+            IFS="$IFS_NEWLINE"
+            for LIST_ITEM in $SHARED_REPOS_LIST; do
                 unset IFS
 
                 set_shared_root "$LIST_ITEM"
-                if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
-                        LIST_ITEM_STATE="active"
+
+                LIST_ITEM_STATE="invalid"
+
+                if [ "$SHARED_REPO_IS_CLONED" = "true" ]; then
+                    if [ -d "$SHARED_ROOT" ]; then
+                        if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
+                            LIST_ITEM_STATE="active"
+                        fi
                     else
-                        LIST_ITEM_STATE="invalid"
+                        LIST_ITEM_STATE="pending"
                     fi
                 else
-                    LIST_ITEM_STATE="pending"
+                    [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
                 fi
 
-                if [ -n "$LIST_WITH_URL" ]; then
-                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)
-      url: $LIST_ITEM"
-                else
-                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
-                fi
+                echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_COMMA_NEWLINE"
+                IFS="$IFS_NEWLINE"
             done
             unset IFS
         fi
-    fi
 
-    if [ -n "$LIST_LOCAL" ]; then
-        echo "Local shared hook repositories:"
+        IFS=","
+    done
+    unset IFS
+
+    if [ -n "$LIST_SHARED" ]; then
+        echo "Shared hook repositories in \`.githooks/.shared\`:"
 
         if ! is_running_in_git_repo_root; then
             echo "  - Current folder does not seem to be a Git repository"
-            exit 1
+            [ -z "$LIST_CONFIGS" ] && exit 1
         elif [ ! -f "$(pwd)/.githooks/.shared" ]; then
             echo "  - None"
         else
-            SHARED_REPOS_LIST=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
+            SHARED_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
 
-            IFS="$IFS_COMMA_NEWLINE"
-            echo "$SHARED_REPOS_LIST" | while read -r LIST_ITEM; do
+            IFS="$IFS_NEWLINE"
+            for LIST_ITEM in $SHARED_REPOS_LIST; do
                 unset IFS
 
                 set_shared_root "$LIST_ITEM"
 
-                if [ -d "$SHARED_ROOT/.git" ]; then
-                    if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$LIST_ITEM" ]; then
-                        LIST_ITEM_STATE="active"
+                LIST_ITEM_STATE="invalid"
+
+                if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
+                    [ -d "$SHARED_ROOT" ] && LIST_ITEM_STATE="active"
+                else
+                    if [ -d "$SHARED_ROOT" ]; then
+                        if [ "$(git -C "$SHARED_ROOT" config --get remote.origin.url)" = "$SHARED_REPO_CLONE_URL" ]; then
+                            LIST_ITEM_STATE="active"
+                        fi
                     else
-                        LIST_ITEM_STATE="invalid"
+                        LIST_ITEM_STATE="pending"
                     fi
-                else
-                    LIST_ITEM_STATE="pending"
                 fi
 
-                if [ -n "$LIST_WITH_URL" ]; then
-                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)
-      url: $LIST_ITEM"
-                else
-                    echo "  - $NORMALIZED_NAME ($LIST_ITEM_STATE)"
-                fi
+                echo "  - $LIST_ITEM ($LIST_ITEM_STATE)"
 
-                IFS="$IFS_COMMA_NEWLINE"
+                IFS="$IFS_NEWLINE"
             done
             unset IFS
         fi
@@ -1240,7 +1252,7 @@ update_shared_hook_repos() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks pull
+git hooks shared pull
 
     Updates the shared repositories found either
     in the global Git configuration, or in the
@@ -1251,31 +1263,104 @@ git hooks pull
         return
     fi
 
-    SHARED_HOOKS=$(git config --global --get githooks.shared)
-    if [ -n "$SHARED_HOOKS" ]; then
-        update_shared_hooks_in "$SHARED_HOOKS"
+    if [ -f "$(pwd)/.githooks/.shared" ]; then
+        SHARED_HOOKS=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
+        update_shared_hooks_in --shared "$SHARED_HOOKS"
     fi
 
-    if [ -f "$(pwd)/.githooks/.shared" ]; then
-        SHARED_HOOKS=$(grep -E "^[^#].+$" <"$(pwd)/.githooks/.shared")
-        update_shared_hooks_in "$SHARED_HOOKS"
+    SHARED_HOOKS=$(git config --local --get-all githooks.shared)
+    if [ -n "$SHARED_HOOKS" ]; then
+        update_shared_hooks_in --local "$SHARED_HOOKS"
+    fi
+
+    SHARED_HOOKS=$(git config --global --get-all githooks.shared)
+    if [ -n "$SHARED_HOOKS" ]; then
+        update_shared_hooks_in --global "$SHARED_HOOKS"
     fi
 
     echo "Finished"
 }
 
 #####################################################
-# Sets the SHARED_ROOT and NORMALIZED_NAME
-#   for the shared hook repo url `$1`.
+# Check if `$1` is not a supported git clone url and
+#   is treated as a local path to a repository.
+#   See `https://tools.ietf.org/html/rfc3986#appendix-B`
+
+# Returns: 0 if it is a local path, 1 otherwise
+#####################################################
+is_local_path() {
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a URL `<scheme>://...``
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
+        return 1
+    fi
+    return 0
+}
+
+#####################################################
+# Check if url `$1`is a local url, e.g `file://`.
+#
+# Returns: 0 if it is a local url, 1 otherwise
+#####################################################
+is_local_url() {
+    if echo "$1" | grep -iEq "^\s*file://"; then
+        return 0
+    fi
+    return 1
+}
+
+#####################################################
+# Sets the `SHARED_ROOT` and `NORMALIZED_NAME`
+#   for the shared hook repo url `$1` and sets
+#   `SHARED_REPO_IS_CLONED` to `true` and its
+#   `SHARED_REPO_CLONE_URL` if is needs to get
+#    cloned and `SHARED_REPO_IS_LOCAL` to `true`
+#    if `$1` points to to a local path.
 #
 # Returns:
-#   0 when successfully finished, 1 otherwise
+#   none
 #####################################################
 set_shared_root() {
-    NORMALIZED_NAME=$(echo "$1" |
-        sed -E "s#.*[:/](.+/.+)\\.git#\\1#" |
-        sed -E "s/[^a-zA-Z0-9]/_/g")
-    SHARED_ROOT="$INSTALL_DIR/shared/$NORMALIZED_NAME"
+
+    SHARED_ROOT=""
+    SHARED_REPO_CLONE_URL=""
+    SHARED_REPO_CLONE_BRANCH=""
+    SHARED_REPO_IS_LOCAL="false"
+    SHARED_REPO_IS_CLONED="true"
+    DO_SPLIT="true"
+
+    if is_local_path "$1"; then
+        SHARED_REPO_IS_LOCAL="true"
+
+        if is_bare_repo "$1"; then
+            DO_SPLIT="false"
+        else
+            # We have a local path to a non-bare repo
+            SHARED_REPO_IS_CLONED="false"
+            SHARED_ROOT="$1"
+            return
+        fi
+    elif is_local_url "$1"; then
+        SHARED_REPO_IS_LOCAL="true"
+    fi
+
+    if [ "$SHARED_REPO_IS_CLONED" = "true" ]; then
+        # Here we now have a supported Git URL or
+        # a local bare-repo `<localpath>`
+
+        # Split "...@(.*)"
+        if [ "$DO_SPLIT" = "true" ] && echo "$1" | grep -q "@"; then
+            SHARED_REPO_CLONE_URL="$(echo "$1" | sed -E "s|^(.+)@.+$|\\1|")"
+            SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
+        else
+            SHARED_REPO_CLONE_URL="$1"
+            SHARED_REPO_CLONE_BRANCH=""
+        fi
+
+        # Define the shared clone folder
+        SHA_HASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
+        NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
+        SHARED_ROOT="$INSTALL_DIR/shared/$SHA_HASH-$NAME"
+    fi
 }
 
 #####################################################
@@ -1283,30 +1368,76 @@ set_shared_root() {
 #   on the list passed in on the first argument.
 #####################################################
 update_shared_hooks_in() {
-    SHARED_REPOS_LIST="$1"
+    SHARED_HOOKS_TYPE="$1"
+    SHARED_REPOS_LIST="$2"
 
-    # split on comma and newline
-    IFS="$IFS_COMMA_NEWLINE"
-
+    IFS="$IFS_NEWLINE"
     for SHARED_REPO in $SHARED_REPOS_LIST; do
         unset IFS
 
-        mkdir -p "$INSTALL_DIR/shared"
-
         set_shared_root "$SHARED_REPO"
+
+        if [ "$SHARED_REPO_IS_CLONED" != "true" ]; then
+            # Non-cloned roots are ignored
+            continue
+        elif [ "$SHARED_HOOKS_TYPE" = "--shared" ] &&
+            [ "$SHARED_REPO_IS_LOCAL" = "true" ]; then
+            echo "! Warning: Shared hooks in \`.githooks/.shared\` contain a local path" >&2
+            echo "  \`$SHARED_REPO\`" >&2
+            echo "  which is forbidden. It will be skipped." >&2
+            echo ""
+            echo "  You can only have local paths for shared hooks defined" >&2
+            echo "  in the local or global Git configuration." >&2
+            echo ""
+            echo "  This can be achieved by running" >&2
+            echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
+            echo "  and deleting it from the \`.shared\` file by" >&2
+            echo "    \$ git hooks shared remove --shared \"$SHARED_REPO\"" >&2
+            continue
+        fi
 
         if [ -d "$SHARED_ROOT/.git" ]; then
             echo "* Updating shared hooks from: $SHARED_REPO"
-            PULL_OUTPUT="$(git -C "$SHARED_ROOT" --work-tree="$SHARED_ROOT" --git-dir="$SHARED_ROOT/.git" -c core.hooksPath=/dev/null pull 2>&1)"
+
+            # shellcheck disable=SC2086
+            PULL_OUTPUT="$(execute_git "$SHARED_ROOT" pull 2>&1)"
+
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Update failed, git pull output:" >&2
                 echo "$PULL_OUTPUT" >&2
             fi
         else
-            echo "* Retrieving shared hooks from: $SHARED_REPO"
-            [ -d "$SHARED_ROOT" ] && rm -rf "$SHARED_ROOT"
-            CLONE_OUTPUT=$(git -c core.hooksPath=/dev/null clone "$SHARED_REPO" "$SHARED_ROOT" 2>&1)
+            echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL"
+
+            ADD_ARGS=""
+            [ "$SHARED_REPO_IS_LOCAL" != "true" ] && ADD_ARGS="--depth=1"
+
+            [ -d "$SHARED_ROOT" ] &&
+                rm -rf "$SHARED_ROOT" &&
+                mkdir -p "$SHARED_ROOT"
+
+            if [ -n "$SHARED_REPO_CLONE_BRANCH" ]; then
+                # shellcheck disable=SC2086
+                CLONE_OUTPUT=$(git clone \
+                    -c core.hooksPath=/dev/null \
+                    --template=/dev/null \
+                    --single-branch \
+                    --branch "$SHARED_REPO_CLONE_BRANCH" \
+                    $ADD_ARGS \
+                    "$SHARED_REPO_CLONE_URL" \
+                    "$SHARED_ROOT" 2>&1)
+            else
+                # shellcheck disable=SC2086
+                CLONE_OUTPUT=$(git clone \
+                    -c core.hooksPath=/dev/null \
+                    --template=/dev/null \
+                    --single-branch \
+                    $ADD_ARGS \
+                    "$SHARED_REPO_CLONE_URL" \
+                    "$SHARED_ROOT" 2>&1)
+            fi
+
             # shellcheck disable=SC2181
             if [ $? -ne 0 ]; then
                 echo "! Clone failed, git clone output:" >&2
@@ -1314,7 +1445,7 @@ update_shared_hooks_in() {
             fi
         fi
 
-        IFS="$IFS_COMMA_NEWLINE"
+        IFS="$IFS_NEWLINE"
     done
 
     unset IFS
@@ -1658,6 +1789,17 @@ is_git_repo() {
     git -C "$1" rev-parse >/dev/null 2>&1 || return 1
 }
 
+############################################################
+# Checks whether the given directory
+#   is a Git bare repository.
+#
+# Returns:
+#   1 if failed, 0 otherwise
+############################################################
+is_bare_repo() {
+    [ "$(git -C "$1" rev-parse --is-bare-repository 2>/dev/null)" = "true" ] || return 1
+}
+
 #####################################################
 # Safely execute a git command in the standard
 #   clone dir `$1`.
@@ -1720,7 +1862,8 @@ clone_release_repository() {
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
-        --depth 1 \
+        --template=/dev/null \
+        --depth=1 \
         --single-branch \
         --branch "$GITHOOKS_CLONE_BRANCH" \
         "$GITHOOKS_CLONE_URL" "$GITHOOKS_CLONE_DIR" 2>&1)
@@ -1841,7 +1984,7 @@ git hooks readme [add|update]
     esac
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -1888,7 +2031,7 @@ git hooks ignore [trigger] [pattern...]
     fi
 
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -1945,7 +2088,7 @@ manage_configuration() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks config list [--global|--local]
+git hooks config list [--local|--global]
 
     Lists the Githooks related settings of the Githooks configuration.
     Can be either global or local configuration, or both by default.
@@ -1973,10 +2116,10 @@ git hooks config [reset|print] search-dir
     The \`set\` option changes the value, and the \`reset\` option clears it.
     The \`print\` option outputs the current setting of it.
 
-git hooks config set shared <git-url...>
-git hooks config [reset|print] shared
+git hooks config set shared [--local] <git-url...>
+git hooks config [reset|print] shared [--local]
 
-    Updates the list of global shared hook repositories when
+    Updates the list of global (or local) shared hook repositories when
     the \`set\` option is used, which accepts multiple <git-url> arguments,
     each containing a clone URL of a hook repository.
     The \`reset\` option clears this setting.
@@ -2018,7 +2161,7 @@ git hooks config [reset|print] update-time
     Use \`git hooks update [enable|disable]\` to change that setting.
     The \`print\` option outputs the current value of it.
 
-git hooks config [enable|disable|print] fail-on-non-existing-shared-hooks [--global|--local]
+git hooks config [enable|disable|print] fail-on-non-existing-shared-hooks [--local|--global]
 
 Enable or disable failing hooks with an error when any
 shared hooks configured in \`.shared\` are missing,
@@ -2064,7 +2207,7 @@ The \`print\` option outputs the current behavior.
         config_search_dir "$CONFIG_OPERATION" "$@"
         ;;
     "shared")
-        config_global_shared_hook_repos "$CONFIG_OPERATION" "$@"
+        config_shared_hook_repos "$CONFIG_OPERATION" "$@"
         ;;
     "trusted")
         config_trust_all_hooks "$CONFIG_OPERATION"
@@ -2103,7 +2246,7 @@ The \`print\` option outputs the current behavior.
 #####################################################
 config_disable() {
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 
@@ -2159,8 +2302,13 @@ config_search_dir() {
 # Prints or modifies the \`githooks.shared\`
 #   global Git configuration.
 #####################################################
-config_global_shared_hook_repos() {
+config_shared_hook_repos() {
+
     if [ "$1" = "set" ]; then
+
+        SHARED_TYPE="--global"
+        [ "$2" = "--local" ] && SHARED_TYPE="$2" && shift
+
         if [ -z "$2" ]; then
             manage_configuration "help"
             echo "! Missing <git-url> parameter" >&2
@@ -2169,21 +2317,32 @@ config_global_shared_hook_repos() {
 
         shift
 
-        NEW_LIST=""
         for SHARED_REPO_ITEM in "$@"; do
-            if [ -z "$NEW_LIST" ]; then
-                NEW_LIST="$SHARED_REPO_ITEM"
-            else
-                NEW_LIST="${NEW_LIST},${SHARED_REPO_ITEM}"
-            fi
+            git config "$SHARED_TYPE" --add githooks.shared "$SHARED_REPO_ITEM"
         done
 
-        git config --global githooks.shared "$NEW_LIST"
     elif [ "$1" = "reset" ]; then
-        git config --global --unset githooks.shared
+        SHARED_TYPE="--global"
+        if echo "$2" | grep -qE "\-\-(local)"; then
+            SHARED_TYPE="$2"
+        elif [ -n "$2" ]; then
+            manage_configuration "help"
+            echo "! Wrong argument \`$2\`" >&2
+        fi
+
+        git config "$SHARED_TYPE" --unset-all githooks.shared
+
     elif [ "$1" = "print" ]; then
-        list_shared_hook_repos "--global"
+        SHARED_TYPE="--global"
+        if echo "$2" | grep -qE "\-\-(local)"; then
+            SHARED_TYPE="$2"
+        elif [ -n "$2" ]; then
+            manage_configuration "help"
+            echo "! Wrong argument $($2)" >&2
+        fi
+        list_shared_hook_repos "$SHARED_TYPE"
     else
+        manage_configuration "help"
         echo "! Invalid operation: \`$1\` (use \`set\`, \`reset\` or \`print\`)" >&2
         exit 1
     fi
@@ -2197,7 +2356,7 @@ config_global_shared_hook_repos() {
 #####################################################
 config_trust_all_hooks() {
     if ! is_running_in_git_repo_root; then
-        echo "The current directory ($(pwd)) does not seem to be the root of a Git repository!"
+        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
 

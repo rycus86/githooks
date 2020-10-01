@@ -101,16 +101,50 @@ Hooks in individual repositories can be disabled as well, running `git hooks dis
 
 The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
 
-For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line or separated by comma, which hold common and shared hooks. Alternatively, you can have a comma-separated list of shared repositories set in the `githooks.shared` global Git configuration variable, and the hooks in these repositories will execute for all local projects where the base hooks are installed. Below is an example value for this setting.
+For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line, which hold common and shared hooks. Alternatively, you can have a shared repositories set by multiple `githooks.shared` local or global Git configuration variables, and the hooks in these repositories will execute for all local projects where Githooks is installed. Below are example values for these setting.
 
 ```shell
-$ git config --global --get githooks.shared
-git@github.com:shared/hooks-python.git,git@github.com:shared/hooks-maven.git
-$ git hooks shared list --with-url
+$ git config --global --get-all githooks.shared # shared hooks in global config (for all repositories)
+https://github.com/shared/hooks-python.git
+git@github.com:shared/repo.git@mybranch
+$ cd myrepo
+$ git config --local --get-all githooks.shared # shared hooks in local config (for specific repository)
+ssh://user@github.com/shared/special-hooks.git@v3.3.3
+/opt/myspecialhooks
+$ cat .githooks/shared
+ssh://user@github.com/shared/special-hooks.git@otherbranch
+$ git hooks shared list
 ...
 ```
 
-The install script offers to set these up for you, but you can do it any time by changing the global configuration variable. These repositories will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+The install script offers to set up shared hooks in the global Git config,
+but you can do it any time by changing the global configuration variable.
+
+Supported entries for shared hooks are:
+
+- **All URLs [Git supports](https://git-scm.com/docs/git-clone#_git_urls)** such as:
+
+  - `ssh://github.com/shared/hooks-maven.git@mybranch` and also the short `scp` form
+     `git@github.com:shared/hooks-maven.git`
+  - `git://github.com/shared/hooks-python.git`
+  - `file:///local/path/to/bare-repo.git@mybranch`
+
+  All URLs can include a tag specification syntax at the end like `...@<tag>`, where `<tag>` is a Git tag, branch or commit hash.
+  The `file://` protocol is treated the same as a local path to a bare repository, see *local paths* below.
+
+- **Local paths** to bare and non-bare repositories such as:
+
+  - `/local/path/to/checkout` (gets used directly)
+  - `/local/path/to/bare-repo.git` (gets cloned internally)
+
+  Note that relative paths are relative to the path of the repository executing the hook.
+  These entries are forbidden for **shared hooks** configured by `.githooks/.shared` per repository
+  because it makes little sense and is a security risk.
+
+Shared hooks repositories specified by *URLs* and *local paths to bare repository* will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. Any other local path will be used **directly and will not be updated or modified**.
+
+The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
+
 An additional global configuration parameter `githooks.failOnNonExistingSharedHooks` makes hooks fail with an error if any shared hook configured in `.shared` is missing, meaning `git hooks update` has not yet been called. See `git hooks config [enable|disable] fail-on-non-existing-shared-hooks` in the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool documentation for more information.
 Note that shared hooks are automatically updated on clone.
 
@@ -259,7 +293,7 @@ cd bareRepo
 git hooks install
 # Creates .githooks/trust-all marker for this bare repo
 git hooks trust
-# Automaticall accept changes to all existing and new
+# Automatically accept changes to all existing and new
 # hooks in the current repository.
 git hooks config accept trusted
 # Don't do global automatic updates, since the Githooks update
