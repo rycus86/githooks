@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"os/exec"
 	strs "rycus86/githooks/strings"
 	"strings"
@@ -75,6 +76,16 @@ func (c *GitContext) Get(args ...string) (string, error) {
 // Check checks if a git command executed successfully.
 func (c *GitContext) Check(args ...string) error {
 	cmd := exec.Command("git", args...)
+	cmd.Dir = c.cwd
+	return cmd.Run()
+}
+
+// CheckPiped checks if a git command executed successfully.
+func (c *GitContext) CheckPiped(args ...string) error {
+	cmd := exec.Command("git", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	cmd.Dir = c.cwd
 	return cmd.Run()
 }

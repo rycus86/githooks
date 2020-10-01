@@ -1,8 +1,6 @@
 package common
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"os"
 	"runtime/debug"
@@ -55,41 +53,11 @@ func GetLogContext() *LogContext {
 	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError}
 }
 
-// Error Make an error message.
-func Error(lines ...string) error {
-	return errors.New(strings.Join(lines, "\n"))
-}
-
-// ErrorF Make an error message.
-func ErrorF(format string, args ...interface{}) error {
-	return fmt.Errorf(format, args...)
-}
-
 // LogDebug logs a debug message.
 func (c *LogContext) LogDebug(lines ...string) {
 	if DebugLog {
 		c.debug.Printf(c.renderInfo(formatMessage("🛠  "+githooksSuffix+" ", "   ", lines...)))
 	}
-}
-
-// LogInfo logs a info message.
-func (c *LogContext) LogInfo(lines ...string) {
-	c.info.Printf(c.renderInfo(formatMessage("ℹ "+githooksSuffix+" ", "   ", lines...)))
-}
-
-// LogWarn logs a warning message.
-func (c *LogContext) LogWarn(lines ...string) {
-	c.warn.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
-}
-
-// LogError logs an error.
-func (c *LogContext) LogError(lines ...string) {
-	c.error.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
-}
-
-// LogPanic logs an error.
-func (c *LogContext) LogPanic(lines ...string) {
-	c.error.Panic(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
 }
 
 // LogDebugF logs a debug message.
@@ -99,9 +67,19 @@ func (c *LogContext) LogDebugF(format string, args ...interface{}) {
 	}
 }
 
+// LogInfo logs a info message.
+func (c *LogContext) LogInfo(lines ...string) {
+	c.info.Printf(c.renderInfo(formatMessage("ℹ "+githooksSuffix+" ", "   ", lines...)))
+}
+
 // LogInfoF logs a info message.
 func (c *LogContext) LogInfoF(format string, args ...interface{}) {
 	c.info.Printf(c.renderInfo(formatMessageF("ℹ "+githooksSuffix+" ", "   ", format, args...)))
+}
+
+// LogWarn logs a warning message.
+func (c *LogContext) LogWarn(lines ...string) {
+	c.warn.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
 }
 
 // LogWarnF logs a warning message.
@@ -109,14 +87,14 @@ func (c *LogContext) LogWarnF(format string, args ...interface{}) {
 	c.warn.Printf(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
 }
 
+// LogError logs an error.
+func (c *LogContext) LogError(lines ...string) {
+	c.error.Printf(c.renderError(formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)))
+}
+
 // LogErrorF logs an error.
 func (c *LogContext) LogErrorF(format string, args ...interface{}) {
 	c.error.Printf(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
-}
-
-// LogPanicF logs an error.
-func (c *LogContext) LogPanicF(format string, args ...interface{}) {
-	c.error.Panic(c.renderError(formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)))
 }
 
 // LogErrorWithStacktrace logs and error with the stack trace.
@@ -129,6 +107,20 @@ func (c *LogContext) LogErrorWithStacktrace(lines ...string) {
 // LogErrorWithStacktraceF logs and error with the stack trace.
 func (c *LogContext) LogErrorWithStacktraceF(format string, args ...interface{}) {
 	c.LogErrorWithStacktrace(strs.Fmt(format, args...))
+}
+
+// LogFatal logs an error and calls panic with a GithooksFailure.
+func (c *LogContext) LogFatal(lines ...string) {
+	m := formatMessage("⚠ "+githooksSuffix+" ", "  ", lines...)
+	c.error.Printf(c.renderError(m))
+	panic(GithooksFailure{m})
+}
+
+// LogFatalF logs an error and calls panic with a GithooksFailure.
+func (c *LogContext) LogFatalF(format string, args ...interface{}) {
+	m := formatMessageF("⚠ "+githooksSuffix+" ", "  ", format, args...)
+	c.error.Printf(c.renderError(m))
+	panic(GithooksFailure{m})
 }
 
 func formatMessage(suffix string, indent string, lines ...string) string {

@@ -39,7 +39,7 @@ func GetBugReportingInfo(repoPath string) string {
 		return bugReportInfo
 	}
 
-	return strs.Fmt("Report this bug to: '%s'", DefaultBugReportingURL)
+	return strs.Fmt("-> Report this bug to: '%s'", DefaultBugReportingURL)
 }
 
 // IsGithooksDisabled checks if Githooks is disabled in
@@ -54,5 +54,5 @@ func IsGithooksDisabled(git *GitContext) bool {
 // IsLFSAvailable tells if git-lfs is available in the path.
 func IsLFSAvailable() bool {
 	_, err := exec.LookPath("git-lfs")
-	return err != nil
+	return err == nil
 }

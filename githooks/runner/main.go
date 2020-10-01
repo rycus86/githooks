@@ -11,7 +11,6 @@ package main
 import (
 	"os"
 	path "path/filepath"
-	"runtime"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 
@@ -34,15 +33,16 @@ type hookSettings struct {
 
 func setMainVariables(cwd string) hookSettings {
 
-	log.AssertFatal(
-		len(os.Args) >= 2,
-		"Hook name not specified as first argument -> Abort")
+	cm.PanicIf(
+		len(os.Args) <= 1,
+		"No arguments given! -> Abort")
 
 	git := cm.Git() // Current git context, in current working dir.
-
 	gitDir, err := git.Get("rev-parse", "--git-common-dir")
+
+	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 	log.LogDebugF("Git dir: '%s'", gitDir)
-	log.AssertNoErrorFatal(err, "Could not get git directory.")
+	log.LogDebugF("Args: '%s'", os.Args[2:])
 
 	installDir := getInstallDir(git)
 
@@ -62,13 +62,14 @@ func getInstallDir(git *cm.GitContext) string {
 
 	setDefault := func() {
 		usr, err := homedir.Dir()
-		log.AssertNoErrorFatal(err, "Could not get home directory.")
+		cm.AssertNoErrorPanic(err, "Could not get home directory.")
 		installDir = path.Join(usr, ".githooks")
 	}
 
 	if installDir == "" {
 		setDefault()
 	} else if !cm.PathExists(installDir) {
+
 		log.LogWarn(
 			"Githooks installation is corrupt!",
 			strs.Fmt("Install directory at '%s' is missing.", installDir))
@@ -96,8 +97,7 @@ func assertRegistered(git *cm.GitContext, installDir string, gitDir string) {
 
 	} else {
 		log.LogDebug(
-			"Repository already registered",
-			"or using 'core.hooksPath'.")
+			"Repository already registered or using 'core.hooksPath'.")
 	}
 }
 
@@ -112,8 +112,9 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 		settings.repositoryPath, ".githooks", ".lfs-required"))
 
 	if lfsIsAvailable {
+		log.LogDebug("Excuting LFS Hook")
 
-		err := settings.git.Check(
+		err := settings.git.CheckPiped(
 			append(
 				[]string{"lfs", settings.hookName},
 				settings.args...,
@@ -122,6 +123,7 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
 
 	} else {
+		log.LogDebug("Git LFS not available")
 		log.FatalIf(lfsIsRequired,
 			"This repository requires Git LFS, but 'git-lfs' was",
 			"not found on your PATH. If you no longer want to use",
@@ -130,40 +132,54 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 	}
 }
 
+func executeHook(hook string, settings hookSettings) {
+	log.LogDebugF("Executing hook: '%s'", hook)
+}
+
+func executeOldHooksIfAvailable(settings hookSettings) {
+	f := settings.hookPath + ".replaced.githook"
+	hook, err := path.Abs(f)
+	cm.AssertNoErrorPanic(err, "Could not get abs. path of '%s'", f)
+
+	executeHook(hook, settings)
+}
+
 func main() {
 
 	cwd, err := os.Getwd()
-	log.AssertNoErrorFatal(err, "Could not get current working dir.")
 
 	// Handle all panics and report the error
 	defer func() {
-		if r := recover(); r != nil {
-			switch v := r.(type) {
-			case runtime.Error:
-				log.LogErrorWithStacktrace(
-					strs.Fmt("Panic: ['%s']", v.Error()),
-					"",
-					cm.GetBugReportingInfo(cwd))
-			case error:
-				log.LogDebug(strs.Fmt("Error received -> Abort"))
-			}
+		r := recover()
+		switch v := r.(type) {
+		case cm.GithooksFailure:
+			log.LogError("Fatal error -> Abort.")
+		case error:
+			log.LogErrorWithStacktrace(
+				v.Error(),
+				cm.GetBugReportingInfo(cwd))
+		default:
+			log.LogErrorWithStacktrace(
+				"Panic: Unknown error",
+				cm.GetBugReportingInfo(cwd))
 		}
+		os.Exit(1)
 	}()
 
-	err = nil
-	s := err.Error()
-	log.LogDebug(s)
+	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 
 	settings := setMainVariables(cwd)
+
+	log.LogDebugF("Running hook: '%s'", settings.hookPath)
 
 	assertRegistered(settings.git, settings.installDir, settings.gitDir)
 
 	if cm.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
+		executeOldHooksIfAvailable(settings)
 	}
 
-	log.LogDebug(strs.Fmt(
-		"Running hook: '%s'", settings.hookPath),
-		"We now going to rip apart your whole repo",
-		"you dont think so ?")
+	executeLFSHooksIfAppropriate(settings)
+
+	os.Exit(0)
 }
