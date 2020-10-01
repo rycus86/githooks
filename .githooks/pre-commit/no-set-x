@@ -2,7 +2,7 @@
 SETX_FOUND="no"
 
 OFFENDING_FILES=$(
-    grep -rE "(set.*[-+]x)" ./*.sh .githooks/ examples/* |
+    grep -rE "(set.*[-+]x)" ./*.sh |
         grep -v '/pre-commit/no-set-x' |
         tr ':' ' ' | awk '{ print $1 }' |
         sort | uniq
