@@ -405,9 +405,6 @@ uninstall_shared_hooks() {
 #   None
 ############################################################
 uninstall_cli() {
-    # This is legacy for old installs
-    # the cli tool does not get installed anymore
-    # but used directly from the release clone
     CLI_DIR="${INSTALL_DIR}/bin"
     if [ -d "$CLI_DIR" ]; then
         if ! rm -rf "$CLI_DIR" >/dev/null 2>&1; then
