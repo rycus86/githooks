@@ -582,8 +582,10 @@ update_shared_hooks_if_appropriate() {
     GIT_NULL_REF="0000000000000000000000000000000000000000"
 
     RUN_UPDATE="false"
+
     [ "$HOOK_NAME" = "post-merge" ] && RUN_UPDATE="true"
     [ "$HOOK_NAME" = "post-checkout" ] && [ "$1" = "$GIT_NULL_REF" ] && RUN_UPDATE="true"
+    git config --get-all githooks.sharedHooksUpdateTriggers | grep -q "$HOOK_NAME" && RUN_UPDATE="true"
 
     if [ "$RUN_UPDATE" = "true" ]; then
 
