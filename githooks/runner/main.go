@@ -143,12 +143,18 @@ func executeHook(hook string, settings hookSettings) {
 	log.LogDebugF("Executing hook: '%s'", hook)
 }
 
-func executeOldHooksIfAvailable(settings hookSettings) {
+func collectOldHooksIfAvailable(settings hookSettings) *hooks.Hook {
 	f := settings.hookPath + ".replaced.githook"
 	hook, err := path.Abs(f)
 	cm.AssertNoErrorPanic(err, "Could not get abs. path of '%s'", f)
-
-	executeHook(hook, settings)
+	isExec, err := cm.IsExecOwner(hook); 
+	if err != nil{
+		return &hooks.Hook{hook, isExec }
+	}else{
+		log.LogWarn("Could not detect if hook:", 
+			strs.Fmt("'%s'",hook), "is executbale or not")
+	}
+	return nil
 }
 
 func main() {
@@ -183,7 +189,7 @@ func main() {
 
 	if hooks.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
-		executeOldHooksIfAvailable(settings)
+		collectOldHooksIfAvailable(settings)
 	}
 
 	executeLFSHooksIfAppropriate(settings)
