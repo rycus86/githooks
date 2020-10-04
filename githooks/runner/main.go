@@ -12,6 +12,7 @@ import (
 	"os"
 	path "path/filepath"
 	cm "rycus86/githooks/common"
+	hooks "rycus86/githooks/githooks"
 	strs "rycus86/githooks/strings"
 
 	"github.com/mitchellh/go-homedir"
@@ -39,8 +40,10 @@ func setMainVariables(cwd string) hookSettings {
 
 	git := cm.Git() // Current git context, in current working dir.
 	gitDir, err := git.Get("rev-parse", "--git-common-dir")
-
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
+	gitDir, err = path.Abs(gitDir)
+	cm.AssertNoErrorPanic(err, "Could not get git directory.")
+
 	log.LogDebugF("Git dir: '%s'", gitDir)
 	log.LogDebugF("Args: '%s'", os.Args[2:])
 
@@ -90,10 +93,14 @@ func assertRegistered(git *cm.GitContext, installDir string, gitDir string) {
 	if !git.IsConfigSet("githooks.registered", cm.LocalScope) &&
 		!git.IsConfigSet("core.hooksPath", cm.Traverse) {
 
-		err := cm.RegisterRepo(gitDir, installDir)
+		log.LogDebugF("Register repo '%s'", gitDir)
 
-		log.AssertNoErrorWarn(err,
-			strs.Fmt("Could not register repo '%s'.", gitDir))
+		err := hooks.RegisterRepo(gitDir, installDir, true)
+		if err != nil {
+			log.LogWarn("Could not register repo '%s'.", gitDir)
+		} else {
+			git.SetConfig("githooks.registered", "true", cm.LocalScope)
+		}
 
 	} else {
 		log.LogDebug(
@@ -103,11 +110,11 @@ func assertRegistered(git *cm.GitContext, installDir string, gitDir string) {
 
 func executeLFSHooksIfAppropriate(settings hookSettings) {
 
-	if !strs.Includes(cm.LFSHookNames[:], settings.hookName) {
+	if !strs.Includes(hooks.LFSHookNames[:], settings.hookName) {
 		return
 	}
 
-	lfsIsAvailable := cm.IsLFSAvailable()
+	lfsIsAvailable := hooks.IsLFSAvailable()
 	lfsIsRequired := cm.PathExists(path.Join(
 		settings.repositoryPath, ".githooks", ".lfs-required"))
 
@@ -157,11 +164,11 @@ func main() {
 		case error:
 			log.LogErrorWithStacktrace(
 				v.Error(),
-				cm.GetBugReportingInfo(cwd))
+				hooks.GetBugReportingInfo(cwd))
 		default:
 			log.LogErrorWithStacktrace(
 				"Panic: Unknown error",
-				cm.GetBugReportingInfo(cwd))
+				hooks.GetBugReportingInfo(cwd))
 		}
 		os.Exit(1)
 	}()
@@ -174,7 +181,7 @@ func main() {
 
 	assertRegistered(settings.git, settings.installDir, settings.gitDir)
 
-	if cm.IsGithooksDisabled(settings.git) {
+	if hooks.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
 		executeOldHooksIfAvailable(settings)
 	}

@@ -48,6 +48,17 @@ func (c *GitContext) GetConfig(key string, scope ConfigScope) string {
 	return ""
 }
 
+// SetConfig sets a Git configuration values.
+func (c *GitContext) SetConfig(key string, value interface{}, scope ConfigScope) error {
+	v := strs.Fmt("%v", value)
+
+	if scope != Traverse {
+		return c.Check("config", string(scope), key, v)
+	} else {
+		return c.Check("config", key, v)
+	}
+}
+
 // IsConfigSet tells if a git config is set.
 func (c *GitContext) IsConfigSet(key string, scope ConfigScope) bool {
 	var err error

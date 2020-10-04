@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "$(echo "a" | sed -E 's|a|\n|')" = "n" ]; then
+    echo "! Install GNU sed for updating the templates."
+    exit 1
+fi
+
 # Patch the hooks
 HOOK_NAMES=$(sed -e '1,/MANAGED_HOOK_NAMES="/d;/"/,$d' install.sh) ||
     {

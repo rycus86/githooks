@@ -25,6 +25,30 @@ func ErrorF(format string, args ...interface{}) error {
 	return fmt.Errorf(format, args...)
 }
 
+// CombineErrors combines multiple errors into one.
+func CombineErrors(err error, errs ...error) error {
+	var s string
+	anyNotNil := false
+
+	if err != nil {
+		s += err.Error()
+		anyNotNil = true
+	}
+
+	for _, e := range errs {
+		if e != nil {
+			anyNotNil = true
+			s += "\n" + e.Error()
+		}
+	}
+
+	if anyNotNil {
+		return errors.New(s)
+	}
+
+	return nil
+}
+
 // Panic panics with an `error`.
 func Panic(lines ...string) {
 	panic(Error(lines...))
