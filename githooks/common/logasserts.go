@@ -28,14 +28,14 @@ func (c *LogContext) WarnIfF(condition bool, format string, args ...interface{})
 	}
 }
 
-// FatalIf Assert a condition is `true`, otherwise log.
+// FatalIf Assert a condition is `true`, otherwise log it.
 func (c *LogContext) FatalIf(condition bool, lines ...string) {
 	if condition {
 		c.LogFatal(lines...)
 	}
 }
 
-// FatalIfF Assert a condition is `true`, otherwise log.
+// FatalIfF Assert a condition is `true`, otherwise log it.
 func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}) {
 	if condition {
 		c.LogFatalF(format, args...)
@@ -49,9 +49,23 @@ func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) {
 	}
 }
 
+// AssertNoErrorWarnF Assert no error, and otherwise log it.
+func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interface{}) {
+	if err != nil {
+		c.LogWarnF(format+" -> error: ["+err.Error()+"]", args...)
+	}
+}
+
 // AssertNoErrorFatal Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorFatal(err error, lines ...string) {
 	if err != nil {
 		c.LogFatal(append(lines, "-> error: ["+err.Error()+"]")...)
+	}
+}
+
+// AssertNoErrorFatalF Assert no error, and otherwise log it.
+func (c *LogContext) AssertNoErrorFatalF(err error, format string, args ...interface{}) {
+	if err != nil {
+		c.LogFatalF(format+" -> error: ["+err.Error()+"]", args...)
 	}
 }

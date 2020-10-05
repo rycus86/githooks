@@ -27,9 +27,9 @@ type hookSettings struct {
 	gitDir         string         // Git directory.
 	installDir     string         // Install directory.
 
-	hookPath   string // Path of the hook executing this runner.
-	hookName   string // Name of the hook.
-	hookFolder string // Directory of the hook.
+	hookPath string // Absolute path of the hook executing this runner.
+	hookName string // Name of the hook.
+	hookDir  string // Directory of the hook.
 }
 
 func setMainVariables(cwd string) hookSettings {
@@ -44,20 +44,26 @@ func setMainVariables(cwd string) hookSettings {
 	gitDir, err = path.Abs(gitDir)
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 
-	log.LogDebugF("Git dir: '%s'", gitDir)
-	log.LogDebugF("Args: '%s'", os.Args[2:])
+	hookPath, err := path.Abs(os.Args[1])
+	cm.AssertNoErrorPanicF(err, "Could not abs. path from '%s'.",
+		os.Args[1])
 
 	installDir := getInstallDir(git)
 
-	return hookSettings{
+	s := hookSettings{
 		args:           os.Args[2:],
 		git:            git,
 		repositoryPath: cwd,
 		gitDir:         gitDir,
 		installDir:     installDir,
-		hookPath:       os.Args[1],
-		hookName:       path.Base(os.Args[1]),
-		hookFolder:     path.Dir(os.Args[1])}
+		hookPath:       hookPath,
+		hookName:       path.Base(hookPath),
+		hookDir:        path.Dir(hookPath)}
+
+	log.LogDebugF("\n- Args: '%s'\n- Repo Path: '%s'\n- Git Dir: '%s'\n- Install Dir: '%s'\n- Hook Path: '%s'",
+		s.args, s.repositoryPath, s.gitDir, s.installDir, s.hookPath)
+
+	return s
 }
 
 func getInstallDir(git *cm.GitContext) string {
@@ -139,31 +145,58 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 	}
 }
 
-func executeHook(hook string, settings hookSettings) {
-	log.LogDebugF("Executing hook: '%s'", hook)
+func executeHook(settings hookSettings, hook hooks.Hook) {
+	log.LogDebugF("Executing hook: '%s'", hook.Path)
 }
 
-func collectOldHooksIfAvailable(settings hookSettings) *hooks.Hook {
+func executeOldHooksIfAvailable(settings hookSettings, ignorePatterns hooks.HookIgnorePatterns) {
 	f := settings.hookPath + ".replaced.githook"
-	hook, err := path.Abs(f)
-	cm.AssertNoErrorPanic(err, "Could not get abs. path of '%s'", f)
-	isExec, err := cm.IsExecOwner(hook); 
-	if err != nil{
-		return &hooks.Hook{hook, isExec }
-	}else{
-		log.LogWarn("Could not detect if hook:", 
-			strs.Fmt("'%s'",hook), "is executbale or not")
+
+	// Make it relative to git directory
+	// e.g. 'hooks/pre-commit.replaced.githooks'
+	hook, err := path.Rel(settings.gitDir, f)
+	cm.AssertNoErrorPanic(err,
+		"Could not get rel. path of '%s' to '%s'",
+		f, settings.gitDir)
+
+	ignored := ignorePatterns.Matches(hook)
+
+	if ignored {
+		log.LogDebugF("Old local hook '%s' is ignored -> Skip.", hook)
+		return
 	}
-	return nil
+
+	isExec, err := cm.IsExecOwner(hook)
+
+	if err != nil {
+		executeHook(settings,
+			hooks.Hook{Path: hook, IsExecutbale: isExec})
+	} else {
+		log.LogWarn("Could not detect if hook:",
+			strs.Fmt("'%s'", hook),
+			"is executbale or not")
+	}
 }
 
 func main() {
+
+	startTime := cm.GetStartTime()
+	exitCode := 0
+
+	defer func() { os.Exit(exitCode) }()
+	defer func() {
+		log.LogDebugF("Runner execution time: '%v'",
+			cm.GetDuration(startTime))
+	}()
 
 	cwd, err := os.Getwd()
 
 	// Handle all panics and report the error
 	defer func() {
 		r := recover()
+		if r == nil {
+			return
+		}
 		switch v := r.(type) {
 		case cm.GithooksFailure:
 			log.LogError("Fatal error -> Abort.")
@@ -173,26 +206,29 @@ func main() {
 				hooks.GetBugReportingInfo(cwd))
 		default:
 			log.LogErrorWithStacktrace(
-				"Panic: Unknown error",
+				"Panic 💩: Unknown error",
 				hooks.GetBugReportingInfo(cwd))
 		}
-		os.Exit(1)
+		exitCode = 1
 	}()
 
 	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 
 	settings := setMainVariables(cwd)
 
-	log.LogDebugF("Running hook: '%s'", settings.hookPath)
-
 	assertRegistered(settings.git, settings.installDir, settings.gitDir)
+
+	ignorePatterns, err := hooks.GetHookIgnorePatterns(
+		settings.repositoryPath,
+		settings.gitDir,
+		settings.hookName)
+	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
+	log.LogDebugF("Ignore patterns: '%v'", ignorePatterns.Patterns)
 
 	if hooks.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
-		collectOldHooksIfAvailable(settings)
+		executeOldHooksIfAvailable(settings, ignorePatterns)
 	}
 
 	executeLFSHooksIfAppropriate(settings)
-
-	os.Exit(0)
 }

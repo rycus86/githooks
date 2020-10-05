@@ -137,5 +137,5 @@ func formatMessage(suffix string, indent string, lines ...string) string {
 
 func formatMessageF(suffix string, indent string, format string, args ...interface{}) string {
 	s := suffix + strs.Fmt(format, args...)
-	return strings.ReplaceAll(s, "\n", indent+"\n")
+	return strings.ReplaceAll(s, "\n", "\n"+indent)
 }

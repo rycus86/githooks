@@ -14,7 +14,7 @@ type RegisterRepos struct {
 
 // RegisterRepo registers the Git directory in the install directory.
 func RegisterRepo(absGitDir string, installDir string, filterExisting bool) error {
-	cm.AssertPanicF(path.IsAbs(absGitDir),
+	cm.DebugAssertF(path.IsAbs(absGitDir),
 		"Not an absolute Git dir '%s'", absGitDir)
 
 	repos, err := LoadRegisteredRepos(installDir)

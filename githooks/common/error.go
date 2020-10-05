@@ -59,15 +59,15 @@ func PanicF(format string, args ...interface{}) {
 	panic(ErrorF(format, args...))
 }
 
-// AssertPanic Assert a condition is `true`, otherwise panic.
-func AssertPanic(condition bool, lines ...string) {
+// AssertOrPanic Assert a condition is `true`, otherwise panic.
+func AssertOrPanic(condition bool, lines ...string) {
 	if !condition {
 		Panic(lines...)
 	}
 }
 
-// AssertPanicF Assert a condition is `true`, otherwise panic.
-func AssertPanicF(condition bool, format string, args ...interface{}) {
+// AssertOrPanicF Assert a condition is `true`, otherwise panic.
+func AssertOrPanicF(condition bool, format string, args ...interface{}) {
 	if !condition {
 		PanicF(format, args...)
 	}
@@ -92,5 +92,12 @@ func AssertNoErrorPanic(err error, lines ...string) {
 	if err != nil {
 		PanicIf(true,
 			append(lines, "-> error: ["+err.Error()+"]")...)
+	}
+}
+
+// AssertNoErrorPanicF Assert no error, otherwise panic.
+func AssertNoErrorPanicF(err error, format string, args ...interface{}) {
+	if err != nil {
+		PanicIfF(true, format+"-> error: ["+err.Error()+"]", args...)
 	}
 }
