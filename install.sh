@@ -103,7 +103,7 @@ execute_installation() {
     fi
 
     # Legacy transformations
-    if ! is_dry_run; then
+    if ! is_dry_run && ! is_single_repo_install; then
         legacy_transform_end || return 1
     fi
 
