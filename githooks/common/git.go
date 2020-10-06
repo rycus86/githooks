@@ -18,9 +18,15 @@ const (
 	Traverse    ConfigScope = ""
 )
 
-// GitContext defines the context to execute git commands
+// GitContext defines the context to execute it commands
 type GitContext struct {
 	cwd string
+}
+
+// GetWorkingDir gets the current working dir of the context
+// to implement `ExecContext`
+func (c *GitContext) GetWorkingDir() string {
+	return c.cwd
 }
 
 // GitC Creates a git command execution context with current working dir.

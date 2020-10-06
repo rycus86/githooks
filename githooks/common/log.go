@@ -22,7 +22,36 @@ const (
 	errorIndent    = "   "
 )
 
-// LogContext Data for a log context
+// ILogContext defines the log interace
+type ILogContext interface {
+	// Log functions
+	LogDebug(lines ...string)
+	LogDebugF(format string, args ...interface{})
+	LogInfo(lines ...string)
+	LogInfoF(format string, args ...interface{})
+	LogWarn(lines ...string)
+	LogWarnF(format string, args ...interface{})
+	LogError(lines ...string)
+	LogErrorF(format string, args ...interface{})
+	LogErrorWithStacktrace(lines ...string)
+	LogErrorWithStacktraceF(format string, args ...interface{})
+	LogFatal(lines ...string)
+	LogFatalF(format string, args ...interface{})
+
+	// Assert helper functions
+	AssertWarn(condition bool, lines ...string)
+	AssertWarnF(condition bool, format string, args ...interface{})
+	WarnIf(condition bool, lines ...string)
+	WarnIfF(condition bool, format string, args ...interface{})
+	FatalIf(condition bool, lines ...string)
+	FatalIfF(condition bool, format string, args ...interface{})
+	AssertNoErrorWarn(err error, lines ...string)
+	AssertNoErrorWarnF(err error, format string, args ...interface{})
+	AssertNoErrorFatal(err error, lines ...string)
+	AssertNoErrorFatalF(err error, format string, args ...interface{})
+}
+
+// LogContext defines the data for a log context
 type LogContext struct {
 	debug *log.Logger
 	info  *log.Logger
@@ -36,7 +65,7 @@ type LogContext struct {
 }
 
 // GetLogContext Gets the log context
-func GetLogContext() *LogContext {
+func GetLogContext() ILogContext {
 	var debug *log.Logger
 	if DebugLog {
 		debug = log.New(os.Stderr, "", 0)
@@ -64,45 +93,45 @@ func GetLogContext() *LogContext {
 // LogDebug logs a debug message.
 func (c *LogContext) LogDebug(lines ...string) {
 	if DebugLog {
-		c.debug.Printf(c.renderInfo(formatMessage(debugSuffix, debugIndent, lines...)))
+		c.debug.Printf(c.renderInfo(FormatMessage(debugSuffix, debugIndent, lines...)))
 	}
 }
 
 // LogDebugF logs a debug message.
 func (c *LogContext) LogDebugF(format string, args ...interface{}) {
 	if DebugLog {
-		c.debug.Printf(c.renderInfo(formatMessageF(debugSuffix, debugIndent, format, args...)))
+		c.debug.Printf(c.renderInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)))
 	}
 }
 
 // LogInfo logs a info message.
 func (c *LogContext) LogInfo(lines ...string) {
-	c.info.Printf(c.renderInfo(formatMessage(infoSuffix, infoIndent, lines...)))
+	c.info.Printf(c.renderInfo(FormatMessage(infoSuffix, infoIndent, lines...)))
 }
 
 // LogInfoF logs a info message.
 func (c *LogContext) LogInfoF(format string, args ...interface{}) {
-	c.info.Printf(c.renderInfo(formatMessageF(infoSuffix, infoIndent, format, args...)))
+	c.info.Printf(c.renderInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)))
 }
 
 // LogWarn logs a warning message.
 func (c *LogContext) LogWarn(lines ...string) {
-	c.warn.Printf(c.renderError(formatMessage(warnSuffix, warnIndent, lines...)))
+	c.warn.Printf(c.renderError(FormatMessage(warnSuffix, warnIndent, lines...)))
 }
 
 // LogWarnF logs a warning message.
 func (c *LogContext) LogWarnF(format string, args ...interface{}) {
-	c.warn.Printf(c.renderError(formatMessageF(warnSuffix, warnIndent, format, args...)))
+	c.warn.Printf(c.renderError(FormatMessageF(warnSuffix, warnIndent, format, args...)))
 }
 
 // LogError logs an error.
 func (c *LogContext) LogError(lines ...string) {
-	c.error.Printf(c.renderError(formatMessage(errorSuffix, errorIndent, lines...)))
+	c.error.Printf(c.renderError(FormatMessage(errorSuffix, errorIndent, lines...)))
 }
 
 // LogErrorF logs an error.
 func (c *LogContext) LogErrorF(format string, args ...interface{}) {
-	c.error.Printf(c.renderError(formatMessageF(errorSuffix, errorIndent, format, args...)))
+	c.error.Printf(c.renderError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
 }
 
 // LogErrorWithStacktrace logs and error with the stack trace.
@@ -119,23 +148,25 @@ func (c *LogContext) LogErrorWithStacktraceF(format string, args ...interface{})
 
 // LogFatal logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) LogFatal(lines ...string) {
-	m := formatMessage(errorSuffix, errorIndent, lines...)
+	m := FormatMessage(errorSuffix, errorIndent, lines...)
 	c.error.Printf(c.renderError(m))
 	panic(GithooksFailure{m})
 }
 
 // LogFatalF logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) LogFatalF(format string, args ...interface{}) {
-	m := formatMessageF(errorSuffix, errorIndent, format, args...)
+	m := FormatMessageF(errorSuffix, errorIndent, format, args...)
 	c.error.Printf(c.renderError(m))
 	panic(GithooksFailure{m})
 }
 
-func formatMessage(suffix string, indent string, lines ...string) string {
+// FormatMessage formats  several lines with a suffix and indent.
+func FormatMessage(suffix string, indent string, lines ...string) string {
 	return suffix + strings.Join(lines, "\n"+indent)
 }
 
-func formatMessageF(suffix string, indent string, format string, args ...interface{}) string {
+// FormatMessageF formats  several lines with a suffix and indent.
+func FormatMessageF(suffix string, indent string, format string, args ...interface{}) string {
 	s := suffix + strs.Fmt(format, args...)
 	return strings.ReplaceAll(s, "\n", "\n"+indent)
 }

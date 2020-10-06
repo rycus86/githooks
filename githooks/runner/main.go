@@ -10,10 +10,12 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	path "path/filepath"
 	cm "rycus86/githooks/common"
 	hooks "rycus86/githooks/githooks"
 	strs "rycus86/githooks/strings"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 )
@@ -30,9 +32,21 @@ type hookSettings struct {
 	hookPath string // Absolute path of the hook executing this runner.
 	hookName string // Name of the hook.
 	hookDir  string // Directory of the hook.
+
+	isTrusted bool // If the repository is a trusted repository.
 }
 
-func setMainVariables(cwd string) hookSettings {
+func (s *hookSettings) ToString() string {
+	return strs.Fmt("\n- Args: '%s'\n"+
+		"- Repo Path: '%s'\n"+
+		"- Git Dir: '%s'\n"+
+		"- Install Dir: '%s'\n"+
+		"- Hook Path: '%s'\n"+
+		"- Trusted: '%v'",
+		s.args, s.repositoryPath, s.gitDir, s.installDir, s.hookPath, s.isTrusted)
+}
+
+func setMainVariables(repoPath string) hookSettings {
 
 	cm.PanicIf(
 		len(os.Args) <= 1,
@@ -50,44 +64,50 @@ func setMainVariables(cwd string) hookSettings {
 
 	installDir := getInstallDir(git)
 
+	isTrusted, err := hooks.IsRepoTrusted(git,
+		installDir, repoPath, true)
+	log.AssertNoErrorWarn(err, "Could not get trust settings.")
+
 	s := hookSettings{
 		args:           os.Args[2:],
 		git:            git,
-		repositoryPath: cwd,
+		repositoryPath: repoPath,
 		gitDir:         gitDir,
 		installDir:     installDir,
 		hookPath:       hookPath,
 		hookName:       path.Base(hookPath),
-		hookDir:        path.Dir(hookPath)}
+		hookDir:        path.Dir(hookPath),
+		isTrusted:      isTrusted}
 
-	log.LogDebugF("\n- Args: '%s'\n- Repo Path: '%s'\n- Git Dir: '%s'\n- Install Dir: '%s'\n- Hook Path: '%s'",
-		s.args, s.repositoryPath, s.gitDir, s.installDir, s.hookPath)
+	log.LogDebugF(s.ToString())
 
 	return s
 }
 
 func getInstallDir(git *cm.GitContext) string {
-	installDir := git.GetConfig("githooks.installDir", cm.GlobalScope)
+	installDir := hooks.GetInstallDir(git)
 
 	setDefault := func() {
 		usr, err := homedir.Dir()
 		cm.AssertNoErrorPanic(err, "Could not get home directory.")
-		installDir = path.Join(usr, ".githooks")
+		installDir = filepath.Join(usr, ".githooks")
 	}
 
 	if installDir == "" {
 		setDefault()
 	} else if !cm.PathExists(installDir) {
 
-		log.LogWarn(
-			"Githooks installation is corrupt!",
-			strs.Fmt("Install directory at '%s' is missing.", installDir))
+		log.LogWarnF(
+			"Githooks installation is corrupt!\n"+
+				"Install directory at '%s' is missing.",
+			installDir)
 
 		setDefault()
 
-		log.LogWarn(
-			strs.Fmt("Falling back to default directory at '%s'.", installDir),
-			"Please run the Githooks install script again to fix it.")
+		log.LogWarnF(
+			"Falling back to default directory at '%s'.\n"+
+				"Please run the Githooks install script again to fix it.",
+			installDir)
 	}
 
 	log.LogDebug(strs.Fmt("Install dir set to: '%s'.", installDir))
@@ -121,7 +141,7 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 	}
 
 	lfsIsAvailable := hooks.IsLFSAvailable()
-	lfsIsRequired := cm.PathExists(path.Join(
+	lfsIsRequired := cm.PathExists(filepath.Join(
 		settings.repositoryPath, ".githooks", ".lfs-required"))
 
 	if lfsIsAvailable {
@@ -150,32 +170,68 @@ func executeHook(settings hookSettings, hook hooks.Hook) {
 }
 
 func executeOldHooksIfAvailable(settings hookSettings, ignorePatterns hooks.HookIgnorePatterns) {
-	f := settings.hookPath + ".replaced.githook"
+	hookName := settings.hookName + ".replaced.githook"
 
 	// Make it relative to git directory
 	// e.g. 'hooks/pre-commit.replaced.githooks'
-	hook, err := path.Rel(settings.gitDir, f)
-	cm.AssertNoErrorPanic(err,
-		"Could not get rel. path of '%s' to '%s'",
-		f, settings.gitDir)
+	hook := filepath.Join(settings.hookPath, hookName)
 
-	ignored := ignorePatterns.Matches(hook)
+	ignored := ignorePatterns.Matches(hookName)
 
 	if ignored {
 		log.LogDebugF("Old local hook '%s' is ignored -> Skip.", hook)
 		return
 	}
 
+	if !settings.isTrusted {
+
+	}
+
 	isExec, err := cm.IsExecOwner(hook)
 
-	if err != nil {
+	if err == nil {
+		log.LogWarnF("Could not detect if hook: '%s' is executbale. Default 'yes'.", hook)
+		// As default: we do not want to execute as shell script.
+		isExec = true
+	} else {
 		executeHook(settings,
 			hooks.Hook{Path: hook, IsExecutbale: isExec})
-	} else {
-		log.LogWarn("Could not detect if hook:",
-			strs.Fmt("'%s'", hook),
-			"is executbale or not")
 	}
+}
+
+func exportStagedFiles(settings hookSettings) {
+	if strs.Includes(hooks.StagedFilesHookNames[:], settings.hookName) {
+
+		files, err := hooks.GetStagedFiles(settings.git)
+
+		log.LogDebugF("Exporting staged files:\n- %s",
+			strings.ReplaceAll(files, "\n", "\n- "))
+
+		if err != nil {
+			log.LogWarn("Could not export staged files.")
+		} else {
+
+			cm.DebugAssertF(
+				func() bool {
+					_, exists := os.LookupEnv(hooks.EnvVariableStagedFiles)
+					return !exists
+				}(),
+				"Env. variable '%s' already defined.", hooks.EnvVariableStagedFiles)
+
+			os.Setenv(hooks.EnvVariableStagedFiles, files)
+		}
+
+	}
+}
+
+func getIgnorePatterns(settings hookSettings) hooks.HookIgnorePatterns {
+	ignorePatterns, err := hooks.GetHookIgnorePatterns(
+		settings.repositoryPath,
+		settings.gitDir,
+		settings.hookName)
+	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
+	log.LogDebugF("Ignore patterns: '%v'", ignorePatterns.Patterns)
+	return ignorePatterns
 }
 
 func main() {
@@ -218,17 +274,17 @@ func main() {
 
 	assertRegistered(settings.git, settings.installDir, settings.gitDir)
 
-	ignorePatterns, err := hooks.GetHookIgnorePatterns(
-		settings.repositoryPath,
-		settings.gitDir,
-		settings.hookName)
-	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
-	log.LogDebugF("Ignore patterns: '%v'", ignorePatterns.Patterns)
+	ignores := getIgnorePatterns(settings)
 
 	if hooks.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
-		executeOldHooksIfAvailable(settings, ignorePatterns)
+		executeOldHooksIfAvailable(settings, ignores)
+		return
 	}
 
+	exportStagedFiles(settings)
 	executeLFSHooksIfAppropriate(settings)
+	executeOldHooksIfAvailable(settings, ignores)
+
+	//executeHooks(settings, ignores)
 }

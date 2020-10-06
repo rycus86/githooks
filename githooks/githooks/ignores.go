@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
@@ -18,12 +17,12 @@ func GetHookIgnorePatterns(repoDir string, gitDir string, hookName string) (Hook
 	var patterns1 HookIgnorePatterns
 	var err1 error
 
-	file := path.Join(repoDir, ".githooks", ".ignore.yaml")
+	file := filepath.Join(repoDir, ".githooks", ".ignore.yaml")
 	if cm.PathExists(file) {
 		patterns1, err1 = loadIgnorePatterns(file)
 	}
 
-	file = path.Join(repoDir, ".githooks", hookName, ".ignore.yaml")
+	file = filepath.Join(repoDir, ".githooks", hookName, ".ignore.yaml")
 	if cm.PathExists(file) {
 		patterns2, err2 := loadIgnorePatterns(file)
 		if err2 != nil {
@@ -70,7 +69,7 @@ func (h *HookIgnorePatterns) Matches(hookPath string) bool {
 
 	for _, p := range h.Patterns {
 		matched, err := filepath.Match(p, hookPath)
-		cm.DebugAssertF(err != nil, "List contains malformed pattern '%s'", p)
+		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
 		return err == nil && matched
 	}
 

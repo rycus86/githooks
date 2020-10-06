@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 )
@@ -19,11 +19,17 @@ var LFSHookNames = [4]string{
 	"post-merge",
 	"pre-push"}
 
+// StagedFilesHookNames are the hook names on which staged files are exported
+var StagedFilesHookNames = [3]string{"pre-commit", "prepare-commit-msg", "commit-msg"}
+
+// EnvVariableStagedFiles is the environment variable which holds the staged files.
+const EnvVariableStagedFiles = "STAGED_FILES"
+
 // GetBugReportingInfo Get the default bug reporting url.
 func GetBugReportingInfo(repoPath string) string {
 
 	// Check in the repo if possible
-	file := path.Join(repoPath, ".githooks/.bug-report")
+	file := filepath.Join(repoPath, ".githooks", ".bug-report")
 	if cm.PathExists(file) {
 		file, err := os.Open(file)
 		if err != nil {
@@ -56,4 +62,18 @@ func IsGithooksDisabled(git *cm.GitContext) bool {
 func IsLFSAvailable() bool {
 	_, err := exec.LookPath("git-lfs")
 	return err == nil
+}
+
+// GetInstallDir returns the Githooks install directory.
+func GetInstallDir(git *cm.GitContext) string {
+	return git.GetConfig("githooks.installDir", cm.GlobalScope)
+}
+
+// GetToolScript gets the tool script associated with the name `tool`
+func GetToolScript(name string, installDir string) string {
+	tool := filepath.Join(installDir, "tools", name, "run")
+	if cm.PathExists(tool) {
+		return tool
+	}
+	return ""
 }
