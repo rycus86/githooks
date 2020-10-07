@@ -17,9 +17,10 @@ func ExecuteScript(c ExecContext, script string, pipeAll bool, args ...string) (
 
 	var cmd *exec.Cmd
 
-	if isExec, err := IsExecOwner(script); err == nil || isExec {
+	if IsExecutable(script) {
 		cmd = exec.Command(script, args...)
 	} else {
+		// @todo Introduce "runner" concept.
 		cmd = exec.Command("sh", append(
 			[]string{"sh"},
 			args...,

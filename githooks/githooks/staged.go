@@ -11,6 +11,5 @@ func GetStagedFiles(git *cm.GitContext) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return changed, nil
 }

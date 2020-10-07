@@ -184,19 +184,17 @@ func executeOldHooksIfAvailable(settings hookSettings, ignorePatterns hooks.Hook
 	}
 
 	if !settings.isTrusted {
-
+		// @todo Check if it is trusted or not ...
 	}
 
-	isExec, err := cm.IsExecOwner(hook)
-
-	if err == nil {
-		log.LogWarnF("Could not detect if hook: '%s' is executbale. Default 'yes'.", hook)
-		// As default: we do not want to execute as shell script.
-		isExec = true
-	} else {
-		executeHook(settings,
-			hooks.Hook{Path: hook, IsExecutbale: isExec})
+	runCmd, err := hooks.GetHookRunCmd(hook)
+	if err != nil {
+		log.AssertNoErrorWarnF(err, "Could not detect runner for hook\n'%s'\n-> Skip it!", hook)
+		return
 	}
+
+	executeHook(settings,
+		hooks.Hook{Path: hook, RunCmd: runCmd})
 }
 
 func exportStagedFiles(settings hookSettings) {
@@ -204,8 +202,10 @@ func exportStagedFiles(settings hookSettings) {
 
 		files, err := hooks.GetStagedFiles(settings.git)
 
-		log.LogDebugF("Exporting staged files:\n- %s",
-			strings.ReplaceAll(files, "\n", "\n- "))
+		if len(files) != 0 {
+			log.LogDebugF("Exporting staged files:\n- %s",
+				strings.ReplaceAll(files, "\n", "\n- "))
+		}
 
 		if err != nil {
 			log.LogWarn("Could not export staged files.")
