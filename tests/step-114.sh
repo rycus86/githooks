@@ -38,3 +38,21 @@ if ! grep 'Testing 114' /tmp/test114.out; then
     echo "! Expected hook did not run"
     exit 6
 fi
+
+# Reset to trigger update
+if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
+    echo "! Could not reset master to trigger update."
+    exit 1
+fi
+
+rm -rf ~/.githooks/templates/hooks/* # Remove to see if the correct folder gets choosen
+
+if ! git hooks update; then
+    echo "! Failed to run the update"
+    exit 1
+fi
+
+if [ ! -f ~/.githooks/templates/hooks/pre-commit ]; then
+    echo "! Expected update to install wrappers into \`~/.githooks/templates\`"
+    exit 1
+fi
