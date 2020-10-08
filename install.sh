@@ -849,7 +849,7 @@ prepare_target_template_directory() {
     # Up to now the directories would not have been set if
     # --use-core-hookspath is used, we set it now here.
     if use_core_hookspath; then
-        set_githooks_directory "$TARGET_TEMPLATE_DIR"
+        set_githooks_directory --core-hooks-path "$TARGET_TEMPLATE_DIR"
     fi
 }
 
@@ -862,18 +862,30 @@ prepare_target_template_directory() {
 # Returns: 0 if succesfull found, otherwise 1
 ############################################################
 find_git_hook_templates() {
+
+    INSTALL_USES_CORE_HOOKS_PATH=$(git config --global githooks.useCoreHooksPath)
+
     # 1. from environment variables
     mark_directory_as_target "$GIT_TEMPLATE_DIR" "hooks" && return 0
 
     # 2. from git config
-    if use_core_hookspath; then
+    if use_core_hookspath || [ "$INSTALL_USES_CORE_HOOKS_PATH" = "true" ]; then
         mark_directory_as_target "$(git config --global core.hooksPath)" && return 0
-    else
+    elif ! use_core_hookspath || [ "$INSTALL_USES_CORE_HOOKS_PATH" = "false" ]; then
         mark_directory_as_target "$(git config --global init.templateDir)" "hooks" && return 0
     fi
 
     # 3. from the default location
     mark_directory_as_target "/usr/share/git-core/templates/hooks" && return 0
+
+    # If we have an installation, and have not found the template folder by now...
+    if [ -n "$INSTALL_USES_CORE_HOOKS_PATH" ]; then
+        echo "! Your installation is corrupt." >&2
+        echo "  The global value \`githooks.useCoreHooksPath = $INSTALL_USES_CORE_HOOKS_PATH\`" >&2
+        echo "  is set but the corresponding hook templates directory" >&2
+        echo "  is not found." >&2
+        return 1
+    fi
 
     # 4. Setup new folder if running interactively and no folder is found by now
     if is_non_interactive; then
@@ -896,7 +908,7 @@ find_git_hook_templates() {
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
                 TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
 
-                if ! set_githooks_directory "$TEMPLATE_DIR"; then
+                if ! set_githooks_directory --template-dir "$TEMPLATE_DIR"; then
                     echo "! Failed to set it up as Git template directory" >&2
                     return 1
                 fi
@@ -1048,7 +1060,7 @@ setup_new_templates_folder() {
     if ! is_dry_run; then
         if mkdir -p "$TARGET_TEMPLATE_DIR"; then
             # Let this one go with or without a tilde
-            set_githooks_directory "$USER_TEMPLATES"
+            set_githooks_directory --template-dir "$USER_TEMPLATES"
         else
             echo "! Failed to set up the new Git templates folder" >&2
             return 1
@@ -1670,10 +1682,10 @@ setup_shared_hook_repositories() {
 #   None
 ############################################################
 set_githooks_directory() {
-    if use_core_hookspath; then
+    if [ "$1" = "--core-hooks-path" ]; then
         git config --global githooks.useCoreHooksPath true
-        git config --global githooks.pathForUseCoreHooksPath "$1"
-        git config --global core.hooksPath "$1"
+        git config --global githooks.pathForUseCoreHooksPath "$2"
+        git config --global core.hooksPath "$2"
 
         CURRENT_TEMPLATE_DIR=$(git config --global init.templateDir)
 
@@ -1702,13 +1714,14 @@ set_githooks_directory() {
             unset HOOKS_GET_IGNORED
         fi
 
-    else
+    elif [ "$1" = "--template-dir" ]; then
         git config --global githooks.useCoreHooksPath false
-        git config --global init.templateDir "$1"
+        git config --global init.templateDir "$2"
 
         CURRENT_CORE_HOOKS_PATH=$(git config --global core.hooksPath)
         if [ -n "$CURRENT_CORE_HOOKS_PATH" ]; then
-            echo "! The \`core.hooksPath\` setting is currently set to \`$CURRENT_CORE_HOOKS_PATH\`" >&2
+            echo "! The \`core.hooksPath\` setting is currently set to" >&2
+            echo "  \`$CURRENT_CORE_HOOKS_PATH\`" >&2
             echo "  This could mean that Githooks hooks will be ignored" >&2
             echo "  Either unset \`core.hooksPath\` or run the Githooks" >&2
             echo "  installation with the --use-core-hookspath parameter" >&2
