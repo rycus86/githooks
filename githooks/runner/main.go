@@ -169,7 +169,10 @@ func executeHook(settings hookSettings, hook hooks.Hook) {
 	log.LogDebugF("Executing hook: '%s'", hook.Path)
 }
 
-func executeOldHooksIfAvailable(settings hookSettings, ignorePatterns hooks.HookIgnorePatterns) {
+func executeOldHooksIfAvailable(settings hookSettings,
+	ignorePatterns hooks.HookIgnorePatterns,
+	checksums hooks.ChecksumStore) {
+
 	hookName := settings.hookName + ".replaced.githook"
 
 	// Make it relative to git directory
@@ -234,6 +237,15 @@ func getIgnorePatterns(settings hookSettings) hooks.HookIgnorePatterns {
 	return ignorePatterns
 }
 
+func getLocalChecksumStore(settings hookSettings) hooks.ChecksumStore {
+	localChecksums := filepath.Join(settings.gitDir, ".githooks.checksum")
+	store, err := hooks.NewChecksumStore(localChecksums, false)
+	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'", localChecksums)
+	log.LogDebug(store.Summary())
+
+	return store
+}
+
 func main() {
 
 	startTime := cm.GetStartTime()
@@ -274,17 +286,18 @@ func main() {
 
 	assertRegistered(settings.git, settings.installDir, settings.gitDir)
 
+	checksums := getLocalChecksumStore(settings)
 	ignores := getIgnorePatterns(settings)
 
 	if hooks.IsGithooksDisabled(settings.git) {
 		executeLFSHooksIfAppropriate(settings)
-		executeOldHooksIfAvailable(settings, ignores)
+		executeOldHooksIfAvailable(settings, ignores, checksums)
 		return
 	}
 
 	exportStagedFiles(settings)
 	executeLFSHooksIfAppropriate(settings)
-	executeOldHooksIfAvailable(settings, ignores)
+	executeOldHooksIfAvailable(settings, ignores, checksums)
 
 	//executeHooks(settings, ignores)
 }

@@ -8,6 +8,18 @@ func PathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
+// IsDirectory checks if a path is a existing directory.
+func IsDirectory(path string) bool {
+	s, err := os.Stat(path)
+	return err == nil && s.IsDir()
+}
+
+// IsFile checks if a path is a existing file.
+func IsFile(path string) bool {
+	s, err := os.Stat(path)
+	return err == nil && !s.IsDir()
+}
+
 // IsExecOwner tells if the file is executbale by Unix 'owner'.
 func IsExecOwner(path string) (bool, error) {
 	var info os.FileInfo
