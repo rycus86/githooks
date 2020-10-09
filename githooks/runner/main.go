@@ -166,7 +166,7 @@ func executeLFSHooksIfAppropriate(settings hookSettings) {
 }
 
 func executeHook(settings hookSettings, hook hooks.Hook) {
-	log.LogDebugF("Executing hook: '%s'", hook.Path)
+	log.LogDebugF("Executing hook: '%s'.", hook.Path)
 }
 
 func executeOldHooksIfAvailable(settings hookSettings,
@@ -233,14 +233,14 @@ func getIgnorePatterns(settings hookSettings) hooks.HookIgnorePatterns {
 		settings.gitDir,
 		settings.hookName)
 	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
-	log.LogDebugF("Ignore patterns: '%v'", ignorePatterns.Patterns)
+	log.LogDebugF("Ignore patterns: '%v'.", ignorePatterns.Patterns)
 	return ignorePatterns
 }
 
 func getLocalChecksumStore(settings hookSettings) hooks.ChecksumStore {
 	localChecksums := filepath.Join(settings.gitDir, ".githooks.checksum")
 	store, err := hooks.NewChecksumStore(localChecksums, false)
-	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'", localChecksums)
+	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'.", localChecksums)
 	log.LogDebug(store.Summary())
 
 	return store
@@ -253,7 +253,7 @@ func main() {
 
 	defer func() { os.Exit(exitCode) }()
 	defer func() {
-		log.LogDebugF("Runner execution time: '%v'",
+		log.LogDebugF("Runner execution time: '%v'.",
 			cm.GetDuration(startTime))
 	}()
 
