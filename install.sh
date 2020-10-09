@@ -1806,6 +1806,7 @@ update_release_clone() {
     if [ "$CREATE_NEW_CLONE" = "true" ]; then
 
         clone_release_repository || return 1
+        GITHOOKS_CLONE_UPDATED_FROM_COMMIT="0000000000000000000000000000000000000000"
         GITHOOKS_CLONE_CREATED="true"
         GITHOOKS_CLONE_UPDATED="true"
 
