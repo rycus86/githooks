@@ -848,8 +848,9 @@ prepare_target_template_directory() {
 
     # Up to now the directories would not have been set if
     # --use-core-hookspath is used, we set it now here.
-    if use_core_hookspath; then
-        set_githooks_directory --core-hooks-path "$TARGET_TEMPLATE_DIR"
+    if ! is_dry_run && use_core_hookspath &&
+        ! set_githooks_directory --core-hooks-path "$TARGET_TEMPLATE_DIR"; then
+        echo "! Failed to set \`core.hooksPath\` to template dir" >&2
     fi
 }
 
@@ -887,7 +888,7 @@ find_git_hook_templates() {
         return 1
     fi
 
-    # 4. Setup new folder if running interactively and no folder is found by now
+    # 4. Setup new folder if running non-interactively and no folder is found by now
     if is_non_interactive; then
         setup_new_templates_folder || return 1
         return 0 # we are finished either way here
@@ -908,7 +909,9 @@ find_git_hook_templates() {
             if [ "$MARK_AS_TEMPLATES" = "y" ] || [ "$MARK_AS_TEMPLATES" = "Y" ]; then
                 TEMPLATE_DIR=$(dirname "$TARGET_TEMPLATE_DIR")
 
-                if ! set_githooks_directory --template-dir "$TEMPLATE_DIR"; then
+                if ! is_dry_run &&
+                    ! use_core_hookspath &&
+                    ! set_githooks_directory --template-dir "$TEMPLATE_DIR"; then
                     echo "! Failed to set it up as Git template directory" >&2
                     return 1
                 fi
@@ -1057,11 +1060,9 @@ setup_new_templates_folder() {
 
     TARGET_TEMPLATE_DIR="${TILDE_REPLACED}/hooks"
 
-    if ! is_dry_run; then
-        if mkdir -p "$TARGET_TEMPLATE_DIR"; then
-            # Let this one go with or without a tilde
-            set_githooks_directory --template-dir "$USER_TEMPLATES"
-        else
+    if ! is_dry_run && ! use_core_hookspath; then
+        if ! mkdir -p "$TARGET_TEMPLATE_DIR" ||
+            ! set_githooks_directory --template-dir "$USER_TEMPLATES"; then # Let this one go with or without a tilde
             echo "! Failed to set up the new Git templates folder" >&2
             return 1
         fi
@@ -1678,8 +1679,7 @@ setup_shared_hook_repositories() {
 # Parameters:
 #   1: path for templateDir or hooksPath
 #
-# Returns:
-#   None
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 set_githooks_directory() {
     if [ "$1" = "--core-hooks-path" ]; then
@@ -1727,6 +1727,8 @@ set_githooks_directory() {
             echo "  installation with the --use-core-hookspath parameter" >&2
         fi
     fi
+
+    return 0
 }
 
 #####################################################
