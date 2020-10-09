@@ -258,6 +258,7 @@ func main() {
 	}()
 
 	cwd, err := os.Getwd()
+	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 
 	// Handle all panics and report the error
 	defer func() {
@@ -279,8 +280,6 @@ func main() {
 		}
 		exitCode = 1
 	}()
-
-	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 
 	settings := setMainVariables(cwd)
 
