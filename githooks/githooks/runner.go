@@ -12,18 +12,26 @@ import (
 func GetHookRunCmd(hookPath string) ([]string, error) {
 	if cm.IsExecutable(hookPath) {
 		return nil, nil
-	} else if runnerFile := hookPath + ".runner"; cm.PathExists(runnerFile) {
-		content, err := ioutil.ReadFile(runnerFile)
-		if err != nil {
+	}
+
+	runnerFile := hookPath + ".runner"
+	exists, err := cm.PathExists(runnerFile)
+	if err != nil {
+		return nil, cm.ErrorF("Could not check path for runner file '%s'", runnerFile)
+	}
+
+	if exists {
+		content, e := ioutil.ReadFile(runnerFile)
+		if e != nil {
 			return nil, cm.ErrorF("Could not read runner file '%s'", runnerFile)
 		}
-		args, err := shlex.Split(string(content))
-		if err != nil {
+		args, e := shlex.Split(string(content))
+		if e != nil {
 			return nil, cm.ErrorF("Could not parse runner file '%s'", runnerFile)
 		}
 		return args, nil
-	} else {
-		// Default is the shell interpreter.
-		return []string{"sh"}, nil
 	}
+
+	// It does not exists -> default is the shell interpreter.
+	return []string{"sh"}, nil
 }

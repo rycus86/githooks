@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	strs "rycus86/githooks/strings"
 	"strings"
 )
 
@@ -26,19 +27,17 @@ func ErrorF(format string, args ...interface{}) error {
 }
 
 // CombineErrors combines multiple errors into one.
-func CombineErrors(err error, errs ...error) error {
+func CombineErrors(errs ...error) error {
 	var s string
 	anyNotNil := false
-
-	if err != nil {
-		s += err.Error()
-		anyNotNil = true
-	}
 
 	for _, e := range errs {
 		if e != nil {
 			anyNotNil = true
-			s += "\n" + e.Error()
+			if strs.IsNotEmpty(s) {
+				s += ",\n"
+			}
+			s += e.Error()
 		}
 	}
 

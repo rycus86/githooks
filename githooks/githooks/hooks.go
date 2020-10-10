@@ -2,7 +2,7 @@ package hooks
 
 // Hook contains the data to a executbale hook
 type Hook struct {
-	// The path of the hook.
+	// The absolute path of the hook.
 	Path string
 	// The run command for the hook.
 	RunCmd []string

@@ -1,5 +1,7 @@
 package common
 
+import strs "rycus86/githooks/strings"
+
 // AssertWarn Assert a condition is `true`, otherwise log.
 func (c *LogContext) AssertWarn(condition bool, lines ...string) {
 	if !condition {
@@ -43,29 +45,33 @@ func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}
 }
 
 // AssertNoErrorWarn Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) {
+func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) bool {
 	if err != nil {
-		c.LogWarn(append(lines, " -> error: ["+err.Error()+"]")...)
+		c.LogWarn(append(lines, strs.SplitLines("-> error: [\n"+err.Error()+"\n]")...)...)
+		return false
 	}
+	return true
 }
 
 // AssertNoErrorWarnF Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interface{}) {
+func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interface{}) bool {
 	if err != nil {
-		c.LogWarnF(format+"\n -> error: ["+err.Error()+"]", args...)
+		c.LogWarnF(format+"\n-> error: [\n"+err.Error()+"\n]", args...)
+		return false
 	}
+	return true
 }
 
 // AssertNoErrorFatal Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorFatal(err error, lines ...string) {
 	if err != nil {
-		c.LogFatal(append(lines, " -> error: ["+err.Error()+"]")...)
+		c.LogFatal(append(lines, strs.SplitLines("-> error: [\n"+err.Error()+"\n]")...)...)
 	}
 }
 
 // AssertNoErrorFatalF Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorFatalF(err error, format string, args ...interface{}) {
 	if err != nil {
-		c.LogFatalF(format+"\n -> error: ["+err.Error()+"]", args...)
+		c.LogFatalF(format+"\n-> error: [\n"+err.Error()+"\n]", args...)
 	}
 }

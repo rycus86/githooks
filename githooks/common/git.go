@@ -24,7 +24,7 @@ type GitContext struct {
 }
 
 // GetWorkingDir gets the current working dir of the context
-// to implement `ExecContext`
+// to implement `IExecContext`
 func (c *GitContext) GetWorkingDir() string {
 	return c.cwd
 }

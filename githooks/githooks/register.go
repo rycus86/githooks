@@ -40,12 +40,13 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool) erro
 func LoadRegisteredRepos(installDir string) (RegisterRepos, error) {
 	file := getRegisterFile(installDir)
 	var repos RegisterRepos
+	exists, err := cm.PathExists(file)
 
-	if cm.PathExists(file) {
+	if exists {
 		return repos, cm.LoadJSON(file, &repos)
 	}
 
-	return repos, nil
+	return repos, err
 }
 
 // StoreRegisteredRepos sets the registered repos to a file
@@ -67,7 +68,10 @@ func (r *RegisterRepos) Remove(gitDir string) {
 // FilterExisting filters non existing Git directories.
 func (r *RegisterRepos) FilterExisting() {
 	r.GitDirs = strs.Filter(r.GitDirs,
-		func(v string) bool { return cm.PathExists(v) })
+		func(v string) bool {
+			exists, _ := cm.PathExists(v)
+			return exists
+		})
 }
 
 func getRegisterFile(installDir string) string {

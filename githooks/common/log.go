@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gookit/color"
+	"github.com/mattn/go-isatty"
 )
 
 const (
@@ -20,6 +21,9 @@ const (
 	warnIndent     = "   "
 	errorSuffix    = warnSuffix + " "
 	errorIndent    = "   "
+
+	promptSuffix = "❓ " + githooksSuffix + " "
+	promptIndent = "   "
 )
 
 // ILogContext defines the log interace
@@ -38,6 +42,9 @@ type ILogContext interface {
 	LogFatal(lines ...string)
 	LogFatalF(format string, args ...interface{})
 
+	LogPromptStartF(format string, args ...interface{})
+	LogPromptEnd()
+
 	// Assert helper functions
 	AssertWarn(condition bool, lines ...string)
 	AssertWarnF(condition bool, format string, args ...interface{})
@@ -45,8 +52,8 @@ type ILogContext interface {
 	WarnIfF(condition bool, format string, args ...interface{})
 	FatalIf(condition bool, lines ...string)
 	FatalIfF(condition bool, format string, args ...interface{})
-	AssertNoErrorWarn(err error, lines ...string)
-	AssertNoErrorWarnF(err error, format string, args ...interface{})
+	AssertNoErrorWarn(err error, lines ...string) bool
+	AssertNoErrorWarnF(err error, format string, args ...interface{}) bool
 	AssertNoErrorFatal(err error, lines ...string)
 	AssertNoErrorFatalF(err error, format string, args ...interface{})
 }
@@ -60,12 +67,13 @@ type LogContext struct {
 
 	isColorSupported bool
 
-	renderInfo  func(string) string
-	renderError func(string) string
+	renderInfo   func(string) string
+	renderError  func(string) string
+	renderPrompt func(string) string
 }
 
-// GetLogContext Gets the log context
-func GetLogContext() ILogContext {
+// CreateLogContext creates a log context
+func CreateLogContext() (ILogContext, error) {
 	var debug *log.Logger
 	if DebugLog {
 		debug = log.New(os.Stderr, "", 0)
@@ -75,19 +83,28 @@ func GetLogContext() ILogContext {
 	warn := log.New(os.Stderr, "", 0)
 	error := log.New(os.Stderr, "", 0)
 
-	hasColors := color.IsSupportColor()
+	if info == nil || warn == nil || error == nil {
+		return nil, Error("Failed to initialized info,warn,error logs")
+	}
+
+	hasColors := isatty.IsTerminal(os.Stdout.Fd()) && color.IsSupportColor()
 
 	var renderInfo func(string) string
 	var renderError func(string) string
+	var renderPrompt func(string) string
+
 	if hasColors {
 		renderInfo = func(s string) string { return color.FgLightBlue.Render(s) }
 		renderError = func(s string) string { return color.FgRed.Render(s) }
+		renderPrompt = func(s string) string { return color.FgGreen.Render(s) }
+
 	} else {
 		renderInfo = func(s string) string { return s }
 		renderError = func(s string) string { return s }
+		renderPrompt = func(s string) string { return s }
 	}
 
-	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError}
+	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError, renderPrompt}, nil
 }
 
 // LogDebug logs a debug message.
@@ -132,6 +149,16 @@ func (c *LogContext) LogError(lines ...string) {
 // LogErrorF logs an error.
 func (c *LogContext) LogErrorF(format string, args ...interface{}) {
 	c.error.Printf(c.renderError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
+}
+
+// LogPromptStartF outputs a prompt to `stdin`.
+func (c *LogContext) LogPromptStartF(format string, args ...interface{}) {
+	c.info.Printf(c.renderPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...)))
+}
+
+// LogPromptEnd outputs the end statement after prompt input to `stdin`.
+func (c *LogContext) LogPromptEnd() {
+	c.info.Printf("\n")
 }
 
 // LogErrorWithStacktrace logs and error with the stack trace.

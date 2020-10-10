@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// ExecContext defines the context to execute commands
-type ExecContext interface {
+// IExecContext defines the context to execute commands
+type IExecContext interface {
 	GetWorkingDir() string
 }
 
 // ExecuteScript calls a script `$1`.
 // If it is not executable call it as a shell script.
-func ExecuteScript(c ExecContext, script string, pipeAll bool, args ...string) (string, error) {
+func ExecuteScript(c IExecContext, script string, pipeAll bool, args ...string) (string, error) {
 
 	var cmd *exec.Cmd
 

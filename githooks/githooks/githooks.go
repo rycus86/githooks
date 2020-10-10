@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	cm "rycus86/githooks/common"
@@ -26,27 +25,32 @@ var StagedFilesHookNames = [3]string{"pre-commit", "prepare-commit-msg", "commit
 const EnvVariableStagedFiles = "STAGED_FILES"
 
 // GetBugReportingInfo Get the default bug reporting url.
-func GetBugReportingInfo(repoPath string) string {
+func GetBugReportingInfo(repoPath string) (info string, err error) {
+	// Set default if needed
+	defer func() {
+		if strs.IsEmpty(info) {
+			info = strs.Fmt("-> Report this bug to: '%s'", DefaultBugReportingURL)
+		}
+	}()
 
 	// Check in the repo if possible
 	file := filepath.Join(repoPath, ".githooks", ".bug-report")
-	if cm.PathExists(file) {
-		file, err := os.Open(file)
-		if err != nil {
-			defer file.Close()
-			bugReportInfo, err := ioutil.ReadAll(file)
-			if err != nil {
-				return string(bugReportInfo)
-			}
-		}
-	}
-	// Check global Git config
-	bugReportInfo := cm.Git().GetConfig("githooks.bugReportInfo", cm.GlobalScope)
-	if bugReportInfo != "" {
-		return bugReportInfo
+	exists, e := cm.PathExists(file)
+	if e != nil {
+		return info, e
 	}
 
-	return strs.Fmt("-> Report this bug to: '%s'", DefaultBugReportingURL)
+	if exists {
+		data, e := ioutil.ReadFile(file)
+		if e != nil {
+			return info, e
+		}
+		info = string(data)
+	}
+
+	// Check global Git config
+	info = cm.Git().GetConfig("githooks.bugReportInfo", cm.GlobalScope)
+	return
 }
 
 // IsGithooksDisabled checks if Githooks is disabled in
@@ -70,10 +74,11 @@ func GetInstallDir(git *cm.GitContext) string {
 }
 
 // GetToolScript gets the tool script associated with the name `tool`
-func GetToolScript(name string, installDir string) string {
+func GetToolScript(name string, installDir string) (string, error) {
 	tool := filepath.Join(installDir, "tools", name, "run")
-	if cm.PathExists(tool) {
-		return tool
+	exists, err := cm.PathExists(tool)
+	if exists {
+		return tool, nil
 	}
-	return ""
+	return "", err
 }

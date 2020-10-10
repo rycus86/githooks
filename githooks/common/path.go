@@ -1,11 +1,21 @@
 package common
 
-import "os"
+import (
+	"os"
+)
 
-// PathExists Checks if a path exists.
-func PathExists(path string) bool {
+// IsPathError returns `true` if the error is a `os.PathError`
+func IsPathError(err error) bool {
+	return err != nil && err.(*os.PathError) != nil
+}
+
+// PathExists checks if a path exists.
+func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
+	if os.IsNotExist(err) || IsPathError(err) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // IsDirectory checks if a path is a existing directory.

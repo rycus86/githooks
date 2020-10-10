@@ -8,39 +8,70 @@ import (
 
 // HookIgnorePatterns is the format of the ignore patterns.
 type HookIgnorePatterns struct {
-	Patterns []string
+	Patterns  []string // Shell file patterns (see `filepath.Match`)
+	HookNames []string // Specific hook names. @todo Introduce namespacing!
 }
 
-// GetHookIgnorePatterns gets all ignored hooks in the current repository
-func GetHookIgnorePatterns(repoDir string, gitDir string, hookName string) (HookIgnorePatterns, error) {
+// IgnorePatterns is the list of possible ignore patterns when running a runner.
+type IgnorePatterns struct {
+	Worktree *HookIgnorePatterns
+	User     *HookIgnorePatterns
+}
 
-	var patterns1 HookIgnorePatterns
-	var err1 error
+// CombineIgnorePatterns combines two ignore patterns.
+func CombineIgnorePatterns(patterns ...*HookIgnorePatterns) *HookIgnorePatterns {
+	var pComb *HookIgnorePatterns
+	for _, p := range patterns {
+		if p != nil {
+			if pComb == nil {
+				pComb = p
+			} else {
+				pComb.Combine(*p)
+			}
+
+		}
+	}
+	return pComb
+}
+
+// GetHookIgnorePatternsWorktree gets all ignored hooks in the current worktree
+func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns *HookIgnorePatterns, err error) {
 
 	file := filepath.Join(repoDir, ".githooks", ".ignore.yaml")
-	if cm.PathExists(file) {
-		patterns1, err1 = loadIgnorePatterns(file)
+	exists1, err := cm.PathExists(file)
+	if exists1 {
+		patterns, err = loadIgnorePatterns(file)
 	}
 
 	file = filepath.Join(repoDir, ".githooks", hookName, ".ignore.yaml")
-	if cm.PathExists(file) {
-		patterns2, err2 := loadIgnorePatterns(file)
-		if err2 != nil {
-			patterns1.Combine(patterns2)
-		}
-		cm.CombineErrors(err1, err2)
+	exists2, e := cm.PathExists(file)
+	err = cm.CombineErrors(err, e)
+
+	if exists2 {
+		patterns2, e := loadIgnorePatterns(file)
+		err = cm.CombineErrors(err, e)
+		patterns = CombineIgnorePatterns(patterns, patterns2)
 	}
 
-	return patterns1, err1
+	return
+}
+
+// GetHookIgnorePatterns gets all ignored hooks in the current Git directorys.
+func GetHookIgnorePatterns(gitDir string) (*HookIgnorePatterns, error) {
+	file := filepath.Join(gitDir, ".githooks.ignore.yaml")
+	exists, err := cm.PathExists(file)
+	if exists {
+		return loadIgnorePatterns(file)
+	}
+	return nil, err
 }
 
 // LoadIgnorePatterns loads patterns.
-func loadIgnorePatterns(file string) (HookIgnorePatterns, error) {
+func loadIgnorePatterns(file string) (*HookIgnorePatterns, error) {
 	var patterns HookIgnorePatterns
-
 	err := cm.LoadYAML(file, &patterns)
 	if err != nil {
-		return patterns, err
+		return nil, err
 	}
 
 	// Filter all malformed patterns and report
@@ -56,7 +87,7 @@ func loadIgnorePatterns(file string) (HookIgnorePatterns, error) {
 	}
 	patterns.Patterns = strs.Filter(patterns.Patterns, patternIsValid)
 
-	return patterns, err
+	return &patterns, err
 }
 
 // Combine combines two patterns.
@@ -64,8 +95,8 @@ func (h *HookIgnorePatterns) Combine(p HookIgnorePatterns) {
 	h.Patterns = append(h.Patterns, p.Patterns...)
 }
 
-// Matches returns true if `hookPath` matches any of the patterns and otherwise `false`
-func (h *HookIgnorePatterns) Matches(hookPath string) bool {
+// IsIgnored returns true if `hookPath` is ignored and otherwise `false`
+func (h *HookIgnorePatterns) IsIgnored(hookPath string) bool {
 
 	for _, p := range h.Patterns {
 		matched, err := filepath.Match(p, hookPath)
@@ -74,4 +105,15 @@ func (h *HookIgnorePatterns) Matches(hookPath string) bool {
 	}
 
 	return false
+}
+
+// IsIgnored returns `true` is ignored by either the worktree patterns or the user patterns
+// and otherwise `false`. The second value is `true` if it was ignored by the user patterns.
+func (h *IgnorePatterns) IsIgnored(hookPath string) (bool, bool) {
+	if h.Worktree != nil && h.Worktree.IsIgnored(hookPath) {
+		return true, false
+	} else if h.User != nil && h.User.IsIgnored(hookPath) {
+		return true, true
+	}
+	return false, false
 }
