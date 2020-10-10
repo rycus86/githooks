@@ -2,9 +2,12 @@
 
 package common
 
-import "os"
+import (
+	"io"
+	"os"
+)
 
 // GetCtty gets the file descriptor of the controlling terminal.
-func GetCtty() (*os.File, error) {
+func GetCtty() (io.Reader, error) {
 	return os.OpenFile("/dev/tty", os.O_RDONLY, 0)
 }

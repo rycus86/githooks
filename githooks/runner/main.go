@@ -95,7 +95,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool")
 
 	promptCtx, err := cm.CreatePromptContext(log, git, dialogTool)
-	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool")
+	log.AssertNoErrorWarnF(err, "Could not get prompt context.")
 
 	isTrusted, err := hooks.IsRepoTrusted(git, promptCtx, repoPath, true)
 	log.AssertNoErrorWarn(err, "Could not get trust settings.")

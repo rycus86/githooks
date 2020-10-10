@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"runtime"
 	strs "rycus86/githooks/strings"
@@ -17,13 +18,17 @@ type IPromptContext interface {
 	Close()
 }
 
+type PromptFormatter func(format string, args ...interface{}) string
+
 // PromptContext defines the prompt context based on a `ILogContext`
 // or as a fallback using the defined dialog tool if configured.
 type PromptContext struct {
+	log ILogContext
+
 	// Fallback prompt over the log context if available.
-	log     ILogContext
-	ctty    *os.File // File descp. of the controlling terminal.
-	hasCtty bool     // If a controlling terminal is available, e.g. `ctty` is valid.
+	promptFmt PromptFormatter
+	termOut   io.Writer
+	termIn    io.Reader
 
 	// Prompt over the tool script if existing.
 	execCtx  IExecContext
@@ -32,24 +37,28 @@ type PromptContext struct {
 
 // Close closes the prompt context
 func (p *PromptContext) Close() {
-	if p.ctty != nil {
-		p.ctty.Close()
+
+	if f, ok := p.termIn.(*os.File); ok {
+		f.Close()
 	}
 }
 
 // CreatePromptContext creates a `PrompContext`.
 func CreatePromptContext(log ILogContext,
 	execCtx IExecContext, toolPath string) (IPromptContext, error) {
-	ctty, err := GetCtty()
+	terminalReader, err := GetCtty()
 
 	p := PromptContext{
-		log:  log,
-		ctty: ctty,
+		log: log,
+
+		promptFmt: log.GetPromptFormatter(),
+		termOut:   log.GetInfoWriter(),
+		termIn:    terminalReader,
 
 		execCtx:  execCtx,
 		toolPath: toolPath}
 
-	if ctty != nil {
+	if terminalReader != nil {
 		runtime.SetFinalizer(&p, func(p *PromptContext) { p.Close() })
 	}
 
@@ -106,15 +115,18 @@ func (p *PromptContext) ShowPrompt(text string,
 	// from git), so read from /dev/tty, our controlling terminal,
 	// if it can be opened.
 	nPrompts := 0 // How many times we showed the prompt
-	if p.ctty != nil {
+	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
+
+	if p.termIn != nil {
 		maxPrompts := 3
 		answerIncorrect := true
 		for answerIncorrect && nPrompts < maxPrompts {
 
-			p.log.LogPromptStartF("%s %s [%s]: ", text, hintText, shortOptions)
+			p.termOut.Write([]byte(question))
 			nPrompts++
+
 			var ans string
-			reader := bufio.NewReader(p.ctty)
+			reader := bufio.NewReader(p.termIn)
 			ans, e := reader.ReadString('\n')
 
 			if e == nil {
@@ -129,21 +141,24 @@ func (p *PromptContext) ShowPrompt(text string,
 					return answer, nil
 				}
 
-				p.log.LogWarnF("Answer '%s' not in '%q', try again ...", answer, shortOptions)
+				warning := p.promptFmt("Answer '%s' not in '%q', try again ...", answer, shortOptions)
+				p.termOut.Write([]byte(warning))
+
 			} else {
-				p.log.LogWarnF("Could not read from ctty '%v'.", p.ctty)
+				p.termOut.Write([]byte("\n"))
+				err = CombineErrors(err, ErrorF("Could not read from terminal reader."))
 				break
 			}
 		}
 	} else {
-		err = CombineErrors(err, ErrorF("Dont have a controlling terminal."))
+		err = CombineErrors(err, ErrorF("Do not have a controlling terminal to show prompt."))
 	}
 
 	if nPrompts == 0 {
 		// Show the prompt once ...
-		p.log.LogPromptStartF("%s %s [%s]: \n", text, hintText, shortOptions)
+		p.termOut.Write([]byte(question))
 	}
 
-	p.log.LogWarnF("Answer not received -> Using default '%s'", defaultAnswer)
+	p.log.LogDebugF("Answer not received -> Using default '%s'", defaultAnswer)
 	return defaultAnswer, err
 }

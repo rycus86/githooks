@@ -1,6 +1,7 @@
 package common
 
 import (
+	"io"
 	"log"
 	"os"
 	"runtime/debug"
@@ -42,9 +43,6 @@ type ILogContext interface {
 	LogFatal(lines ...string)
 	LogFatalF(format string, args ...interface{})
 
-	LogPromptStartF(format string, args ...interface{})
-	LogPromptEnd()
-
 	// Assert helper functions
 	AssertWarn(condition bool, lines ...string)
 	AssertWarnF(condition bool, format string, args ...interface{})
@@ -56,6 +54,13 @@ type ILogContext interface {
 	AssertNoErrorWarnF(err error, format string, args ...interface{}) bool
 	AssertNoErrorFatal(err error, lines ...string)
 	AssertNoErrorFatalF(err error, format string, args ...interface{})
+
+	HasColors() bool
+
+	GetPromptFormatter() func(format string, args ...interface{}) string
+
+	GetInfoWriter() io.Writer
+	GetErrorWriter() io.Writer
 }
 
 // LogContext defines the data for a log context
@@ -107,6 +112,21 @@ func CreateLogContext() (ILogContext, error) {
 	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError, renderPrompt}, nil
 }
 
+// HasColors returns if the log uses colors.
+func (c *LogContext) HasColors() bool {
+	return c.isColorSupported
+}
+
+// GetErrorWriter returns the error writer.
+func (c *LogContext) GetErrorWriter() io.Writer {
+	return c.error.Writer()
+}
+
+// GetInfoWriter returns the error writer.
+func (c *LogContext) GetInfoWriter() io.Writer {
+	return c.info.Writer()
+}
+
 // LogDebug logs a debug message.
 func (c *LogContext) LogDebug(lines ...string) {
 	if DebugLog {
@@ -151,14 +171,14 @@ func (c *LogContext) LogErrorF(format string, args ...interface{}) {
 	c.error.Printf(c.renderError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
 }
 
-// LogPromptStartF outputs a prompt to `stdin`.
-func (c *LogContext) LogPromptStartF(format string, args ...interface{}) {
-	c.info.Printf(c.renderPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...)))
-}
+// GetPromptFormatter renders a prompt.
+func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
 
-// LogPromptEnd outputs the end statement after prompt input to `stdin`.
-func (c *LogContext) LogPromptEnd() {
-	c.info.Printf("\n")
+	fmt := func(format string, args ...interface{}) string {
+		return c.renderPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))
+	}
+
+	return fmt
 }
 
 // LogErrorWithStacktrace logs and error with the stack trace.

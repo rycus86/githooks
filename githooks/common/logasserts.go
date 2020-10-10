@@ -47,7 +47,7 @@ func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}
 // AssertNoErrorWarn Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) bool {
 	if err != nil {
-		c.LogWarn(append(lines, strs.SplitLines("-> error: [\n"+err.Error()+"\n]")...)...)
+		c.LogWarn(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
 		return false
 	}
 	return true
@@ -56,7 +56,7 @@ func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) bool {
 // AssertNoErrorWarnF Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interface{}) bool {
 	if err != nil {
-		c.LogWarnF(format+"\n-> error: [\n"+err.Error()+"\n]", args...)
+		c.LogWarnF(format+"\n-> error: ["+err.Error()+"]", args...)
 		return false
 	}
 	return true
@@ -65,13 +65,13 @@ func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interf
 // AssertNoErrorFatal Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorFatal(err error, lines ...string) {
 	if err != nil {
-		c.LogFatal(append(lines, strs.SplitLines("-> error: [\n"+err.Error()+"\n]")...)...)
+		c.LogFatal(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
 	}
 }
 
 // AssertNoErrorFatalF Assert no error, and otherwise log it.
 func (c *LogContext) AssertNoErrorFatalF(err error, format string, args ...interface{}) {
 	if err != nil {
-		c.LogFatalF(format+"\n-> error: [\n"+err.Error()+"\n]", args...)
+		c.LogFatalF(format+"\n-> error: ["+err.Error()+"]", args...)
 	}
 }
