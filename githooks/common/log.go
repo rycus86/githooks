@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/gookit/color"
-	"github.com/mattn/go-isatty"
+	"github.com/moby/term"
 )
 
 const (
@@ -82,10 +82,6 @@ type LogContext struct {
 	renderPrompt func(string) string
 }
 
-func isTerminal(fd uintptr) bool {
-	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
-}
-
 // CreateLogContext creates a log context
 func CreateLogContext() (ILogContext, error) {
 	var debug *log.Logger
@@ -101,8 +97,8 @@ func CreateLogContext() (ILogContext, error) {
 		return nil, Error("Failed to initialized info,warn,error logs")
 	}
 
-	infoIsATerminal := isTerminal(os.Stdout.Fd())
-	errorIsATerminal := isTerminal(os.Stderr.Fd())
+	infoIsATerminal := term.IsTerminal(os.Stdout.Fd())
+	errorIsATerminal := term.IsTerminal(os.Stderr.Fd())
 
 	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 
