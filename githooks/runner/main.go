@@ -210,9 +210,9 @@ func executeOldHooks(settings HookSettings,
 	ingores hooks.IgnorePatterns,
 	checksums hooks.ChecksumStore) {
 
-	hookName := settings.hookName + ".replaced.githooks"
+	hookName := settings.hookName + ".replaced.githook"
 	// Make it relative to git directory
-	// e.g. 'hooks/pre-commit.replaced.githooks'
+	// e.g. 'hooks/pre-commit.replaced.githook'
 	hook := hooks.Hook{Path: filepath.Join(settings.hookDir, hookName), RunCmd: nil}
 
 	exists, err := cm.PathExists(hook.Path)

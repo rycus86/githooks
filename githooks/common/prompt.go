@@ -46,13 +46,18 @@ func (p *PromptContext) Close() {
 // CreatePromptContext creates a `PrompContext`.
 func CreatePromptContext(log ILogContext,
 	execCtx IExecContext, toolPath string) (IPromptContext, error) {
+
+	var terminalWriter io.Writer
+	if log.IsInfoATerminal() {
+		terminalWriter = log.GetInfoWriter()
+	}
 	terminalReader, err := GetCtty()
 
 	p := PromptContext{
 		log: log,
 
 		promptFmt: log.GetPromptFormatter(),
-		termOut:   log.GetInfoWriter(),
+		termOut:   terminalWriter,
 		termIn:    terminalReader,
 
 		execCtx:  execCtx,
@@ -65,8 +70,8 @@ func CreatePromptContext(log ILogContext,
 	return &p, err
 }
 
-func getDefaultAnswer(shortOptions string) string {
-	for _, r := range strings.Split(shortOptions, "/") {
+func getDefaultAnswer(options []string) string {
+	for _, r := range options {
 		if strings.ToLower(r) != r {
 			return r
 		}
@@ -74,8 +79,8 @@ func getDefaultAnswer(shortOptions string) string {
 	return ""
 }
 
-func isAnswerCorrect(answer string, shortOptions string) bool {
-	return strs.Includes(strings.Split(shortOptions, "/"), answer)
+func isAnswerCorrect(answer string, options []string) bool {
+	return strs.Includes(options, answer)
 }
 
 // ShowPrompt shows a prompt to the user with `text`
@@ -85,7 +90,8 @@ func (p *PromptContext) ShowPrompt(text string,
 	shortOptions string,
 	longOptions ...string) (answer string, err error) {
 
-	defaultAnswer := getDefaultAnswer(shortOptions)
+	options := strings.Split(shortOptions, "/")
+	defaultAnswer := getDefaultAnswer(options)
 
 	if strs.IsNotEmpty(p.toolPath) {
 
@@ -95,13 +101,13 @@ func (p *PromptContext) ShowPrompt(text string,
 				longOptions...)...)
 
 		if err == nil {
-			if isAnswerCorrect(answer, shortOptions) {
-				return answer, nil
+			if isAnswerCorrect(answer, options) {
+				return
 			}
 
 			return defaultAnswer,
 				ErrorF("Dialog tool returned wrong answer '%s' not in '%q'",
-					answer, shortOptions)
+					answer, options)
 		}
 
 		err = CombineErrors(err, ErrorF("Could not execute dialog script '%s'", p.toolPath))
@@ -109,56 +115,77 @@ func (p *PromptContext) ShowPrompt(text string,
 	}
 
 	enterCausesDefault := strs.IsNotEmpty(defaultAnswer)
+	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
 
+	answer, isPromptDisplayed, e := p.showPromptTerminal(
+		question,
+		defaultAnswer,
+		options,
+		enterCausesDefault)
+	if e == nil {
+		return answer, nil
+	}
+
+	err = CombineErrors(err, e)
+
+	if !isPromptDisplayed {
+		// Show the prompt in the log output
+		p.log.LogInfo(question)
+	}
+
+	p.log.LogDebugF("Answer not received -> Using default '%s'", defaultAnswer)
+	return defaultAnswer, err
+}
+
+func (p *PromptContext) showPromptTerminal(
+	question string,
+	defaultAnswer string,
+	options []string,
+	enterCausesDefault bool) (string, bool, error) {
+
+	var err error
 	// Try to read from the controlling terminal if available.
 	// Our stdin is never a tty (either a pipe or /dev/null when called
 	// from git), so read from /dev/tty, our controlling terminal,
 	// if it can be opened.
 	nPrompts := 0 // How many times we showed the prompt
-	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
 
-	if p.termIn != nil {
+	if p.termIn != nil && p.termOut != nil {
+
 		maxPrompts := 3
 		answerIncorrect := true
+
 		for answerIncorrect && nPrompts < maxPrompts {
 
 			p.termOut.Write([]byte(question))
 			nPrompts++
 
-			var ans string
 			reader := bufio.NewReader(p.termIn)
 			ans, e := reader.ReadString('\n')
 
 			if e == nil {
-				answer = strings.TrimSpace(ans)
+				ans := strings.TrimSpace(ans)
 
-				if strs.IsEmpty(answer) && enterCausesDefault {
-					answer = defaultAnswer
+				if strs.IsEmpty(ans) && enterCausesDefault {
+					ans = defaultAnswer
 				}
 
-				if isAnswerCorrect(answer, shortOptions) {
-					p.log.LogDebugF("Answer '%v' received.", answer)
-					return answer, nil
+				if isAnswerCorrect(ans, options) {
+					return ans, nPrompts != 0, nil
 				}
 
-				warning := p.promptFmt("Answer '%s' not in '%q', try again ...", answer, shortOptions)
+				warning := p.promptFmt("Answer '%s' not in '%q', try again ...", ans, options)
 				p.termOut.Write([]byte(warning))
 
 			} else {
 				p.termOut.Write([]byte("\n"))
-				err = CombineErrors(err, ErrorF("Could not read from terminal reader."))
+				err = ErrorF("Could not read from terminal.")
 				break
 			}
 		}
 	} else {
-		err = CombineErrors(err, ErrorF("Do not have a controlling terminal to show prompt."))
+		err = ErrorF("Do not have a controlling terminal to show prompt.")
 	}
 
-	if nPrompts == 0 {
-		// Show the prompt once ...
-		p.termOut.Write([]byte(question))
-	}
-
-	p.log.LogDebugF("Answer not received -> Using default '%s'", defaultAnswer)
-	return defaultAnswer, err
+	return defaultAnswer, nPrompts != 0, err
 }

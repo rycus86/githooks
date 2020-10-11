@@ -60,7 +60,10 @@ type ILogContext interface {
 	GetPromptFormatter() func(format string, args ...interface{}) string
 
 	GetInfoWriter() io.Writer
+	IsInfoATerminal() bool
+
 	GetErrorWriter() io.Writer
+	IsErrorATerminal() bool
 }
 
 // LogContext defines the data for a log context
@@ -70,11 +73,17 @@ type LogContext struct {
 	warn  *log.Logger
 	error *log.Logger
 
+	infoIsATerminal  bool
+	errorIsATerminal bool
 	isColorSupported bool
 
 	renderInfo   func(string) string
 	renderError  func(string) string
 	renderPrompt func(string) string
+}
+
+func isTerminal(fd uintptr) bool {
+	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
 }
 
 // CreateLogContext creates a log context
@@ -92,7 +101,10 @@ func CreateLogContext() (ILogContext, error) {
 		return nil, Error("Failed to initialized info,warn,error logs")
 	}
 
-	hasColors := isatty.IsTerminal(os.Stdout.Fd()) && color.IsSupportColor()
+	infoIsATerminal := isTerminal(os.Stdout.Fd())
+	errorIsATerminal := isTerminal(os.Stderr.Fd())
+
+	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 
 	var renderInfo func(string) string
 	var renderError func(string) string
@@ -109,7 +121,9 @@ func CreateLogContext() (ILogContext, error) {
 		renderPrompt = func(s string) string { return s }
 	}
 
-	return &LogContext{debug, info, warn, error, hasColors, renderInfo, renderError, renderPrompt}, nil
+	return &LogContext{debug, info, warn, error,
+		infoIsATerminal, errorIsATerminal, hasColors,
+		renderInfo, renderError, renderPrompt}, nil
 }
 
 // HasColors returns if the log uses colors.
@@ -117,14 +131,24 @@ func (c *LogContext) HasColors() bool {
 	return c.isColorSupported
 }
 
+// GetInfoWriter returns the info writer.
+func (c *LogContext) GetInfoWriter() io.Writer {
+	return c.info.Writer()
+}
+
 // GetErrorWriter returns the error writer.
 func (c *LogContext) GetErrorWriter() io.Writer {
 	return c.error.Writer()
 }
 
-// GetInfoWriter returns the error writer.
-func (c *LogContext) GetInfoWriter() io.Writer {
-	return c.info.Writer()
+// IsInfoATerminal returns `true` if the info log is connected to a terminal.
+func (c *LogContext) IsInfoATerminal() bool {
+	return c.infoIsATerminal
+}
+
+// IsErrorATerminal returns `true` if the error log is connected to a terminal.
+func (c *LogContext) IsErrorATerminal() bool {
+	return c.errorIsATerminal
 }
 
 // LogDebug logs a debug message.

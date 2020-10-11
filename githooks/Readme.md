@@ -13,7 +13,7 @@ Execute:
 1. registered file becomse a JSON file -> legacy transform
 2. Ignore patterns matched only filename. Now , ignore patterns are matching the paths relative to the
 
-    - Git dir. for old hook `hooks/pre-commit.replaced.githooks`
+    - Git dir. for old hook `hooks/pre-commit.replaced.githook`
     - `.githooks/<namespace>/` for shared hooks with a `.githooks` folder
     - `<namespace>/` for shared hooks without a `.githooks` folder.
 
