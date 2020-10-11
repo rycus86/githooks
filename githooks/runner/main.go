@@ -23,45 +23,63 @@ import (
 
 var log cm.ILogContext
 
-// HookSettings defines hooks related settings for this run.
-type HookSettings struct {
-	args           []string       // Rest arguments.
-	git            *cm.GitContext // Git context to execute commands (working dir is this repository)
-	repositoryPath string         // Repository path.
-	gitDir         string         // Git directory.
-	installDir     string         // Install directory.
+func main() {
 
-	hookPath string // Absolute path of the hook executing this runner.
-	hookName string // Name of the hook.
-	hookDir  string // Directory of the hook.
+	_, err := os.OpenFile("/dev/tty", os.O_RDONLY, 0)
+	if err != nil {
+		fmt.Print("wups")
+		os.Exit(1)
+	}
 
-	isTrusted bool // If the repository is a trusted repository.
-}
+	createLog()
 
-// UISettings defines user interface settings made by the user over prompts.
-type UISettings struct {
+	startTime := cm.GetStartTime()
+	exitCode := 0
 
-	// A prompt context which enables showing a prompt.
-	promptCtx cm.IPromptContext
+	defer func() { os.Exit(exitCode) }()
+	defer func() {
+		log.LogDebugF("Runner execution time: '%v'.",
+			cm.GetDuration(startTime))
+	}()
 
-	// The user accepts all newly/changed hooks as trusted.
-	acceptAllChanges bool
+	cwd, err := os.Getwd()
+	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 
-	// All hooks which were newly trusted and need to be recorded back
-	newlyTrustedHooks []hooks.ChecksumData
+	// Handle all panics and report the error
+	defer func() {
+		r := recover()
+		handleError(cwd, r)
+		exitCode = 1
+	}()
 
-	// All hooks which were newly trusted and need to be recored back
-	newlyDisabledHooks []hooks.ChecksumResult
-}
+	settings, uiSettings := setMainVariables(cwd)
+	defer storePendingData(settings, uiSettings)
 
-func (s HookSettings) toString() string {
-	return strs.Fmt("\n- Args: '%q'\n"+
-		"- Repo Path: '%s'\n"+
-		"- Git Dir: '%s'\n"+
-		"- Install Dir: '%s'\n"+
-		"- Hook Path: '%s'\n"+
-		"- Trusted: '%v'",
-		s.args, s.repositoryPath, s.gitDir, s.installDir, s.hookPath, s.isTrusted)
+	assertRegistered(settings.Git, settings.InstallDir, settings.GitDir)
+
+	checksums := getLocalChecksumStore(settings)
+	ignores := getIgnorePatterns(settings)
+
+	if hooks.IsGithooksDisabled(settings.Git) {
+		executeLFSHooks(settings)
+		executeOldHooks(settings, uiSettings, ignores, checksums)
+		return
+	}
+
+	exportStagedFiles(settings)
+	executeLFSHooks(settings)
+	executeOldHooks(settings, uiSettings, ignores, checksums)
+
+	// executeSharedHooks(settings, uiSettings, ignores, checksums)
+	var hooks hooks.Hooks
+	hooks.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, ignores, checksums)
+
+	if cm.IsDebug {
+		logBatches(hooks.LocalHooks)
+	}
+
+	uiSettings.PromptCtx.Close()
+	log.LogDebug("All done.\n")
 }
 
 func createLog() {
@@ -70,7 +88,7 @@ func createLog() {
 	cm.AssertOrPanic(err == nil, "Could not create log")
 }
 
-func setMainVariables(repoPath string) (HookSettings, UISettings) {
+func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 
 	cm.PanicIf(
 		len(os.Args) <= 1,
@@ -86,7 +104,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	cm.AssertNoErrorPanicF(err, "Could not abs. path from '%s'.",
 		os.Args[1])
 
-	exists, _ := cm.PathExists(hookPath)
+	exists, _ := cm.IsPathExist(hookPath)
 	cm.DebugAssert(exists, "Hook path does not exist")
 
 	installDir := getInstallDir(git)
@@ -101,19 +119,57 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	log.AssertNoErrorWarn(err, "Could not get trust settings.")
 
 	s := HookSettings{
-		args:           os.Args[2:],
-		git:            git,
-		repositoryPath: repoPath,
-		gitDir:         gitDir,
-		installDir:     installDir,
-		hookPath:       hookPath,
-		hookName:       path.Base(hookPath),
-		hookDir:        path.Dir(hookPath),
-		isTrusted:      isTrusted}
+		Args:               os.Args[2:],
+		Git:                git,
+		RepositoryPath:     repoPath,
+		RepositoryHooksDir: filepath.Join(repoPath, ".githooks"),
+		GitDir:             gitDir,
+		InstallDir:         installDir,
+		HookPath:           hookPath,
+		HookName:           path.Base(hookPath),
+		HookDir:            path.Dir(hookPath),
+		IsTrusted:          isTrusted}
 
 	log.LogDebugF(s.toString())
 
-	return s, UISettings{acceptAllChanges: false, promptCtx: promptCtx}
+	return &s, &UISettings{AcceptAllChanges: false, PromptCtx: promptCtx}
+}
+
+func getIgnorePatterns(settings *HookSettings) *hooks.IgnorePatterns {
+
+	var patt hooks.IgnorePatterns
+	var err error
+
+	patt.Worktree, err = hooks.GetHookIgnorePatternsWorktree(
+		settings.RepositoryPath,
+		settings.HookName)
+
+	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
+	if patt.Worktree != nil {
+		log.LogDebugF("Worktree ignore patterns: '%q'.", patt.Worktree.Patterns)
+	} else {
+		log.LogDebug("Worktree ignore patterns: 'none' ")
+	}
+
+	patt.User, err = hooks.GetHookIgnorePatterns(settings.GitDir)
+
+	log.AssertNoErrorWarn(err, "Could not get user ignore patterns.")
+	if patt.User != nil {
+		log.LogDebugF("User ignore patterns: '%v'.", patt.User.Patterns)
+	} else {
+		log.LogDebug("User ignore patterns: 'none' ")
+	}
+
+	return &patt
+}
+
+func getLocalChecksumStore(settings *HookSettings) *hooks.ChecksumStore {
+	localChecksums := filepath.Join(settings.GitDir, ".githooks.checksum")
+	store, err := hooks.NewChecksumStore(localChecksums, false)
+	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'.", localChecksums)
+	log.LogDebugF("%s", store.Summary())
+
+	return &store
 }
 
 func getInstallDir(git *cm.GitContext) string {
@@ -127,7 +183,7 @@ func getInstallDir(git *cm.GitContext) string {
 
 	if installDir == "" {
 		setDefault()
-	} else if exists, err := cm.PathExists(installDir); !exists {
+	} else if exists, err := cm.IsPathExist(installDir); !exists {
 
 		log.AssertNoErrorWarn(err,
 			"Could not check path '%s'", installDir)
@@ -168,140 +224,10 @@ func assertRegistered(git *cm.GitContext, installDir string, gitDir string) {
 	}
 }
 
-func executeLFSHooks(settings HookSettings) {
+func exportStagedFiles(settings *HookSettings) {
+	if strs.Includes(hooks.StagedFilesHookNames[:], settings.HookName) {
 
-	if !strs.Includes(hooks.LFSHookNames[:], settings.hookName) {
-		return
-	}
-
-	lfsIsAvailable := hooks.IsLFSAvailable()
-
-	lfsIsRequired, err := cm.PathExists(filepath.Join(
-		settings.repositoryPath, ".githooks", ".lfs-required"))
-	log.AssertNoErrorWarnF(err, "Could not check path.")
-
-	if lfsIsAvailable {
-		log.LogDebug("Excuting LFS Hook")
-
-		err := settings.git.CheckPiped(
-			append(
-				[]string{"lfs", settings.hookName},
-				settings.args...,
-			)...)
-
-		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
-
-	} else {
-		log.LogDebug("Git LFS not available")
-		log.FatalIf(lfsIsRequired,
-			"This repository requires Git LFS, but 'git-lfs' was",
-			"not found on your PATH. If you no longer want to use",
-			"Git LFS, remove the '.githooks/.lfs-required' file.",
-		)
-	}
-}
-
-func executeHook(settings HookSettings, hook hooks.Hook) {
-	log.LogDebugF("Executing hook: '%s'.", hook.Path)
-}
-
-func executeOldHooks(settings HookSettings,
-	uiSettings UISettings,
-	ingores hooks.IgnorePatterns,
-	checksums hooks.ChecksumStore) {
-
-	hookName := settings.hookName + ".replaced.githook"
-	// Make it relative to git directory
-	// e.g. 'hooks/pre-commit.replaced.githook'
-	hook := hooks.Hook{Path: filepath.Join(settings.hookDir, hookName), RunCmd: nil}
-
-	exists, err := cm.PathExists(hook.Path)
-	log.AssertNoErrorWarnF(err, "Could not check path '%s'", hook.Path)
-	if !exists {
-		log.LogDebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
-		return
-	}
-
-	// @todo Introduce namespacing here!
-	ignored, byUser := ingores.IsIgnored(hookName)
-	if ignored && byUser {
-		// Old hook can only be ignored by user patterns!
-		log.LogDebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
-		return
-	}
-
-	if !settings.isTrusted &&
-		!executeSafetyChecks(settings, uiSettings, &checksums, hook.Path) {
-		return
-	}
-
-	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
-	if !log.AssertNoErrorWarnF(err, "Could not detect runner for hook\n'%s'\n-> Skip it!",
-		hook.Path) {
-		return
-	}
-
-	executeHook(settings, hook)
-}
-
-func executeSafetyChecks(settings HookSettings,
-	uiSettings UISettings,
-	checksums *hooks.ChecksumStore,
-	hookPath string) (runHook bool) {
-
-	trusted, sha1, err := checksums.IsTrusted(hookPath)
-	if !log.AssertNoErrorWarnF(err,
-		"Could not check trust status '%s'.", hookPath) {
-		return
-	}
-
-	if !trusted {
-		mess := strs.Fmt("New or changed hook found:\n'%s'", hookPath)
-
-		if !uiSettings.acceptAllChanges {
-
-			question := mess + "\nDo you accept the changes?"
-
-			answer, err := uiSettings.promptCtx.ShowPrompt(question,
-				"(Yes, all, no, disable)",
-				"Y/a/n/d",
-				"Yes", "All", "No", "Disable")
-
-			if !log.AssertNoErrorWarn(err,
-				"Could not show trust prompt.") {
-				return
-			}
-
-			answer = strings.ToLower(answer)
-
-			switch strings.ToLower(answer) {
-			case "a":
-				uiSettings.acceptAllChanges = true
-				fallthrough
-			case "y":
-				checksums.AddChecksum(sha1, hookPath)
-				runHook = true
-			case "d":
-				uiSettings.newlyDisabledHooks = append(
-					uiSettings.newlyDisabledHooks, hooks.ChecksumResult{SHA1: sha1, Path: hookPath})
-				fallthrough
-			case "n":
-				fallthrough
-			default:
-				// no changes
-			}
-		} else {
-			log.LogInfo(mess, "-> Already accepted.")
-		}
-	}
-
-	return
-}
-
-func exportStagedFiles(settings HookSettings) {
-	if strs.Includes(hooks.StagedFilesHookNames[:], settings.hookName) {
-
-		files, err := hooks.GetStagedFiles(settings.git)
+		files, err := hooks.GetStagedFiles(settings.Git)
 
 		if len(files) != 0 {
 			log.LogDebugF("Exporting staged files:\n- %s",
@@ -325,126 +251,239 @@ func exportStagedFiles(settings HookSettings) {
 	}
 }
 
-func getIgnorePatterns(settings HookSettings) hooks.IgnorePatterns {
+func executeLFSHooks(settings *HookSettings) {
 
-	var patt hooks.IgnorePatterns
-	var err error
-
-	patt.Worktree, err = hooks.GetHookIgnorePatternsWorktree(
-		settings.repositoryPath,
-		settings.hookName)
-
-	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
-	if patt.Worktree != nil {
-		log.LogDebugF("Worktree ignore patterns: '%q'.", patt.Worktree.Patterns)
-	} else {
-		log.LogDebug("Worktree ignore patterns: 'none' ")
-	}
-
-	patt.User, err = hooks.GetHookIgnorePatterns(settings.gitDir)
-
-	log.AssertNoErrorWarn(err, "Could not get user ignore patterns.")
-	if patt.User != nil {
-		log.LogDebugF("User ignore patterns: '%v'.", patt.User.Patterns)
-	} else {
-		log.LogDebug("User ignore patterns: 'none' ")
-	}
-
-	return patt
-}
-
-func getLocalChecksumStore(settings HookSettings) hooks.ChecksumStore {
-	localChecksums := filepath.Join(settings.gitDir, ".githooks.checksum")
-	store, err := hooks.NewChecksumStore(localChecksums, false)
-	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'.", localChecksums)
-	log.LogDebugF("%s", store.Summary())
-
-	return store
-}
-
-func storePendingData(settings HookSettings, uiSettings UISettings) {
-
-}
-
-func main() {
-
-	_, err := os.OpenFile("/dev/tty", os.O_RDONLY, 0)
-	if err != nil {
-		fmt.Print("wups")
-		os.Exit(1)
-	}
-
-	createLog()
-
-	startTime := cm.GetStartTime()
-	exitCode := 0
-
-	defer func() { os.Exit(exitCode) }()
-	defer func() {
-		log.LogDebugF("Runner execution time: '%v'.",
-			cm.GetDuration(startTime))
-	}()
-
-	cwd, err := os.Getwd()
-	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
-
-	// Handle all panics and report the error
-	defer func() {
-		r := recover()
-		if r == nil {
-			return
-		}
-
-		var message string
-		withTrace := false
-
-		switch v := r.(type) {
-		case cm.GithooksFailure:
-			message = "Fatal error -> Abort."
-		case error:
-			info, e := hooks.GetBugReportingInfo(cwd)
-			v = cm.CombineErrors(v, e)
-			message = v.Error() + "\n" + info
-			withTrace = true
-
-		default:
-			info, e := hooks.GetBugReportingInfo(cwd)
-			e = cm.CombineErrors(cm.Error("Panic 💩: Unknown error"), e)
-			message = e.Error() + "\n" + info
-			withTrace = true
-		}
-
-		if log != nil && withTrace {
-			log.LogErrorWithStacktrace(message)
-		} else if log != nil && !withTrace {
-			log.LogError(message)
-		} else {
-			os.Stderr.WriteString(err.Error() + "\n")
-		}
-
-		exitCode = 1
-	}()
-
-	settings, uiSettings := setMainVariables(cwd)
-	defer storePendingData(settings, uiSettings)
-
-	assertRegistered(settings.git, settings.installDir, settings.gitDir)
-
-	checksums := getLocalChecksumStore(settings)
-	ignores := getIgnorePatterns(settings)
-
-	if hooks.IsGithooksDisabled(settings.git) {
-		executeLFSHooks(settings)
-		executeOldHooks(settings, uiSettings, ignores, checksums)
+	if !strs.Includes(hooks.LFSHookNames[:], settings.HookName) {
 		return
 	}
 
-	exportStagedFiles(settings)
-	executeLFSHooks(settings)
-	executeOldHooks(settings, uiSettings, ignores, checksums)
+	lfsIsAvailable := hooks.IsLFSAvailable()
 
-	//executeHooks(settings, ignores)
+	lfsIsRequired, err := cm.IsPathExist(filepath.Join(
+		settings.RepositoryPath, ".githooks", ".lfs-required"))
+	log.AssertNoErrorWarnF(err, "Could not check path.")
 
-	uiSettings.promptCtx.Close()
-	log.LogDebug("All done.\n")
+	if lfsIsAvailable {
+		log.LogDebug("Excuting LFS Hook")
+
+		err := settings.Git.CheckPiped(
+			append(
+				[]string{"lfs", settings.HookName},
+				settings.Args...,
+			)...)
+
+		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
+
+	} else {
+		log.LogDebug("Git LFS not available")
+		log.FatalIf(lfsIsRequired,
+			"This repository requires Git LFS, but 'git-lfs' was",
+			"not found on your PATH. If you no longer want to use",
+			"Git LFS, remove the '.githooks/.lfs-required' file.",
+		)
+	}
+}
+
+func executeOldHooks(settings *HookSettings,
+	uiSettings *UISettings,
+	ingores *hooks.IgnorePatterns,
+	checksums *hooks.ChecksumStore) {
+
+	hookName := settings.HookName + ".replaced.githook"
+	// Make it relative to git directory
+	// e.g. 'hooks/pre-commit.replaced.githook'
+	hook := hooks.Hook{Path: filepath.Join(settings.HookDir, hookName), RunCmd: nil}
+
+	exists, err := cm.IsPathExist(hook.Path)
+	log.AssertNoErrorWarnF(err, "Could not check path '%s'", hook.Path)
+	if !exists {
+		log.LogDebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
+		return
+	}
+
+	// @todo Introduce namespacing here!
+	ignored, byUser := ingores.IsIgnored(hookName)
+	if ignored && byUser {
+		// Old hook can only be ignored by user patterns!
+		log.LogDebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
+		return
+	}
+
+	if !settings.IsTrusted &&
+		!executeSafetyChecks(settings, uiSettings, checksums, hook.Path) {
+		log.LogDebugF("Hook '%s' skipped", hook.Path)
+		return
+	}
+
+	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
+	log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", hook.Path)
+
+	err = executeHook(settings, hook)
+	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
+}
+
+func getSharedHooks(settings *HookSettings,
+	uiSettings *UISettings,
+	ingores *hooks.IgnorePatterns,
+	checksums *hooks.ChecksumStore) {
+
+}
+
+func getHooksIn(settings *HookSettings,
+	uiSettings *UISettings,
+	path string,
+	ingores *hooks.IgnorePatterns,
+	checksums *hooks.ChecksumStore) (batches hooks.HookPrioList) {
+
+	dir := filepath.Join(path, settings.HookName)
+	exists, err := cm.IsPathExist(dir)
+	log.AssertNoErrorWarnF(err, "Error in path check '%s'", dir)
+
+	if exists {
+		hookFiles, err := cm.GetFiles(dir,
+			func(path string, _ os.FileInfo) bool {
+				ignored, _ := ingores.IsIgnored(path)
+				return !ignored
+			})
+		log.AssertNoErrorWarnF(err, "Errors while walking '%s'", path)
+
+		// @todo make a priority list for executing all batches in parallel
+		// First good solution: all sequential
+		for _, path := range hookFiles {
+
+			// Check if trusted
+			if !settings.IsTrusted &&
+				!executeSafetyChecks(settings, uiSettings, checksums, path) {
+				log.LogDebugF("Hook '%s' skipped", path)
+				continue
+			}
+
+			runCmd, err := hooks.GetHookRunCmd(path)
+			log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", path)
+
+			batch := []hooks.Hook{hooks.Hook{Path: path, RunCmd: runCmd}}
+			batches = append(batches, batch)
+		}
+	}
+
+	return
+}
+
+func logBatches(hooks hooks.HookPrioList) {
+	var l string
+
+	if hooks == nil {
+		log.LogInfo("Hooks collected: none")
+	} else {
+		for bIdx, batch := range hooks {
+			l += strs.Fmt(" Batch: %v\n", bIdx)
+			for _, h := range batch {
+				l += strs.Fmt("  - '%s'\n", h.Path)
+			}
+		}
+		log.LogInfoF("Hooks collected:\n%s", l)
+	}
+}
+
+func executeSafetyChecks(settings *HookSettings,
+	uiSettings *UISettings,
+	checksums *hooks.ChecksumStore,
+	hookPath string) (runHook bool) {
+
+	trusted, sha1, err := checksums.IsTrusted(hookPath)
+	if !log.AssertNoErrorWarnF(err,
+		"Could not check trust status '%s'.", hookPath) {
+		return
+	}
+
+	if trusted {
+		runHook = true
+	} else {
+		mess := strs.Fmt("New or changed hook found:\n'%s'", hookPath)
+
+		acceptHook := uiSettings.AcceptAllChanges
+
+		if !acceptHook {
+
+			question := mess + "\nDo you accept the changes?"
+
+			answer, err := uiSettings.PromptCtx.ShowPrompt(question,
+				"(Yes, all, no, disable)",
+				"Y/a/n/d",
+				"Yes", "All", "No", "Disable")
+
+			if !log.AssertNoErrorWarn(err,
+				"Could not show trust prompt.") {
+				return
+			}
+
+			answer = strings.ToLower(answer)
+
+			switch answer {
+			case "a":
+				uiSettings.AcceptAllChanges = true
+				fallthrough
+			case "y":
+				acceptHook = true
+				runHook = true
+			case "d":
+				log.LogInfoF("-> Adding hook\n'%s'\nto disabled list.", hookPath)
+				uiSettings.AppendDisabledHook(hooks.ChecksumResult{SHA1: sha1, Path: hookPath})
+			default:
+				// Don't run hook ...
+			}
+		} else {
+			log.LogInfo("-> Already accepted.")
+			runHook = true
+		}
+
+		if acceptHook {
+			checksums.AddChecksum(sha1, hookPath)
+		}
+	}
+
+	return
+}
+
+func executeHook(settings *HookSettings, hook hooks.Hook) error {
+	log.LogDebugF("Executing hook: '%s'.", hook.Path)
+	err := cm.RunExecutable(settings.Git, &hook, true)
+	return err
+}
+
+func storePendingData(settings *HookSettings, uiSettings *UISettings) {
+
+}
+
+func handleError(cwd string, r interface{}) {
+	if r == nil {
+		return
+	}
+
+	var message string
+	withTrace := false
+
+	switch v := r.(type) {
+	case cm.GithooksFailure:
+		message = "Fatal error -> Abort."
+	case error:
+		info, e := hooks.GetBugReportingInfo(cwd)
+		v = cm.CombineErrors(v, e)
+		message = v.Error() + "\n" + info
+		withTrace = true
+
+	default:
+		info, e := hooks.GetBugReportingInfo(cwd)
+		e = cm.CombineErrors(cm.Error("Panic 💩: Unknown error"), e)
+		message = e.Error() + "\n" + info
+		withTrace = true
+	}
+
+	if log != nil && withTrace {
+		log.LogErrorWithStacktrace(message)
+	} else if log != nil && !withTrace {
+		log.LogError(message)
+	} else {
+		os.Stderr.WriteString(message + "\n")
+	}
 }

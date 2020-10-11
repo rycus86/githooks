@@ -19,7 +19,7 @@ func IsRepoTrusted(
 	trustFile := filepath.Join(repoPath, ".githooks", "trust-all")
 	var isTrusted bool = false
 
-	exists, err := cm.PathExists(trustFile)
+	exists, err := cm.IsPathExist(trustFile)
 	if exists {
 		trustFlag := git.GetConfig("githooks.trust.all", cm.LocalScope)
 
@@ -80,8 +80,7 @@ type ChecksumData struct {
 	Paths []string
 }
 
-// NewChecksumData makes a new checksum entry for `ChecksumStore`.
-func NewChecksumData(paths ...string) ChecksumData {
+func newChecksumData(paths ...string) ChecksumData {
 	return ChecksumData{paths}
 }
 
@@ -146,7 +145,7 @@ func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
 		*p = append(*p, path)
 		return true
 	} else {
-		t.checksums[sha1] = NewChecksumData(path)
+		t.checksums[sha1] = newChecksumData(path)
 		return false
 	}
 }
@@ -162,7 +161,7 @@ func (t *ChecksumStore) IsTrusted(path string) (bool, string, error) {
 
 	// Check first all directories ...
 	for _, dir := range t.checksumDirs {
-		exists, err := cm.PathExists(filepath.Join(dir, sha1))
+		exists, err := cm.IsPathExist(filepath.Join(dir, sha1))
 		if exists {
 			return true, sha1, nil
 		} else if err != nil {

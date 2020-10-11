@@ -1,35 +1,35 @@
 package common
 
 const (
-	// IsProduction set to `true` will disable debug asserts and other stuff.
-	IsProduction = false
+	// IsDebug set to `true` will disable debug asserts and other stuff.
+	IsDebug = true
 
 	// DebugLog set to `true` will turn on debug logging.
-	DebugLog = true && !IsProduction
+	DebugLog = true && IsDebug
 	// PrintPromptAnswer prints the prompt answer to stdout.
 	PrintPromptAnswer = true && DebugLog
 )
 
 // DebugAssert asserts that a condition is `true`, otherwise panic (disabled in production mode).
 func DebugAssert(condition bool, lines ...string) {
-	AssertOrPanic(IsProduction || condition, lines...)
+	AssertOrPanic(!IsDebug || condition, lines...)
 }
 
 // DebugAssertF asserts that a condition is `true`, otherwise panic (disabled in production mode).
 func DebugAssertF(condition bool, format string, args ...interface{}) {
-	AssertOrPanicF(IsProduction || condition, format, args...)
+	AssertOrPanicF(!IsDebug || condition, format, args...)
 }
 
 // DebugAssertNoError asserts that a condition is `true`, otherwise panic (disabled in production mode).
 func DebugAssertNoError(err error, lines ...string) {
-	if IsProduction {
+	if IsDebug {
 		AssertNoErrorPanic(err, lines...)
 	}
 }
 
 // DebugAssertNoErrorF asserts that a condition is `true`, otherwise panic (disabled in production mode).
 func DebugAssertNoErrorF(err error, format string, args ...interface{}) {
-	if IsProduction {
+	if IsDebug {
 		AssertNoErrorPanicF(err, format, args...)
 	}
 }

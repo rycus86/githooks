@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"path/filepath"
 )
 
 // IsPathError returns `true` if the error is a `os.PathError`
@@ -9,13 +10,47 @@ func IsPathError(err error) bool {
 	return err != nil && err.(*os.PathError) != nil
 }
 
-// PathExists checks if a path exists.
-func PathExists(path string) (bool, error) {
+// IsPathExist checks if a path exists.
+func IsPathExist(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) || IsPathError(err) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+// FileFilter is the filter for `GetFiles`.
+type FileFilter = func(path string, info os.FileInfo) bool
+
+// GetFiles returns the file in directory `root`, non-recursive.
+func GetFiles(root string, filter FileFilter) (files []string, err error) {
+
+	rootDirVisited := false
+
+	e := filepath.Walk(root,
+		func(path string, info os.FileInfo, e error) error {
+			if info == nil || err != nil {
+				err = CombineErrors(err, e)
+				return nil
+			}
+
+			if info.IsDir() {
+				if !rootDirVisited {
+					rootDirVisited = true
+					return nil // Skip root dir...
+				}
+				// Skip all other dirs...
+				return filepath.SkipDir
+			}
+
+			if filter == nil || filter(path, info) {
+				files = append(files, path)
+			}
+
+			return nil
+		})
+	err = CombineErrors(err, e)
+	return
 }
 
 // IsDirectory checks if a path is a existing directory.

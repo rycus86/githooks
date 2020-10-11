@@ -18,11 +18,14 @@ cd "$tmp" &&
     rm -rf .git/hooks/* &&
     cp "$REPO_DIR/base-template-wrapper.sh" .git/hooks/pre-commit &&
     chmod +x .git/hooks/pre-commit &&
-    echo "echo 'hello from old hook'" >.git/hooks/pre-commit.replaced.githook &&
+    echo -e "#!/bin/bash\n echo 'hello from old hook'" >.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
     mkdir .githooks && touch .githooks/trust-all &&
-    echo "echo 'hello from .githooks/my'" >.githooks/pre-commit &&
-    chmod +x .githooks/pre-commit
+    mkdir -p .githooks/pre-commit &&
+    echo  -e "#!/bin/bash\n echo 'hello from repo hook1'" >.githooks/pre-commit/monkey &&
+    chmod +x .githooks/pre-commit/monkey &&
+    echo  -e "#!/bin/bash\n echo 'hello from repo hook2'" >.githooks/pre-commit/gaga &&
+    chmod +x .githooks/pre-commit/gaga
 
 tree .git/hooks
 tree .githooks

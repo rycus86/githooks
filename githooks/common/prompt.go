@@ -31,8 +31,8 @@ type PromptContext struct {
 	termIn    io.Reader
 
 	// Prompt over the tool script if existing.
-	execCtx  IExecContext
-	toolPath string
+	execCtx IExecContext
+	tool    *Executable
 }
 
 // Close closes the prompt context
@@ -44,8 +44,10 @@ func (p *PromptContext) Close() {
 }
 
 // CreatePromptContext creates a `PrompContext`.
-func CreatePromptContext(log ILogContext,
-	execCtx IExecContext, toolPath string) (IPromptContext, error) {
+func CreatePromptContext(
+	log ILogContext,
+	execCtx IExecContext,
+	tool *Executable) (IPromptContext, error) {
 
 	var terminalWriter io.Writer
 	if log.IsInfoATerminal() {
@@ -60,8 +62,8 @@ func CreatePromptContext(log ILogContext,
 		termOut:   terminalWriter,
 		termIn:    terminalReader,
 
-		execCtx:  execCtx,
-		toolPath: toolPath}
+		execCtx: execCtx,
+		tool:    tool}
 
 	if terminalReader != nil {
 		runtime.SetFinalizer(&p, func(p *PromptContext) { p.Close() })
@@ -93,12 +95,10 @@ func (p *PromptContext) ShowPrompt(text string,
 	options := strings.Split(shortOptions, "/")
 	defaultAnswer := getDefaultAnswer(options)
 
-	if strs.IsNotEmpty(p.toolPath) {
+	if p.tool != nil {
 
-		answer, err = ExecuteScript(p.execCtx,
-			p.toolPath, true,
-			append([]string{text, hintText, shortOptions},
-				longOptions...)...)
+		args := append([]string{text, hintText, shortOptions}, longOptions...)
+		answer, err = GetOutputFromExecutable(p.execCtx, p.tool, true, args...)
 
 		if err == nil {
 			if isAnswerCorrect(answer, options) {
@@ -110,7 +110,7 @@ func (p *PromptContext) ShowPrompt(text string,
 					answer, options)
 		}
 
-		err = CombineErrors(err, ErrorF("Could not execute dialog script '%s'", p.toolPath))
+		err = CombineErrors(err, ErrorF("Could not execute dialog script '%q'", p.tool))
 		// else: Runnning fallback ...
 	}
 

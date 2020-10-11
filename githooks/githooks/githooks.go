@@ -35,7 +35,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 
 	// Check in the repo if possible
 	file := filepath.Join(repoPath, ".githooks", ".bug-report")
-	exists, e := cm.PathExists(file)
+	exists, e := cm.IsPathExist(file)
 	if e != nil {
 		return info, e
 	}
@@ -74,11 +74,15 @@ func GetInstallDir(git *cm.GitContext) string {
 }
 
 // GetToolScript gets the tool script associated with the name `tool`
-func GetToolScript(name string, installDir string) (string, error) {
+func GetToolScript(name string, installDir string) (*cm.Executable, error) {
+
 	tool := filepath.Join(installDir, "tools", name, "run")
-	exists, err := cm.PathExists(tool)
-	if exists {
-		return tool, nil
+
+	exists, err := cm.IsPathExist(tool)
+	if !exists {
+		return nil, nil
 	}
-	return "", err
+
+	runCmd, err := GetToolRunCmd(tool)
+	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
 }
