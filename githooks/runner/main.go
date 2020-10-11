@@ -71,11 +71,13 @@ func main() {
 	executeOldHooks(settings, uiSettings, ignores, checksums)
 
 	// executeSharedHooks(settings, uiSettings, ignores, checksums)
-	var hooks hooks.Hooks
-	hooks.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, ignores, checksums)
+
+	hooks := collectHooks(settings, uiSettings, ignores, checksums)
 
 	if cm.IsDebug {
-		logBatches(hooks.LocalHooks)
+		logBatches("Global Shared Hooks", hooks.GlobalSharedHooks)
+		logBatches("Local Shared Hooks:", hooks.LocalSharedHooks)
+		logBatches("Local Hooks", hooks.LocalHooks)
 	}
 
 	uiSettings.PromptCtx.Close()
@@ -322,6 +324,18 @@ func executeOldHooks(settings *HookSettings,
 	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
 }
 
+func collectHooks(
+	settings *HookSettings,
+	uiSettings *UISettings,
+	ignores *hooks.IgnorePatterns,
+	checksums *hooks.ChecksumStore) (h hooks.Hooks) {
+
+	// Local hooks in repository
+	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, ignores, checksums)
+
+	return
+}
+
 func getSharedHooks(settings *HookSettings,
 	uiSettings *UISettings,
 	ingores *hooks.IgnorePatterns,
@@ -369,11 +383,11 @@ func getHooksIn(settings *HookSettings,
 	return
 }
 
-func logBatches(hooks hooks.HookPrioList) {
+func logBatches(title string, hooks hooks.HookPrioList) {
 	var l string
 
 	if hooks == nil {
-		log.LogInfo("Hooks collected: none")
+		log.LogInfoF("%s: none", title)
 	} else {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
@@ -381,7 +395,7 @@ func logBatches(hooks hooks.HookPrioList) {
 				l += strs.Fmt("  - '%s'\n", h.Path)
 			}
 		}
-		log.LogInfoF("Hooks collected:\n%s", l)
+		log.LogInfoF("%s :\n%s", title, l)
 	}
 }
 
