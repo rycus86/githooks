@@ -1268,7 +1268,7 @@ git hooks shared pull
         update_shared_hooks_in --shared "$SHARED_HOOKS"
     fi
 
-    SHARED_HOOKS=$(git config --local --get-all githooks.shared)
+    SHARED_HOOKS=$(git config --local --get-all githooks.shared 2>/dev/null)
     if [ -n "$SHARED_HOOKS" ]; then
         update_shared_hooks_in --local "$SHARED_HOOKS"
     fi
