@@ -1759,6 +1759,11 @@ execute_git() {
 #   - `GITHOOKS_CLONE_CREATED`
 #   - `GITHOOKS_CLONE_UPDATED` (also for clone)
 #   - `GITHOOKS_CLONE_UPDATED_FROM_COMMIT`
+#
+#   `GITHOOKS_CLONE_UPDATED_FROM_COMMIT` is empty if no update happened
+#   or the Git null ref "000..000" if a new cloned happened or
+#   the commit sha from where was updated.
+#
 # Returns:
 #   1 if failed, 0 otherwise
 #####################################################
@@ -1970,12 +1975,11 @@ run_internal_install() {
         return 1
     fi
 
-    ADD_ARGS=""
-    [ -n "$GITHOOKS_CLONE_UPDATED_FROM_COMMIT" ] &&
-        ADD_ARGS="--internal-updated-from $GITHOOKS_CLONE_UPDATED_FROM_COMMIT"
-
     # shellcheck disable=SC2086
-    sh "$INSTALL_SCRIPT" $ADD_ARGS --internal-install "$@" || return 1
+    sh "$INSTALL_SCRIPT" $ADD_ARGS \
+        --internal-install \
+        --internal-updated-from "$GITHOOKS_CLONE_UPDATED_FROM_COMMIT" \
+        "$@" || return 1
 }
 
 ############################################################
