@@ -351,7 +351,7 @@ legacy_transform_registered_repos() {
         while read -r REGISTERED_REPO; do
             unset IFS
 
-            if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+            if [ "$(git -C "$REGISTERED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" != "true" ]; then
                 # Not existing git dir -> skip.
                 true
             else
@@ -361,6 +361,7 @@ legacy_transform_registered_repos() {
                 for TREE in $WORKTREES; do
                     unset IFS
 
+                    # safe guard: a bit buggy get_repo_worktrees
                     if [ "$(git -C "$TREE" rev-parse --is-inside-git-dir 2>/dev/null)" = "true" ]; then
                         continue
                     fi
@@ -1392,7 +1393,7 @@ install_into_registered_repositories() {
         while read -r INSTALLED_REPO; do
             unset IFS
 
-            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" = "false" ]; then
+            if [ "$(git -C "$INSTALLED_REPO" rev-parse --is-inside-git-dir 2>/dev/null)" != "true" ]; then
                 # Not existing git dir -> skip.
                 true
 
