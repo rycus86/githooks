@@ -10,8 +10,8 @@ func IsPathError(err error) bool {
 	return err != nil && err.(*os.PathError) != nil
 }
 
-// IsPathExist checks if a path exists.
-func IsPathExist(path string) (bool, error) {
+// IsPathExisting checks if a path exists.
+func IsPathExisting(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) || IsPathError(err) {
 		return false, nil

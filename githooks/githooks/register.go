@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
@@ -15,7 +14,7 @@ type RegisterRepos struct {
 
 // RegisterRepo registers the Git directory in the install directory.
 func RegisterRepo(absGitDir string, installDir string, filterExisting bool) error {
-	cm.DebugAssertF(path.IsAbs(absGitDir),
+	cm.DebugAssertF(filepath.IsAbs(absGitDir),
 		"Not an absolute Git dir '%s'", absGitDir)
 
 	repos, err := LoadRegisteredRepos(installDir)
@@ -40,7 +39,7 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool) erro
 func LoadRegisteredRepos(installDir string) (RegisterRepos, error) {
 	file := getRegisterFile(installDir)
 	var repos RegisterRepos
-	exists, err := cm.IsPathExist(file)
+	exists, err := cm.IsPathExisting(file)
 
 	if exists {
 		return repos, cm.LoadJSON(file, &repos)
@@ -69,7 +68,7 @@ func (r *RegisterRepos) Remove(gitDir string) {
 func (r *RegisterRepos) FilterExisting() {
 	r.GitDirs = strs.Filter(r.GitDirs,
 		func(v string) bool {
-			exists, _ := cm.IsPathExist(v)
+			exists, _ := cm.IsPathExisting(v)
 			return exists
 		})
 }

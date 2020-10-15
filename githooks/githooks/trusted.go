@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
@@ -11,17 +12,17 @@ import (
 // IsRepoTrusted tells if the repository `repoPath` is trusted.
 // On any error `false` is reported together with the error.
 func IsRepoTrusted(
-	git *cm.GitContext,
+	gitx *git.Context,
 	promptCtx cm.IPromptContext,
 	repoPath string,
 	promptUser bool) (bool, error) {
 
-	trustFile := filepath.Join(repoPath, ".githooks", "trust-all")
+	trustFile := filepath.Join(repoPath, HookDirName, "trust-all")
 	var isTrusted bool = false
 
-	exists, err := cm.IsPathExist(trustFile)
+	exists, err := cm.IsPathExisting(trustFile)
 	if exists {
-		trustFlag := git.GetConfig("githooks.trust.all", cm.LocalScope)
+		trustFlag := gitx.GetConfig("githooks.trust.all", git.LocalScope)
 
 		if trustFlag == "" && promptUser {
 			question := "This repository wants you to trust all current and\n" +
@@ -33,12 +34,12 @@ func IsRepoTrusted(
 
 			if err == nil {
 				if answer == "y" || answer == "Y" {
-					err = git.SetConfig("githooks.trust.all", true, cm.LocalScope)
+					err = gitx.SetConfig("githooks.trust.all", true, git.LocalScope)
 					if err == nil {
 						isTrusted = true
 					}
 				} else {
-					err = git.SetConfig("githooks.trust.all", false, cm.LocalScope)
+					err = gitx.SetConfig("githooks.trust.all", false, git.LocalScope)
 				}
 			}
 
@@ -153,7 +154,7 @@ func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
 // IsTrusted checks if a path has been trusted.
 func (t *ChecksumStore) IsTrusted(path string) (bool, string, error) {
 
-	sha1, err := cm.GetSHA1Hash(path)
+	sha1, err := cm.GetSHA1HashFile(path)
 	if err != nil {
 		return false, sha1,
 			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", path), err)
@@ -161,7 +162,7 @@ func (t *ChecksumStore) IsTrusted(path string) (bool, string, error) {
 
 	// Check first all directories ...
 	for _, dir := range t.checksumDirs {
-		exists, err := cm.IsPathExist(filepath.Join(dir, sha1))
+		exists, err := cm.IsPathExisting(filepath.Join(dir, sha1))
 		if exists {
 			return true, sha1, nil
 		} else if err != nil {

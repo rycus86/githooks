@@ -1,4 +1,4 @@
-package common
+package git
 
 import (
 	"os"
@@ -18,29 +18,29 @@ const (
 	Traverse    ConfigScope = ""
 )
 
-// GitContext defines the context to execute it commands
-type GitContext struct {
+// Context defines the context to execute it commands
+type Context struct {
 	cwd string
 }
 
 // GetWorkingDir gets the current working dir of the context
 // to implement `IExecContext`
-func (c *GitContext) GetWorkingDir() string {
+func (c *Context) GetWorkingDir() string {
 	return c.cwd
 }
 
-// GitC Creates a git command execution context with current working dir.
-func GitC(cwd string) *GitContext {
-	return &GitContext{cwd: cwd}
+// CtxC creates a git command execution context with current working dir.
+func CtxC(cwd string) *Context {
+	return &Context{cwd: cwd}
 }
 
-// Git creates a git command execution context with current working dir.
-func Git() *GitContext {
-	return &GitContext{}
+// Ctx creates a git command execution context with current working dir.
+func Ctx() *Context {
+	return &Context{}
 }
 
 // GetConfig gets a Git configuration values.
-func (c *GitContext) GetConfig(key string, scope ConfigScope) string {
+func (c *Context) GetConfig(key string, scope ConfigScope) string {
 	var out string
 	var err error
 	if scope != Traverse {
@@ -54,8 +54,23 @@ func (c *GitContext) GetConfig(key string, scope ConfigScope) string {
 	return ""
 }
 
+// GetConfigWithArgs gets a Git configuration values.
+func (c *Context) GetConfigWithArgs(key string, scope ConfigScope, args ...string) string {
+	var out string
+	var err error
+	if scope != Traverse {
+		out, err = c.Get(append(append([]string{"config"}, args...), string(scope), key)...)
+	} else {
+		out, err = c.Get(append(append([]string{"config"}, args...), key)...)
+	}
+	if err == nil {
+		return out
+	}
+	return ""
+}
+
 // SetConfig sets a Git configuration values.
-func (c *GitContext) SetConfig(key string, value interface{}, scope ConfigScope) error {
+func (c *Context) SetConfig(key string, value interface{}, scope ConfigScope) error {
 	v := strs.Fmt("%v", value)
 
 	if scope != Traverse {
@@ -66,7 +81,7 @@ func (c *GitContext) SetConfig(key string, value interface{}, scope ConfigScope)
 }
 
 // IsConfigSet tells if a git config is set.
-func (c *GitContext) IsConfigSet(key string, scope ConfigScope) bool {
+func (c *Context) IsConfigSet(key string, scope ConfigScope) bool {
 	var err error
 	if scope != Traverse {
 		err = c.Check("config", string(scope), key)
@@ -77,13 +92,13 @@ func (c *GitContext) IsConfigSet(key string, scope ConfigScope) bool {
 }
 
 // GetSplit executes a git command and splits the output by newlines.
-func (c *GitContext) GetSplit(args ...string) ([]string, error) {
+func (c *Context) GetSplit(args ...string) ([]string, error) {
 	out, err := c.Get(args...)
 	return strs.SplitLines(out), err
 }
 
 // Get executes a git command and gets the output.
-func (c *GitContext) Get(args ...string) (string, error) {
+func (c *Context) Get(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
 	stdout, err := cmd.CombinedOutput()
@@ -91,14 +106,14 @@ func (c *GitContext) Get(args ...string) (string, error) {
 }
 
 // Check checks if a git command executed successfully.
-func (c *GitContext) Check(args ...string) error {
+func (c *Context) Check(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
 	return cmd.Run()
 }
 
 // CheckPiped checks if a git command executed successfully.
-func (c *GitContext) CheckPiped(args ...string) error {
+func (c *Context) CheckPiped(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

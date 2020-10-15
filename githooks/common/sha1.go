@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-// GetSha1Hash gets the SHA1 hash of a file.
-func GetSHA1Hash(path string) (string, error) {
+// GetSHA1HashFile gets the SHA1 hash of a file.
+func GetSHA1HashFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -24,4 +24,11 @@ func GetSHA1Hash(path string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// GetSHA1HashString gets the SHA1 hash of a string.
+func GetSHA1HashString(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
 }

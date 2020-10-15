@@ -75,3 +75,20 @@ func (c *LogContext) AssertNoErrorFatalF(err error, format string, args ...inter
 		c.LogFatalF(format+"\n-> error: ["+err.Error()+"]", args...)
 	}
 }
+
+// LogErrorOrFatalF logs an error or a fatal error and also with a potential occured error.
+func (c *LogContext) LogErrorOrFatalF(isFatal bool, err error, format string, args ...interface{}) {
+	if isFatal {
+		if err != nil {
+			c.LogFatalF(format+"\n-> error: ["+err.Error()+"]", args...)
+		} else {
+			c.LogFatalF(format, args...)
+		}
+	} else {
+		if err != nil {
+			c.LogErrorF(format+"\n-> error: ["+err.Error()+"]", args...)
+		} else {
+			c.LogErrorF(format, args...)
+		}
+	}
+}

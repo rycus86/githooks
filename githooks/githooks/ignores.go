@@ -37,14 +37,14 @@ func CombineIgnorePatterns(patterns ...*HookIgnorePatterns) *HookIgnorePatterns 
 // GetHookIgnorePatternsWorktree gets all ignored hooks in the current worktree
 func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns *HookIgnorePatterns, err error) {
 
-	file := filepath.Join(repoDir, ".githooks", ".ignore.yaml")
-	exists1, err := cm.IsPathExist(file)
+	file := filepath.Join(repoDir, HookDirName, ".ignore.yaml")
+	exists1, err := cm.IsPathExisting(file)
 	if exists1 {
 		patterns, err = loadIgnorePatterns(file)
 	}
 
-	file = filepath.Join(repoDir, ".githooks", hookName, ".ignore.yaml")
-	exists2, e := cm.IsPathExist(file)
+	file = filepath.Join(repoDir, HookDirName, hookName, ".ignore.yaml")
+	exists2, e := cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
 
 	if exists2 {
@@ -59,7 +59,7 @@ func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns *H
 // GetHookIgnorePatterns gets all ignored hooks in the current Git directorys.
 func GetHookIgnorePatterns(gitDir string) (*HookIgnorePatterns, error) {
 	file := filepath.Join(gitDir, ".githooks.ignore.yaml")
-	exists, err := cm.IsPathExist(file)
+	exists, err := cm.IsPathExisting(file)
 	if exists {
 		return loadIgnorePatterns(file)
 	}

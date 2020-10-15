@@ -9,14 +9,14 @@ import (
 	"strings"
 
 	"github.com/gookit/color"
-	"github.com/moby/term"
+	"golang.org/x/term"
 )
 
 const (
 	githooksSuffix = "Githooks:"
 	debugSuffix    = "🛠  " + githooksSuffix + " "
 	debugIndent    = "   "
-	infoSuffix     = "ℹℹ " + githooksSuffix + " "
+	infoSuffix     = "ℹ  " + githooksSuffix + " "
 	infoIndent     = "   "
 	warnSuffix     = "⚠  " + githooksSuffix + " "
 	warnIndent     = "   "
@@ -44,6 +44,7 @@ type ILogContext interface {
 	LogFatalF(format string, args ...interface{})
 
 	// Assert helper functions
+	LogErrorOrFatalF(isFatal bool, err error, format string, args ...interface{})
 	AssertWarn(condition bool, lines ...string)
 	AssertWarnF(condition bool, format string, args ...interface{})
 	WarnIf(condition bool, lines ...string)
@@ -97,9 +98,8 @@ func CreateLogContext() (ILogContext, error) {
 		return nil, Error("Failed to initialized info,warn,error logs")
 	}
 
-	infoIsATerminal := term.IsTerminal(os.Stdout.Fd())
-	errorIsATerminal := term.IsTerminal(os.Stderr.Fd())
-
+	infoIsATerminal := term.IsTerminal(int(os.Stdout.Fd()))
+	errorIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 
 	var renderInfo func(string) string

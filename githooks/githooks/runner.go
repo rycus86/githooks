@@ -21,7 +21,7 @@ func GetHookRunCmd(hookPath string) ([]string, error) {
 	}
 
 	runnerFile := hookPath + ".runner"
-	exists, err := cm.IsPathExist(runnerFile)
+	exists, err := cm.IsPathExisting(runnerFile)
 	if err != nil {
 		return nil, cm.ErrorF("Could not check path for runner file '%s'", runnerFile)
 	}

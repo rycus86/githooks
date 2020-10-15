@@ -5,8 +5,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
 )
+
+// HookDirName denotes the directory name used for repository specific hooks.
+var HookDirName = ".githooks"
 
 // DefaultBugReportingURL is the default url to report errors
 var DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
@@ -34,8 +38,8 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	}()
 
 	// Check in the repo if possible
-	file := filepath.Join(repoPath, ".githooks", ".bug-report")
-	exists, e := cm.IsPathExist(file)
+	file := filepath.Join(repoPath, HookDirName, ".bug-report")
+	exists, e := cm.IsPathExisting(file)
 	if e != nil {
 		return info, e
 	}
@@ -49,14 +53,14 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	}
 
 	// Check global Git config
-	info = cm.Git().GetConfig("githooks.bugReportInfo", cm.GlobalScope)
+	info = git.Ctx().GetConfig("githooks.bugReportInfo", git.GlobalScope)
 	return
 }
 
 // IsGithooksDisabled checks if Githooks is disabled in
 // any config starting from the working dir given by the git context.
-func IsGithooksDisabled(git *cm.GitContext) bool {
-	disabled := git.GetConfig("githooks.disable", cm.Traverse)
+func IsGithooksDisabled(gitx *git.Context) bool {
+	disabled := gitx.GetConfig("githooks.disable", git.Traverse)
 	return disabled == "true" ||
 		disabled == "y" || // Legacy
 		disabled == "Y" // Legacy
@@ -69,8 +73,8 @@ func IsLFSAvailable() bool {
 }
 
 // GetInstallDir returns the Githooks install directory.
-func GetInstallDir(git *cm.GitContext) string {
-	return git.GetConfig("githooks.installDir", cm.GlobalScope)
+func GetInstallDir(gitx *git.Context) string {
+	return gitx.GetConfig("githooks.installDir", git.GlobalScope)
 }
 
 // GetToolScript gets the tool script associated with the name `tool`
@@ -78,7 +82,7 @@ func GetToolScript(name string, installDir string) (*cm.Executable, error) {
 
 	tool := filepath.Join(installDir, "tools", name, "run")
 
-	exists, err := cm.IsPathExist(tool)
+	exists, err := cm.IsPathExisting(tool)
 	if !exists {
 		return nil, nil
 	}
