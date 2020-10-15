@@ -361,6 +361,7 @@ legacy_transform_registered_repos() {
                 for TREE in $WORKTREES; do
                     unset IFS
 
+                    # safe guard: a bit buggy get_repo_worktrees
                     if [ "$(git -C "$TREE" rev-parse --is-inside-git-dir 2>/dev/null)" = "true" ]; then
                         continue
                     fi
