@@ -1760,9 +1760,10 @@ execute_git() {
 #   - `GITHOOKS_CLONE_UPDATED` (also for clone)
 #   - `GITHOOKS_CLONE_UPDATED_FROM_COMMIT`
 #
-#   `GITHOOKS_CLONE_UPDATED_FROM_COMMIT` is empty if no update happened
-#   or the Git null ref "000..000" if a new cloned happened or
-#   the commit sha from where was updated.
+#   `GITHOOKS_CLONE_UPDATED_FROM_COMMIT` is empty if
+#    no update happened or the Git null ref
+#    "000..000" if a new cloned happened or
+#   the commit SHA from where was updated.
 #
 # Returns:
 #   1 if failed, 0 otherwise
