@@ -1879,7 +1879,7 @@ update_release_clone() {
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
     GITHOOKS_CLONE_CURRENT_COMMIT_DATE=$(execute_git "$GITHOOKS_CLONE_DIR" log -1 "--date=format:%y%m.%d%H%M" --format="%cd" HEAD)
 
-    echo "Githooks clone updated to version: $GITHOOKS_CLONE_CURRENT_COMMIT_DATE-$(echo "$GITHOOKS_CLONE_CURRENT_COMMIT" | cut -c -6)"
+    echo "Githooks clone at version: $GITHOOKS_CLONE_CURRENT_COMMIT_DATE-$(echo "$GITHOOKS_CLONE_CURRENT_COMMIT" | cut -c -6)"
 
     return 0
 }
