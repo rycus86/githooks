@@ -393,7 +393,7 @@ legacy_transform_registered_repos() {
 # Returns: None
 ############################################################
 legacy_transform_remove_legacy_config() {
-    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered
+    git -C "$REGISTERED_REPO" config --local --unset githooks.autoupdate.registered >/dev/null 2>&1
 }
 
 ############################################################
