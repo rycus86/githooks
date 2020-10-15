@@ -1246,27 +1246,31 @@ install_into_existing_repositories() {
     PRE_START_DIR=$(git config --global --get githooks.previousSearchDir)
     # shellcheck disable=SC2181
     if [ $? -eq 0 ] && [ -n "$PRE_START_DIR" ]; then
-        HAS_PRE_START_DIR="Y"
+        HAS_PRE_START_DIR="true"
     else
         PRE_START_DIR="$HOME"
     fi
 
-    if [ "$HAS_PRE_START_DIR" = "Y" ]; then
+    if [ "$HAS_PRE_START_DIR" = "true" ]; then
         QUESTION_PROMPT="[Y/n]"
     else
         QUESTION_PROMPT="[y/N]"
     fi
 
     if is_non_interactive; then
-        echo "Installing the hooks into existing repositories under $PRE_START_DIR"
-        START_DIR="$PRE_START_DIR"
-
+        if [ "$HAS_PRE_START_DIR" = "true" ]; then
+            echo "Installing the hooks into existing repositories under $PRE_START_DIR"
+            START_DIR="$PRE_START_DIR"
+        else
+            # non-interactive set and no pre start dir set -> abort
+            return
+        fi
     else
         printf 'Do you want to install the hooks into existing repositories? %s ' "$QUESTION_PROMPT"
         read -r DO_INSTALL </dev/tty
 
         if [ "$DO_INSTALL" != "y" ] && [ "$DO_INSTALL" != "Y" ]; then
-            if [ "$HAS_PRE_START_DIR" != "Y" ] || [ -n "$DO_INSTALL" ]; then
+            if [ "$HAS_PRE_START_DIR" != "true" ] || [ -n "$DO_INSTALL" ]; then
                 return
             fi
         fi
