@@ -69,6 +69,16 @@ func (c *Context) GetConfigWithArgs(key string, scope ConfigScope, args ...strin
 	return ""
 }
 
+// GetConfigAll gets a all Git configuration values.
+func (c *Context) GetConfigAll(key string, scope ConfigScope, args ...string) []string {
+	return strs.SplitLines(c.GetConfigWithArgs(key, scope, "--get-all"))
+}
+
+// GetConfigAllU gets a all Git configuration values unsplitted.
+func (c *Context) GetConfigAllU(key string, scope ConfigScope, args ...string) string {
+	return c.GetConfigWithArgs(key, scope, "--get-all")
+}
+
 // SetConfig sets a Git configuration values.
 func (c *Context) SetConfig(key string, value interface{}, scope ConfigScope) error {
 	v := strs.Fmt("%v", value)
@@ -97,8 +107,16 @@ func (c *Context) GetSplit(args ...string) ([]string, error) {
 	return strs.SplitLines(out), err
 }
 
-// Get executes a git command and gets the output.
+// Get executes a git command and gets the stdout.
 func (c *Context) Get(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = c.cwd
+	stdout, err := cmd.Output()
+	return strings.TrimSpace(string(stdout)), err
+}
+
+// GetCombined executes a git command and gets the combined stdout and stderr.
+func (c *Context) GetCombined(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
 	stdout, err := cmd.CombinedOutput()

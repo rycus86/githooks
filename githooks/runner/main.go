@@ -24,6 +24,7 @@ import (
 var log cm.ILogContext
 
 func main() {
+
 	createLog()
 
 	startTime := cm.GetStartTime()
@@ -341,6 +342,56 @@ func collectHooks(
 	return
 }
 
+func isHookNameSharedUpdateTrigger(gitx *git.Context, hookName string) bool {
+
+	return true
+}
+
+func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType int) {
+
+	if settings.HookName != "post-merge" &&
+		!(settings.HookName == "post-checkout" && settings.Args[0] == git.NullRef) &&
+		!strs.Includes(settings.Git.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
+		log.LogDebug("Shared hooks not updated")
+		return
+	}
+
+	log.LogDebug("Updating all shared hooks")
+
+	for _, hook := range sharedHooks {
+
+		if !hook.IsCloned {
+			log.LogDebug("Skipping local shared hook: '%s'", hook.OriginalURL)
+			continue
+
+		} else if !hooks.AllowLocalURLInRepoSharedHooks &&
+			sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal {
+
+			log.LogWarnF("Shared hooks in '%[1]s/.shared' contain a local path\n"+
+				"'%[2]s'\n"+
+				"which is forbidden. Update will be skipped.\n\n"+
+				"You can only have local paths for shared hooks defined\n"+
+				"in the local or global Git configuration.\n\n"+
+				"This can be achieved by running\n"+
+				"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
+				"and deleting it from the '.shared' file manually by\n"+
+				"  $ git hooks shared remove --shared '%[2]s'\n",
+				hooks.HookDirName, hook.OriginalURL)
+			continue
+		}
+
+		log.LogDebugF("Updating shared hook: '%s'", hook.RootDir)
+
+		depth := -1
+		if hook.IsLocal {
+			depth = 1
+		}
+
+		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth)
+		log.AssertNoErrorWarnF(err, "Updating hooks '%s' failed", hook.OriginalURL)
+	}
+}
+
 func geRepoSharedHooks(
 	settings *HookSettings,
 	uiSettings *UISettings,
@@ -357,10 +408,12 @@ func geRepoSharedHooks(
 			hooks.GetRepoSharedFile(settings.RepositoryHooksDir))
 	}
 
+	updateSharedHooks(settings, sharedHooks, hooks.SharedHookEnum.Repo)
+
 	for _, sharedHook := range sharedHooks {
+
 		if checkSharedHook(settings, sharedHook, allAddedHooks, hooks.SharedHookEnum.Repo) {
 			hs = getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)
-			log.LogDebugF("Collected hooks: '%q'", hs)
 		}
 	}
 	return
@@ -397,7 +450,6 @@ func getConfigSharedHooks(
 	for _, sharedHook := range sharedHooks {
 		if checkSharedHook(settings, sharedHook, allAddedHooks, sharedType) {
 			hs = append(hs, getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)...)
-			log.LogDebugF("Collected hooks: '%q'", hs)
 		}
 	}
 	return
@@ -415,7 +467,8 @@ func checkSharedHook(settings *HookSettings, hook hooks.SharedHook, allAddedHook
 
 	// Check that no local paths are in repository configured
 	// shared hooks
-	log.FatalIfF(sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal,
+	log.FatalIfF(!hooks.AllowLocalURLInRepoSharedHooks &&
+		sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal,
 		"Shared hooks in '%[1]s/.shared' contain a local path\n"+
 			"'%[2]s'\n"+
 			"which is forbidden.\n"+
@@ -436,11 +489,11 @@ func checkSharedHook(settings *HookSettings, hook hooks.SharedHook, allAddedHook
 		mess := "Failed to execute shared hooks in:\n" +
 			"'%s'\n"
 
-		if hook.IsLocal {
-			mess += "It does not exist."
-		} else {
+		if hook.IsCloned {
 			mess += "It is not available. To fix, run:\n" +
 				"$ git hooks shared update"
+		} else {
+			mess += "It does not exist."
 		}
 
 		if !settings.FailOnNonExistingSharedHooks {
@@ -508,7 +561,6 @@ func getHooksIn(settings *HookSettings,
 	dirOrFile := filepath.Join(path, settings.HookName)
 	// Collect all in e.g. `path/pre-commit/*`
 	if cm.IsDirectory(dirOrFile) {
-		log.LogDebugF("Search in dir: '%s'", dirOrFile)
 
 		hookFiles, err := cm.GetFiles(dirOrFile,
 			func(path string, _ os.FileInfo) bool {
@@ -532,8 +584,6 @@ func getHooksIn(settings *HookSettings,
 
 	} else if cm.IsFile(dirOrFile) { // Check hook in `path/pre-commit`
 
-		log.LogDebugF("Use file: '%s'", dirOrFile)
-
 		hook, use := createHook(settings, uiSettings, dirOrFile, ignores, checksums)
 		if use {
 			batch := []hooks.Hook{hook}
@@ -541,7 +591,6 @@ func getHooksIn(settings *HookSettings,
 		}
 	}
 
-	log.LogDebugF("Got hooks: '%q'", batches)
 	return
 }
 
@@ -557,7 +606,7 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 	var l string
 
 	if hooks == nil {
-		log.LogInfoF("%s: none", title)
+		log.LogDebugF("%s: none", title)
 	} else {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
@@ -565,7 +614,7 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 				l += strs.Fmt("  - '%s'\n", h.Path)
 			}
 		}
-		log.LogInfoF("%s :\n%s", title, l)
+		log.LogDebugF("%s :\n%s", title, l)
 	}
 }
 

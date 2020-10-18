@@ -23,7 +23,7 @@ cd "$tmp/shared1.git" &&
     git init &&
     git add . &&
     git commit -m 'Initial commit'
-    
+
 mkdir -p "$tmp/shared2.git" &&
     echo 'echo "From shared hook 2"' \
         >"$tmp/shared2.git/pre-commit" &&
@@ -52,8 +52,8 @@ cd "$tmp/repo" &&
     echo -e "#!/bin/bash\n echo 'hello from repo hook2'" >.githooks/pre-commit/gaga &&
     chmod +x .githooks/pre-commit/gaga &&
     git config --local --add githooks.shared "$tmp/shared1.git" &&
-    git config --local --add githooks.shared "$tmp/shared2.git"
-    # echo "$tmp/shared2.git" > .githooks/.shared
+    git config --local --add githooks.shared "$tmp/shared2.git" &&
+    echo "file://$tmp/shared2.git" > .githooks/.shared
 
 tree .git/hooks
 tree .githooks
@@ -61,5 +61,7 @@ tree .githooks
 if [ "$useOld" != "--old" ]; then
     git config --local githooks.runner "$DIR/bin/runner"
 fi
+
+git config --local githooks.sharedHooksUpdateTriggers "pre-commit"
 
 git commit --allow-empty -m "Test commit"

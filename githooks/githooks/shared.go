@@ -62,13 +62,13 @@ var reFileURLScheme *regexp.Regexp
 
 func getReFileURLScheme() *regexp.Regexp {
 	if reFileURLScheme == nil {
-		reFileURLScheme = regexp.MustCompile(`(?m)^\\s*file://`)
+		reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
 	}
 	return reFileURLScheme
 }
 
 func isSharedEntryALocalPath(url string) bool {
-	return !(getReURLScheme().MatchString(url) && getReShortSCPSyntax().MatchString(url))
+	return !(getReURLScheme().MatchString(url) || getReShortSCPSyntax().MatchString(url))
 }
 
 func isSharedEntryALocalURL(url string) bool {
@@ -155,7 +155,7 @@ func LoadRepoSharedHooks(installDir string, repoHooksDir string) (hooks []Shared
 // the local/global Git configuration.
 // No checks are made to the filesystem if paths are existing in `SharedHook`.
 func LoadConfigSharedHooks(installDir string, ctx *git.Context, scope git.ConfigScope) (hooks []SharedHook, err error) {
-	data := ctx.GetConfigWithArgs(SharedConfigName, scope, "--get-all")
+	data := ctx.GetConfigAllU(SharedConfigName, scope)
 	if data != "" {
 		hooks, err = parseData(installDir, data)
 	}
