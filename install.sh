@@ -467,7 +467,17 @@ legacy_transform_adjust_local_paths() {
 legacy_transform_update_shared_hooks() {
     # Could be more efficient if we have a "--shared,--local,--global"
     # flag on this command.
-    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update)
+    if [ -d "$1" ]; then
+        out=$(cd "$1" 2>&1 && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update 2>&1)
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! Could not execute shared update in" >&2
+            echo "  \`$1\`" >&2
+            echo "  Errors: \`$out\`" >&2
+            return 1
+        fi
+    fi
+    return 0
 }
 
 #####################################################
