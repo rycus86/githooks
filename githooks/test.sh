@@ -25,7 +25,7 @@ cd "$tmp/shared1.git" &&
     git commit -m 'Initial commit'
 
 mkdir -p "$tmp/shared2.git" &&
-    echo 'echo "From shared hook 2"' \
+    echo -e '#!/bin/bash\necho "From shared hook 2"' \
         >"$tmp/shared2.git/pre-commit" &&
         chmod +x "$tmp/shared2.git/pre-commit" || exit 1
 cd "$tmp/shared2.git" &&
@@ -47,13 +47,14 @@ cd "$tmp/repo" &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
     mkdir .githooks && touch .githooks/trust-all &&
     mkdir -p .githooks/pre-commit &&
-    echo -e "#!/bin/bash\n echo 'hello from repo hook1'" >.githooks/pre-commit/monkey &&
+    echo -e "#!/bin/bash\n echo 'hello from repo hook monkey'" >.githooks/pre-commit/monkey &&
     chmod +x .githooks/pre-commit/monkey &&
-    echo -e "#!/bin/bash\n echo 'hello from repo hook2'" >.githooks/pre-commit/gaga &&
+    echo -e "#!/bin/bash\n echo 'hello from repo hook gaga'" >.githooks/pre-commit/gaga &&
     chmod +x .githooks/pre-commit/gaga &&
     git config --local --add githooks.shared "$tmp/shared1.git" &&
     git config --local --add githooks.shared "$tmp/shared2.git" &&
-    echo "file://$tmp/shared2.git" > .githooks/.shared
+    echo "file://$tmp/shared2.git" > .githooks/.shared &&
+    echo "file://$tmp/shared2.git" >> .githooks/.shared
 
 tree .git/hooks
 tree .githooks

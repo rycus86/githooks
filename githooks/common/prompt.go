@@ -98,7 +98,7 @@ func (p *PromptContext) ShowPrompt(text string,
 	if p.tool != nil {
 
 		args := append([]string{text, hintText, shortOptions}, longOptions...)
-		answer, err = GetOutputFromExecutable(p.execCtx, p.tool, true, args...)
+		answer, err = GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
 
 		if err == nil {
 			if isAnswerCorrect(answer, options) {

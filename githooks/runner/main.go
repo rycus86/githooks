@@ -12,13 +12,16 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	hooks "rycus86/githooks/githooks"
 	strs "rycus86/githooks/strings"
+	"strconv"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/pbenner/threadpool"
 )
 
 var log cm.ILogContext
@@ -64,8 +67,6 @@ func main() {
 	executeLFSHooks(settings)
 	executeOldHooks(settings, uiSettings, ignores, checksums)
 
-	// executeSharedHooks(settings, uiSettings, ignores, checksums)
-
 	hooks := collectHooks(settings, uiSettings, ignores, checksums)
 
 	if cm.IsDebug {
@@ -74,6 +75,8 @@ func main() {
 		logBatches("Local Shared Hooks", hooks.LocalSharedHooks)
 		logBatches("Global Shared Hooks", hooks.GlobalSharedHooks)
 	}
+
+	executeHooks(settings, &hooks)
 
 	uiSettings.PromptCtx.Close()
 	log.LogDebug("All done.\n")
@@ -322,7 +325,9 @@ func executeOldHooks(settings *HookSettings,
 	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
 	log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", hook.Path)
 
-	err = executeHook(settings, hook)
+	log.LogDebugF("Executing hook: '%s'.", hook.Path)
+	err = cm.RunExecutable(settings.Git, &hook, true)
+
 	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
 }
 
@@ -335,6 +340,7 @@ func collectHooks(
 	// Local hooks in repository
 	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, ignores, checksums)
 
+	// All shared hooks
 	var allAddedShared = make([]string, 0)
 	h.RepoSharedHooks = geRepoSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared)
 	h.LocalSharedHooks = getConfigSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared, hooks.SharedHookEnum.Local)
@@ -411,9 +417,9 @@ func geRepoSharedHooks(
 	updateSharedHooks(settings, sharedHooks, hooks.SharedHookEnum.Repo)
 
 	for _, sharedHook := range sharedHooks {
-
 		if checkSharedHook(settings, sharedHook, allAddedHooks, hooks.SharedHookEnum.Repo) {
 			hs = getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)
+			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
 		}
 	}
 	return
@@ -450,12 +456,17 @@ func getConfigSharedHooks(
 	for _, sharedHook := range sharedHooks {
 		if checkSharedHook(settings, sharedHook, allAddedHooks, sharedType) {
 			hs = append(hs, getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)...)
+			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
 		}
 	}
 	return
 }
 
-func checkSharedHook(settings *HookSettings, hook hooks.SharedHook, allAddedHooks *[]string, sharedType int) bool {
+func checkSharedHook(
+	settings *HookSettings,
+	hook hooks.SharedHook,
+	allAddedHooks *[]string,
+	sharedType int) bool {
 
 	if strs.Includes(*allAddedHooks, hook.RootDir) {
 		log.LogWarnF(
@@ -645,10 +656,7 @@ func executeSafetyChecks(settings *HookSettings,
 				"Y/a/n/d",
 				"Yes", "All", "No", "Disable")
 
-			if !log.AssertNoErrorWarn(err,
-				"Could not show trust prompt.") {
-				return
-			}
+			log.AssertNoErrorWarn(err, "Could not show trust prompt.")
 
 			answer = strings.ToLower(answer)
 
@@ -678,14 +686,52 @@ func executeSafetyChecks(settings *HookSettings,
 	return
 }
 
-func executeHook(settings *HookSettings, hook hooks.Hook) error {
-	log.LogDebugF("Executing hook: '%s'.", hook.Path)
-	err := cm.RunExecutable(settings.Git, &hook, true)
-	return err
+func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
+
+	var nThreads = runtime.NumCPU()
+	nThSetting := settings.Git.GetConfig("githooks.numThreads", git.Traverse)
+	if n, err := strconv.Atoi(nThSetting); err == nil {
+		nThreads = n
+	}
+
+	log.LogDebug("Create thread pool")
+	pool := threadpool.New(nThreads, 15)
+	var results []hooks.HookResult
+
+	log.LogDebug("Launching local hooks ...")
+	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.LocalHooks, results, settings.Args...)
+	logHookResults(results)
+
+	log.LogDebug("Launching repository shared hooks ...")
+	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.RepoSharedHooks, results, settings.Args...)
+	logHookResults(results)
+
+	log.LogDebug("Launching local shared hooks ...")
+	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.LocalSharedHooks, results, settings.Args...)
+	logHookResults(results)
+
+	log.LogDebug("Launching global shared hooks ...")
+	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.GlobalSharedHooks, results, settings.Args...)
+	logHookResults(results)
+}
+
+func logHookResults(res []hooks.HookResult) {
+	for _, r := range res {
+		if r.Error == nil {
+			if len(r.Output) != 0 {
+				log.GetInfoWriter().Write(r.Output)
+			}
+		} else {
+			if len(r.Output) != 0 {
+				log.GetErrorWriter().Write(r.Output)
+			}
+			log.AssertNoErrorFatalF(r.Error, "Hook '%s' failed!", r.Hook.GetCommand())
+		}
+	}
 }
 
 func storePendingData(settings *HookSettings, uiSettings *UISettings) {
-
+	//@todo store data back
 }
 
 func handleError(cwd string, r interface{}) {
