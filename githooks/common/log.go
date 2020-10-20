@@ -85,14 +85,19 @@ type LogContext struct {
 
 // CreateLogContext creates a log context
 func CreateLogContext() (ILogContext, error) {
+
+	// Its good to output everythin to stderr since git
+	// might read stdin for certain hooks.
+	// Either do redirection (which needs to be bombproof)
+	// or just use stderr.
+	info := log.New(os.Stderr, "", 0)
+	warn := info
+	error := info
+
 	var debug *log.Logger
 	if DebugLog {
-		debug = log.New(os.Stderr, "", 0)
+		debug = info
 	}
-
-	info := log.New(os.Stdout, "", 0)
-	warn := log.New(os.Stderr, "", 0)
-	error := log.New(os.Stderr, "", 0)
 
 	if info == nil || warn == nil || error == nil {
 		return nil, Error("Failed to initialized info,warn,error logs")
