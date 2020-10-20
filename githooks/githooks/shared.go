@@ -34,10 +34,12 @@ var SharedConfigName string = "githooks.shared"
 
 func getSharedCloneDir(installDir string, entry string) string {
 	sha1 := cm.GetSHA1HashString(entry)
-	if len(entry) >= 48 {
-		return filepath.Join(installDir, "shared", sha1+entry[0:48])
+	name := []rune(entry)
+	if len(entry) > 48 {
+		name = name[0:48]
 	}
-	return filepath.Join(installDir, "shared", sha1+entry)
+	nameAbrev := getReEscapeURL().ReplaceAllLiteralString(string(name), "-")
+	return filepath.Join(installDir, "shared", sha1+nameAbrev)
 }
 
 var reURLScheme *regexp.Regexp
@@ -65,6 +67,15 @@ func getReFileURLScheme() *regexp.Regexp {
 		reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
 	}
 	return reFileURLScheme
+}
+
+var reEscapeURL *regexp.Regexp
+
+func getReEscapeURL() *regexp.Regexp {
+	if reEscapeURL == nil {
+		reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	}
+	return reEscapeURL
 }
 
 func isSharedEntryALocalPath(url string) bool {
