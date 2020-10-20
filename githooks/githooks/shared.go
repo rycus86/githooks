@@ -39,7 +39,7 @@ func getSharedCloneDir(installDir string, entry string) string {
 		name = name[0:48]
 	}
 	nameAbrev := getReEscapeURL().ReplaceAllLiteralString(string(name), "-")
-	return filepath.Join(installDir, "shared", sha1+nameAbrev)
+	return filepath.Join(installDir, "shared", sha1+"-"+nameAbrev)
 }
 
 var reURLScheme *regexp.Regexp
@@ -73,7 +73,7 @@ var reEscapeURL *regexp.Regexp
 
 func getReEscapeURL() *regexp.Regexp {
 	if reEscapeURL == nil {
-		reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]`)
+		reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 	}
 	return reEscapeURL
 }
