@@ -699,24 +699,29 @@ func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 		nThreads = n
 	}
 
-	log.LogDebug("Create thread pool")
-	pool := threadpool.New(nThreads, 15)
+	var pool *threadpool.ThreadPool
+	if hooks.UseThreadPool {
+		log.LogDebug("Create thread pool")
+		p := threadpool.New(nThreads, 15)
+		pool = &p
+	}
+
 	var results []hooks.HookResult
 
 	log.LogDebug("Launching local hooks ...")
-	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.LocalHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.LogDebug("Launching repository shared hooks ...")
-	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.RepoSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.RepoSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.LogDebug("Launching local shared hooks ...")
-	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.LocalSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.LogDebug("Launching global shared hooks ...")
-	results = hooks.ExecuteHooksParallel(&pool, settings.Git, &hs.GlobalSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.GlobalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 }
 

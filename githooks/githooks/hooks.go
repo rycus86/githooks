@@ -82,22 +82,31 @@ func ExecuteHooksParallel(
 			continue
 		}
 
-		g := pool.NewJobGroup()
-
-		pool.AddRangeJob(0, nHooks, g,
-			func(idx int, pool thx.ThreadPool, erf func() error) error {
-				hook := &hooksGroup[idx]
+		if pool == nil {
+			for idx, hook := range hooksGroup {
 				var err error
-				res[currIdx+idx].Output, err =
-					cm.GetCombinedOutputFromExecutable(exec, &hooksGroup[idx], true, args...)
-
+				res[currIdx+idx].Output, err = cm.GetCombinedOutputFromExecutable(exec, &hook, true, args...)
 				res[currIdx+idx].Error = err
-				res[currIdx+idx].Hook = hook
+				res[currIdx+idx].Hook = &hook
+			}
+		} else {
+			g := pool.NewJobGroup()
 
-				return nil
-			})
+			pool.AddRangeJob(0, nHooks, g,
+				func(idx int, pool thx.ThreadPool, erf func() error) error {
+					hook := &hooksGroup[idx]
+					var err error
+					res[currIdx+idx].Output, err =
+						cm.GetCombinedOutputFromExecutable(exec, hook, true, args...)
 
-		pool.Wait(g)
+					res[currIdx+idx].Error = err
+					res[currIdx+idx].Hook = hook
+
+					return nil
+				})
+
+			pool.Wait(g)
+		}
 
 		currIdx += nHooks
 	}
