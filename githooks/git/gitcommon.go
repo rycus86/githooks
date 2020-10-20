@@ -1,7 +1,7 @@
 package git
 
 import (
-	"path/filepath"
+	"path"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 )
@@ -51,7 +51,7 @@ func Pull(repoPath string) error {
 // existing clones to this path.
 func PullOrClone(repoPath string, url string, branch string, depth int) (isNewClone bool, err error) {
 
-	if cm.IsDirectory(filepath.Join(repoPath, ".git")) {
+	if cm.IsDirectory(path.Join(repoPath, ".git")) {
 		isNewClone = false
 		err = Pull(repoPath)
 	} else {

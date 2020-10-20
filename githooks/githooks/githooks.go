@@ -3,6 +3,7 @@ package hooks
 import (
 	"io/ioutil"
 	"os/exec"
+	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
@@ -38,7 +39,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	}()
 
 	// Check in the repo if possible
-	file := filepath.Join(repoPath, HookDirName, ".bug-report")
+	file := path.Join(repoPath, HookDirName, ".bug-report")
 	exists, e := cm.IsPathExisting(file)
 	if e != nil {
 		return info, e
@@ -74,13 +75,13 @@ func IsLFSAvailable() bool {
 
 // GetInstallDir returns the Githooks install directory.
 func GetInstallDir(gitx *git.Context) string {
-	return gitx.GetConfig("githooks.installDir", git.GlobalScope)
+	return filepath.ToSlash(gitx.GetConfig("githooks.installDir", git.GlobalScope))
 }
 
 // GetToolScript gets the tool script associated with the name `tool`
 func GetToolScript(name string, installDir string) (*cm.Executable, error) {
 
-	tool := filepath.Join(installDir, "tools", name, "run")
+	tool := path.Join(installDir, "tools", name, "run")
 
 	exists, err := cm.IsPathExisting(tool)
 	if !exists {

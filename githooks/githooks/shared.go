@@ -2,7 +2,7 @@ package hooks
 
 import (
 	"io/ioutil"
-	"path/filepath"
+	"path"
 	"regexp"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
@@ -25,7 +25,7 @@ type SharedHook struct {
 
 // GetRepoSharedFile gets the shared file with respect to the hooks dir in the repository.
 func GetRepoSharedFile(repoHooksDir string) string {
-	return filepath.Join(repoHooksDir, ".shared")
+	return path.Join(repoHooksDir, ".shared")
 }
 
 // SharedConfigName defines the config name used to define local/global
@@ -39,7 +39,7 @@ func getSharedCloneDir(installDir string, entry string) string {
 		name = name[0:48]
 	}
 	nameAbrev := getReEscapeURL().ReplaceAllLiteralString(string(name), "-")
-	return filepath.Join(installDir, "shared", sha1+"-"+nameAbrev)
+	return path.Join(installDir, "shared", sha1+"-"+nameAbrev)
 }
 
 var reURLScheme *regexp.Regexp

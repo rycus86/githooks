@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"io/ioutil"
+	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
@@ -17,7 +18,7 @@ func IsRepoTrusted(
 	repoPath string,
 	promptUser bool) (bool, error) {
 
-	trustFile := filepath.Join(repoPath, HookDirName, "trust-all")
+	trustFile := path.Join(repoPath, HookDirName, "trust-all")
 	var isTrusted bool = false
 
 	exists, err := cm.IsPathExisting(trustFile)
@@ -141,6 +142,7 @@ func (t *ChecksumStore) assertData() {
 // AddChecksum adds a SHA1 checksum of a path and returns if it was added (or merged).
 func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
 	t.assertData()
+	path = filepath.ToSlash(path)
 	if data, exists := t.checksums[sha1]; exists {
 		p := &data.Paths
 		*p = append(*p, path)
@@ -152,17 +154,17 @@ func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
 }
 
 // IsTrusted checks if a path has been trusted.
-func (t *ChecksumStore) IsTrusted(path string) (bool, string, error) {
+func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 
-	sha1, err := cm.GetSHA1HashFile(path)
+	sha1, err := cm.GetSHA1HashFile(filePath)
 	if err != nil {
 		return false, sha1,
-			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", path), err)
+			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", filePath), err)
 	}
 
 	// Check first all directories ...
 	for _, dir := range t.checksumDirs {
-		exists, err := cm.IsPathExisting(filepath.Join(dir, sha1))
+		exists, err := cm.IsPathExisting(path.Join(dir, sha1))
 		if exists {
 			return true, sha1, nil
 		} else if err != nil {

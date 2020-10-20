@@ -11,6 +11,7 @@ package main
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	cm "rycus86/githooks/common"
@@ -41,6 +42,7 @@ func main() {
 
 	cwd, err := os.Getwd()
 	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
+	cwd = filepath.ToSlash(cwd)
 
 	// Handle all panics and report the error
 	defer func() {
@@ -99,10 +101,12 @@ func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 	gitDir, err = filepath.Abs(gitDir)
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
+	gitDir = filepath.ToSlash(gitDir)
 
 	hookPath, err := filepath.Abs(os.Args[1])
 	cm.AssertNoErrorPanicF(err, "Could not abs. path from '%s'.",
 		os.Args[1])
+	hookPath = filepath.ToSlash(hookPath)
 
 	exists, _ := cm.IsPathExisting(hookPath)
 	cm.DebugAssert(exists, "Hook path does not exist")
@@ -124,13 +128,13 @@ func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 		Args:               os.Args[2:],
 		Git:                gitx,
 		RepositoryPath:     repoPath,
-		RepositoryHooksDir: filepath.Join(repoPath, hooks.HookDirName),
+		RepositoryHooksDir: path.Join(repoPath, hooks.HookDirName),
 		GitDir:             gitDir,
 		InstallDir:         installDir,
 
 		HookPath: hookPath,
-		HookName: filepath.Base(hookPath),
-		HookDir:  filepath.Dir(hookPath),
+		HookName: path.Base(hookPath),
+		HookDir:  path.Dir(hookPath),
 
 		IsTrusted: isTrusted,
 
@@ -170,7 +174,7 @@ func getIgnorePatterns(settings *HookSettings) *hooks.IgnorePatterns {
 }
 
 func getLocalChecksumStore(settings *HookSettings) *hooks.ChecksumStore {
-	localChecksums := filepath.Join(settings.GitDir, ".githooks.checksum")
+	localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
 	store, err := hooks.NewChecksumStore(localChecksums, false)
 	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'.", localChecksums)
 	log.LogDebugF("%s", store.Summary())
@@ -184,7 +188,8 @@ func getInstallDir(git *git.Context) string {
 	setDefault := func() {
 		usr, err := homedir.Dir()
 		cm.AssertNoErrorPanic(err, "Could not get home directory.")
-		installDir = filepath.Join(usr, hooks.HookDirName)
+		usr = filepath.ToSlash(usr)
+		installDir = path.Join(usr, hooks.HookDirName)
 	}
 
 	if installDir == "" {
@@ -265,7 +270,7 @@ func executeLFSHooks(settings *HookSettings) {
 
 	lfsIsAvailable := hooks.IsLFSAvailable()
 
-	lfsIsRequired, err := cm.IsPathExisting(filepath.Join(
+	lfsIsRequired, err := cm.IsPathExisting(path.Join(
 		settings.RepositoryPath, hooks.HookDirName, ".lfs-required"))
 	log.AssertNoErrorWarnF(err, "Could not check path.")
 
@@ -299,7 +304,7 @@ func executeOldHooks(settings *HookSettings,
 	hookName := settings.HookName + ".replaced.githook"
 	// Make it relative to git directory
 	// e.g. 'hooks/pre-commit.replaced.githook'
-	hook := hooks.Hook{Path: filepath.Join(settings.HookDir, hookName), RunCmd: nil}
+	hook := hooks.Hook{Path: path.Join(settings.HookDir, hookName), RunCmd: nil}
 
 	exists, err := cm.IsPathExisting(hook.Path)
 	log.AssertNoErrorWarnF(err, "Could not check path '%s'", hook.Path)
@@ -563,13 +568,13 @@ func createHook(settings *HookSettings,
 
 func getHooksIn(settings *HookSettings,
 	uiSettings *UISettings,
-	path string,
+	dirOrFilePath string,
 	ignores *hooks.IgnorePatterns,
 	checksums *hooks.ChecksumStore) (batches hooks.HookPrioList) {
 
-	log.LogDebugF("Getting hooks in '%s'", path)
+	log.LogDebugF("Getting hooks in '%s'", dirOrFilePath)
 
-	dirOrFile := filepath.Join(path, settings.HookName)
+	dirOrFile := path.Join(dirOrFilePath, settings.HookName)
 	// Collect all in e.g. `path/pre-commit/*`
 	if cm.IsDirectory(dirOrFile) {
 
@@ -578,7 +583,7 @@ func getHooksIn(settings *HookSettings,
 				ignored, _ := ignores.IsIgnored(path)
 				return !ignored
 			})
-		log.AssertNoErrorWarnF(err, "Errors while walking '%s'", path)
+		log.AssertNoErrorWarnF(err, "Errors while walking '%s'", dirOrFile)
 
 		// @todo make a priority list for executing all batches in parallel
 		// First good solution: all sequential

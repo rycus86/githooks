@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
@@ -74,5 +75,5 @@ func (r *RegisterRepos) FilterExisting() {
 }
 
 func getRegisterFile(installDir string) string {
-	return filepath.Join(installDir, "registered.json")
+	return path.Join(installDir, "registered.json")
 }

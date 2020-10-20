@@ -43,6 +43,8 @@ func GetFiles(root string, filter FileFilter) (files []string, err error) {
 				return filepath.SkipDir
 			}
 
+			path = filepath.ToSlash(path)
+
 			if filter == nil || filter(path, info) {
 				files = append(files, path)
 			}
