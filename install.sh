@@ -10,15 +10,16 @@
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
     applypatch-msg pre-applypatch post-applypatch
-    pre-commit prepare-commit-msg commit-msg post-commit
+    pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
     pre-rebase post-checkout post-merge pre-push
-    pre-receive update post-receive post-update
+    pre-receive update post-receive post-update reference-transaction
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
+    fsmonitor-watchman post-index-change
 "
 
 MANAGED_SERVER_HOOK_NAMES="
     pre-push pre-receive update post-receive post-update
-    push-to-checkout pre-auto-gc
+    reference-transaction push-to-checkout pre-auto-gc
 "
 
 ############################################################
@@ -665,7 +666,7 @@ check_not_deprecated_single_install() {
         echo "    You appear to have setup this repo as a single install." >&2
         echo "    The hooks in this repository are not supported anymore." >&2
         echo >&2
-        echo "    To install the latest hooks you need to reset this option"
+        echo "    To install the latest hooks you need to reset this option" >&2
         echo "    by running" >&2
         echo "      \`git config --local --unset githooks.single.install\`" >&2
         echo "    in order to use this repository with githooks." >&2

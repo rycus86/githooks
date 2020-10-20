@@ -61,6 +61,7 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `pre-applypatch`
 - `post-applypatch`
 - `pre-commit`
+- `pre-merge-commit`
 - `prepare-commit-msg`
 - `commit-msg`
 - `post-commit`
@@ -72,10 +73,13 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `update`
 - `post-receive`
 - `post-update`
+- `reference-transaction`
 - `push-to-checkout`
 - `pre-auto-gc`
 - `post-rewrite`
 - `sendemail-validate`
+- `fsmonitor-watchman`
+- `post-index-change`
 
 ## Git Large File Storage support
 

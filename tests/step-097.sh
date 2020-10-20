@@ -4,10 +4,11 @@
 
 MANAGED_HOOK_NAMES="
     applypatch-msg pre-applypatch post-applypatch
-    pre-commit prepare-commit-msg commit-msg post-commit
+    pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
     pre-rebase post-checkout post-merge pre-push
-    pre-receive update post-receive post-update
+    pre-receive update post-receive post-update reference-transaction
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
+    fsmonitor-watchman post-index-change
 "
 
 SINGLE="--single"
