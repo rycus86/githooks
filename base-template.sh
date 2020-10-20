@@ -908,7 +908,7 @@ show_prompt() {
     # Our stdin is never a tty (either a pipe or /dev/null when called
     # from git), so read from /dev/tty, our controlling terminal,
     # if it can be opened.
-    printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
+    printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS" >&2
 
     # shellcheck disable=SC2217
     if true </dev/tty 2>/dev/null; then
