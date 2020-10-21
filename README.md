@@ -78,8 +78,9 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `pre-auto-gc`
 - `post-rewrite`
 - `sendemail-validate`
-- `fsmonitor-watchman`
 - `post-index-change`
+
+The `fsmonitor-watchman` hook is currently not supported. If you have a use-case for it and want to use it with this tool, please open an issue.
 
 ## Git Large File Storage support
 

@@ -14,7 +14,7 @@ MANAGED_HOOK_NAMES="
     pre-rebase post-checkout post-merge pre-push
     pre-receive update post-receive post-update reference-transaction
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
-    fsmonitor-watchman post-index-change
+    post-index-change
 "
 
 MANAGED_SERVER_HOOK_NAMES="
