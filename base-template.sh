@@ -412,9 +412,9 @@ execute_opt_in_checks() {
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-        echo "* Skipping disabled $HOOK_PATH"
-        echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
-        echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
+        echo "* Skipping disabled $HOOK_PATH" >&2
+        echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again" >&2
+        echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again" >&2
         return 1
 
     elif ! echo "$CURRENT_HASHES" | grep -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
@@ -425,21 +425,21 @@ execute_opt_in_checks() {
         fi
 
         if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
-            echo "? $MESSAGE: $HOOK_PATH"
-            echo "  Already accepted"
+            echo "? $MESSAGE: $HOOK_PATH" >&2
+            echo "  Already accepted" >&2
         else
             MESSAGE="$(printf "%s\n%s" "$MESSAGE: $HOOK_PATH" "  Do you accept the changes?")"
             show_prompt ACCEPT_CHANGES "? $MESSAGE" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
 
             if [ "$ACCEPT_CHANGES" = "n" ] || [ "$ACCEPT_CHANGES" = "N" ]; then
-                echo "* Not running $HOOK_FILE"
+                echo "* Not running $HOOK_FILE" >&2
                 return 1
             fi
 
             if [ "$ACCEPT_CHANGES" = "d" ] || [ "$ACCEPT_CHANGES" = "D" ]; then
-                echo "* Disabled $HOOK_PATH"
-                echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again"
-                echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again"
+                echo "* Disabled $HOOK_PATH" >&2
+                echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again" >&2
+                echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again" >&2
 
                 echo "disabled> $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
                 return 1
@@ -615,7 +615,7 @@ update_shared_hooks_if_appropriate() {
             fi
 
             if [ -d "$SHARED_ROOT/.git" ]; then
-                echo "* Updating shared hooks from: $SHARED_REPO"
+                echo "* Updating shared hooks from: $SHARED_REPO" >&2
 
                 # shellcheck disable=SC2086
                 PULL_OUTPUT=$(execute_git "$SHARED_ROOT" pull 2>&1)
@@ -626,7 +626,7 @@ update_shared_hooks_if_appropriate() {
                     echo "$PULL_OUTPUT" >&2
                 fi
             else
-                echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL"
+                echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL" >&2
 
                 ADD_ARGS=""
                 [ "$SHARED_REPO_IS_LOCAL" != "true" ] && ADD_ARGS="--depth=1"
@@ -696,10 +696,10 @@ execute_shared_hooks() {
             echo "! Shared hooks in \`.githooks/.shared\` contain a local path" >&2
             echo "  \`$SHARED_REPO\`" >&2
             echo "  which is forbidden." >&2
-            echo ""
+            echo "" >&2
             echo "  You can only have local paths in shared hooks defined" >&2
             echo "  in the local or global Git configuration." >&2
-            echo ""
+            echo "" >&2
             echo "  You need to fix this by running" >&2
             echo "    \$ git hooks shared add [--local|--global] \"$SHARED_REPO\"" >&2
             echo "  and deleting it from the \`.shared\` file by" >&2
@@ -908,7 +908,7 @@ show_prompt() {
     # Our stdin is never a tty (either a pipe or /dev/null when called
     # from git), so read from /dev/tty, our controlling terminal,
     # if it can be opened.
-    printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS"
+    printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS" >&2
 
     # shellcheck disable=SC2217
     if true </dev/tty 2>/dev/null; then
@@ -935,7 +935,7 @@ show_prompt() {
 #####################################################
 fetch_latest_updates() {
 
-    echo "^ Checking for updates ..."
+    echo "^ Checking for updates ..." >&2
 
     GITHOOKS_CLONE_CREATED="false"
     GITHOOKS_CLONE_UPDATE_AVAILABLE="false"
@@ -1028,7 +1028,7 @@ clone_release_repository() {
         fi
     fi
 
-    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` ..."
+    echo "Cloning \`$GITHOOKS_CLONE_URL\` to \`$GITHOOKS_CLONE_DIR\` ..." >&2
 
     CLONE_OUTPUT=$(git clone \
         -c core.hooksPath=/dev/null \
@@ -1135,7 +1135,7 @@ should_run_update() {
             return 1
         fi
     else
-        echo "* Githooks is on the latest version"
+        echo "* Githooks is on the latest version" >&2
         return 1
     fi
 }
@@ -1166,8 +1166,8 @@ execute_update() {
 #   None
 #####################################################
 print_update_disable_info() {
-    echo "  If you would like to disable auto-updates, run:"
-    echo "    \$ git hooks update disable"
+    echo "  If you would like to disable auto-updates, run:" >&2
+    echo "    \$ git hooks update disable" >&2
 }
 
 # Start processing the hooks
