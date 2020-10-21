@@ -18,6 +18,7 @@ type IPromptContext interface {
 	Close()
 }
 
+// PromptFormatter is the format function to format a prompt.
 type PromptFormatter func(format string, args ...interface{}) string
 
 // PromptContext defines the prompt context based on a `ILogContext`
@@ -174,8 +175,10 @@ func (p *PromptContext) showPromptTerminal(
 					return ans, nPrompts != 0, nil
 				}
 
-				warning := p.promptFmt("Answer '%s' not in '%q', try again ...", ans, options)
-				p.termOut.Write([]byte(warning))
+				if nPrompts < maxPrompts {
+					warning := p.promptFmt("Answer '%s' not in '%q', try again ...", ans, options)
+					p.termOut.Write([]byte(warning + "\n"))
+				}
 
 			} else {
 				p.termOut.Write([]byte("\n"))
@@ -183,6 +186,10 @@ func (p *PromptContext) showPromptTerminal(
 				break
 			}
 		}
+
+		warning := p.promptFmt("Could not get answer in '%q', taking default '%s'", options, defaultAnswer)
+		p.termOut.Write([]byte(warning + "\n"))
+
 	} else {
 		err = ErrorF("Do not have a controlling terminal to show prompt.")
 	}

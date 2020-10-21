@@ -103,7 +103,7 @@ func CreateLogContext() (ILogContext, error) {
 		return nil, Error("Failed to initialized info,warn,error logs")
 	}
 
-	infoIsATerminal := term.IsTerminal(int(os.Stdout.Fd()))
+	infoIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	errorIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 

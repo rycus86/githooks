@@ -2,9 +2,19 @@
 
 package common
 
-import "os"
+import (
+	"os"
+	"syscall"
+)
 
 // GetCtty gets the file descriptor of the controlling terminal.
+// Taken from:
+// https://github.com/mattn/go-tty/blob/master/tty_windows.go
 func GetCtty() (*os.File, error) {
-	return os.OpenFile("/dev/tty", os.O_RDONLY, 0)
+	in, err := syscall.Open("CONIN$", syscall.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.NewFile(uintptr(in), "/dev/tty"), nil
 }

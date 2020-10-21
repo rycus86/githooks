@@ -9,6 +9,14 @@ function die() {
     exit 1
 }
 
+function cleanUp() {
+    echo "Temp folder is: '$tmp'"
+    # if [ -d "$tmp" ]; then
+    #     rm -rf "$tmp"
+    # fi
+}
+
+trap cleanUp EXIT SIGINT SIGTERM
 
 tmp=$(mktemp -d)
 
