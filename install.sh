@@ -197,7 +197,7 @@ legacy_transform_after_update() {
     COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
 
-    if [ "$COMMIT_COUNT" != "1" ] && [ -z "$INTERNAL_UPDATED_FROM_COMMIT" ]; then
+    if [ "$COMMIT_COUNT" != "1" ] && [ -z "${INTERNAL_UPDATED_FROM_COMMIT+set}" ]; then
         # If the clone dir has been updated (commit count != 1) and
         # we do not have the update commit yet (meaning we are updating from an old version )
         # we set it to the last commit where this feature (INTERNAL_UPDATED_FROM_COMMIT)
