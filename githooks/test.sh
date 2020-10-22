@@ -28,7 +28,7 @@ function makeShared() {
     echo 'echo "From shared hook 1"' \
         >"$tmp/shared1.git/pre-commit/say-hello" || exit 1
 cd "$tmp/shared1.git" &&
-    git init &&
+    git init --template="" &&
     git add . &&
     git commit -m 'Initial commit'
 
@@ -37,7 +37,16 @@ mkdir -p "$tmp/shared2.git" &&
         >"$tmp/shared2.git/pre-commit" &&
         chmod +x "$tmp/shared2.git/pre-commit" || exit 1
 cd "$tmp/shared2.git" &&
-    git init &&
+    git init --template="" &&
+    git add . &&
+    git commit -m 'Initial commit'
+
+mkdir -p "$tmp/shared3.git" &&
+    echo -e '#!/usr/bin/env python\nprint("hello from python shared hook 3")' \
+        >"$tmp/shared3.git/pre-commit" &&
+        chmod +x "$tmp/shared3.git/pre-commit" || exit 1
+cd "$tmp/shared3.git" &&
+    git init --template="" &&
     git add . &&
     git commit -m 'Initial commit'
 }
@@ -62,7 +71,8 @@ cd "$tmp/repo" &&
     git config --local --add githooks.shared "$tmp/shared1.git" &&
     git config --local --add githooks.shared "$tmp/shared2.git" &&
     echo "file://$tmp/shared2.git" > .githooks/.shared &&
-    echo "file://$tmp/shared2.git" >> .githooks/.shared
+    echo "file://$tmp/shared2.git" >> .githooks/.shared &&
+    echo "file://$tmp/shared3.git" >> .githooks/.shared
 
 tree .git/hooks
 tree .githooks
