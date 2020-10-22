@@ -27,3 +27,4 @@ there is no notion of execution permissions and this honors the shebang correctl
 ## Problems
 
 - How to get the controlling terminal on Windows? Since we launch through the wrapper git-bash.exe anyway -> /dev/tty is available ? Probably not.
+  - Solved: see `ctty-windows.go` which works.
