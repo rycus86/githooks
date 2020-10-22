@@ -21,6 +21,8 @@ Namespace `<namespace>` can be defined in shared hooks in a file `.namespace`. D
 3. TODO: `githooks.trust.all` move to `githooks.trustAll`
 4. Checksum fileR should not contain, disabled settings as well. There is a bug in `execute_opt_in_checks`: disabling hooks only works if repo `! is_trusted_repo`.
 We store this in `.git/.githooks.disabled`
+5. Default runner on Unix is `sh` and on Windows its `sh -c` since
+there is no notion of execution permissions and this honors the shebang correctly.
 
 ## Problems
 
