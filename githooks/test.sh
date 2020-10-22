@@ -11,9 +11,9 @@ function die() {
 
 function cleanUp() {
     echo "Temp folder is: '$tmp'"
-    # if [ -d "$tmp" ]; then
-    #     rm -rf "$tmp"
-    # fi
+    if [ -d "$tmp" ]; then
+        rm -rf "$tmp"
+    fi
 }
 
 trap cleanUp EXIT SIGINT SIGTERM

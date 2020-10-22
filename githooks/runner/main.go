@@ -627,7 +627,7 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
 			for _, h := range batch {
-				l += strs.Fmt("  - '%s'\n", h.Path)
+				l += strs.Fmt("  - '%s' [runner: '%s']\n", h.RunCmd, h.Path)
 			}
 		}
 		log.LogDebugF("%s :\n%s", title, l)
