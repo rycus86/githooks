@@ -39,5 +39,5 @@ func GetHookRunCmd(hookPath string) ([]string, error) {
 	}
 
 	// It does not exists -> default is the shell interpreter.
-	return []string{"sh"}, nil
+	return defaultRunner, nil
 }
