@@ -18,7 +18,7 @@ type HookSettings struct {
 	HookName string // Name of the hook.
 	HookDir  string // Directory of the hook.
 
-	IsTrusted                    bool // If the repository is a trusted repository.
+	IsRepoTrusted                bool // If the repository is a trusted repository.
 	FailOnNonExistingSharedHooks bool // If Githooks should fail if there are shared hooks demanded which are not existing.
 }
 
@@ -30,5 +30,5 @@ func (s HookSettings) toString() string {
 		"- Install Dir: '%s'\n"+
 		"- Hook Path: '%s'\n"+
 		"- Trusted: '%v'",
-		s.Args, s.RepositoryPath, s.RepositoryHooksDir, s.GitDir, s.InstallDir, s.HookPath, s.IsTrusted)
+		s.Args, s.RepositoryPath, s.RepositoryHooksDir, s.GitDir, s.InstallDir, s.HookPath, s.IsRepoTrusted)
 }

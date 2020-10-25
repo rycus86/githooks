@@ -83,7 +83,9 @@ func getDefaultAnswer(options []string) string {
 }
 
 func isAnswerCorrect(answer string, options []string) bool {
-	return strs.Includes(options, answer)
+	return strs.Any(options, func(o string) bool {
+		return strings.ToLower(answer) == strings.ToLower(o)
+	})
 }
 
 // ShowPrompt shows a prompt to the user with `text`

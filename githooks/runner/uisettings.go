@@ -17,7 +17,7 @@ type UISettings struct {
 	// All hooks which were newly trusted and need to be recorded back
 	TrustedHooks []hooks.ChecksumResult
 
-	// All hooks which were newly trusted and need to be recored back
+	// All hooks which were newly disabled and need to be recored back
 	DisabledHooks []hooks.ChecksumResult
 }
 

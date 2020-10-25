@@ -10,7 +10,6 @@ function die() {
 }
 
 function cleanUp() {
-    echo "Temp folder is: '$tmp'"
     if [ -d "$tmp" ]; then
         rm -rf "$tmp"
     fi
@@ -74,6 +73,9 @@ cd "$tmp/repo" &&
     echo "file://$tmp/shared2.git" >> .githooks/.shared &&
     echo "file://$tmp/shared3.git" >> .githooks/.shared
 
+# Make one hook disabled
+echo "disabled> $tmp/shared1.git/pre-commit/say-hello" > .git/.githooks.checksum
+
 tree .git/hooks
 tree .githooks
 
@@ -83,4 +85,9 @@ fi
 
 git config --local githooks.sharedHooksUpdateTriggers "pre-commit"
 
+echo "Commit..."
 git commit --allow-empty -m "Test commit"
+echo "Commit finished"
+
+echo "File: '.git/.githooks.checksum' :"
+cat ".git/.githooks.checksum"
