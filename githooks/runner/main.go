@@ -390,7 +390,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 			continue
 		}
 
-		log.LogDebugF("Updating shared hook: '%s'", hook.RootDir)
+		log.LogDebugF("Updating shared hook: '%s'", hook.OriginalURL)
 
 		depth := -1
 		if hook.IsLocal {

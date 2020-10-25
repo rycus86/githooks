@@ -24,30 +24,40 @@ useOld="$1"
 # Make shared hook repo
 function makeShared() {
     mkdir -p "$tmp/shared1.git/pre-commit" &&
-    echo 'echo "From shared hook 1"' \
-        >"$tmp/shared1.git/pre-commit/say-hello" || exit 1
-cd "$tmp/shared1.git" &&
-    git init --template="" &&
-    git add . &&
-    git commit -m 'Initial commit'
+        echo 'echo "From shared hook 1"' \
+            >"$tmp/shared1.git/pre-commit/say-hello" || exit 1
+    cd "$tmp/shared1.git" &&
+        git init --template="" &&
+        git add . &&
+        git commit -m 'Initial commit'
 
-mkdir -p "$tmp/shared2.git" &&
-    echo -e '#!/bin/bash\necho "From shared hook 2"' \
-        >"$tmp/shared2.git/pre-commit" &&
+    mkdir -p "$tmp/shared2.git" &&
+        echo -e '#!/bin/bash\necho "From shared hook 2"' \
+            >"$tmp/shared2.git/pre-commit" &&
         chmod +x "$tmp/shared2.git/pre-commit" || exit 1
-cd "$tmp/shared2.git" &&
-    git init --template="" &&
-    git add . &&
-    git commit -m 'Initial commit'
+    cd "$tmp/shared2.git" &&
+        git init --template="" &&
+        git add . &&
+        git commit -m 'Initial commit'
 
-mkdir -p "$tmp/shared3.git" &&
-    echo -e '#!/usr/bin/env python\nprint("hello from python shared hook 3")' \
-        >"$tmp/shared3.git/pre-commit" &&
+    mkdir -p "$tmp/shared3.git" &&
+        echo -e '#!/usr/bin/env python\nprint("hello from python shared hook 3")' \
+            >"$tmp/shared3.git/pre-commit" &&
         chmod +x "$tmp/shared3.git/pre-commit" || exit 1
-cd "$tmp/shared3.git" &&
-    git init --template="" &&
-    git add . &&
-    git commit -m 'Initial commit'
+    cd "$tmp/shared3.git" &&
+        git init --template="" &&
+        git add . &&
+        git commit -m 'Initial commit'
+
+    mkdir -p "$tmp/shared4.git" &&
+        mkdir -p "$tmp/shared4.git/.githooks/pre-commit"
+        echo -e '#!/usr/bin/env python\nprint("hello from python shared hook legacy")' \
+            >"$tmp/shared4.git/.githooks/pre-commit/legacy" &&
+        chmod +x "$tmp/shared4.git/.githooks/pre-commit/legacy" || exit 1
+    cd "$tmp/shared4.git" &&
+        git init --template="" &&
+        git add . &&
+        git commit -m 'Initial commit'
 }
 
 makeShared &>/dev/null || die "Could not make shared repos"
@@ -69,12 +79,14 @@ cd "$tmp/repo" &&
     chmod +x .githooks/pre-commit/gaga &&
     git config --local --add githooks.shared "$tmp/shared1.git" &&
     git config --local --add githooks.shared "$tmp/shared2.git" &&
-    echo "file://$tmp/shared2.git" > .githooks/.shared &&
-    echo "file://$tmp/shared2.git" >> .githooks/.shared &&
-    echo "file://$tmp/shared3.git" >> .githooks/.shared
+    git config --local --add githooks.shared "$tmp/shared4.git" &&
+    echo "file://$tmp/shared2.git" >.githooks/.shared &&
+    echo "file://$tmp/shared2.git" >>.githooks/.shared &&
+    echo "file://$tmp/shared3.git" >>.githooks/.shared &&
+    echo "file://$tmp/shared4.git" >>.githooks/.shared
 
 # Make one hook disabled
-echo "disabled> $tmp/shared1.git/pre-commit/say-hello" > .git/.githooks.checksum
+echo "disabled> $tmp/shared1.git/pre-commit/say-hello" >.git/.githooks.checksum
 
 tree .git/hooks
 tree .githooks
