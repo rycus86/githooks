@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
@@ -14,7 +15,7 @@ import (
 // On any error `false` is reported together with the error.
 func IsRepoTrusted(
 	gitx *git.Context,
-	promptCtx cm.IPromptContext,
+	promptCtx prompt.IContext,
 	repoPath string,
 	promptUser bool) (bool, error) {
 

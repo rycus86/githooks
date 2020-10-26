@@ -1,96 +1,19 @@
-package common
+// +build !mock
+
+package prompt
 
 import (
 	"bufio"
-	"io"
-	"os"
-	"runtime"
+	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
 
-// IPromptContext defines the interface to show a prompt to the user
-type IPromptContext interface {
-	ShowPrompt(text string,
-		hintText string,
-		shortOptions string,
-		longOptions ...string) (string, error)
-	Close()
-}
-
-// PromptFormatter is the format function to format a prompt.
-type PromptFormatter func(format string, args ...interface{}) string
-
-// PromptContext defines the prompt context based on a `ILogContext`
-// or as a fallback using the defined dialog tool if configured.
-type PromptContext struct {
-	log ILogContext
-
-	// Fallback prompt over the log context if available.
-	promptFmt PromptFormatter
-	termOut   io.Writer
-	termIn    io.Reader
-
-	// Prompt over the tool script if existing.
-	execCtx IExecContext
-	tool    *Executable
-}
-
-// Close closes the prompt context
-func (p *PromptContext) Close() {
-
-	if f, ok := p.termIn.(*os.File); ok {
-		f.Close()
-	}
-}
-
-// CreatePromptContext creates a `PrompContext`.
-func CreatePromptContext(
-	log ILogContext,
-	execCtx IExecContext,
-	tool *Executable) (IPromptContext, error) {
-
-	var terminalWriter io.Writer
-	if log.IsInfoATerminal() {
-		terminalWriter = log.GetInfoWriter()
-	}
-	terminalReader, err := GetCtty()
-
-	p := PromptContext{
-		log: log,
-
-		promptFmt: log.GetPromptFormatter(),
-		termOut:   terminalWriter,
-		termIn:    terminalReader,
-
-		execCtx: execCtx,
-		tool:    tool}
-
-	if terminalReader != nil {
-		runtime.SetFinalizer(&p, func(p *PromptContext) { p.Close() })
-	}
-
-	return &p, err
-}
-
-func getDefaultAnswer(options []string) string {
-	for _, r := range options {
-		if strings.ToLower(r) != r {
-			return r
-		}
-	}
-	return ""
-}
-
-func isAnswerCorrect(answer string, options []string) bool {
-	return strs.Any(options, func(o string) bool {
-		return strings.ToLower(answer) == strings.ToLower(o)
-	})
-}
-
 // ShowPrompt shows a prompt to the user with `text`
 // with the options `shortOptions` and optional long options `longOptions`.
-func (p *PromptContext) ShowPrompt(text string,
+func showPrompt(
+	p *Context,
+	text string,
 	hintText string,
 	shortOptions string,
 	longOptions ...string) (answer string, err error) {
@@ -101,7 +24,7 @@ func (p *PromptContext) ShowPrompt(text string,
 	if p.tool != nil {
 
 		args := append([]string{text, hintText, shortOptions}, longOptions...)
-		answer, err = GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
+		answer, err = cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
 
 		if err == nil {
 			if isAnswerCorrect(answer, options) {
@@ -109,11 +32,11 @@ func (p *PromptContext) ShowPrompt(text string,
 			}
 
 			return defaultAnswer,
-				ErrorF("Dialog tool returned wrong answer '%s' not in '%q'",
+				cm.ErrorF("Dialog tool returned wrong answer '%s' not in '%q'",
 					answer, options)
 		}
 
-		err = CombineErrors(err, ErrorF("Could not execute dialog script '%q'", p.tool))
+		err = cm.CombineErrors(err, cm.ErrorF("Could not execute dialog script '%q'", p.tool))
 		// else: Runnning fallback ...
 	}
 
@@ -129,7 +52,7 @@ func (p *PromptContext) ShowPrompt(text string,
 		return answer, nil
 	}
 
-	err = CombineErrors(err, e)
+	err = cm.CombineErrors(err, e)
 
 	if !isPromptDisplayed {
 		// Show the prompt in the log output
@@ -140,7 +63,7 @@ func (p *PromptContext) ShowPrompt(text string,
 	return defaultAnswer, err
 }
 
-func (p *PromptContext) showPromptTerminal(
+func (p *Context) showPromptTerminal(
 	question string,
 	defaultAnswer string,
 	options []string,
@@ -184,7 +107,7 @@ func (p *PromptContext) showPromptTerminal(
 
 			} else {
 				p.termOut.Write([]byte("\n"))
-				err = ErrorF("Could not read from terminal.")
+				err = cm.ErrorF("Could not read from terminal.")
 				break
 			}
 		}
@@ -193,7 +116,7 @@ func (p *PromptContext) showPromptTerminal(
 		p.termOut.Write([]byte(warning + "\n"))
 
 	} else {
-		err = ErrorF("Do not have a controlling terminal to show prompt.")
+		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")
 	}
 
 	return defaultAnswer, nPrompts != 0, err

@@ -1,15 +1,15 @@
 package main
 
 import (
-	cm "rycus86/githooks/common"
 	hooks "rycus86/githooks/githooks"
+	"rycus86/githooks/prompt"
 )
 
 // UISettings defines user interface settings made by the user over prompts.
 type UISettings struct {
 
 	// A prompt context which enables showing a prompt.
-	PromptCtx cm.IPromptContext
+	PromptCtx prompt.IContext
 
 	// The user accepts all newly/changed hooks as trusted.
 	AcceptAllChanges bool

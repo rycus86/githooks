@@ -58,7 +58,7 @@ type ILogContext interface {
 
 	HasColors() bool
 
-	GetPromptFormatter() func(format string, args ...interface{}) string
+	GetFormatter() func(format string, args ...interface{}) string
 
 	GetInfoWriter() io.Writer
 	IsInfoATerminal() bool
@@ -196,8 +196,8 @@ func (c *LogContext) LogErrorF(format string, args ...interface{}) {
 	c.error.Printf(c.renderError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
 }
 
-// GetPromptFormatter renders a prompt.
-func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
+// GetFormatter renders a prompt.
+func (c *LogContext) GetFormatter() func(format string, args ...interface{}) string {
 
 	fmt := func(format string, args ...interface{}) string {
 		return c.renderPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))

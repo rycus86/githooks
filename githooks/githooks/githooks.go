@@ -78,6 +78,11 @@ func GetInstallDir(gitx *git.Context) string {
 	return filepath.ToSlash(gitx.GetConfig("githooks.installDir", git.GlobalScope))
 }
 
+// GetReleaseCloneDir get the release clone directory inside the install dir.
+func GetReleaseCloneDir(installDir string) string {
+	return path.Join(installDir, "release")
+}
+
 // GetToolScript gets the tool script associated with the name `tool`
 func GetToolScript(name string, installDir string) (*cm.Executable, error) {
 

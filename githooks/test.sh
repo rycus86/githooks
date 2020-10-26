@@ -95,6 +95,7 @@ if [ "$useOld" != "--old" ]; then
     git config --local githooks.runner "$DIR/bin/runner"
 fi
 
+git config --local githooks.testingTreatFileProtocolAsRemote "true"
 git config --local githooks.sharedHooksUpdateTriggers "pre-commit"
 
 echo "Commit..."

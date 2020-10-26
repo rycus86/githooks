@@ -18,9 +18,11 @@ import (
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	hooks "rycus86/githooks/githooks"
+	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/pbenner/threadpool"
@@ -68,6 +70,7 @@ func main() {
 	}
 
 	exportStagedFiles(settings)
+	updateGithooks(settings)
 	executeLFSHooks(settings)
 	executeOldHooks(settings, uiSettings, &ignores, checksums)
 
@@ -118,7 +121,7 @@ func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 	dialogTool, err := hooks.GetToolScript(installDir, "dialog")
 	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool")
 
-	promptCtx, err := cm.CreatePromptContext(log, gitx, dialogTool)
+	promptCtx, err := prompt.CreateContext(log, gitx, dialogTool)
 	log.AssertNoErrorWarnF(err, "Could not get prompt context.")
 
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
@@ -261,6 +264,47 @@ func exportStagedFiles(settings *HookSettings) {
 	}
 }
 
+func updateGithooks(settings *HookSettings) {
+
+	if !shouldRunUpdateCheck(settings) {
+		return
+	}
+
+	// Record update time
+	settings.Git.SetConfig("githooks.autoupdate.enabled",
+		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
+
+	log.LogInfo("Checking for updates ...")
+	status, err := hooks.FetchUpdates(settings.Git, settings.InstallDir)
+
+	log.AssertNoErrorWarn(err, "Could not fetch updates.")
+	if err != nil {
+		return
+	}
+
+	log.LogDebugF("Fetch status: '%q'", status)
+
+}
+
+func shouldRunUpdateCheck(settings *HookSettings) bool {
+	if settings.HookName != "post-commit" {
+		return false
+	}
+
+	enabled := settings.Git.GetConfig("githooks.autoupdate.enabled", git.Traverse)
+	if enabled != "true" && enabled != "Y" {
+		return false
+	}
+
+	timeLastUpdate := settings.Git.GetConfig("githooks.autoupdate.lastrun", git.GlobalScope)
+	if timeLastUpdate == "" {
+		return true
+	}
+	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
+	log.AssertNoErrorWarnF(err, "Could not parse update time")
+	return time.Since(time.Unix(t, 0)).Hours() > 24.0
+}
+
 func executeLFSHooks(settings *HookSettings) {
 
 	if !strs.Includes(hooks.LFSHookNames[:], settings.HookName) {
@@ -374,7 +418,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 			log.LogDebug("Skipping local shared hook: '%s'", hook.OriginalURL)
 			continue
 
-		} else if !hooks.AllowLocalURLInRepoSharedHooks &&
+		} else if !hooks.AllowLocalURLInRepoSharedHooks() &&
 			sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal {
 
 			log.LogWarnF("Shared hooks in '%[1]s/.shared' contain a local path\n"+
@@ -397,7 +441,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 			depth = 1
 		}
 
-		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth)
+		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth, nil)
 		log.AssertNoErrorWarnF(err, "Updating hooks '%s' failed", hook.OriginalURL)
 	}
 }
@@ -482,7 +526,7 @@ func checkSharedHook(
 
 	// Check that no local paths are in repository configured
 	// shared hooks
-	log.FatalIfF(!hooks.AllowLocalURLInRepoSharedHooks &&
+	log.FatalIfF(!hooks.AllowLocalURLInRepoSharedHooks() &&
 		sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal,
 		"Shared hooks in '%[1]s/.shared' contain a local path\n"+
 			"'%[2]s'\n"+
