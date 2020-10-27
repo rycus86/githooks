@@ -25,7 +25,9 @@ ADD examples /var/lib/githooks/examples
 ADD githooks /var/lib/githooks/githooks
 ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 
-# Build Go
+# Build Go and replace the template with the runner
+RUN cd /var/lib/githooks/githooks && ./clean.sh && ./build.sh -tags mock
+RUN cp /var/lib/githooks/githooks/bin/runner /var/lib/githooks/base-template.sh
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
@@ -34,7 +36,8 @@ RUN git config --global user.email "githook@test.com" && \
 RUN sed -i 's|</dev/tty||g' /var/lib/githooks/install.sh && \\
     # Change the base template so we can pass in the hook name and accept flags
     sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-/var/lib/githooks/base-template.sh}"|' /var/lib/githooks/base-template-wrapper.sh && \\
-    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/base-template.sh /var/lib/githooks/install.sh
+    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh /var/lib/githooks/install.sh
+
 # Commit everything
 RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init && \
@@ -52,7 +55,7 @@ RUN git config --global githooks.deleteDetectedLFSHooks "n"
 
 ${ADDITIONAL_INSTALL_STEPS:-}
 
-RUN sh /var/lib/tests/exec-steps.sh
+# RUN sh /var/lib/tests/exec-steps.sh
 EOF
 
 RESULT=$?
