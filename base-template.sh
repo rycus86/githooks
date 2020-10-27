@@ -1154,7 +1154,7 @@ execute_update() {
         return 1
     fi
 
-    sh -s -- --internal-autoupdate --internal-install <"$INSTALL_SCRIPT" || return 1
+    sh -s -- --internal-autoupdate --internal-install <"$INSTALL_SCRIPT" >&2 || return 1
     return 0
 }
 
