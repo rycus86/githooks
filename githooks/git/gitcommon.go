@@ -12,14 +12,14 @@ const (
 )
 
 // IsBareRepo returns `true` if `path` is a bare repository.
-func IsBareRepo(path string) bool {
-	out, _ := CtxC(path).Get("rev-parse", "--is-bare-repository")
+func (c *Context) IsBareRepo() bool {
+	out, _ := c.Get("rev-parse", "--is-bare-repository")
 	return out == "true"
 }
 
 // IsGitRepo returns `true` if `path` is a git repository (bare or non-bare).
-func IsGitRepo(path string) bool {
-	return CtxC(path).Check("rev-parse") == nil
+func (c *Context) IsGitRepo() bool {
+	return c.Check("rev-parse") == nil
 }
 
 // Clone an URL to a path `repoPath`.
@@ -35,7 +35,7 @@ func Clone(repoPath string, url string, branch string, depth int) error {
 	}
 
 	args = append(args, []string{url, repoPath}...)
-	out, e := Ctx().GetCombined(args...)
+	out, e := Ctx().SanitizeEnv().GetCombined(args...)
 
 	if e != nil {
 		return cm.ErrorF("Cloning of '%s'\ninto '%s' failed:\n%s", url, repoPath, out)
@@ -44,48 +44,46 @@ func Clone(repoPath string, url string, branch string, depth int) error {
 }
 
 // Pull executes a pull in `repoPath`.
-func Pull(repoPath string, remote string) error {
-	out, e := CtxC(repoPath).GetCombined("pull", remote)
+func (c *Context) Pull(remote string) error {
+	out, e := c.GetCombined("pull", remote)
 	if e != nil {
-		return cm.ErrorF("Pulling '%s' in '%s' failed:\n%s", remote, repoPath, out)
+		return cm.ErrorF("Pulling '%s' in '%s' failed:\n%s", remote, c.cwd, out)
 	}
 	return nil
 }
 
 // Fetch executes a fetch of a `branch` from the `remote` in `repoPath`.
-func Fetch(repoPath string, remote string, branch string) error {
-	out, e := CtxC(repoPath).GetCombined("fetch", remote, branch)
+func (c *Context) Fetch(remote string, branch string) error {
+	out, e := c.GetCombined("fetch", remote, branch)
 	if e != nil {
-		return cm.ErrorF("Fetching of '%s' from '%s'\nin '%s' failed:\n%s", branch, remote, repoPath, out)
+		return cm.ErrorF("Fetching of '%s' from '%s'\nin '%s' failed:\n%s", branch, remote, c.cwd, out)
 	}
 	return nil
 }
 
 // GetRemoteURLAndBranch reports the `remote`s `url` and
 // the current `branch` of HEAD.
-func GetRemoteURLAndBranch(
-	repoPath string,
-	remote string) (currentURL string, currentBranch string, err error) {
-	gitx := CtxC(repoPath)
-	currentURL = gitx.GetConfig("remote."+remote+".url", LocalScope)
-	currentBranch, err = gitx.Get("symbolic-ref", "-q", "--short", "HEAD")
+func (c *Context) GetRemoteURLAndBranch(remote string) (currentURL string, currentBranch string, err error) {
+	currentURL = c.GetConfig("remote."+remote+".url", LocalScope)
+	currentBranch, err = c.Get("symbolic-ref", "-q", "--short", "HEAD")
 	return
 }
 
 // PullOrClone either executes a pull in `repoPath` or if not
 // existing, clones to this path.
-func PullOrClone(repoPath string, url string, branch string, depth int, repoCheck func(repoPath string) error) (isNewClone bool, err error) {
+func PullOrClone(repoPath string, url string, branch string, depth int, repoCheck func(*Context) error) (isNewClone bool, err error) {
 
-	if IsGitRepo(repoPath) {
+	gitx := CtxC(repoPath)
+	if gitx.IsGitRepo() {
 		isNewClone = false
 
 		if repoCheck != nil {
-			if err = repoCheck(repoPath); err != nil {
+			if err = repoCheck(gitx); err != nil {
 				return
 			}
 		}
 
-		err = Pull(repoPath, "origin")
+		err = gitx.SanitizeEnv().Pull("origin")
 	} else {
 		isNewClone = true
 
@@ -102,18 +100,19 @@ func PullOrClone(repoPath string, url string, branch string, depth int, repoChec
 
 // FetchOrClone either executes a fetch in `repoPath` or if not
 // existing, clones to this path.
-func FetchOrClone(repoPath string, url string, branch string, depth int, repoCheck func(repoPath string) error) (isNewClone bool, err error) {
+func FetchOrClone(repoPath string, url string, branch string, depth int, repoCheck func(*Context) error) (isNewClone bool, err error) {
 
-	if IsGitRepo(repoPath) {
+	gitx := CtxC(repoPath)
+	if gitx.IsGitRepo() {
 		isNewClone = false
 
 		if repoCheck != nil {
-			if err = repoCheck(repoPath); err != nil {
+			if err = repoCheck(gitx); err != nil {
 				return
 			}
 		}
 
-		err = Fetch(repoPath, "origin", branch)
+		err = gitx.SanitizeEnv().Fetch("origin", branch)
 
 	} else {
 		isNewClone = true
@@ -126,4 +125,9 @@ func FetchOrClone(repoPath string, url string, branch string, depth int, repoChe
 	}
 
 	return
+}
+
+// GetSHA1HashFile gets the `git hash-object` SHA1 of a `path`.
+func GetSHA1HashFile(path string) (string, error) {
+	return Ctx().Get("hash-object", path)
 }

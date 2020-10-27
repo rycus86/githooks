@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -59,8 +60,19 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 }
 
 // IsGithooksDisabled checks if Githooks is disabled in
-// any config starting from the working dir given by the git context.
-func IsGithooksDisabled(gitx *git.Context) bool {
+// any config starting from the working dir given by the git context or
+// optional also by the env. variable `GITHOOKS_DISABLE`.
+func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
+
+	if checkEnv {
+		env := os.Getenv("GITHOOKS_DISABLE")
+		if env != "" &&
+			env != "0" &&
+			env != "false" && env != "off" {
+			return true
+		}
+	}
+
 	disabled := gitx.GetConfig("githooks.disable", git.Traverse)
 	return disabled == "true" ||
 		disabled == "y" || // Legacy
@@ -74,8 +86,8 @@ func IsLFSAvailable() bool {
 }
 
 // GetInstallDir returns the Githooks install directory.
-func GetInstallDir(gitx *git.Context) string {
-	return filepath.ToSlash(gitx.GetConfig("githooks.installDir", git.GlobalScope))
+func GetInstallDir() string {
+	return filepath.ToSlash(git.Ctx().GetConfig("githooks.installDir", git.GlobalScope))
 }
 
 // GetReleaseCloneDir get the release clone directory inside the install dir.
@@ -84,10 +96,9 @@ func GetReleaseCloneDir(installDir string) string {
 }
 
 // GetToolScript gets the tool script associated with the name `tool`
-func GetToolScript(name string, installDir string) (*cm.Executable, error) {
+func GetToolScript(installDir string, name string) (cm.IExecutable, error) {
 
 	tool := path.Join(installDir, "tools", name, "run")
-
 	exists, err := cm.IsPathExisting(tool)
 	if !exists {
 		return nil, nil

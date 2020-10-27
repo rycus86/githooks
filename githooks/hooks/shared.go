@@ -33,7 +33,10 @@ func GetRepoSharedFile(repoHooksDir string) string {
 var SharedConfigName string = "githooks.shared"
 
 func getSharedCloneDir(installDir string, entry string) string {
-	sha1 := cm.GetSHA1HashString(entry)
+	// Legacy: As we used `git hash-object --stdin` we need to model the same behavior here
+	// @todo Remove `blob`+ length + \0...
+	sha1 := cm.GetSHA1HashString("blob ", strs.Fmt("%v", len([]byte(entry))), "\u0000", entry)
+
 	name := []rune(entry)
 	if len(entry) > 48 {
 		name = name[0:48]
@@ -95,7 +98,7 @@ func parseSharedEntry(installDir string, entry string) (SharedHook, error) {
 
 		h.IsLocal = true
 
-		if git.IsBareRepo(entry) {
+		if git.CtxC(entry).IsBareRepo() {
 			doSplit = false
 		} else {
 			// We have a local path to a non-bare repo

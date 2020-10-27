@@ -12,7 +12,8 @@ mkdir -p /tmp/test9/.githooks/pre-commit &&
     echo 'echo "In-repo" >> /tmp/test-009.out' >.githooks/pre-commit/test &&
     git init &&
     mkdir -p .git/hooks &&
-    echo 'echo "Previous" >> /tmp/test-009.out' >.git/hooks/pre-commit &&
+    echo '#!/bin/sh' >>.git/hooks/pre-commit &&
+    echo 'echo "Previous" >> /tmp/test-009.out' >>.git/hooks/pre-commit &&
     chmod +x .git/hooks/pre-commit ||
     exit 1
 
@@ -21,7 +22,7 @@ y
 /tmp/test9
 ' | sh /var/lib/githooks/install.sh || exit 1
 
-git commit -m '' 2>/dev/null
+git commit -m ''
 
 if ! grep 'Previous' /tmp/test-009.out; then
     echo '! Saved hook was not run'

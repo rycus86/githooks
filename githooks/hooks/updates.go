@@ -23,12 +23,12 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 	currentURL := gitx.GetConfig("githooks.cloneUrl", git.GlobalScope)
 	currentBranch := gitx.GetConfig("githooks.cloneBranch", git.GlobalScope)
 
-	check := func(path string) error {
-		u, b, err := git.GetRemoteURLAndBranch(path, "origin")
+	check := func(gitx *git.Context) error {
+		u, b, err := gitx.GetRemoteURLAndBranch("origin")
 
 		if err != nil {
 
-			return cm.CombineErrors(cm.ErrorF("Could not check url & branch in repository at '%s'", path), err)
+			return cm.CombineErrors(cm.ErrorF("Could not check url & branch in repository at '%s'", gitx.GetWorkingDir()), err)
 
 		} else if u != currentURL || b != currentBranch {
 			return cm.ErrorF("Cannot fetch updates because 'origin' of clone\n"+
@@ -41,7 +41,7 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 				"    'git hooks config [set|print] clone-branch'\n"+
 				"Either fix this or delete the clone\n"+
 				"'%[1]s'\n"+
-				"to trigger a new checkout.", path, u, b)
+				"to trigger a new checkout.", gitx.GetWorkingDir(), u, b)
 		}
 		return nil
 	}
@@ -65,7 +65,7 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 		return
 	}
 
-	gitxClone := git.CtxC(cloneDir)
+	gitxClone := git.CtxCSanitized(cloneDir)
 	remoteBranch := "origin/" + cloneBranch
 
 	localSHA, e := gitxClone.Get("rev-parse", cloneBranch)

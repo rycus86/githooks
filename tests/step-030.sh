@@ -8,8 +8,7 @@ git init || exit 1
 
 git config --global githooks.autoupdate.enabled false || exit 1
 
-HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh ~/.githooks/release/base-template-wrapper.sh
+ACCEPT_CHANGES=A ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit
 
 # shellcheck disable=SC2181
 if cd ~/.githooks/release && git rev-parse HEAD; then

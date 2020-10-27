@@ -9,9 +9,8 @@ git init || exit 1
 mkdir -p .githooks/pre-commit &&
     touch .githooks/trust-all &&
     echo 'echo "Trusted hook" > /tmp/test34.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS=Y ACCEPT_CHANGES=N \
-        sh ~/.githooks/release/base-template-wrapper.sh
+        ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Trusted hook" /tmp/test34.out; then
     echo "! Expected hook was not run"
@@ -19,9 +18,8 @@ if ! grep -q "Trusted hook" /tmp/test34.out; then
 fi
 
 echo 'echo "Changed hook" > /tmp/test34.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS="" ACCEPT_CHANGES=N \
-        sh ~/.githooks/release/base-template-wrapper.sh
+        ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Changed hook" /tmp/test34.out; then
     echo "! Changed hook was not run"

@@ -34,15 +34,13 @@ func IsRepoTrusted(
 			var answer string
 			answer, err = promptCtx.ShowPrompt(question, "(yes, No)", "y/N", "Yes", "No")
 
-			if err == nil {
-				if answer == "y" || answer == "Y" {
-					err = gitx.SetConfig("githooks.trust.all", true, git.LocalScope)
-					if err == nil {
-						isTrusted = true
-					}
-				} else {
-					err = gitx.SetConfig("githooks.trust.all", false, git.LocalScope)
+			if err == nil && answer == "y" || answer == "Y" {
+				err = gitx.SetConfig("githooks.trust.all", true, git.LocalScope)
+				if err == nil {
+					isTrusted = true
 				}
+			} else {
+				err = gitx.SetConfig("githooks.trust.all", false, git.LocalScope)
 			}
 
 		} else if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {
@@ -157,7 +155,7 @@ func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
 // IsTrusted checks if a path has been trusted.
 func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 
-	sha1, err := cm.GetSHA1HashFile(filePath)
+	sha1, err := git.GetSHA1HashFile(filePath)
 	if err != nil {
 		return false, sha1,
 			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", filePath), err)

@@ -16,7 +16,9 @@ checkTab() {
 }
 
 for FILE in $STAGED_FILES; do
-    checkTab "$FILE"
+    if echo "$FILE" | grep -qvE "\.go$"; then
+        checkTab "$FILE"
+    fi
 done
 
 if [ "$SUCCESS" = "0" ]; then

@@ -1,7 +1,7 @@
 package common
 
 // IExecutable defines the interface for a general executable.
-type IExecutbale interface {
+type IExecutable interface {
 	GetCommand() string
 	GetArgs(args ...string) []string
 }

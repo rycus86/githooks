@@ -21,6 +21,7 @@ const (
 // Context defines the context to execute it commands
 type Context struct {
 	cwd string
+	env []string
 }
 
 // GetWorkingDir gets the current working dir of the context
@@ -34,9 +35,20 @@ func CtxC(cwd string) *Context {
 	return &Context{cwd: cwd}
 }
 
+// CtxCSanitized creates a git command execution context with current working dir and sanitized environement.
+func CtxCSanitized(cwd string) *Context {
+	return (&Context{cwd: cwd}).SanitizeEnv()
+}
+
 // Ctx creates a git command execution context with current working dir.
 func Ctx() *Context {
 	return &Context{}
+}
+
+// SanitizeEnv sanitizes the execution environment.
+func (c *Context) SanitizeEnv() *Context {
+	c.env = sanitizeEnv(os.Environ())
+	return c
 }
 
 // GetConfig gets a Git configuration values.
@@ -54,8 +66,8 @@ func (c *Context) GetConfig(key string, scope ConfigScope) string {
 	return ""
 }
 
-// GetConfigWithArgs gets a Git configuration values.
-func (c *Context) GetConfigWithArgs(key string, scope ConfigScope, args ...string) string {
+// getConfigWithArgs gets a Git configuration values.
+func (c *Context) getConfigWithArgs(key string, scope ConfigScope, args ...string) string {
 	var out string
 	var err error
 	if scope != Traverse {
@@ -71,12 +83,12 @@ func (c *Context) GetConfigWithArgs(key string, scope ConfigScope, args ...strin
 
 // GetConfigAll gets a all Git configuration values.
 func (c *Context) GetConfigAll(key string, scope ConfigScope, args ...string) []string {
-	return strs.SplitLines(c.GetConfigWithArgs(key, scope, "--get-all"))
+	return strs.SplitLines(c.getConfigWithArgs(key, scope, "--get-all"))
 }
 
 // GetConfigAllU gets a all Git configuration values unsplitted.
 func (c *Context) GetConfigAllU(key string, scope ConfigScope, args ...string) string {
-	return c.GetConfigWithArgs(key, scope, "--get-all")
+	return c.getConfigWithArgs(key, scope, "--get-all")
 }
 
 // SetConfig sets a Git configuration values.
@@ -85,9 +97,8 @@ func (c *Context) SetConfig(key string, value interface{}, scope ConfigScope) er
 
 	if scope != Traverse {
 		return c.Check("config", string(scope), key, v)
-	} else {
-		return c.Check("config", key, v)
 	}
+	return c.Check("config", key, v)
 }
 
 // IsConfigSet tells if a git config is set.
@@ -111,6 +122,7 @@ func (c *Context) GetSplit(args ...string) ([]string, error) {
 func (c *Context) Get(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
+	cmd.Env = c.env
 	stdout, err := cmd.Output()
 	return strings.TrimSpace(string(stdout)), err
 }
@@ -119,6 +131,7 @@ func (c *Context) Get(args ...string) (string, error) {
 func (c *Context) GetCombined(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
+	cmd.Env = c.env
 	stdout, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(stdout)), err
 }
@@ -127,6 +140,7 @@ func (c *Context) GetCombined(args ...string) (string, error) {
 func (c *Context) Check(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = c.cwd
+	cmd.Env = c.env
 	return cmd.Run()
 }
 
@@ -137,5 +151,12 @@ func (c *Context) CheckPiped(args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = c.cwd
+	cmd.Env = c.env
 	return cmd.Run()
+}
+
+func sanitizeEnv(env []string) []string {
+	return strs.Filter(env, func(s string) bool {
+		return !strings.Contains(s, "GIT_DIR") && !strings.Contains(s, "GIT_WORK_TREE")
+	})
 }

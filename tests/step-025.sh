@@ -8,18 +8,17 @@ git init || exit 1
 
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
-    echo 'echo "Direct execution" >> /tmp/test025.out' >.githooks/pre-commit/test &&
-    echo 'exit 1' >.git/hooks/pre-commit.replaced.githook &&
+    echo 'echo "Direct execution" >> /tmp/test025.out' >>.githooks/pre-commit/test &&
+    echo "#!/bin/sh" >.git/hooks/pre-commit.replaced.githook &&
+    echo 'exit 1' >>.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
     exit 1
 fi
 
-echo '*.replaced.githook' >.githooks/.ignore &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh ||
+printf 'patterns:\n   - "*.replaced.githook"' >.git/.githooks.ignore.yaml &&
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

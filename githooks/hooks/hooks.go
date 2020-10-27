@@ -114,6 +114,11 @@ func ExecuteHooksParallel(
 	return res
 }
 
+// GetHooksCount gets the number of all hooks.
+func (h *Hooks) GetHooksCount() int {
+	return len(h.LocalHooks) + len(h.RepoSharedHooks) + len(h.LocalSharedHooks) + len(h.GlobalSharedHooks)
+}
+
 // AllHooksSuccessful returns `true`
 func AllHooksSuccessful(results []HookResult) bool {
 	for _, h := range results {

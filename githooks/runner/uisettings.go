@@ -1,7 +1,7 @@
 package main
 
 import (
-	hooks "rycus86/githooks/githooks"
+	hooks "rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 )
 

@@ -54,10 +54,10 @@ func showPrompt(
 
 	if !isPromptDisplayed {
 		// Show the prompt in the log output
-		p.log.LogInfo(question)
+		p.log.Info(question)
 	}
 
-	p.log.LogDebugF("Answer not received -> Using default '%s'", defaultAnswer)
+	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
 	return defaultAnswer, err
 }
 

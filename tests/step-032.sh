@@ -9,8 +9,8 @@ git init || exit 1
 git config --global githooks.autoupdate.enabled true || exit 1
 
 OUTPUT=$(
-    HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
+        ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then

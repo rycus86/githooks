@@ -33,7 +33,7 @@ type Context struct {
 
 	// Prompt over the tool script if existing.
 	execCtx cm.IExecContext
-	tool    *cm.Executable
+	tool    cm.IExecutable
 }
 
 // Close closes the prompt context
@@ -48,7 +48,7 @@ func (p *Context) Close() {
 func CreateContext(
 	log cm.ILogContext,
 	execCtx cm.IExecContext,
-	tool *cm.Executable) (IContext, error) {
+	tool cm.IExecutable) (IContext, error) {
 
 	var terminalWriter io.Writer
 	if log.IsInfoATerminal() {

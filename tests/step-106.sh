@@ -55,8 +55,7 @@ if ! grep -q 'post-commit' lfs.out || [ -f hook.out ]; then
 fi
 
 # an extra invocation for coverage
-HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh ~/.githooks/release/base-template-wrapper.sh unused ||
+~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused ||
     exit 12
 
 if ! grep -q 'post-merge' lfs.out; then

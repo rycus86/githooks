@@ -60,8 +60,7 @@ fi
 echo "file://///tmp/shared/shared-cloned.git" >.githooks/.shared || exit 1
 
 # Invoke shared hooks update
-OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
+OUT=$(~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused 2>&1)
 # shellcheck disable=SC2181
 if echo "$OUT" | grep -q "Shared hook: test1" ||
     ! echo "$OUT" | grep -q "Update will be skipped" ||

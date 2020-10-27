@@ -8,10 +8,10 @@ git init || exit 1
 
 mkdir -p .githooks/pre-commit &&
     echo 'echo "Direct execution" >> /tmp/test017.out' >.githooks/pre-commit/test &&
-    echo 'echo "Previous hook" >> /tmp/test017.out' >.git/hooks/pre-commit.replaced.githook &&
+    echo '#!/bin/sh' >.git/hooks/pre-commit.replaced.githook &&
+    echo 'echo "Previous hook" >> /tmp/test017.out' >>.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh ||
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 if ! grep -q 'Direct execution' /tmp/test017.out; then

@@ -18,8 +18,8 @@ EOF
 
 git add sample.txt second.txt
 
-HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh ~/.githooks/release/base-template-wrapper.sh
+ACCEPT_CHANGES=A \
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep 'staged: sample.txt' /tmp/test095.out; then
     echo "! Failed to find expected output (1)"

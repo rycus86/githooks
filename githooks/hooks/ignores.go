@@ -46,7 +46,9 @@ func (h *HookIgnorePatterns) IsIgnored(hookPath string) bool {
 	for _, p := range h.Patterns {
 		matched, err := filepath.Match(p, hookPath)
 		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
-		return err == nil && matched
+		if err == nil && matched {
+			return true
+		}
 	}
 
 	return strs.Includes(h.HookNames, hookPath)
@@ -106,9 +108,14 @@ func GetHookIgnorePatternsGitDir(gitDir string) (HookIgnorePatterns, error) {
 // @todo This needs to be deleted once the test work.
 func GetHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
 
-	data, err := ioutil.ReadFile(path.Join(gitDir, ".githooks.checksum"))
-	if err == nil {
-		var p HookIgnorePatterns
+	file := path.Join(gitDir, ".githooks.checksum")
+	var p HookIgnorePatterns
+
+	if cm.IsFile(file) {
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			return p, err
+		}
 
 		s := strs.SplitLines(string(data))
 
@@ -119,10 +126,9 @@ func GetHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
 				p.HookNames = append(p.HookNames, path.Base(strings.TrimSpace(hookPath)))
 			}
 		}
-
-		return p, nil
 	}
-	return HookIgnorePatterns{}, err
+
+	return p, nil
 }
 
 // LoadIgnorePatterns loads patterns.
@@ -177,9 +183,11 @@ func loadIgnorePatternsLegacyFile(file string) (p HookIgnorePatterns, err error)
 		err = cm.CombineErrors(err, e)
 
 		for _, s := range strs.SplitLines(string(data)) {
-			if s != "" || !strings.HasPrefix(s, "#") {
-				p.Patterns = append(p.Patterns, s)
+			if s == "" || strings.HasPrefix(s, "#") {
+				continue
 			}
+
+			p.Patterns = append(p.Patterns, s)
 		}
 	}
 	return

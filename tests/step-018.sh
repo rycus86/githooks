@@ -21,8 +21,7 @@ mkdir -p .githooks &&
     ~/.githooks/release/cli.sh shared update ||
     exit 1
 
-HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh ~/.githooks/release/base-template-wrapper.sh
+~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected to fail on shared hook execution"

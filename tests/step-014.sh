@@ -8,14 +8,12 @@ git init || exit 1
 
 mkdir -p .githooks/pre-commit &&
     echo 'exit 1' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
     exit 1
 fi
 
-GITHOOKS_DISABLE=1 HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-    sh ~/.githooks/release/base-template-wrapper.sh ||
+GITHOOKS_DISABLE=1 ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

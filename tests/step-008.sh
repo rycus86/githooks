@@ -2,9 +2,10 @@
 # Test:
 #   Run an install that preserves an existing hook in the templates directory
 
-echo 'echo "Previous" >> /tmp/test-008.out' \
-    >/usr/share/git-core/templates/hooks/pre-commit &&
-    chmod +x /usr/share/git-core/templates/hooks/pre-commit ||
+cd /usr/share/git-core/templates/hooks &&
+    echo '#!/bin/sh' >>pre-commit &&
+    echo 'echo "Previous" >> /tmp/test-008.out' >>pre-commit &&
+    chmod +x pre-commit ||
     exit 1
 
 sh /var/lib/githooks/install.sh || exit 1
@@ -15,7 +16,7 @@ mkdir -p /tmp/test8/.githooks/pre-commit &&
     git init ||
     exit 1
 
-git commit -m '' 2>/dev/null
+git commit -m ''
 
 if ! grep 'Previous' /tmp/test-008.out; then
     echo '! Saved hook was not run'

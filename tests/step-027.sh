@@ -9,8 +9,7 @@ git init || exit 1
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
     echo 'echo "First execution" >> /tmp/test027.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=D \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=D ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if grep -q "First execution" /tmp/test027.out; then
     echo "! Expected to refuse executing the hook the first time"
@@ -23,8 +22,7 @@ if ! grep -q "disabled> $(pwd)/.githooks/pre-commit/test" .git/.githooks.checksu
 fi
 
 echo 'echo "Second execution" >> /tmp/test027.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=Y \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=Y ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if grep -q "Second execution" /tmp/test027.out; then
     echo "! Expected to refuse executing the hook the second time"

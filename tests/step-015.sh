@@ -11,12 +11,11 @@ mkdir -p .githooks/pre-commit &&
     echo 'exit 1' >.githooks/pre-commit/test.second &&
     echo 'echo "Third was run" >> /tmp/test015.out' >.githooks/pre-commit/test.third &&
     echo '#!/bin/sh' >.githooks/pre-commit/test.fourth &&
-    echo 'echo "Fourth was run" >> /tmp/test015.out ' >.githooks/pre-commit/test.fourth &&
+    echo 'echo "Fourth was run" >> /tmp/test015.out ' >>.githooks/pre-commit/test.fourth &&
     chmod +x .githooks/pre-commit/test.fourth &&
     echo '*.first' >.githooks/.ignore &&
     echo '*.second' >.githooks/pre-commit/.ignore &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh ||
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 grep -q 'Third was run' /tmp/test015.out &&

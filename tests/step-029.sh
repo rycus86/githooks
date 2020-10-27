@@ -14,8 +14,7 @@ git init || exit 1
 
 git config --global githooks.autoupdate.enabled true || exit 1
 
-HOOK_NAME=post-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-    sh ~/.githooks/release/base-template-wrapper.sh
+ACCEPT_CHANGES=A ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then
     echo "! Release clone was not updated, but it should have!"

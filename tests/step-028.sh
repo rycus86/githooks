@@ -9,8 +9,7 @@ git init || exit 1
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
     echo 'echo "First execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=A \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=A ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "First execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the first time"
@@ -24,8 +23,7 @@ if [ "$NUMBER_OF_CHECKSUMS" != "1" ]; then
 fi
 
 echo 'echo "Second execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=Y \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=Y ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Second execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the second time"

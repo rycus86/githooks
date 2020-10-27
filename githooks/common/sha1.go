@@ -27,8 +27,10 @@ func GetSHA1HashFile(path string) (string, error) {
 }
 
 // GetSHA1HashString gets the SHA1 hash of a string.
-func GetSHA1HashString(s string) string {
+func GetSHA1HashString(strs ...string) string {
 	h := sha1.New()
-	h.Write([]byte(s))
+	for _, s := range strs {
+		h.Write([]byte(s))
+	}
 	return hex.EncodeToString(h.Sum(nil))
 }

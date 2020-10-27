@@ -9,8 +9,7 @@ git init || exit 1
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
     echo 'echo "First execution" >> /tmp/test026.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks ACCEPT_CHANGES=N \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ACCEPT_CHANGES=N ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if grep -q "First execution" /tmp/test026.out; then
     echo "! Expected to refuse executing the hook"

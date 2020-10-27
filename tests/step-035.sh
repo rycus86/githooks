@@ -9,9 +9,8 @@ git init || exit 1
 mkdir -p .githooks/pre-commit &&
     touch .githooks/trust-all &&
     echo 'echo "Accepted hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS=N ACCEPT_CHANGES=Y \
-        sh ~/.githooks/release/base-template-wrapper.sh
+        ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Accepted hook" /tmp/test35.out; then
     echo "! Expected hook was not run"
@@ -19,16 +18,15 @@ if ! grep -q "Accepted hook" /tmp/test35.out; then
 fi
 
 echo 'echo "Changed hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
     TRUST_ALL_HOOKS="" ACCEPT_CHANGES=N \
-        sh ~/.githooks/release/base-template-wrapper.sh
+        ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if grep -q "Changed hook" /tmp/test35.out; then
     echo "! Changed hook was unexpectedly run"
     exit 1
 fi
 
-if ! CFG=$(git config --get githooks.trust.all) || [ "$CFG" != "N" ]; then
+if ! CFG=$(git config --get githooks.trust.all) || [ "$CFG" != "false" ]; then
     echo "! Unexpected config found"
     exit 1
 fi

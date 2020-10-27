@@ -15,7 +15,7 @@ type IExecContext interface {
 // GetOutputFromExecutable calls an executable and returns its stdout output.
 func GetOutputFromExecutable(
 	ctx IExecContext,
-	exe IExecutbale,
+	exe IExecutable,
 	pipeStdIn bool,
 	args ...string) ([]byte, error) {
 
@@ -32,7 +32,7 @@ func GetOutputFromExecutable(
 // GetCombinedOutputFromExecutable calls an executable and returns its stdout and stderr output.
 func GetCombinedOutputFromExecutable(
 	ctx IExecContext,
-	exe IExecutbale,
+	exe IExecutable,
 	pipeStdIn bool,
 	args ...string) ([]byte, error) {
 
@@ -48,7 +48,7 @@ func GetCombinedOutputFromExecutable(
 
 // GetOutputFromExecutableTrimmed calls an executable and returns its trimmed stdout output.
 func GetOutputFromExecutableTrimmed(ctx IExecContext,
-	exe IExecutbale,
+	exe IExecutable,
 	pipeStdin bool,
 	args ...string) (string, error) {
 	data, err := GetOutputFromExecutable(ctx, exe, pipeStdin, args...)
@@ -58,7 +58,7 @@ func GetOutputFromExecutableTrimmed(ctx IExecContext,
 // GetOutputFromExecutableSep calls an executable and gets stdout and stderr seperate.
 func GetOutputFromExecutableSep(
 	ctx IExecContext,
-	exe IExecutbale,
+	exe IExecutable,
 	pipeIn bool,
 	args ...string) ([]byte, []byte, error) {
 
@@ -82,7 +82,7 @@ func GetOutputFromExecutableSep(
 // RunExecutable calls an executable.
 func RunExecutable(
 	ctx IExecContext,
-	exe IExecutbale,
+	exe IExecutable,
 	pipeAll bool,
 	args ...string) error {
 

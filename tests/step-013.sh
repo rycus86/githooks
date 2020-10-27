@@ -8,8 +8,7 @@ git init || exit 1
 
 mkdir -p .githooks &&
     echo 'exit 1' >.githooks/pre-commit &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -19,8 +18,7 @@ fi
 rm .githooks/pre-commit &&
     mkdir .githooks/pre-commit &&
     echo 'exit 1' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -28,6 +26,5 @@ if [ $? -ne 1 ]; then
 fi
 
 echo 'exit 0' >.githooks/pre-commit/test &&
-    HOOK_NAME=pre-commit HOOK_FOLDER=$(pwd)/.git/hooks \
-        sh ~/.githooks/release/base-template-wrapper.sh ||
+    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

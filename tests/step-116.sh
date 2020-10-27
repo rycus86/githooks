@@ -7,7 +7,9 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
-if [ -f ~/.githooks/registered ]; then
+REGISTER_FILE=~/.githooks/registered
+
+if [ -f "$REGISTER_FILE" ]; then
     echo "Expected the file to not exist"
     exit 1
 fi
@@ -20,7 +22,7 @@ mkdir -p /tmp/test116.1 && cd /tmp/test116.1 &&
 
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo "Using core.hooksPath"
-    if [ -f ~/.githooks/registered ]; then
+    if [ -f "$REGISTER_FILE" ]; then
         echo "Expected the file to not exist"
         exit 1
     fi
@@ -28,14 +30,14 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 0
 fi
 
-if [ ! -f ~/.githooks/registered ]; then
+if [ ! -f "$REGISTER_FILE" ]; then
     echo "Expected the file to be created"
     exit 1
 fi
 
-if [ "$(cat ~/.githooks/registered)" = "/tmp/test116/.git" ]; then
+if [ "$(cat "$REGISTER_FILE")" != "/tmp/test116.1/.git" ]; then
     echo "Expected correct content:"
-    cat ~/.githooks/registered
+    cat "$REGISTER_FILE"
     exit 2
 fi
 
@@ -46,10 +48,10 @@ mkdir -p /tmp/test116.2 && cd /tmp/test116.2 &&
     git commit --allow-empty -m 'Initial commit' ||
     exit 1
 
-if ! grep -q /tmp/test116.1/.git ~/.githooks/registered ||
-    ! grep -q /tmp/test116.2/.git ~/.githooks/registered; then
+if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
+    ! grep -q /tmp/test116.2/.git "$REGISTER_FILE"; then
     echo "! Expected correct content"
-    cat ~/.githooks/registered
+    cat "$REGISTER_FILE"
     exit 3
 fi
 
@@ -60,11 +62,11 @@ echo 'Y
 /tmp
 ' | sh /var/lib/githooks/install.sh || exit 1
 
-if ! grep -q /tmp/test116.1/.git ~/.githooks/registered ||
-    ! grep -q /tmp/test116.2/.git ~/.githooks/registered ||
-    ! grep -q /tmp/test116.3/.git ~/.githooks/registered; then
+if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
+    ! grep -q /tmp/test116.2/.git "$REGISTER_FILE" ||
+    ! grep -q /tmp/test116.3/.git "$REGISTER_FILE"; then
     echo "! Expected all repos to be registered"
-    cat ~/.githooks/registered
+    cat "$REGISTER_FILE"
     exit 4
 fi
 
@@ -74,11 +76,11 @@ echo 'Y
 n
 ' | sh /var/lib/githooks/uninstall.sh || exit 1
 
-if grep -q /tmp/test116.1 ~/.githooks/registered ||
-    (! grep -q /tmp/test116.2 ~/.githooks/registered &&
-        ! grep -q /tmp/test116.3 ~/.githooks/registered); then
+if grep -q /tmp/test116.1 "$REGISTER_FILE" ||
+    (! grep -q /tmp/test116.2 "$REGISTER_FILE" &&
+        ! grep -q /tmp/test116.3 "$REGISTER_FILE"); then
     echo "! Expected repo 2 and 3 to still be registered"
-    cat ~/.githooks/registered
+    cat "$REGISTER_FILE"
     exit 5
 fi
 
@@ -87,7 +89,7 @@ echo 'Y
 /tmp
 ' | sh /var/lib/githooks/uninstall.sh || exit 1
 
-if [ -f ~/.githooks/registered ]; then
+if [ -f "$REGISTER_FILE" ]; then
     echo "! Expected registered list to not exist"
     exit 1
 fi

@@ -17,7 +17,7 @@ import (
 	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
-	hooks "rycus86/githooks/githooks"
+	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strconv"
@@ -39,7 +39,7 @@ func main() {
 
 	defer func() { os.Exit(exitCode) }()
 	defer func() {
-		log.LogDebugF("Runner execution time: '%v'.",
+		log.DebugF("Runner execution time: '%v'.",
 			cm.GetDuration(startTime))
 	}()
 
@@ -63,7 +63,7 @@ func main() {
 	checksums := getLocalChecksumStore(settings)
 	ignores := getIgnorePatterns(settings)
 
-	if hooks.IsGithooksDisabled(settings.Git) {
+	if hooks.IsGithooksDisabled(settings.Git, true) {
 		executeLFSHooks(settings)
 		executeOldHooks(settings, uiSettings, &ignores, checksums)
 		return
@@ -86,7 +86,7 @@ func main() {
 	executeHooks(settings, &hooks)
 
 	uiSettings.PromptCtx.Close()
-	log.LogDebug("All done.\n")
+	log.Debug("All done.\n")
 }
 
 func createLog() {
@@ -113,16 +113,16 @@ func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 		os.Args[1])
 	hookPath = filepath.ToSlash(hookPath)
 
-	exists, _ := cm.IsPathExisting(hookPath)
-	cm.DebugAssert(exists, "Hook path does not exist")
-
-	installDir := getInstallDir(gitx)
+	installDir := getInstallDir()
 
 	dialogTool, err := hooks.GetToolScript(installDir, "dialog")
-	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool")
+	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool.")
+	if dialogTool != nil {
+		log.DebugF("Use dialog tool '%s'", dialogTool.GetCommand())
+	}
 
 	promptCtx, err := prompt.CreateContext(log, gitx, dialogTool)
-	log.AssertNoErrorWarnF(err, "Could not get prompt context.")
+	log.AssertNoErrorWarnF(err, "Prompt setup failed -> using fallback.")
 
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
 	log.AssertNoErrorWarn(err, "Could not get trust settings.")
@@ -145,7 +145,7 @@ func setMainVariables(repoPath string) (*HookSettings, *UISettings) {
 
 		FailOnNonExistingSharedHooks: failOnNonExistingHooks}
 
-	log.LogDebugF(s.toString())
+	log.DebugF(s.toString())
 
 	return &s, &UISettings{AcceptAllChanges: false, PromptCtx: promptCtx}
 }
@@ -158,11 +158,11 @@ func getIgnorePatterns(settings *HookSettings) (patt hooks.RepoIgnorePatterns) {
 		settings.RepositoryPath,
 		settings.HookName)
 	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
-	log.LogDebugF("Worktree ignore patterns: '%q'.", patt.Worktree.Patterns)
+	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree.Patterns)
 
 	patt.User, err = hooks.GetHookIgnorePatternsGitDir(settings.GitDir)
 	log.AssertNoErrorWarn(err, "Could not get user ignore patterns.")
-	log.LogDebugF("User ignore patterns: '%v'.", patt.User.Patterns)
+	log.DebugF("User ignore patterns: '%v'.", patt.User.Patterns)
 
 	// Legacy
 	// @todo Remove
@@ -179,13 +179,13 @@ func getLocalChecksumStore(settings *HookSettings) *hooks.ChecksumStore {
 	store, err := hooks.NewChecksumStore(localChecksums, false)
 
 	log.AssertNoErrorWarnF(err, "Could not init checksum store in '%s'.", localChecksums)
-	log.LogDebugF("%s", store.Summary())
+	log.DebugF("%s", store.Summary())
 
 	return &store
 }
 
-func getInstallDir(git *git.Context) string {
-	installDir := hooks.GetInstallDir(git)
+func getInstallDir() string {
+	installDir := hooks.GetInstallDir()
 
 	setDefault := func() {
 		usr, err := homedir.Dir()
@@ -200,20 +200,20 @@ func getInstallDir(git *git.Context) string {
 
 		log.AssertNoErrorWarn(err,
 			"Could not check path '%s'", installDir)
-		log.LogWarnF(
+		log.WarnF(
 			"Githooks installation is corrupt!\n"+
 				"Install directory at '%s' is missing.",
 			installDir)
 
 		setDefault()
 
-		log.LogWarnF(
+		log.WarnF(
 			"Falling back to default directory at '%s'.\n"+
 				"Please run the Githooks install script again to fix it.",
 			installDir)
 	}
 
-	log.LogDebug(strs.Fmt("Install dir set to: '%s'.", installDir))
+	log.Debug(strs.Fmt("Install dir set to: '%s'.", installDir))
 	return installDir
 }
 
@@ -222,17 +222,16 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 	if !gitx.IsConfigSet("githooks.registered", git.LocalScope) &&
 		!gitx.IsConfigSet("core.hooksPath", git.Traverse) {
 
-		log.LogDebugF("Register repo '%s'", gitDir)
+		log.DebugF("Register repo '%s'", gitDir)
 
 		err := hooks.RegisterRepo(gitDir, installDir, true)
-		if err != nil {
-			log.LogWarn("Could not register repo '%s'.", gitDir)
-		} else {
+		log.AssertNoErrorWarnF(err, "Could not register repo '%s'.", gitDir)
+		if err == nil {
 			gitx.SetConfig("githooks.registered", "true", git.LocalScope)
 		}
 
 	} else {
-		log.LogDebug(
+		log.Debug(
 			"Repository already registered or using 'core.hooksPath'.")
 	}
 }
@@ -243,12 +242,12 @@ func exportStagedFiles(settings *HookSettings) {
 		files, err := hooks.GetStagedFiles(settings.Git)
 
 		if len(files) != 0 {
-			log.LogDebugF("Exporting staged files:\n- %s",
+			log.DebugF("Exporting staged files:\n- %s",
 				strings.ReplaceAll(files, "\n", "\n- "))
 		}
 
 		if err != nil {
-			log.LogWarn("Could not export staged files.")
+			log.Warn("Could not export staged files.")
 		} else {
 
 			cm.DebugAssertF(
@@ -270,11 +269,11 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		return
 	}
 
-	log.LogInfo("Record update check time ...")
+	log.Info("Record update check time ...")
 	settings.Git.SetConfig("githooks.autoupdate.lastrun",
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
-	log.LogInfo("Checking for updates ...")
+	log.Info("Checking for updates ...")
 	status, err := hooks.FetchUpdates(settings.Git, settings.InstallDir)
 
 	log.AssertNoErrorWarn(err, "Could not fetch updates.")
@@ -282,13 +281,13 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		return
 	}
 
-	log.LogDebugF("Fetch status: '%q'", status)
+	log.DebugF("Fetch status: '%v'", status)
 	if shouldRunUpdate(uiSettings, status) {
 
 		runUpdate(settings, status)
 
 	} else {
-		log.LogInfo(
+		log.Info(
 			"If you would like to disable auto-updates, run:",
 			"  $ git hooks update disable")
 	}
@@ -332,7 +331,7 @@ func shouldRunUpdate(uiSettings *UISettings, status hooks.FetchStatus) bool {
 		}
 
 	} else {
-		log.LogInfo("Githooks is on the latest version")
+		log.Info("Githooks is on the latest version")
 	}
 	return false
 }
@@ -347,13 +346,14 @@ func runUpdate(settings *HookSettings, status hooks.FetchStatus) {
 			settings.Git,
 			&exec,
 			false,
-			"--internal-update",
+			"--internal-autoupdate",
 			"--internal-install")
 
-		log.AssertNoErrorWarnF(err, "Updating failed with output:\n%s", output)
+		log.InfoF("Update:\n%s", output)
+		log.AssertNoErrorWarnF(err, "Updating failed")
 
 	} else {
-		log.LogWarnF(
+		log.WarnF(
 			"Could not execute update, because the installer:\n"+
 				"'%s'\n"+
 				"is not existing.", exec.Path)
@@ -373,7 +373,7 @@ func executeLFSHooks(settings *HookSettings) {
 	log.AssertNoErrorWarnF(err, "Could not check path.")
 
 	if lfsIsAvailable {
-		log.LogDebug("Excuting LFS Hook")
+		log.Debug("Excuting LFS Hook")
 
 		err := settings.Git.CheckPiped(
 			append(
@@ -384,7 +384,7 @@ func executeLFSHooks(settings *HookSettings) {
 		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
 
 	} else {
-		log.LogDebug("Git LFS not available")
+		log.Debug("Git LFS not available")
 		log.FatalIf(lfsIsRequired,
 			"This repository requires Git LFS, but 'git-lfs' was",
 			"not found on your PATH. If you no longer want to use",
@@ -407,7 +407,7 @@ func executeOldHooks(settings *HookSettings,
 	exists, err := cm.IsPathExisting(hook.Path)
 	log.AssertNoErrorWarnF(err, "Could not check path '%s'", hook.Path)
 	if !exists {
-		log.LogDebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
+		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
 		return
 	}
 
@@ -415,20 +415,20 @@ func executeOldHooks(settings *HookSettings,
 	ignored, byUser := ingores.IsIgnored(hookName)
 	if ignored && byUser {
 		// Old hook can only be ignored by user patterns!
-		log.LogDebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
+		log.DebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
 		return
 	}
 
 	if !settings.IsRepoTrusted &&
-		!executeSafetyChecks(settings, uiSettings, checksums, hook.Path) {
-		log.LogDebugF("Hook '%s' skipped", hook.Path)
+		!executeSafetyChecks(uiSettings, checksums, hook.Path) {
+		log.DebugF("Hook '%s' skipped", hook.Path)
 		return
 	}
 
 	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
 	log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", hook.Path)
 
-	log.LogDebugF("Executing hook: '%s'.", hook.Path)
+	log.DebugF("Executing hook: '%s'.", hook.Path)
 	err = cm.RunExecutable(settings.Git, &hook, true)
 
 	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
@@ -441,7 +441,7 @@ func collectHooks(
 	checksums *hooks.ChecksumStore) (h hooks.Hooks) {
 
 	// Local hooks in repository
-	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, ignores, checksums)
+	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, true, ignores, checksums)
 
 	// All shared hooks
 	var allAddedShared = make([]string, 0)
@@ -461,22 +461,21 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 	if settings.HookName != "post-merge" &&
 		!(settings.HookName == "post-checkout" && settings.Args[0] == git.NullRef) &&
 		!strs.Includes(settings.Git.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
-		log.LogDebug("Shared hooks not updated")
+		log.Debug("Shared hooks not updated")
 		return
 	}
 
-	log.LogDebug("Updating all shared hooks")
+	log.Debug("Updating all shared hooks.")
 
 	for _, hook := range sharedHooks {
 
 		if !hook.IsCloned {
-			log.LogDebug("Skipping local shared hook: '%s'", hook.OriginalURL)
 			continue
 
 		} else if !hooks.AllowLocalURLInRepoSharedHooks() &&
 			sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal {
 
-			log.LogWarnF("Shared hooks in '%[1]s/.shared' contain a local path\n"+
+			log.WarnF("Shared hooks in '%[1]s/.shared' contain a local path\n"+
 				"'%[2]s'\n"+
 				"which is forbidden. Update will be skipped.\n\n"+
 				"You can only have local paths for shared hooks defined\n"+
@@ -489,7 +488,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 			continue
 		}
 
-		log.LogDebugF("Updating shared hook: '%s'", hook.OriginalURL)
+		log.InfoF("Updating shared hooks from: '%s'", hook.OriginalURL)
 
 		depth := -1
 		if hook.IsLocal {
@@ -497,7 +496,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 		}
 
 		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth, nil)
-		log.AssertNoErrorWarnF(err, "Updating hooks '%s' failed", hook.OriginalURL)
+		log.AssertNoErrorWarnF(err, "Updating hooks '%s' failed.", hook.OriginalURL)
 	}
 }
 
@@ -511,7 +510,7 @@ func geRepoSharedHooks(
 	sharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryHooksDir)
 
 	if err != nil {
-		log.LogErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err,
+		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err,
 			"Repository shared hooks are demanded but failed "+
 				"to parse the file:\n'%s'",
 			hooks.GetRepoSharedFile(settings.RepositoryHooksDir))
@@ -548,7 +547,7 @@ func getConfigSharedHooks(
 	}
 
 	if err != nil {
-		log.LogErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
+		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
 			err,
 			"Shared hooks are demanded but failed "+
 				"to parse the %s config:\n'%s'",
@@ -572,7 +571,7 @@ func checkSharedHook(
 	sharedType int) bool {
 
 	if strs.Includes(*allAddedHooks, hook.RootDir) {
-		log.LogWarnF(
+		log.WarnF(
 			"Shared hooks entry:\n'%s'\n"+
 				"is already listed and will be skipped.", hook.OriginalURL)
 
@@ -598,6 +597,7 @@ func checkSharedHook(
 
 	// Check if existing otherwise skip or fail...
 	exists, err := cm.IsPathExisting(hook.RootDir)
+
 	if !exists {
 
 		mess := "Failed to execute shared hooks in:\n" +
@@ -614,16 +614,15 @@ func checkSharedHook(
 			mess += "\nContinuing..."
 		}
 
-		log.LogErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err, mess, hook.OriginalURL)
+		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err, mess, hook.OriginalURL)
 		return false
 	}
 
 	// If cloned check that the remote url
 	// is the same as the specified
 	// Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
-	// which means we really need a `-f` to sepcify the actual config!
 	if hook.IsCloned {
-		url := git.CtxC(hook.RootDir).GetConfig(
+		url := git.CtxCSanitized(hook.RootDir).GetConfig(
 			"remote.origin.url", git.LocalScope)
 
 		if url != hook.URL {
@@ -637,7 +636,7 @@ func checkSharedHook(
 				mess += "\nContinuing..."
 			}
 
-			log.LogErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
+			log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
 				nil, mess, hook.OriginalURL, url)
 			return false
 		}
@@ -646,15 +645,15 @@ func checkSharedHook(
 	return true
 }
 
-func createHook(settings *HookSettings,
-	uiSettings *UISettings,
+func createHook(uiSettings *UISettings,
+	isRepoTrusted bool,
 	hookPath string,
 	checksums *hooks.ChecksumStore) (hooks.Hook, bool) {
 
 	// Check if trusted
-	if !settings.IsRepoTrusted &&
-		!executeSafetyChecks(settings, uiSettings, checksums, hookPath) {
-		log.LogDebugF("Hook '%s' skipped", hookPath)
+	if !isRepoTrusted &&
+		!executeSafetyChecks(uiSettings, checksums, hookPath) {
+		log.DebugF("Hook '%s' skipped", hookPath)
 		return hooks.Hook{}, false
 	}
 
@@ -666,37 +665,48 @@ func createHook(settings *HookSettings,
 
 func getHooksIn(settings *HookSettings,
 	uiSettings *UISettings,
-	hookDir string,
+	hooksDir string,
+	parseIgnores bool,
 	externalIgnores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) (batches hooks.HookPrioList) {
 
-	log.LogDebugF("Getting hooks in '%s'", hookDir)
+	log.DebugF("Getting hooks in '%s'", hooksDir)
 
-	repoIgnores, err := hooks.GetHookIgnorePatternsWorktree(hookDir, settings.HookName)
-	log.AssertNoErrorWarnF(err, "Could not get worktree ignores in '%s'", hookDir)
+	var ignores hooks.HookIgnorePatterns
+	if parseIgnores {
+		var e error
+		ignores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, settings.HookName)
+		log.AssertNoErrorWarnF(e, "Could not get worktree ignores in '%s'", hooksDir)
+	}
 
-	dirOrFile := path.Join(hookDir, settings.HookName)
+	dirOrFile := path.Join(hooksDir, settings.HookName)
+
 	// Collect all in e.g. `path/pre-commit/*`
 	if cm.IsDirectory(dirOrFile) {
 
-		hookNamespace, err := hooks.GetHooksNamespace(hookDir)
-		log.AssertNoErrorWarnF(err, "Could not read namespace file in '%s'", hookDir)
+		hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
+		log.AssertNoErrorWarnF(err, "Could not read namespace file in '%s'", hooksDir)
 
 		// Get all files and skip ingored hooks.
 		// Use a namespace to check ignores.
 		hookFiles, err := cm.GetFiles(dirOrFile,
 			func(hookPath string, _ os.FileInfo) bool {
 
+				// Ignore `.xxx` files
+				if strings.HasPrefix(path.Base(hookPath), ".") {
+					return false
+				}
+
 				// Namespace the path to check ignores
-				namespacedPath, err := cm.MakeRelative(hookDir, hookPath)
-				log.AssertNoErrorWarnF(err, "Could not make path '%s' relative to '%s'", hookPath, hookDir)
+				namespacedPath, err := cm.MakeRelative(hooksDir, hookPath)
+				log.AssertNoErrorWarnF(err, "Could not make path '%s' relative to '%s'", hookPath, hooksDir)
 				namespacedPath = path.Join(hookNamespace, namespacedPath)
 
-				ignoredExt, _ := externalIgnores.IsIgnored(namespacedPath)
-				ignored := ignoredExt || repoIgnores.IsIgnored(namespacedPath)
+				ignored, _ := externalIgnores.IsIgnored(namespacedPath)
+				ignored = ignored || ignores.IsIgnored(namespacedPath)
 
 				if ignored {
-					log.LogDebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
+					log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
 				}
 
 				return !ignored
@@ -708,7 +718,7 @@ func getHooksIn(settings *HookSettings,
 		// First good solution: all sequential
 		for _, hookFile := range hookFiles {
 
-			hook, use := createHook(settings, uiSettings, hookFile, checksums)
+			hook, use := createHook(uiSettings, settings.IsRepoTrusted, hookFile, checksums)
 			if !use {
 				continue
 			}
@@ -719,7 +729,7 @@ func getHooksIn(settings *HookSettings,
 
 	} else if cm.IsFile(dirOrFile) { // Check hook in `path/pre-commit`
 
-		hook, use := createHook(settings, uiSettings, dirOrFile, checksums)
+		hook, use := createHook(uiSettings, settings.IsRepoTrusted, dirOrFile, checksums)
 		if use {
 			batch := []hooks.Hook{hook}
 			batches = append(batches, batch)
@@ -740,10 +750,10 @@ func getHooksInShared(settings *HookSettings,
 	// using hooks in hook repos!
 	dir := path.Join(hook.RootDir, ".githooks")
 	if cm.IsDirectory(dir) {
-		return getHooksIn(settings, uiSettings, dir, ignores, checksums)
+		return getHooksIn(settings, uiSettings, dir, true, ignores, checksums)
 	}
 
-	return getHooksIn(settings, uiSettings, hook.RootDir, ignores, checksums)
+	return getHooksIn(settings, uiSettings, hook.RootDir, true, ignores, checksums)
 
 }
 
@@ -751,7 +761,7 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 	var l string
 
 	if hooks == nil {
-		log.LogDebugF("%s: none", title)
+		log.DebugF("%s: none", title)
 	} else {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
@@ -759,12 +769,11 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 				l += strs.Fmt("  - '%s' [runner: '%s']\n", h.Path, h.RunCmd)
 			}
 		}
-		log.LogDebugF("%s :\n%s", title, l)
+		log.DebugF("%s :\n%s", title, l)
 	}
 }
 
-func executeSafetyChecks(settings *HookSettings,
-	uiSettings *UISettings,
+func executeSafetyChecks(uiSettings *UISettings,
 	checksums *hooks.ChecksumStore,
 	hookPath string) (runHook bool) {
 
@@ -801,13 +810,13 @@ func executeSafetyChecks(settings *HookSettings,
 				acceptHook = true
 				runHook = true
 			case "d":
-				log.LogInfoF("-> Adding hook\n'%s'\nto disabled list.", hookPath)
+				log.InfoF("-> Adding hook\n'%s'\nto disabled list.", hookPath)
 				uiSettings.AppendDisabledHook(hooks.ChecksumResult{SHA1: sha1, Path: hookPath})
 			default:
 				// Don't run hook ...
 			}
 		} else {
-			log.LogInfo("-> Already accepted.")
+			log.Info("-> Already accepted.")
 			acceptHook = true
 			runHook = true
 		}
@@ -830,27 +839,27 @@ func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 	}
 
 	var pool *threadpool.ThreadPool
-	if hooks.UseThreadPool {
-		log.LogDebug("Create thread pool")
+	if hooks.UseThreadPool && hs.GetHooksCount() >= 2 {
+		log.Debug("Create thread pool")
 		p := threadpool.New(nThreads, 15)
 		pool = &p
 	}
 
 	var results []hooks.HookResult
 
-	log.LogDebug("Launching local hooks ...")
+	log.DebugIf(len(hs.LocalHooks) != 0, "Launching local hooks ...")
 	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalHooks, results, settings.Args...)
 	logHookResults(results)
 
-	log.LogDebug("Launching repository shared hooks ...")
+	log.DebugIf(len(hs.RepoSharedHooks) != 0, "Launching repository shared hooks ...")
 	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.RepoSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
-	log.LogDebug("Launching local shared hooks ...")
+	log.DebugIf(len(hs.LocalSharedHooks) != 0, "Launching local shared hooks ...")
 	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
-	log.LogDebug("Launching global shared hooks ...")
+	log.DebugIf(len(hs.GlobalSharedHooks) != 0, "Launching global shared hooks ...")
 	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.GlobalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 }
@@ -913,9 +922,9 @@ func handleError(cwd string, r interface{}) bool {
 	}
 
 	if log != nil && withTrace {
-		log.LogErrorWithStacktrace(message)
+		log.ErrorWithStacktrace(message)
 	} else if log != nil && !withTrace {
-		log.LogError(message)
+		log.Error(message)
 	} else {
 		os.Stderr.WriteString(message + "\n")
 	}

@@ -5,6 +5,12 @@ if ! grep '/docker/' </proc/self/cgroup >/dev/null 2>&1; then
     exit 1
 fi
 
+SEQUENCE=""
+if [ "$1" = "--sequence" ]; then
+    shift
+    SEQUENCE=$(for f in "$@"; do echo "step-$f"; done)
+fi
+
 TEST_RUNS=0
 FAILED=0
 SKIPPED=0
@@ -14,6 +20,10 @@ FAILED_TEST_LIST=""
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
+
+    if [ -n "$SEQUENCE" ] && ! echo "$SEQUENCE" | grep -q "$STEP_NAME"; then
+        continue
+    fi
 
     echo "> Executing $STEP_NAME"
     echo "  :: $STEP_DESC"
