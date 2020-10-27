@@ -25,6 +25,11 @@ func (p *Context) ShowPrompt(text string,
 		if defined {
 			return answer, nil
 		}
+	} else if strings.Contains(test, "There is a new Githooks update available") {
+		answer, defined := os.LookupEnv("EXECUTE_UPDATE")
+		if defined {
+			return answer, nil
+		}
 	}
 
 	return showPrompt(p, text, hintText, shortOptions, longOptions...)

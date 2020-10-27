@@ -70,7 +70,7 @@ func main() {
 	}
 
 	exportStagedFiles(settings)
-	updateGithooks(settings)
+	updateGithooks(settings, uiSettings)
 	executeLFSHooks(settings)
 	executeOldHooks(settings, uiSettings, &ignores, checksums)
 
@@ -264,14 +264,14 @@ func exportStagedFiles(settings *HookSettings) {
 	}
 }
 
-func updateGithooks(settings *HookSettings) {
+func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 	if !shouldRunUpdateCheck(settings) {
 		return
 	}
 
-	// Record update time
-	settings.Git.SetConfig("githooks.autoupdate.enabled",
+	log.LogInfo("Record update check time ...")
+	settings.Git.SetConfig("githooks.autoupdate.lastrun",
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
 	log.LogInfo("Checking for updates ...")
@@ -283,7 +283,15 @@ func updateGithooks(settings *HookSettings) {
 	}
 
 	log.LogDebugF("Fetch status: '%q'", status)
+	if shouldRunUpdate(uiSettings, status) {
 
+		runUpdate(settings, status)
+
+	} else {
+		log.LogInfo(
+			"If you would like to disable auto-updates, run:",
+			"  $ git hooks update disable")
+	}
 }
 
 func shouldRunUpdateCheck(settings *HookSettings) bool {
@@ -303,6 +311,53 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
 	log.AssertNoErrorWarnF(err, "Could not parse update time")
 	return time.Since(time.Unix(t, 0)).Hours() > 24.0
+}
+
+func shouldRunUpdate(uiSettings *UISettings, status hooks.FetchStatus) bool {
+	if status.IsUpdateAvailable {
+
+		question := "There is a new Githooks update available:\n" +
+			strs.Fmt(" -> Forward-merge to version '%s'\n", status.UpdateVersion) +
+			"Would you like to install it now?"
+
+		answer, err := uiSettings.PromptCtx.ShowPrompt(question,
+			"(Yes, no)",
+			"Y/n",
+			"Yes", "No")
+		log.AssertNoErrorWarnF(err, "Could not show prompt.")
+
+		answer = strings.ToLower(answer)
+		if answer == "y" {
+			return true
+		}
+
+	} else {
+		log.LogInfo("Githooks is on the latest version")
+	}
+	return false
+}
+
+func runUpdate(settings *HookSettings, status hooks.FetchStatus) {
+
+	exec := hooks.GetInstaller(settings.InstallDir)
+
+	if cm.IsFile(exec.Path) {
+
+		output, err := cm.GetCombinedOutputFromExecutable(
+			settings.Git,
+			&exec,
+			false,
+			"--internal-update",
+			"--internal-install")
+
+		log.AssertNoErrorWarnF(err, "Updating failed with output:\n%s", output)
+
+	} else {
+		log.LogWarnF(
+			"Could not execute update, because the installer:\n"+
+				"'%s'\n"+
+				"is not existing.", exec.Path)
+	}
 }
 
 func executeLFSHooks(settings *HookSettings) {
@@ -734,8 +789,7 @@ func executeSafetyChecks(settings *HookSettings,
 				"(Yes, all, no, disable)",
 				"Y/a/n/d",
 				"Yes", "All", "No", "Disable")
-
-			log.AssertNoErrorWarn(err, "Could not show trust prompt.")
+			log.AssertNoErrorWarn(err, "Could not show prompt.")
 
 			answer = strings.ToLower(answer)
 

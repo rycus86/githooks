@@ -96,3 +96,10 @@ func GetToolScript(name string, installDir string) (*cm.Executable, error) {
 	runCmd, err := GetToolRunCmd(tool)
 	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
 }
+
+// GetInstaller returns the installer executbale in the install directory.
+func GetInstaller(installDir string) cm.Executable {
+	return cm.Executable{
+		Path:   path.Join(GetReleaseCloneDir(installDir), "install.sh"),
+		RunCmd: []string{"sh"}}
+}

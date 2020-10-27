@@ -1,5 +1,11 @@
 package common
 
+// IExecutable defines the interface for a general executable.
+type IExecutbale interface {
+	GetCommand() string
+	GetArgs(args ...string) []string
+}
+
 // Executable contains the data to a script/executbale file.
 type Executable struct {
 	// The absolute path of the script/executable.
