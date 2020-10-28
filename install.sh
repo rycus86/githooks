@@ -1892,6 +1892,11 @@ update_release_clone() {
                 return 1
             fi
 
+            # Ensure we have clone url and branch set (technically not necessary)
+            # its possible to have them not set till now...
+            git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
+            git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
+
             # shellcheck disable=SC2034
             GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURRENT_COMMIT"
             GITHOOKS_CLONE_UPDATED="true"
