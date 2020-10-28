@@ -10,6 +10,8 @@ Execute:
 
 ## Deprecated Stuff
 
+This stuff is to be made deprecated once all tests are passing. So far we comply 99% to the original implementation. Internally we wrap legacy stuff such that we agree the most with the original implementation.
+
 1. Registered file becomse a JSON file -> (@todo needs legacy transform)
 2. Ignore patterns matched only filename. @Todo: Ignore patterns are matching the paths relative to the
 

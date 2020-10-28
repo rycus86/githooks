@@ -1,9 +1,10 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	fmt.Println("asd")
+	fmt.Print("...")
+	for i := 1; i < 2; i += 0 {
+
+	}
 }
