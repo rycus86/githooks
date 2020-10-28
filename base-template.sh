@@ -564,8 +564,8 @@ set_shared_root() {
         fi
 
         # Define the shared clone folder
-        SHA_HASH=$(echo "$1" | git hash-object --stdin 2>/dev/null)
-        NAME=$(echo "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]/-/g")
+        SHA_HASH=$(printf "%s" "$1" | git hash-object --stdin 2>/dev/null)
+        NAME=$(printf "%s" "$1" | tail -c 48 | sed -E "s/[^a-zA-Z0-9]+/-/g")
         SHARED_ROOT="$INSTALL_DIR/shared/$SHA_HASH-$NAME"
     fi
 }
