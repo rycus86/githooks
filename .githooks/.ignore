@@ -2,3 +2,4 @@
 #   filename patterns to exclude (not paths).
 
 *.md
+*export-staged

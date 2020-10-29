@@ -1,13 +1,25 @@
 #!/bin/sh
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
+
+assertStaged
 
 if ! shfmt --version >/dev/null 2>&1; then
     echo "_ Skipping shfmt - not installed"
     exit 0
 fi
 
-if shfmt -p -d -i 4 ./*.sh ./.githooks ./tests; then
+SUCCESS=0
+for FILE in $STAGED_FILES; do
+    if echo "$FILE" | grep -qE "\.sh$" &&
+        ! shfmt -p -d -i 4 "$FILE" >/dev/null 2>&1; then
+        echo "! shfmt problems detected in $FILE"
+        SUCCESS=1
+    fi
+done
+
+if [ "$SUCCESS" = "0" ]; then
     echo "* shfmt OK"
 else
-    echo "! shfmt problems detected"
-    exit 1
+    exit "$SUCCESS"
 fi
