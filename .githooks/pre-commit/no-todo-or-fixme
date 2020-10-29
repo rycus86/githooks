@@ -1,20 +1,28 @@
 #!/bin/sh
-TODO_FOUND="no"
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
 
-OFFENDING_FILES=$(
-    grep -rE "(TODO|FIXME)" ./*.sh .githooks/ examples/* |
-        grep -vE '(/cover/|/pre-commit/no-todo-or-fixme)' |
-        tr ':' ' ' | awk '{ print $1 }' |
-        sort | uniq
-)
+assertStaged
 
-for WITH_TODO in $OFFENDING_FILES; do
-    echo "! TODO or FIXME found in: $WITH_TODO"
-    TODO_FOUND="yes"
+SUCCESS=0
+
+checkTodo() {
+    LINES=$(grep -rnHE "(TODO|FIXME)" "$1")
+
+    if [ -n "$LINES" ]; then
+        echo "! TODO or FIXME found in: $LINES"
+        SUCCESS=1
+    fi
+}
+
+for FILE in $STAGED_FILES; do
+    if echo "$FILE" | grep -qvE '(/cover/|/pre-commit/no-todo-or-fixme|\.go|\.md)'; then
+        checkTodo "$FILE"
+    fi
 done
 
-if [ "$TODO_FOUND" = "no" ]; then
+if [ "$SUCCESS" = "0" ]; then
     echo "* No TODO or FIXME detected"
 else
-    exit 1
+    exit "$SUCCESS"
 fi

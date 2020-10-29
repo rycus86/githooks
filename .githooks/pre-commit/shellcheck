@@ -1,13 +1,25 @@
 #!/bin/sh
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
+
+assertStaged
 
 if ! shellcheck --version >/dev/null 2>&1; then
     echo "_ Skipping shellcheck - not installed"
     exit 0
 fi
 
-if shellcheck ./*.sh ./tests/*.sh .githooks/*/*; then
+SUCCESS=0
+for FILE in $STAGED_FILES; do
+    if echo "$FILE" | grep -qE '\.sh$' &&
+        ! shellcheck "$FILE"; then
+        echo "! shellcheck problems detected in: $FILE"
+        SUCCESS=1
+    fi
+done
+
+if [ "$SUCCESS" = "0" ]; then
     echo "* shellcheck OK"
 else
-    echo "! shellcheck problems detected"
-    exit 1
+    exit "$SUCCESS"
 fi

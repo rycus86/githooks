@@ -1,20 +1,21 @@
 #!/bin/sh
-INVALID_FORMAT="no"
-OLD_IFS="$IFS"
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
 
-OFFENDING_LINES=$(grep -nrE 'shellcheck.*disable' ./* .githooks/* examples/* | grep -v '/cover/' | grep -v '# shellcheck disable=SC')
+assertStaged
 
-IFS="
-"
-for WITH_LINE in $OFFENDING_LINES; do
-    echo "! Shellcheck ignore with wrong format: $WITH_LINE"
-    INVALID_FORMAT="yes"
+SUCCESS=0
+for FILE in $STAGED_FILES; do
+    if echo "$FILE" | grep -qE '\.sh$' &&
+        echo "$FILE" | grep -qv '/cover/' &&
+        grep -nrHE 'shellcheck.*disable' "$FILE" | grep -v '# shellcheck disable=SC'; then
+        echo "! Wrong shellcheck ignored format: use \`# shellcheck disable=SCnnnn\` in $FILE"
+        SUCCESS=1
+    fi
 done
-IFS="$OLD_IFS"
 
-if [ "$INVALID_FORMAT" = "no" ]; then
+if [ "$SUCCESS" = "0" ]; then
     echo "* No shellcheck ignore format issues found"
 else
-    echo "  Use \`# shellcheck disable=SCnnnn\` format instead"
     exit 1
 fi

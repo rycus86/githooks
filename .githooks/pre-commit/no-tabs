@@ -1,13 +1,26 @@
 #!/bin/sh
-TAB_FOUND="no"
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
 
-for WITH_TAB in $(grep -r "$(printf '\t')" ./*.sh ./tests/* .githooks/* examples/* | tr ':' ' ' | awk '{ print $1 }' | sort | uniq); do
-    echo "! Tab character found in: $WITH_TAB"
-    TAB_FOUND="yes"
+assertStaged
+
+SUCCESS=0
+
+checkTab() {
+    LINES=$(grep -rnH "$(printf '\t')" "$1")
+
+    if [ -n "$LINES" ]; then
+        echo "! Tab character found in: $LINES"
+        SUCCESS=1
+    fi
+}
+
+for FILE in $STAGED_FILES; do
+    checkTab "$FILE"
 done
 
-if [ "$TAB_FOUND" = "no" ]; then
+if [ "$SUCCESS" = "0" ]; then
     echo "* No tab characters detected"
 else
-    exit 1
+    exit "$SUCCESS"
 fi
