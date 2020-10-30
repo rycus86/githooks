@@ -2,8 +2,9 @@
 #
 # Add a random emoji to the end of the first line in every commit message.
 
-if [ ! -f "$1" ]; then
+if [ ! -f "$1" ] || grep -q "fixup!" "$1"; then
     # Exit if we didn't get a target file for some reason
+    # or we have a fixup commit
     exit 0
 fi
 
