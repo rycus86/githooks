@@ -1,20 +1,26 @@
 #!/bin/sh
-SETX_FOUND="no"
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
 
-OFFENDING_FILES=$(
-    grep -rE "(set.*[-+]x)" ./*.sh |
-        grep -v '/pre-commit/no-set-x' |
-        tr ':' ' ' | awk '{ print $1 }' |
-        sort | uniq
-)
+assertStaged
 
-for FILE in $OFFENDING_FILES; do
-    echo "! set -x or set +x found in: $FILE"
-    SETX_FOUND="yes"
+SUCCESS=0
+
+checkSetX() {
+    LINES=$(grep -rnHE "(set.*[-+]x)" "$FILE")
+
+    if [ -n "$LINES" ]; then
+        echo "! Found \`set -x\`: $LINES"
+        SUCCESS=1
+    fi
+}
+
+for FILE in $STAGED_FILES; do
+    echo "$FILE" | grep -qE '\.sh$' && checkSetX "$FILE"
 done
 
-if [ "$SETX_FOUND" = "no" ]; then
-    echo "* No set -x or set +x detected"
+if [ "$SUCCESS" = "0" ]; then
+    echo "* No \`set -x\` found"
 else
-    exit 1
+    exit "$SUCCESS"
 fi
