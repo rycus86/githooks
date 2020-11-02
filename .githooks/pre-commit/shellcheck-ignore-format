@@ -8,7 +8,7 @@ SUCCESS=0
 for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qE '\.sh$' &&
         echo "$FILE" | grep -qv '/cover/' &&
-        grep -nrHE 'shellcheck.*disable' "$FILE" | grep -v '# shellcheck disable=SC'; then
+        grep -nrHE 'shellcheck.*disable' "$FILE" | grep -vE '# shellcheck disable=SC[0-9]+(,SC[0-9]+)*'; then
         echo "! Wrong shellcheck ignored format: use \`# shellcheck disable=SCnnnn\` in $FILE"
         SUCCESS=1
     fi

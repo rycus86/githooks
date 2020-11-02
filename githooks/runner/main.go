@@ -766,7 +766,7 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
 			for _, h := range batch {
-				l += strs.Fmt("  - '%s' [runner: '%s']\n", h.Path, h.RunCmd)
+				l += strs.Fmt("  - '%s' [runner: '%q']\n", h.Path, h.RunCmd)
 			}
 		}
 		log.DebugF("%s :\n%s", title, l)
@@ -874,7 +874,8 @@ func logHookResults(res []hooks.HookResult) {
 			if len(r.Output) != 0 {
 				log.GetErrorWriter().Write(r.Output)
 			}
-			log.AssertNoErrorFatalF(r.Error, "Hook '%s' failed!", r.Hook.GetCommand())
+			log.AssertNoErrorFatalF(r.Error, "Hook '%s %q' failed!",
+				r.Hook.GetCommand(), r.Hook.GetArgs())
 		}
 	}
 }
