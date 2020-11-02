@@ -163,7 +163,8 @@ func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 
 	// Check first all directories ...
 	for _, dir := range t.checksumDirs {
-		exists, err := cm.IsPathExisting(path.Join(dir, sha1))
+		bucket := sha1[0:2]
+		exists, err := cm.IsPathExisting(path.Join(dir, bucket, sha1))
 		if exists {
 			return true, sha1, nil
 		} else if err != nil {

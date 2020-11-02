@@ -88,8 +88,10 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
 ### Trusting and Checksums
 
 1. Trust file becomes a YAML file. **[done]**
+
     - @todo remove legacy store/load from old location
     - no backward compatibility, since it just means -> retrusting hooks.
+
 2. A new checksum cache mechanism is implemented which has search directories which are
    considered to look for a checksum files where the filename
    is the SHA1 hash of the hook which was
@@ -110,8 +112,8 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
     hook it belongs to, in case it is needed (?).
 
 3. Checksums should be stored as SHA1 filenames (as described above) in
-    - the directory specified in the global Git config `githooks.checksumCacheDir` or if not existing
-    - the directory `<installDir>/checksums` or if not existing in
+
+    - the directory specified in the global Git config `githooks.checksumCacheDir` or if not existing (can be made `<installDir>/checksums` during install)
     - the directory `<repo>/.git/.githooks.checksums`.
 
 This is more efficient, since we only have to search for such a file and we know we have trusted this hook. Instead of parsing the file for every hook run. Note: `git commit` runs several hooks, and all need to re-read the same stuff again.
@@ -130,7 +132,7 @@ This is more efficient, since we only have to search for such a file and we know
 
     which is parsed by `https://godoc.org/github.com/google/shlex`.
 
-    - Substitute over all args all environment variables in `sh` style. **[done]**
+    - Substitute over all args all environment variables in `sh` style. **[done, test 121]**
 
 2. Default runner on Unix is `sh` and on Windows its `sh -c` since
 there is no notion of execution permissions and this
