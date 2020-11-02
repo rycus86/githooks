@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -11,14 +12,14 @@ import (
 
 // HookIgnorePatterns is the format of the ignore patterns.
 type HookIgnorePatterns struct {
-	Patterns  []string // Shell file patterns (see `filepath.Match`)
-	HookNames []string // Specific hook names.
+	Patterns       []string // Shell file patterns (uses `filepath.Match`) matching hook namespace paths.
+	NamespacePaths []string // Specific hook namespace paths (uses full string match).
 }
 
 // RepoIgnorePatterns is the list of possible ignore patterns in a repository.
 type RepoIgnorePatterns struct {
 	Worktree HookIgnorePatterns // Ignores set by `.ignore` file in the repository.
-	User     HookIgnorePatterns // Ignores set by the user of the repository.
+	User     HookIgnorePatterns // Ignores set by the `.ignore` file in the Git directory of the repository.
 }
 
 // CombineIgnorePatterns combines two ignore patterns.
@@ -30,28 +31,42 @@ func CombineIgnorePatterns(patterns ...HookIgnorePatterns) HookIgnorePatterns {
 	return p
 }
 
+// AddPatterns adds pattern to the patterns.
+func (h *HookIgnorePatterns) AddPatterns(pattern ...string) {
+	h.Patterns = append(h.Patterns, pattern...)
+}
+
+// AddNamespacePaths adds a namespace path to the patterns.
+func (h *HookIgnorePatterns) AddNamespacePaths(namespacePath ...string) {
+	h.NamespacePaths = append(h.NamespacePaths, namespacePath...)
+}
+
 // Add adds pattersn from other patterns to itself.
 func (h *HookIgnorePatterns) Add(p HookIgnorePatterns) {
 	h.Patterns = append(h.Patterns, p.Patterns...)
-	h.HookNames = append(h.HookNames, p.HookNames...)
+	h.NamespacePaths = append(h.NamespacePaths, p.NamespacePaths...)
 }
 
-// IsIgnored returns true if `hookPath` is ignored and otherwise `false`
-func (h *HookIgnorePatterns) IsIgnored(hookPath string) bool {
+// IsIgnored returns true if `NamespacePathspacePath` is ignored and otherwise `false`
+func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
 
 	// Legacy
 	// @todo Remove only restricting to filename!
-	hookPath = path.Base(hookPath)
+	namespacePath = path.Base(namespacePath)
 
 	for _, p := range h.Patterns {
-		matched, err := filepath.Match(p, hookPath)
+		// Note: Only forward slashes need to be used here in `hookPath`
+		cm.DebugAssert(!strings.Contains(namespacePath, `\`),
+			"Only forward slashes")
+		fmt.Printf("Match %s, %s\n", p, namespacePath)
+		matched, err := path.Match(p, namespacePath)
 		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
 		if err == nil && matched {
 			return true
 		}
 	}
 
-	return strs.Includes(h.HookNames, hookPath)
+	return strs.Includes(h.NamespacePaths, namespacePath)
 }
 
 // IsIgnored returns `true` if the hooksPath is ignored by either the worktree patterns or the user patterns
@@ -93,7 +108,7 @@ func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns Ho
 	return
 }
 
-// GetHookIgnorePatternsGitDir gets all ignored hooks in the current Git directorys.
+// GetHookIgnorePatternsGitDir gets all ignored hooks in the current Git directory.
 func GetHookIgnorePatternsGitDir(gitDir string) (HookIgnorePatterns, error) {
 
 	file := path.Join(gitDir, ".githooks.ignore.yaml")
@@ -102,6 +117,14 @@ func GetHookIgnorePatternsGitDir(gitDir string) (HookIgnorePatterns, error) {
 		return loadIgnorePatterns(file)
 	}
 	return HookIgnorePatterns{}, err
+}
+
+// StoreHookIgnorePatternsGitDir stores all ignored hooks in the current Git directory.
+func StoreHookIgnorePatternsGitDir(patterns HookIgnorePatterns, gitDir string) error {
+
+	return storeIgnorePatterns(patterns,
+		path.Join(gitDir, ".githooks.ignore.yaml"))
+
 }
 
 // GetHookIgnorePatternsLegacy loads file `.githooks.checksum` and parses "disabled>" entries
@@ -123,7 +146,7 @@ func GetHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
 			l := strings.TrimSpace(l)
 			if strings.HasPrefix(l, "disabled>") {
 				hookPath := strings.TrimPrefix(l, "disabled>")
-				p.HookNames = append(p.HookNames, path.Base(strings.TrimSpace(hookPath)))
+				p.NamespacePaths = append(p.NamespacePaths, path.Base(strings.TrimSpace(hookPath)))
 			}
 		}
 	}
@@ -131,7 +154,7 @@ func GetHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
 	return p, nil
 }
 
-// LoadIgnorePatterns loads patterns.
+// loadIgnorePatterns loads patterns.
 func loadIgnorePatterns(file string) (patterns HookIgnorePatterns, err error) {
 	err = cm.LoadYAML(file, &patterns)
 	if err != nil {
@@ -152,6 +175,24 @@ func loadIgnorePatterns(file string) (patterns HookIgnorePatterns, err error) {
 	patterns.Patterns = strs.Filter(patterns.Patterns, patternIsValid)
 
 	return
+}
+
+// storeIgnorePatterns stores patterns.
+func storeIgnorePatterns(patterns HookIgnorePatterns, file string) (err error) {
+	return cm.StoreYAML(file, &patterns)
+}
+
+// MakeNamespacePath makes `path` relative to `basePath` and adds `namespace/` as prefix if not empty.
+func MakeNamespacePath(basePath string, path string, namespace string) (string, error) {
+	s, err := filepath.Rel(basePath, path)
+	if err != nil {
+		return path, err
+	}
+
+	if namespace != "" {
+		return namespace + "/" + filepath.ToSlash(s), nil
+	}
+	return filepath.ToSlash(s), nil
 }
 
 func loadIgnorePatternsLegacy(repoDir string, hookName string) (patterns HookIgnorePatterns, err error) {

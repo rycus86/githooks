@@ -27,6 +27,11 @@ func GetFiles(root string, filter FileFilter) (files []string, err error) {
 
 	rootDirVisited := false
 
+	if filter == nil {
+		err = ErrorF("No lambda given")
+		return nil, err
+	}
+
 	e := filepath.Walk(root,
 		func(path string, info os.FileInfo, e error) error {
 			if info == nil || err != nil {
@@ -45,12 +50,51 @@ func GetFiles(root string, filter FileFilter) (files []string, err error) {
 
 			path = filepath.ToSlash(path)
 
-			if filter == nil || filter(path, info) {
+			if filter(path, info) {
 				files = append(files, path)
 			}
 
 			return nil
 		})
+
+	err = CombineErrors(err, e)
+
+	return
+}
+
+// FileFunc is the filter for `GetFiles`.
+type FileFunc = func(path string, info os.FileInfo)
+
+// WalkFiles walks all files in directory `root` and calls `filter`.
+func WalkFiles(root string, filter FileFunc) (err error) {
+
+	rootDirVisited := false
+
+	if filter == nil {
+		return ErrorF("No lambda given")
+	}
+
+	e := filepath.Walk(root,
+		func(path string, info os.FileInfo, e error) error {
+			if info == nil || err != nil {
+				err = CombineErrors(err, e)
+				return nil
+			}
+
+			if info.IsDir() {
+				if !rootDirVisited {
+					rootDirVisited = true
+					return nil // Skip root dir...
+				}
+				// Skip all other dirs...
+				return filepath.SkipDir
+			}
+
+			filter(filepath.ToSlash(path), info)
+
+			return nil
+		})
+
 	err = CombineErrors(err, e)
 	return
 }

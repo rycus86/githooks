@@ -1,5 +1,6 @@
 #!/bin/sh
 IMAGE_TYPE="$1"
+shift
 # shellcheck disable=SC2124
 SEQUENCE="$@"
 

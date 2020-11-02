@@ -60,7 +60,7 @@ if ! git hooks tools register dialog ./tool; then
 fi
 
 echo "A" >>A || exit 10
-rm -rf .git/.githooks.checksum || true
+rm -rf .git/.githooks.checksum* || true
 OUTPUT=$(git commit -a -m "Test2" 2>&1)
 if ! echo "$OUTPUT" | grep -q "Do you accept the changes?"; then
     echo "! Expected fall back prompt not found"

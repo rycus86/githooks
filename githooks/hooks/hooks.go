@@ -6,8 +6,11 @@ import (
 	thx "github.com/pbenner/threadpool"
 )
 
-// Hook contains the data to a executbale hook
-type Hook = cm.Executable
+// Hook contains the data to an executbale hook
+type Hook struct {
+	cm.Executable
+	NamespacePath string // The namespaced path of the hook `<namespace>/<relPath>`.
+}
 
 // HookPrioList is a list of lists of executable hooks.
 // Each list contains a set of hooks which can potentially

@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
@@ -56,10 +57,12 @@ const (
 	SHA1Length = 40
 )
 
-// ChecksumResult defines the SHA1 hash and the path it was computed with
+// ChecksumResult defines the SHA1 hash and the path it was computed with togehter with the
+// namespaced path.
 type ChecksumResult struct {
-	SHA1 string
-	Path string
+	SHA1          string // SHA1 hash.
+	Path          string // Path.
+	NamespacePath string // Namespaced path.
 }
 
 // ChecksumStore represents a set of checksum which
@@ -69,9 +72,13 @@ type ChecksumStore struct {
 	// with file name equal to the checksum.
 	checksumDirs []string
 
+	// Legacy:
+	// @todo Remove this as we only use checksumDirs...
 	// checksumFiles are paths to files containing a list of checksums.
 	checksumFiles []string
 
+	// Legacy:
+	// @todo Remove this as we only use checksumDirs...
 	// checksums are the values from checksumFiles (if existing)
 	checksums map[string]ChecksumData
 }
@@ -81,19 +88,23 @@ type ChecksumData struct {
 	Paths []string
 }
 
+type checksumFile struct {
+	Path string
+}
+
 func newChecksumData(paths ...string) ChecksumData {
 	return ChecksumData{paths}
 }
 
 // NewChecksumStore creates a checksum store from `path` (file or directory).
-func NewChecksumStore(path string, errorIfNotExists bool) (ChecksumStore, error) {
+func NewChecksumStore(path string, addAsDirIfNonExisting bool) (ChecksumStore, error) {
 	c := ChecksumStore{}
-	err := c.AddChecksums(path, errorIfNotExists)
+	err := c.AddChecksums(path, addAsDirIfNonExisting)
 	return c, err
 }
 
 // AddChecksums adds checksum data from `path` (file or directory) to the store.
-func (t *ChecksumStore) AddChecksums(path string, errorIfNotExists bool) error {
+func (t *ChecksumStore) AddChecksums(path string, addAsDirIfNonExisting bool) error {
 
 	if cm.IsFile(path) {
 
@@ -121,14 +132,10 @@ func (t *ChecksumStore) AddChecksums(path string, errorIfNotExists bool) error {
 
 		t.checksumFiles = append(t.checksumFiles, path)
 
-	} else if cm.IsDirectory(path) {
-
+	} else if cm.IsDirectory(path) || addAsDirIfNonExisting {
 		t.checksumDirs = append(t.checksumDirs, path)
-
-	} else if errorIfNotExists {
-
-		return cm.ErrorF("Path '%s' does not exist", path)
 	}
+
 	return nil
 }
 
@@ -138,18 +145,35 @@ func (t *ChecksumStore) assertData() {
 	}
 }
 
-// AddChecksum adds a SHA1 checksum of a path and returns if it was added (or merged).
-func (t *ChecksumStore) AddChecksum(sha1 string, path string) bool {
+// AddChecksum adds a SHA1 checksum of a path and returns if it was added (or it existed already).
+func (t *ChecksumStore) AddChecksum(sha1 string, filePath string) bool {
 	t.assertData()
-	path = filepath.ToSlash(path)
+	filePath = filepath.ToSlash(filePath)
 	if data, exists := t.checksums[sha1]; exists {
 		p := &data.Paths
-		*p = append(*p, path)
+		*p = append(*p, filePath)
 		return true
-	} else {
-		t.checksums[sha1] = newChecksumData(path)
-		return false
 	}
+
+	t.checksums[sha1] = newChecksumData(filePath)
+	return false
+}
+
+// SyncChecksum adds a SHA1 checksum of a path to the first search directory.
+func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
+	cm.DebugAssert(len(checksum.SHA1) >= 2, "Wrong SHA1 hash")
+
+	if len(t.checksumDirs) == 0 {
+		return cm.Error("No checksum directory.")
+	}
+
+	dir := path.Join(t.checksumDirs[0], checksum.SHA1[0:2])
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return err
+	}
+
+	return cm.StoreYAML(path.Join(dir, checksum.SHA1[2:]), checksumFile{checksum.Path})
 }
 
 // IsTrusted checks if a path has been trusted.
@@ -164,7 +188,7 @@ func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 	// Check first all directories ...
 	for _, dir := range t.checksumDirs {
 		bucket := sha1[0:2]
-		exists, err := cm.IsPathExisting(path.Join(dir, bucket, sha1))
+		exists, err := cm.IsPathExisting(path.Join(dir, bucket, sha1[2:]))
 		if exists {
 			return true, sha1, nil
 		} else if err != nil {

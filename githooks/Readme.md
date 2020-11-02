@@ -12,7 +12,7 @@ cd githooks
 Run tests:
 
 ```shell
-sh tests/exec-tests-go.sh {000..120}
+sh tests/exec-tests-go.sh {001..120}
 ```
 
 ## New and Deprecated Stuff
@@ -92,10 +92,11 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
     - @todo remove legacy store/load from old location
     - no backward compatibility, since it just means -> retrusting hooks.
 
-2. A new checksum cache mechanism is implemented which has search directories which are
+2. A new checksum cache mechanism is implemented which has search directories
+   (and bucktes like in git `.git/objects` directory) which are
    considered to look for a checksum files where the filename
    is the SHA1 hash of the hook which was
-   trusted, e.g. *[not yet finished]*
+   trusted, e.g. **[done]**
 
     ```shell
     checksums
@@ -109,7 +110,7 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
     ```
 
     Each checksum file contains also the `<namespace>/<relPath>` of the
-    hook it belongs to, in case it is needed (?).
+    hook it belongs to, in case it is needed (?). *[not done]*
 
 3. Checksums should be stored as SHA1 filenames (as described above) in
 
@@ -141,7 +142,9 @@ honors the shebang correctly. **[done]**
 ### Parallel Execution
 
 All hooks to execute, except the old replaced hook, are already collected and afterwards executed. As we use a threadpool, one can now
-support executing hooks in parallel. One might have several successive parallel batches for each type:
+support executing hooks in parallel. **[done]**
+
+One might have several successive parallel batches for each type:
 
 - local repository hooks in `<repoPath>/.githooks/<hookName>/...`
 
@@ -155,7 +158,7 @@ support executing hooks in parallel. One might have several successive parallel 
   - ...
   - batch N
 
-This hower poses the question: How should we define these batches.
+This however poses the question: How should we define these batches?
 Should we have folders e.g. `<sharedRepo>/.githooks/<hookName>`: *[not done]*
 
 ```shell

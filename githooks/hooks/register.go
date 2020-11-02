@@ -73,7 +73,7 @@ func (r *RegisterRepos) Store(installDir string) error {
 
 	// Legacy: Store legacy register file
 	// @todo: Remove this as soon as possible
-	f, err := os.Create(getLegacyRegisterFile(installDir))
+	f, err := os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
 	if err == nil {
 		defer f.Close()
 		for _, gitdir := range r.GitDirs {

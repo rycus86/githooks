@@ -28,7 +28,7 @@ func LoadYAML(file string, repr interface{}) error {
 
 // StoreYAML stores a representation in a JSON file.
 func StoreYAML(file string, repr interface{}) error {
-	yamlFile, err := os.OpenFile(file, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
+	yamlFile, err := os.OpenFile(file, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
 	if err != nil {
 		return err
 	}
