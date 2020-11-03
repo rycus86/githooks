@@ -16,7 +16,7 @@ if ! grep -q "First execution" /tmp/test028.out; then
     exit 1
 fi
 
-NUMBER_OF_CHECKSUMS=$(grep -c "$(pwd)/.githooks/pre-commit/test" .git/.githooks.checksum)
+NUMBER_OF_CHECKSUMS=$(grep -r "pre-commit" .git/.githooks.checksums | wc -l)
 if [ "$NUMBER_OF_CHECKSUMS" != "1" ]; then
     echo "! Expected to have one checksum entry"
     exit 1
@@ -30,7 +30,7 @@ if ! grep -q "Second execution" /tmp/test028.out; then
     exit 1
 fi
 
-NUMBER_OF_CHECKSUMS=$(grep -c "$(pwd)/.githooks/pre-commit/test" .git/.githooks.checksum)
+NUMBER_OF_CHECKSUMS=$(grep -r "pre-commit" .git/.githooks.checksums | wc -l)
 if [ "$NUMBER_OF_CHECKSUMS" != "2" ]; then
     echo "! Expected to have two checksum entries"
     exit 1

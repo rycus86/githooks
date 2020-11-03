@@ -16,7 +16,7 @@ if grep -q "First execution" /tmp/test027.out; then
     exit 1
 fi
 
-if ! grep -q "disabled> $(pwd)/.githooks/pre-commit/test" .git/.githooks.checksum; then
+if ! grep -q "pre-commit/test" .git/.githooks.ignore.yaml; then
     echo "! Expected to disable the hook"
     exit 1
 fi

@@ -3,6 +3,7 @@ module rycus86/githooks
 go 1.15
 
 require (
+	github.com/bmatcuk/doublestar/v2 v2.0.3
 	github.com/goccy/go-yaml v1.8.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/gookit/color v1.3.1

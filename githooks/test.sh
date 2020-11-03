@@ -108,3 +108,5 @@ cat ".git/.githooks.checksum"
 
 echo "Dir: '.git/.githooks.checksums' :"
 tree '.git/.githooks.checksums'
+
+find .git/.githooks.checksums -type f -exec cat {} \;

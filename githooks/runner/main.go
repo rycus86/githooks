@@ -158,11 +158,11 @@ func getIgnorePatterns(settings *HookSettings) (patt hooks.RepoIgnorePatterns) {
 		settings.RepositoryPath,
 		settings.HookName)
 	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
-	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree.Patterns)
+	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree)
 
 	patt.User, err = hooks.GetHookIgnorePatternsGitDir(settings.GitDir)
 	log.AssertNoErrorWarn(err, "Could not get user ignore patterns.")
-	log.DebugF("User ignore patterns: '%v'.", patt.User.Patterns)
+	log.DebugF("User ignore patterns: '%q'.", patt.User)
 
 	// Legacy
 	// @todo Remove
@@ -194,10 +194,12 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 		log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", cacheDir)
 	}
 
-	// Legacy: Load the the old file, if existing
-	localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
-	store.AddChecksums(localChecksums, false)
-	log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", localChecksums)
+	if hooks.ReadWriteLegacyTrustFile {
+		// Legacy: Load the the old file, if existing
+		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
+		store.AddChecksums(localChecksums, false)
+		log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", localChecksums)
+	}
 
 	log.DebugF("%s", store.Summary())
 	return store
@@ -961,18 +963,20 @@ func storePendingData(
 		}
 	}
 
-	// Legacy function write disabled and trusted hooks back to `.githooks.checksum`
-	// @todo write them to the correct file!
-	localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
-	f, err := os.OpenFile(localChecksums, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
-	log.AssertNoErrorFatalF(err, "Could not open file '%s'", localChecksums)
+	if hooks.ReadWriteLegacyTrustFile {
+		// Legacy function write disabled and trusted hooks back to `.githooks.checksum`
+		// @todo write them to the correct file!
+		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
+		f, err := os.OpenFile(localChecksums, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		log.AssertNoErrorFatalF(err, "Could not open file '%s'", localChecksums)
 
-	for _, d := range uiSettings.DisabledHooks {
-		f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
-	}
+		for _, d := range uiSettings.DisabledHooks {
+			f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
+		}
 
-	for _, d := range uiSettings.TrustedHooks {
-		f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
+		for _, d := range uiSettings.TrustedHooks {
+			f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
+		}
 	}
 }
 

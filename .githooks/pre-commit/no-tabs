@@ -16,7 +16,7 @@ checkTab() {
 }
 
 for FILE in $STAGED_FILES; do
-    if echo "$FILE" | grep -qvE "\.go$"; then
+    if echo "$FILE" | grep -qvE "githooks/.*$"; then
         checkTab "$FILE"
     fi
 done

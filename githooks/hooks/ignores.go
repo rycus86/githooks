@@ -1,19 +1,20 @@
 package hooks
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
+
+	glob "github.com/bmatcuk/doublestar/v2"
 )
 
 // HookIgnorePatterns is the format of the ignore patterns.
 type HookIgnorePatterns struct {
-	Patterns       []string // Shell file patterns (uses `filepath.Match`) matching hook namespace paths.
-	NamespacePaths []string // Specific hook namespace paths (uses full string match).
+	Patterns       []string `yaml:"patterns"`        // Shell file patterns (uses `filepath.Match`) matching hook namespace paths.
+	NamespacePaths []string `yaml:"namespace-paths"` // Specific hook namespace paths (uses full string match).
 }
 
 // RepoIgnorePatterns is the list of possible ignore patterns in a repository.
@@ -50,16 +51,13 @@ func (h *HookIgnorePatterns) Add(p HookIgnorePatterns) {
 // IsIgnored returns true if `NamespacePathspacePath` is ignored and otherwise `false`
 func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
 
-	// Legacy
-	// @todo Remove only restricting to filename!
-	namespacePath = path.Base(namespacePath)
-
 	for _, p := range h.Patterns {
 		// Note: Only forward slashes need to be used here in `hookPath`
 		cm.DebugAssert(!strings.Contains(namespacePath, `\`),
 			"Only forward slashes")
-		fmt.Printf("Match %s, %s\n", p, namespacePath)
-		matched, err := path.Match(p, namespacePath)
+
+		matched, err := glob.Match(p, namespacePath)
+
 		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
 		if err == nil && matched {
 			return true
@@ -71,10 +69,10 @@ func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
 
 // IsIgnored returns `true` if the hooksPath is ignored by either the worktree patterns or the user patterns
 // and otherwise `false`. The second value is `true` if it was ignored by the user patterns.
-func (h *RepoIgnorePatterns) IsIgnored(hookPath string) (bool, bool) {
-	if h.Worktree.IsIgnored(hookPath) {
+func (h *RepoIgnorePatterns) IsIgnored(namespacePath string) (bool, bool) {
+	if h.Worktree.IsIgnored(namespacePath) {
 		return true, false
-	} else if h.User.IsIgnored(hookPath) {
+	} else if h.User.IsIgnored(namespacePath) {
 		return true, true
 	}
 	return false, false
@@ -99,11 +97,13 @@ func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns Ho
 		patterns.Add(patterns2)
 	}
 
-	// Legacy load hooks from old ignore files
-	// @todo Remove and only use the .yaml implementation.
-	patterns3, e := loadIgnorePatternsLegacy(repoDir, hookName)
-	err = cm.CombineErrors(err, e)
-	patterns.Add(patterns3)
+	if ReadLegacyIgnoreFiles {
+		// Legacy load hooks from old ignore files
+		// @todo Remove and only use the .yaml implementation.
+		patterns3, e := loadIgnorePatternsLegacy(repoDir, hookName)
+		err = cm.CombineErrors(err, e)
+		patterns.Add(patterns3)
+	}
 
 	return
 }
@@ -226,6 +226,12 @@ func loadIgnorePatternsLegacyFile(file string) (p HookIgnorePatterns, err error)
 		for _, s := range strs.SplitLines(string(data)) {
 			if s == "" || strings.HasPrefix(s, "#") {
 				continue
+			}
+
+			// We add '**/' to each pattern, as we no longer match filenames only
+			// but a whole namespacePath.
+			if ReadLegacyIgnoreFileFixPatters {
+				s = "**/" + s
 			}
 
 			p.Patterns = append(p.Patterns, s)

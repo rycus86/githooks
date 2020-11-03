@@ -13,7 +13,7 @@ import (
 // RegisterRepos is the format of the register file
 // in the install folder.
 type RegisterRepos struct {
-	GitDirs []string
+	GitDirs []string `yaml:"git-dirs"`
 }
 
 // RegisterRepo registers the Git directory in the install directory.
