@@ -63,8 +63,11 @@ type ILogContext interface {
 	AssertNoErrorFatalF(err error, format string, args ...interface{})
 
 	HasColors() bool
+	ColorInfo(string) string
+	ColorError(string) string
+	ColorPrompt(string) string
 
-	GetFormatter() func(format string, args ...interface{}) string
+	GetPromptFormatter() func(format string, args ...interface{}) string
 
 	GetInfoWriter() io.Writer
 	IsInfoATerminal() bool
@@ -84,58 +87,81 @@ type LogContext struct {
 	errorIsATerminal bool
 	isColorSupported bool
 
-	renderInfo   func(string) string
-	renderError  func(string) string
-	renderPrompt func(string) string
+	colorInfo   func(string) string
+	colorError  func(string) string
+	colorPrompt func(string) string
 }
 
 // CreateLogContext creates a log context
-func CreateLogContext() (ILogContext, error) {
+func CreateLogContext(onlyStderr bool) (ILogContext, error) {
 
-	// Its good to output everythin to stderr since git
-	// might read stdin for certain hooks.
-	// Either do redirection (which needs to be bombproof)
-	// or just use stderr.
-	info := log.New(os.Stderr, "", 0)
-	warn := info
-	error := info
+	var debug, info, warn, error *log.Logger
 
-	var debug *log.Logger
+	if onlyStderr {
+
+		// Its good to output everythin to stderr since git
+		// might read stdin for certain hooks.
+		// Either do redirection (which needs to be bombproof)
+		// or just use stderr.
+		info = log.New(os.Stderr, "", 0)
+		warn = info
+		error = info
+	} else {
+		info = log.New(os.Stdout, "", 0)
+		warn = log.New(os.Stderr, "", 0)
+		error = warn
+	}
+
 	if DebugLog {
 		debug = info
 	}
 
 	if info == nil || warn == nil || error == nil {
-		return nil, Error("Failed to initialized info,warn,error logs")
+		return nil, Error("Failed to initialized info, warn, error logs")
 	}
 
 	infoIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	errorIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
 	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 
-	var renderInfo func(string) string
-	var renderError func(string) string
-	var renderPrompt func(string) string
+	var colorInfo func(string) string
+	var colorError func(string) string
+	var colorPrompt func(string) string
 
 	if hasColors {
-		renderInfo = func(s string) string { return color.FgLightBlue.Render(s) }
-		renderError = func(s string) string { return color.FgRed.Render(s) }
-		renderPrompt = func(s string) string { return color.FgGreen.Render(s) }
+		colorInfo = func(s string) string { return color.FgLightBlue.Render(s) }
+		colorError = func(s string) string { return color.FgRed.Render(s) }
+		colorPrompt = func(s string) string { return color.FgGreen.Render(s) }
 
 	} else {
-		renderInfo = func(s string) string { return s }
-		renderError = func(s string) string { return s }
-		renderPrompt = func(s string) string { return s }
+		colorInfo = func(s string) string { return s }
+		colorError = func(s string) string { return s }
+		colorPrompt = func(s string) string { return s }
 	}
 
 	return &LogContext{debug, info, warn, error,
 		infoIsATerminal, errorIsATerminal, hasColors,
-		renderInfo, renderError, renderPrompt}, nil
+		colorInfo, colorError, colorPrompt}, nil
 }
 
 // HasColors returns if the log uses colors.
 func (c *LogContext) HasColors() bool {
 	return c.isColorSupported
+}
+
+// ColorInfo returns the colorized string for info-like messages
+func (c *LogContext) ColorInfo(s string) string {
+	return c.colorInfo(s)
+}
+
+// ColorError returns the colorized string for error-like messages
+func (c *LogContext) ColorError(s string) string {
+	return c.colorError(s)
+}
+
+// ColorPrompt returns the colorized string for prompt-like messages
+func (c *LogContext) ColorPrompt(s string) string {
+	return c.colorPrompt(s)
 }
 
 // GetInfoWriter returns the info writer.
@@ -161,52 +187,52 @@ func (c *LogContext) IsErrorATerminal() bool {
 // Debug logs a debug message.
 func (c *LogContext) Debug(lines ...string) {
 	if DebugLog {
-		c.debug.Printf(c.renderInfo(FormatMessage(debugSuffix, debugIndent, lines...)))
+		c.debug.Printf(c.colorInfo(FormatMessage(debugSuffix, debugIndent, lines...)))
 	}
 }
 
 // DebugF logs a debug message.
 func (c *LogContext) DebugF(format string, args ...interface{}) {
 	if DebugLog {
-		c.debug.Printf(c.renderInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)))
+		c.debug.Printf(c.colorInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)))
 	}
 }
 
 // Info logs a info message.
 func (c *LogContext) Info(lines ...string) {
-	c.info.Printf(c.renderInfo(FormatMessage(infoSuffix, infoIndent, lines...)))
+	c.info.Printf(c.colorInfo(FormatMessage(infoSuffix, infoIndent, lines...)))
 }
 
 // InfoF logs a info message.
 func (c *LogContext) InfoF(format string, args ...interface{}) {
-	c.info.Printf(c.renderInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)))
+	c.info.Printf(c.colorInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)))
 }
 
 // Warn logs a warning message.
 func (c *LogContext) Warn(lines ...string) {
-	c.warn.Printf(c.renderError(FormatMessage(warnSuffix, warnIndent, lines...)))
+	c.warn.Printf(c.colorError(FormatMessage(warnSuffix, warnIndent, lines...)))
 }
 
 // WarnF logs a warning message.
 func (c *LogContext) WarnF(format string, args ...interface{}) {
-	c.warn.Printf(c.renderError(FormatMessageF(warnSuffix, warnIndent, format, args...)))
+	c.warn.Printf(c.colorError(FormatMessageF(warnSuffix, warnIndent, format, args...)))
 }
 
 // Error logs an error.
 func (c *LogContext) Error(lines ...string) {
-	c.error.Printf(c.renderError(FormatMessage(errorSuffix, errorIndent, lines...)))
+	c.error.Printf(c.colorError(FormatMessage(errorSuffix, errorIndent, lines...)))
 }
 
 // ErrorF logs an error.
 func (c *LogContext) ErrorF(format string, args ...interface{}) {
-	c.error.Printf(c.renderError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
+	c.error.Printf(c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
 }
 
-// GetFormatter renders a prompt.
-func (c *LogContext) GetFormatter() func(format string, args ...interface{}) string {
+// GetPromptFormatter colors a prompt.
+func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
 
 	fmt := func(format string, args ...interface{}) string {
-		return c.renderPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))
+		return c.colorPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))
 	}
 
 	return fmt
@@ -227,14 +253,14 @@ func (c *LogContext) ErrorWithStacktraceF(format string, args ...interface{}) {
 // Fatal logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) Fatal(lines ...string) {
 	m := FormatMessage(errorSuffix, errorIndent, lines...)
-	c.error.Printf(c.renderError(m))
+	c.error.Printf(c.colorError(m))
 	panic(GithooksFailure{m})
 }
 
 // FatalF logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) FatalF(format string, args ...interface{}) {
 	m := FormatMessageF(errorSuffix, errorIndent, format, args...)
-	c.error.Printf(c.renderError(m))
+	c.error.Printf(c.colorError(m))
 	panic(GithooksFailure{m})
 }
 

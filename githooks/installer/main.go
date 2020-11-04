@@ -1,9 +1,7 @@
 package main
 
-import (
-	"fmt"
-)
+import "rycus86/githooks/installer/cmd"
 
 func main() {
-	fmt.Println("Hello World")
+	cmd.Execute()
 }

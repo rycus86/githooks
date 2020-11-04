@@ -91,7 +91,7 @@ func main() {
 
 func createLog() {
 	var err error
-	log, err = cm.CreateLogContext()
+	log, err = cm.CreateLogContext(true)
 	cm.AssertOrPanic(err == nil, "Could not create log")
 }
 

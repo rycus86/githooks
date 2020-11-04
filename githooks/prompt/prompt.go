@@ -59,7 +59,7 @@ func CreateContext(
 	p := Context{
 		log: log,
 
-		promptFmt: log.GetFormatter(),
+		promptFmt: log.GetPromptFormatter(),
 		termOut:   terminalWriter,
 		termIn:    terminalReader,
 
