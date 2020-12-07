@@ -2,12 +2,21 @@ package main
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/hooks"
+	strs "rycus86/githooks/strings"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
+
+// InstallSettings are the settings for the installer.
+type InstallSettings struct {
+	installDir string
+	cloneDir   string
+}
 
 var log cm.ILogContext
 var args = GetDefaultArgs()
@@ -42,15 +51,11 @@ func init() {
 	log, err = cm.CreateLogContext(false)
 	cm.AssertOrPanic(err == nil, "Could not create log")
 
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize()
 	rootCmd.SetOutput(&ProxyWriter{log: log})
 	rootCmd.Version = "1.0.0"
 
 	defineArguments(rootCmd, &args)
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
 }
 
 func defineArguments(rootCmd *cobra.Command, args *Arguments) {
@@ -135,9 +140,58 @@ func validateArgs(args *Arguments) {
 		"Cannot use --single and --use-core-hookspath together. See `--help`.")
 }
 
+func loadInstallDir(args *Arguments) (installDir string, cloneDir string) {
+
+	setDefault := func() {
+		usr, err := homedir.Dir()
+		cm.AssertNoErrorPanic(err, "Could not get home directory.")
+		usr = filepath.ToSlash(usr)
+		installDir = path.Join(usr, hooks.HookDirName)
+	}
+
+	// First check if we already have
+	// an install directory set (from --prefix)
+	if strs.IsNotEmpty(args.installPrefix) {
+		var err error
+		args.installPrefix, err = cm.ReplaceTilde(filepath.ToSlash(args.installPrefix))
+		log.AssertNoErrorFatal(err, "Could not replace '~' character in path.")
+		installDir = path.Join(args.installPrefix, ".githooks")
+
+	} else {
+		installDir = hooks.GetInstallDir()
+		if !cm.IsDirectory(installDir) {
+			log.WarnF("Install directors '%s' does not exist."+
+				"Setting to default '~/.githooks'.", installDir)
+			installDir = ""
+		}
+	}
+
+	if strs.IsEmpty(installDir) {
+		setDefault()
+	}
+
+	return
+}
+
+func setInstallDirAndRunner(installDir string) {
+	runner := hooks.GetRunnerExecutable(installDir)
+	log.AssertNoErrorFatal(hooks.SetInstallDir(installDir),
+		"Could not set install dir '%s'", installDir)
+	log.AssertNoErrorFatal(hooks.SetRunnerExecutable(runner),
+		"Could not set runner executable '%s'", runner)
+}
+
 func runInstall(cmd *cobra.Command, auxArgs []string) {
 	parseEnv(&args)
 	validateArgs(&args)
+
+	settings := InstallSettings{}
+	settings.installDir, settings.cloneDir = loadInstallDir(&args)
+
+	if !args.dryRun {
+		setInstallDirAndRunner(settings.installDir)
+	}
+
 }
 
 func main() {

@@ -181,6 +181,38 @@ Or should we put that configuration stuff inside `<sharedRepo>/.githooks/<hookNa
 
 There is also the question of should have a notion of read-only (no changes to the filesystem) and read-write (changes may happen to the filesystem) hooks. With the above pattern there is a impleizit synchronization point between `.githooks` folder (which is ok and good). But can we do better? Can we merge stuff if the user specifies that in the `parallel.yaml` somehow?
 
+## Installer
+
+### Update Procedure
+
+Updating might work like the following when the installer enters (`if ! is_postupdate`):
+
+- If the remote branch **cannot** be merged (onyl test it, this happens later) or fast-forwarded into the local branch -> exit gracefully with error.
+
+- Otherwise, clone the remote branch in the release folder into a temporary dir.
+
+- Get the binares either by manually building or by calling a
+  binary download tool (analoguous to the dialog tool) which
+  provides the binaries for the system:
+	 - Arguments: current commit sha.
+     - Returns: `installer`, `runner`, `cli`"
+	 - Binaries should be signed: https://github.com/kencochrane/golang-github-action-sign-macos/
+
+  If we use [https://goreleaser.com](https://goreleaser.com]) we directly check the deploy url as the default behavior.
+  if the download of the binaries fails, or cannot be verified... (how? app sigining... argh -> later)
+  or the binary are not yet built (can happen) -> the installer gracefully exits
+  leaving the remote branch where it was -> the update will be postponed till the next trigger...
+
+- When the binaries are succesfully downloaded & verified, we dispatch to the **downloaded** installer (with `--internal-install-postupdate`). It then continues to the postupdate install procedure as follows.
+
+- Itreplaces the current binaries with the downloaded (needs to be provided on the command line)
+  -> needs special care for Windows when the `cli`/`runner` or `installer` is still running [see here]([https://www.codeproject.com/Questions/621666/Download-and-replace-running-EXE#:~:text=If%20the%20exe%20is%20running,after%2).
+- Update all stuff it needs to do (as in `base-template.sh`) ... including legacy transforms
+  - Initialy we drop all legacy shit for the go
+    rewrite, to start fresh... but this feature needs to be included in the design since we want nice update compatibility from old releases in the future. -> Refactor this part out, such that it does not clutter the normal procedure.
+- It then updates the last update time.
+- Exits with `0` -> **Update completed.**
+
 
 ## Todos
 

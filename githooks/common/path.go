@@ -3,6 +3,9 @@ package common
 import (
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 // IsPathError returns `true` if the error is a `os.PathError`
@@ -116,4 +119,16 @@ func MakeRelative(base string, path string) (s string, e error) {
 	s, e = filepath.Rel(base, path)
 	s = filepath.ToSlash(s)
 	return
+}
+
+// ReplaceTilde replaces a suffix tilde '~' charachter in a path with the home dir.
+func ReplaceTilde(path string) (string, error) {
+	if strings.HasSuffix(path, "~") {
+		usr, err := homedir.Dir()
+		if err != nil {
+			return path, err
+		}
+		return filepath.ToSlash(usr), nil
+	}
+	return path, nil
 }

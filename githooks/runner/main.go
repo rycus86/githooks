@@ -215,7 +215,7 @@ func getInstallDir() string {
 		installDir = path.Join(usr, hooks.HookDirName)
 	}
 
-	if installDir == "" {
+	if strs.IsEmpty(installDir) {
 		setDefault()
 	} else if exists, err := cm.IsPathExisting(installDir); !exists {
 

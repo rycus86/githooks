@@ -126,6 +126,21 @@ func GetInstallDir() string {
 	return filepath.ToSlash(git.Ctx().GetConfig("githooks.installDir", git.GlobalScope))
 }
 
+// SetInstallDir sets the global Githooks install directory.
+func SetInstallDir(path string) error {
+	return git.Ctx().SetConfig("githooks.installDir", path, git.GlobalScope)
+}
+
+// GetRunnerExecutable gets the global Githooks runner executable.
+func GetRunnerExecutable(path string) string {
+	return filepath.ToSlash(git.Ctx().GetConfig("githooks.runner", git.GlobalScope))
+}
+
+// SetRunnerExecutable sets the global Githooks runner executable.
+func SetRunnerExecutable(path string) error {
+	return git.Ctx().SetConfig("githooks.runner", path, git.GlobalScope)
+}
+
 // GetReleaseCloneDir get the release clone directory inside the install dir.
 func GetReleaseCloneDir(installDir string) string {
 	return path.Join(installDir, "release")
