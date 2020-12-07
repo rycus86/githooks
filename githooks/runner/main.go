@@ -50,7 +50,7 @@ func main() {
 	// Handle all panics and report the error
 	defer func() {
 		r := recover()
-		if handleError(cwd, r) {
+		if hooks.HandleCLIErrors(r, cwd, log) {
 			exitCode = 1
 		}
 	}()
@@ -978,38 +978,4 @@ func storePendingData(
 			f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
 		}
 	}
-}
-
-func handleError(cwd string, r interface{}) bool {
-	if r == nil {
-		return false
-	}
-
-	var message string
-	withTrace := false
-
-	switch v := r.(type) {
-	case cm.GithooksFailure:
-		message = "Fatal error -> Abort."
-	case error:
-		info, e := hooks.GetBugReportingInfo(cwd)
-		v = cm.CombineErrors(v, e)
-		message = v.Error() + "\n" + info
-		withTrace = true
-
-	default:
-		info, e := hooks.GetBugReportingInfo(cwd)
-		e = cm.CombineErrors(cm.Error("Panic 💩: Unknown error"), e)
-		message = e.Error() + "\n" + info
-		withTrace = true
-	}
-
-	if log != nil && withTrace {
-		log.ErrorWithStacktrace(message)
-	} else if log != nil && !withTrace {
-		log.Error(message)
-	} else {
-		os.Stderr.WriteString(message + "\n")
-	}
-	return true
 }

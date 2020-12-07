@@ -9,6 +9,7 @@ import (
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
+	"strings"
 )
 
 // HookDirName denotes the directory name used for repository specific hooks.
@@ -30,8 +31,10 @@ var StagedFilesHookNames = [3]string{"pre-commit", "prepare-commit-msg", "commit
 // EnvVariableStagedFiles is the environment variable which holds the staged files.
 const EnvVariableStagedFiles = "STAGED_FILES"
 
-// GetBugReportingInfo Get the default bug reporting url.
+// GetBugReportingInfo gets the default bug reporting url. Argument 'repoPath' can be empty.
 func GetBugReportingInfo(repoPath string) (info string, err error) {
+	var exists bool
+
 	// Set default if needed
 	defer func() {
 		if strs.IsEmpty(info) {
@@ -40,23 +43,56 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	}()
 
 	// Check in the repo if possible
-	file := path.Join(repoPath, HookDirName, ".bug-report")
-	exists, e := cm.IsPathExisting(file)
-	if e != nil {
-		return info, e
-	}
+	if !strs.IsEmpty(repoPath) {
+		file := path.Join(repoPath, HookDirName, ".bug-report")
+		exists, err = cm.IsPathExisting(file)
 
-	if exists {
-		data, e := ioutil.ReadFile(file)
-		if e != nil {
-			return info, e
+		if exists {
+			data, err := ioutil.ReadFile(file)
+			if err == nil {
+				info = string(data)
+			}
 		}
-		info = string(data)
 	}
 
 	// Check global Git config
 	info = git.Ctx().GetConfig("githooks.bugReportInfo", git.GlobalScope)
 	return
+}
+
+// HandleCLIErrors generally handles errors for the Githooks executables. Argument `cwd` can be empty.
+func HandleCLIErrors(err interface{}, cwd string, log cm.ILogContext) bool {
+	if err == nil {
+		return false
+	}
+
+	var message []string
+	withTrace := false
+
+	switch v := err.(type) {
+	case cm.GithooksFailure:
+		message = append(message, "Fatal error -> Abort.")
+	case error:
+		info, e := GetBugReportingInfo(cwd)
+		v = cm.CombineErrors(v, e)
+		message = append(message, v.Error(), info)
+		withTrace = true
+
+	default:
+		info, e := GetBugReportingInfo(cwd)
+		e = cm.CombineErrors(cm.Error("Panic 💩: Unknown error: "), e)
+		message = append(message, e.Error(), info)
+		withTrace = true
+	}
+
+	if log != nil && withTrace {
+		log.ErrorWithStacktrace(message...)
+	} else if log != nil && !withTrace {
+		log.Error(message...)
+	} else {
+		os.Stderr.WriteString(strings.Join(message, "\n"))
+	}
+	return true
 }
 
 // IsGithooksDisabled checks if Githooks is disabled in

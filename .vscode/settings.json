@@ -1,5 +1,5 @@
 {
-    "go.useLanguageServer": false
+    "go.useLanguageServer": false,
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
