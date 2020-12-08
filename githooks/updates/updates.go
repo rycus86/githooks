@@ -1,4 +1,4 @@
-package hooks
+package updates
 
 import (
 	cm "rycus86/githooks/common"
@@ -36,10 +36,8 @@ func SetCloneURL(url string, branch string) error {
 }
 
 // FetchUpdates fetches updates in the Githooks clone directory.
-func FetchUpdates(installDir string) (status FetchStatus, err error) {
-	cm.AssertOrPanic(strs.IsNotEmpty(installDir))
-
-	cloneDir := GetReleaseCloneDir(installDir)
+func FetchUpdates(cloneDir string) (status FetchStatus, err error) {
+	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
 	currentURL, currentBranch := GetCloneURL()
 
 	check := func(gitx *git.Context) error {
@@ -126,9 +124,8 @@ func FetchUpdates(installDir string) (status FetchStatus, err error) {
 // MergeUpdates merges updates in the Githooks clone directory.
 // Only a fast-forward merge of the remote branch into the local
 // branch is performed.
-func MergeUpdates(installDir string, dryRun bool) error {
-	cm.AssertOrPanic(strs.IsNotEmpty(installDir))
-	cloneDir := GetReleaseCloneDir(installDir)
+func MergeUpdates(cloneDir string, dryRun bool) error {
+	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
 
 	_, branch := GetCloneURL()
 	if strs.IsEmpty(branch) {

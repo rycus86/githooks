@@ -20,6 +20,7 @@ import (
 	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
+	"rycus86/githooks/updates"
 	"strconv"
 	"strings"
 	"time"
@@ -295,7 +296,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
 	log.Info("Checking for updates ...")
-	status, err := hooks.FetchUpdates(settings.InstallDir)
+	status, err := updates.FetchUpdates(settings.InstallDir)
 	log.AssertNoErrorWarn(err, "Could not fetch updates.")
 	if err != nil {
 		return
@@ -304,14 +305,14 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 	if shouldRunUpdate(uiSettings, status) {
 
-		// Dry run the merge...
-		err = hooks.MergeUpdates(settings.InstallDir, true)
+		cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
+		err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
 
 		log.AssertNoErrorWarnF(err,
 			"Update cannot run:\n"+
 				"Your release clone '%s' cannot be fast-forward merged.\n"+
 				"Either fix this or delete the clone to retry.",
-			hooks.GetReleaseCloneDir(settings.InstallDir))
+			cloneDir)
 
 		if err != nil {
 			return
@@ -345,7 +346,7 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	return time.Since(time.Unix(t, 0)).Hours() > 24.0
 }
 
-func shouldRunUpdate(uiSettings *UISettings, status hooks.FetchStatus) bool {
+func shouldRunUpdate(uiSettings *UISettings, status updates.FetchStatus) bool {
 	if status.IsUpdateAvailable {
 
 		question := "There is a new Githooks update available:\n" +
@@ -369,7 +370,7 @@ func shouldRunUpdate(uiSettings *UISettings, status hooks.FetchStatus) bool {
 	return false
 }
 
-func runUpdate(settings *HookSettings, status hooks.FetchStatus) {
+func runUpdate(settings *HookSettings, status updates.FetchStatus) {
 
 	exec := hooks.GetInstaller(settings.InstallDir)
 
@@ -381,6 +382,8 @@ func runUpdate(settings *HookSettings, status hooks.FetchStatus) {
 			false,
 			"--internal-autoupdate",
 			"--internal-install")
+
+		// @todo installer: remove "--internal-install"
 
 		log.InfoF("Update:\n%s", output)
 		log.AssertNoErrorWarnF(err, "Updating failed")
