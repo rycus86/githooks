@@ -295,15 +295,27 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
 	log.Info("Checking for updates ...")
-	status, err := hooks.FetchUpdates(settings.Git, settings.InstallDir)
-
+	status, err := hooks.FetchUpdates(settings.InstallDir)
 	log.AssertNoErrorWarn(err, "Could not fetch updates.")
 	if err != nil {
 		return
 	}
-
 	log.DebugF("Fetch status: '%v'", status)
+
 	if shouldRunUpdate(uiSettings, status) {
+
+		// Dry run the merge...
+		err = hooks.MergeUpdates(settings.InstallDir, true)
+
+		log.AssertNoErrorWarnF(err,
+			"Update cannot run:\n"+
+				"Your release clone '%s' cannot be fast-forward merged.\n"+
+				"Either fix this or delete the clone to retry.",
+			hooks.GetReleaseCloneDir(settings.InstallDir))
+
+		if err != nil {
+			return
+		}
 
 		runUpdate(settings, status)
 

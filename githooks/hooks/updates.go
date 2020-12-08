@@ -3,6 +3,9 @@ package hooks
 import (
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	strs "rycus86/githooks/strings"
+
+	"github.com/google/uuid"
 )
 
 // FetchStatus contains the output for `FetchUpdates`
@@ -16,12 +19,28 @@ type FetchStatus struct {
 	UpdateVersion     string
 }
 
-// FetchUpdates fetches updates in the Githooks clone directory.
-func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err error) {
-	cloneDir := GetReleaseCloneDir(installDir)
+// GetCloneURL get the clone url and clone branch.
+func GetCloneURL() (url string, branch string) {
+	gitx := git.Ctx()
+	url = gitx.GetConfig("githooks.cloneUrl", git.GlobalScope)
+	branch = gitx.GetConfig("githooks.cloneBranch", git.GlobalScope)
+	return
+}
 
-	currentURL := gitx.GetConfig("githooks.cloneUrl", git.GlobalScope)
-	currentBranch := gitx.GetConfig("githooks.cloneBranch", git.GlobalScope)
+// SetCloneURL get the clone url and clone branch.
+func SetCloneURL(url string, branch string) error {
+	gitx := git.Ctx()
+	e1 := gitx.SetConfig("githooks.cloneUrl", url, git.GlobalScope)
+	e2 := gitx.SetConfig("githooks.cloneBranch", branch, git.GlobalScope)
+	return cm.CombineErrors(e1, e2)
+}
+
+// FetchUpdates fetches updates in the Githooks clone directory.
+func FetchUpdates(installDir string) (status FetchStatus, err error) {
+	cm.AssertOrPanic(strs.IsNotEmpty(installDir))
+
+	cloneDir := GetReleaseCloneDir(installDir)
+	currentURL, currentBranch := GetCloneURL()
 
 	check := func(gitx *git.Context) error {
 		u, b, err := gitx.GetRemoteURLAndBranch("origin")
@@ -48,12 +67,12 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 
 	// Set clone URL and branch
 	cloneURL := currentURL
-	if cloneURL == "" {
+	if strs.IsEmpty(cloneURL) {
 		cloneURL = "https://github.com/rycus86/githooks.git"
 	}
 
 	cloneBranch := currentBranch
-	if cloneBranch == "" {
+	if strs.IsEmpty(cloneBranch) {
 		cloneBranch = "master"
 	}
 
@@ -63,6 +82,13 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 
 	if err != nil {
 		return
+	}
+
+	if isNewClone {
+		// Set the values back...
+		if err = SetCloneURL(cloneURL, cloneBranch); err != nil {
+			return
+		}
 	}
 
 	gitxClone := git.CtxCSanitized(cloneDir)
@@ -95,4 +121,39 @@ func FetchUpdates(gitx *git.Context, installDir string) (status FetchStatus, err
 		UpdateVersion:     updateVersion}
 
 	return
+}
+
+// MergeUpdates merges updates in the Githooks clone directory.
+// Only a fast-forward merge of the remote branch into the local
+// branch is performed.
+func MergeUpdates(installDir string, dryRun bool) error {
+	cm.AssertOrPanic(strs.IsNotEmpty(installDir))
+	cloneDir := GetReleaseCloneDir(installDir)
+
+	_, branch := GetCloneURL()
+	if strs.IsEmpty(branch) {
+		branch = "master"
+	}
+
+	remoteBranch := "origin/" + branch
+
+	gitxClone := git.CtxCSanitized(cloneDir)
+
+	if dryRun {
+		// Checkout a temporary branch from the current
+		// and merge the remote to see if it works.
+		branch = "update-" + uuid.New().String()
+		if e := gitxClone.Check("branch", branch); e != nil {
+			return e
+		}
+		defer gitxClone.Check("branch", "-D", branch)
+	}
+
+	// Fast-forward merge with fetch.
+	refSpec := strs.Fmt("%s:%s", remoteBranch, branch)
+	if e := gitxClone.Check("fetch", ".", refSpec); e != nil {
+		return e
+	}
+
+	return nil
 }

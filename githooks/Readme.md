@@ -187,7 +187,7 @@ There is also the question of should have a notion of read-only (no changes to t
 
 Updating might work like the following when the installer enters (`if ! is_postupdate`):
 
-- If the remote branch **cannot** be merged (onyl test it, this happens later) or fast-forwarded into the local branch -> exit gracefully with error.
+- If the remote branch **cannot** be merged (only test it, this happens later) or fast-forwarded into the local branch -> exit gracefully with error. **[done]** (in runner)
 
 - Otherwise, clone the remote branch in the release folder into a temporary dir.
 
