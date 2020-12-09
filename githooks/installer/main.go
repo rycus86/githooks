@@ -1,12 +1,15 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
+	"rycus86/githooks/updates"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -14,6 +17,8 @@ import (
 
 // InstallSettings are the settings for the installer.
 type InstallSettings struct {
+	args Arguments
+
 	installDir string
 	cloneDir   string
 }
@@ -140,7 +145,7 @@ func validateArgs(args *Arguments) {
 		"Cannot use --single and --use-core-hookspath together. See `--help`.")
 }
 
-func loadInstallDir(args *Arguments) (installDir string, cloneDir string) {
+func loadInstallDir(args *Arguments) (installDir string) {
 
 	setDefault := func() {
 		usr, err := homedir.Dir()
@@ -181,17 +186,82 @@ func setInstallDirAndRunner(installDir string) {
 		"Could not set runner executable '%s'", runner)
 }
 
+func buildFromSource(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
+
+	// Checkout release branch into temporary directory
+	git.Clone(tempDir, settings.cloneDir, status.RemoteBranch, 1)
+
+	// Build the binaries.
+}
+
+func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
+
+}
+
+func prepareDispatch(settings *InstallSettings) {
+
+	var status updates.ReleaseStatus
+	var err error
+
+	if args.internalAutoUpdate {
+
+		status, err = updates.GetStatus(settings.cloneDir, true)
+
+		log.AssertNoErrorFatal(err,
+			"Could not get status of release clone '%s'",
+			settings.cloneDir)
+
+	} else {
+
+		status, err = updates.FetchUpdates(
+			settings.cloneDir,
+			settings.args.cloneURL,
+			settings.args.cloneBranch,
+			true, updates.RecloneOnWrongRemote)
+
+		log.AssertNoErrorFatal(err,
+			"Could not assert release clone '%s' existing",
+			settings.cloneDir)
+
+	}
+
+	tempDir, err := ioutil.TempDir(os.TempDir(), "githooks-update")
+	log.AssertNoErrorFatal(err, "Can not create temporary update dir in '%s'", os.TempDir())
+	defer os.RemoveAll(tempDir)
+
+	updateSettings := updates.GetSettings()
+
+	if updateSettings.DoBuildFromSource {
+		buildFromSource(settings, tempDir, status)
+	} else {
+		downloadBinaries(settings, tempDir, status)
+	}
+
+	// Run installer binary
+
+}
+
+func runUpdate() {
+
+}
+
 func runInstall(cmd *cobra.Command, auxArgs []string) {
 	parseEnv(&args)
 	validateArgs(&args)
 
 	settings := InstallSettings{}
-	settings.installDir, settings.cloneDir = loadInstallDir(&args)
+	settings.args = args
+	settings.installDir = loadInstallDir(&args)
 
 	if !args.dryRun {
 		setInstallDirAndRunner(settings.installDir)
 	}
 
+	if !args.internalPostUpdate {
+		prepareDispatch(&settings)
+	}
+
+	runUpdate()
 }
 
 func main() {

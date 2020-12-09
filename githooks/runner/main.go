@@ -296,7 +296,8 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
 	log.Info("Checking for updates ...")
-	status, err := updates.FetchUpdates(settings.InstallDir)
+	cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
+	status, err := updates.FetchUpdates(cloneDir, "", "", true, updates.ErrorOnWrongRemote)
 	log.AssertNoErrorWarn(err, "Could not fetch updates.")
 	if err != nil {
 		return
@@ -305,7 +306,6 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 	if shouldRunUpdate(uiSettings, status) {
 
-		cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
 		err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
 
 		log.AssertNoErrorWarnF(err,
@@ -346,7 +346,7 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	return time.Since(time.Unix(t, 0)).Hours() > 24.0
 }
 
-func shouldRunUpdate(uiSettings *UISettings, status updates.FetchStatus) bool {
+func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool {
 	if status.IsUpdateAvailable {
 
 		question := "There is a new Githooks update available:\n" +
@@ -370,7 +370,7 @@ func shouldRunUpdate(uiSettings *UISettings, status updates.FetchStatus) bool {
 	return false
 }
 
-func runUpdate(settings *HookSettings, status updates.FetchStatus) {
+func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
 
 	exec := hooks.GetInstaller(settings.InstallDir)
 

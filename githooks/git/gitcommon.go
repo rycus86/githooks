@@ -47,7 +47,7 @@ func Clone(repoPath string, url string, branch string, depth int) error {
 func (c *Context) Pull(remote string) error {
 	out, e := c.GetCombined("pull", remote)
 	if e != nil {
-		return cm.ErrorF("Pulling '%s' in '%s' failed:\n%s", remote, c.cwd, out)
+		return cm.ErrorF("Pulling '%s' in '%s' failed:\n%s", remote, c.Cwd, out)
 	}
 	return nil
 }
@@ -56,9 +56,26 @@ func (c *Context) Pull(remote string) error {
 func (c *Context) Fetch(remote string, branch string) error {
 	out, e := c.GetCombined("fetch", remote, branch)
 	if e != nil {
-		return cm.ErrorF("Fetching of '%s' from '%s'\nin '%s' failed:\n%s", branch, remote, c.cwd, out)
+		return cm.ErrorF("Fetching of '%s' from '%s'\nin '%s' failed:\n%s", branch, remote, c.Cwd, out)
 	}
 	return nil
+}
+
+// GetCommits gets all commits in the ancestry path starting from `firstSHA` (excluded in the result)
+// up to and including `lastSHA`.
+func (c *Context) GetCommits(firstSHA string, lastSHA string) ([]string, error) {
+	return c.GetSplit("rev-list", "--ancestry-path", strs.Fmt("%s..%s", firstSHA, lastSHA))
+}
+
+// GetCommitLog gets all commits in the ancestry path starting from `firstSHA` (excluded in the result)
+// up to and including `lastSHA`.
+func (c *Context) GetCommitLog(commitSHA string, format string) (string, error) {
+	return c.Get("log", strs.Fmt("--format=%s", format), commitSHA)
+}
+
+// UpdateRef executes `git update-ref`.
+func (c *Context) UpdateRef(ref string, commitSHA string) error {
+	return c.Check("update-ref", ref, commitSHA)
 }
 
 // GetRemoteURLAndBranch reports the `remote`s `url` and
@@ -98,30 +115,47 @@ func PullOrClone(repoPath string, url string, branch string, depth int, repoChec
 	return
 }
 
+// RepoCheck is the function which is executed before a fetch.
+// Arguments 1 and 2 are `url`, `branch`.
+// Return an error to abort the action.
+// Return `true` to trigger a complete reclone.
+// Available ConfigScope's
+type RepoCheck = func(*Context, string, string) (bool, error)
+
 // FetchOrClone either executes a fetch in `repoPath` or if not
 // existing, clones to this path.
-func FetchOrClone(repoPath string, url string, branch string, depth int, repoCheck func(*Context) error) (isNewClone bool, err error) {
+// The callback `repoCheck` before a fetch can trigger a reclone.
+func FetchOrClone(
+	repoPath string,
+	url string, branch string,
+	depth int,
+	repoCheck RepoCheck) (isNewClone bool, err error) {
 
-	gitx := CtxC(repoPath)
+	gitx := CtxC(repoPath).SanitizeEnv()
 	if gitx.IsGitRepo() {
 		isNewClone = false
 
 		if repoCheck != nil {
-			if err = repoCheck(gitx); err != nil {
+			reclone := false
+			if reclone, err = repoCheck(gitx, url, branch); err != nil {
 				return
 			}
-		}
 
-		err = gitx.SanitizeEnv().Fetch("origin", branch)
+			isNewClone = reclone
+		}
 
 	} else {
 		isNewClone = true
+	}
 
+	if isNewClone {
 		if err = os.RemoveAll(repoPath); err != nil {
-			err = cm.ErrorF("Could not remove directory '%s'.", repoPath)
 			return
 		}
 		err = Clone(repoPath, url, branch, depth)
+	} else {
+
+		err = gitx.SanitizeEnv().Fetch("origin", branch)
 	}
 
 	return

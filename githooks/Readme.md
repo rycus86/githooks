@@ -205,7 +205,7 @@ Updating might work like the following when the installer enters (`if ! is_postu
 
 - When the binaries are succesfully downloaded & verified, we dispatch to the **downloaded** installer (with `--internal-install-postupdate`). It then continues to the postupdate install procedure as follows.
 
-- Itreplaces the current binaries with the downloaded (needs to be provided on the command line)
+- It replaces the current binaries with the downloaded (needs to be provided on the command line)
   -> needs special care for Windows when the `cli`/`runner` or `installer` is still running [see here]([https://www.codeproject.com/Questions/621666/Download-and-replace-running-EXE#:~:text=If%20the%20exe%20is%20running,after%2).
 - Update all stuff it needs to do (as in `base-template.sh`) ... including legacy transforms
   - Initialy we drop all legacy shit for the go
@@ -215,6 +215,10 @@ Updating might work like the following when the installer enters (`if ! is_postu
 
 
 ## Todos
+
+When installer is finished for testing:
+
+- // @todo installer: remove "--internal-install" in runner. it needs to launch the normal one first...
 
 
 ## Problems
