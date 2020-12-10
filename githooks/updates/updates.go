@@ -9,11 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
+// DefaultURL is the default remote url for release clones.
 var DefaultURL = "https://github.com/rycus86/githooks.git"
+
+// DefaultBranch is the default branch for release clones.
 var DefaultBranch = "master"
+
+var defaultRemote = "origin"
 
 // ReleaseStatus contains the status of the release clone.
 type ReleaseStatus struct {
+	RemoteURL  string
+	RemoteName string
+
 	IsNewClone bool
 
 	LocalCommitSHA  string
@@ -107,7 +115,7 @@ func FetchUpdates(
 		}
 
 		if checkRemote {
-			u, b, e := gitx.GetRemoteURLAndBranch("origin")
+			u, b, e := gitx.GetRemoteURLAndBranch(defaultRemote)
 
 			if e != nil {
 				return false, cm.CombineErrors(cm.ErrorF(
@@ -116,7 +124,7 @@ func FetchUpdates(
 			} else if u != url || b != branch {
 				if checkRemoteAction != RecloneOnWrongRemote {
 					// Default action is error out:
-					return false, cm.ErrorF("Cannot fetch updates because 'origin' of clone\n"+
+					return false, cm.ErrorF("Cannot fetch updates because '%[6]s' of clone\n"+
 						"'%[1]s'\n"+
 						"points to url:\n"+
 						"'%[2]s'\n"+
@@ -128,7 +136,7 @@ func FetchUpdates(
 						"    'git hooks config [set|print] clone-branch'\n"+
 						"Either fix this or delete the clone\n"+
 						"'%[1]s'\n"+
-						"to trigger a new checkout.", gitx.Cwd, u, b, url, branch)
+						"to trigger a new checkout.", gitx.Cwd, u, b, url, branch, defaultRemote)
 				}
 
 				// Do a reclone
@@ -172,29 +180,38 @@ func FetchUpdates(
 		}
 	}
 
-	remoteBranch := "origin/" + branch
+	remoteBranch := defaultRemote + "/" + branch
 	gitx := git.CtxCSanitized(cloneDir)
-	status, err = getStatus(gitx, branch, remoteBranch)
+	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch)
 	status.IsNewClone = isNewClone
+
+	// Reset the release branch to determined remote commit sha.
+	// We could have found an unskipable commit.
+	err = gitx.UpdateRef("refs/remotes/"+remoteBranch, status.RemoteCommitSHA)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
 // GetStatus returns the status of the release clone.
 func GetStatus(cloneDir string, checkRemote bool) (status ReleaseStatus, err error) {
-	url, branch := GetCloneURL()
 
 	gitx := git.CtxCSanitized(cloneDir)
 
-	if checkRemote {
-		var u, b string
-		u, b, err = gitx.GetRemoteURLAndBranch("origin")
-		if err != nil {
-			return
-		}
+	var url, branch string
+	url, branch, err = gitx.GetRemoteURLAndBranch(defaultRemote)
+	if err != nil {
+		return
+	}
 
-		if u != url || b != branch {
+	if checkRemote {
+		configURL, configBranch := GetCloneURL()
+
+		if url != configURL || branch != configBranch {
 			// Default action is error out:
-			err = cm.ErrorF("Cannot get status because 'origin' of clone\n"+
+			err = cm.ErrorF("Cannot get status because '%s' of clone\n"+
 				"'%[1]s'\n"+
 				"points to url:\n"+
 				"'%[2]s'\n"+
@@ -206,17 +223,21 @@ func GetStatus(cloneDir string, checkRemote bool) (status ReleaseStatus, err err
 				"    'git hooks config [set|print] clone-branch'\n"+
 				"Either fix this or delete the clone\n"+
 				"'%[1]s'\n"+
-				"to trigger a new checkout.", gitx.Cwd, u, b, url, branch)
+				"to trigger a new checkout.", gitx.Cwd, url, branch, configURL, configBranch)
 
 			return
 		}
 	}
 
-	return getStatus(gitx, branch, "origin/"+branch)
+	remoteBranch := defaultRemote + "/" + branch
+
+	return getStatus(gitx, url, defaultRemote, branch, remoteBranch)
 }
 
 func getStatus(
 	gitx *git.Context,
+	url string,
+	remoteName string,
 	branch string,
 	remoteBranch string) (status ReleaseStatus, err error) {
 
@@ -246,26 +267,19 @@ func getStatus(
 		}
 
 		if unskipCommit != remoteSHA {
-			// Reset to the unskippable commit.
-			err = gitx.UpdateRef("refs/remotes/"+remoteBranch, unskipCommit)
-			if err != nil {
-				return
-			}
 			remoteSHA = unskipCommit
 		}
 
-		shortSHA, e1 := gitx.Get("rev-parse", "--short=6", remoteBranch)
-		date, e2 := gitx.Get("log", "-1", "--date=format:%y%m.%d%H%M", "--format=%cd", remoteBranch)
-
-		if e1 != nil || e2 != nil {
-			err = cm.CombineErrors(err, e1, e2)
+		// Get the version.
+		updateVersion, err = gitx.Get("describe", "--tags", "--always", "--abbrev=6", remoteSHA)
+		if err != nil {
 			return
 		}
-
-		updateVersion = date + "-" + shortSHA
 	}
 
 	status = ReleaseStatus{
+		RemoteURL:         url,
+		RemoteName:        remoteName,
 		LocalCommitSHA:    localSHA,
 		RemoteCommitSHA:   remoteSHA,
 		IsUpdateAvailable: strs.IsNotEmpty(updateVersion),

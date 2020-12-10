@@ -86,8 +86,8 @@ func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}
 	}
 }
 
-// AssertNoErrorWarn Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) bool {
+// AssertNoError Assert no error, and otherwise log it.
+func (c *LogContext) AssertNoError(err error, lines ...string) bool {
 	if err != nil {
 		c.Warn(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
 		return false
@@ -95,8 +95,8 @@ func (c *LogContext) AssertNoErrorWarn(err error, lines ...string) bool {
 	return true
 }
 
-// AssertNoErrorWarnF Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorWarnF(err error, format string, args ...interface{}) bool {
+// AssertNoErrorF Assert no error, and otherwise log it.
+func (c *LogContext) AssertNoErrorF(err error, format string, args ...interface{}) bool {
 	if err != nil {
 		c.WarnF(format+"\n-> error: ["+err.Error()+"]", args...)
 		return false

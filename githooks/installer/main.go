@@ -5,11 +5,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"rycus86/githooks/builder"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -17,7 +19,7 @@ import (
 
 // InstallSettings are the settings for the installer.
 type InstallSettings struct {
-	args Arguments
+	args *Arguments
 
 	installDir string
 	cloneDir   string
@@ -122,6 +124,11 @@ func defineArguments(rootCmd *cobra.Command, args *Arguments) {
 		"The clone branch from which Githooks should\n"+
 			"clone and install itself.")
 
+	rootCmd.PersistentFlags().BoolVar(&args.buildFromSource,
+		"build-from-source", false,
+		"If the binaries are built from source instead of\n"+
+			"downloaded from the deploy url.")
+
 	rootCmd.Args = cobra.NoArgs
 }
 
@@ -145,13 +152,15 @@ func validateArgs(args *Arguments) {
 		"Cannot use --single and --use-core-hookspath together. See `--help`.")
 }
 
-func loadInstallDir(args *Arguments) (installDir string) {
+func setMainVariables(args *Arguments) InstallSettings {
 
-	setDefault := func() {
+	var installDir string
+
+	getDefault := func() string {
 		usr, err := homedir.Dir()
 		cm.AssertNoErrorPanic(err, "Could not get home directory.")
 		usr = filepath.ToSlash(usr)
-		installDir = path.Join(usr, hooks.HookDirName)
+		return path.Join(usr, hooks.HookDirName)
 	}
 
 	// First check if we already have
@@ -165,17 +174,20 @@ func loadInstallDir(args *Arguments) (installDir string) {
 	} else {
 		installDir = hooks.GetInstallDir()
 		if !cm.IsDirectory(installDir) {
-			log.WarnF("Install directory '%s' does not exist."+
+			log.WarnF("Install directory '%s' does not exist.\n"+
 				"Setting to default '~/.githooks'.", installDir)
 			installDir = ""
 		}
 	}
 
 	if strs.IsEmpty(installDir) {
-		setDefault()
+		installDir = getDefault()
 	}
 
-	return
+	return InstallSettings{
+		args:       args,
+		installDir: installDir,
+		cloneDir:   hooks.GetReleaseCloneDir(installDir)}
 }
 
 func setInstallDirAndRunner(installDir string) {
@@ -188,11 +200,39 @@ func setInstallDirAndRunner(installDir string) {
 
 func buildFromSource(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
 
-	// Checkout release branch into temporary directory
-	err := git.Clone(tempDir, settings.cloneDir, status.RemoteBranch, 1)
-	log.AssertNoErrorFatalF(err, "Could not checkout release branch into '%s'", tempDir)
+	log.Info("Building binaries from source ...")
+
+	// Clone another copy of the release clone into temporary directory
+	log.InfoF("Clone to temporary build directory '%s'", tempDir)
+	err := git.Clone(tempDir, status.RemoteURL, status.Branch, 1)
+	log.AssertNoErrorFatalF(err, "Could not clone release branch into '%s'.", tempDir)
+
+	// Checkout the remote commit sha (the update)
+	log.InfoF("Checkout out commit '%s'", status.RemoteCommitSHA[0:6])
+	err = git.CtxC(tempDir).Check("checkout",
+		"-b", "update-to-"+status.RemoteCommitSHA[0:6],
+		status.RemoteCommitSHA)
+
+	log.AssertNoErrorFatalF(err,
+		"Could not checkout update commit '%s' in '%s'.",
+		status.RemoteCommitSHA, tempDir)
 
 	// Build the binaries.
+	log.Info("Building binaries ...")
+	binPath, err := builder.Build(tempDir)
+	log.AssertNoErrorFatalF(err, "Could not build release branch in '%s'.", tempDir)
+
+	binaries, err := cm.GetAllFiles(binPath)
+	log.AssertNoErrorFatalF(err, "Could not get binaries in path '%s'.", binPath)
+	log.FatalIf(len(binaries) == 0, "No binaries found in '%s'", binPath)
+
+	log.InfoF(
+		"Succesfully built %v binaries:\n - %s",
+		len(binaries),
+		strings.Join(
+			strs.Map(binaries,
+				func(s string) string { return path.Base(s) }),
+			"\n - "))
 }
 
 func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
@@ -216,7 +256,7 @@ func prepareDispatch(settings *InstallSettings) {
 			settings.args.cloneBranch,
 			true, updates.RecloneOnWrongRemote)
 
-		log.AssertNoErrorFatal(err,
+		log.AssertNoErrorFatalF(err,
 			"Could not assert release clone '%s' existing",
 			settings.cloneDir)
 	}
@@ -227,7 +267,7 @@ func prepareDispatch(settings *InstallSettings) {
 
 	updateSettings := updates.GetSettings()
 
-	if updateSettings.DoBuildFromSource {
+	if settings.args.buildFromSource || updateSettings.DoBuildFromSource {
 		buildFromSource(settings, tempDir, status)
 	} else {
 		downloadBinaries(settings, tempDir, status)
@@ -242,12 +282,13 @@ func runUpdate() {
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
+
+	log.InfoF("Installer [version: %s]", hooks.BuildVersion)
+
 	parseEnv(&args)
 	validateArgs(&args)
 
-	settings := InstallSettings{}
-	settings.args = args
-	settings.installDir = loadInstallDir(&args)
+	settings := setMainVariables(&args)
 
 	if !args.dryRun {
 		setInstallDirAndRunner(settings.installDir)

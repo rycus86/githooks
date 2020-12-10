@@ -18,8 +18,10 @@ type Arguments struct {
 
 	useCoreHooksPath bool
 
-	cloneURL      string
-	cloneBranch   string
+	cloneURL        string
+	cloneBranch     string
+	buildFromSource bool
+
 	installPrefix string
 	templateDir   string
 }

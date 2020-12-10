@@ -1,0 +1,47 @@
+#!/bin/sh
+
+REPO_DIR=$(git rev-parse --show-toplevel)
+
+set -e
+
+die() {
+    echo "!! " "$@" >&2
+    exit 1
+}
+
+cleanUp() {
+    if [ -d "$tmp" ]; then
+        rm -rf "$tmp"
+    fi
+}
+
+tmp=$(mktemp -d)
+
+trap cleanUp EXIT INT TERM
+
+cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
+FROM golang:1.15.3-alpine
+RUN apk add --no-cache git git-lfs bash
+
+RUN git config --global user.email "githook@test.com" && \
+    git config --global user.name "Githook Tests"
+
+ADD githooks /var/lib/githooks/githooks
+
+# Commit everything
+RUN echo "Make test gitrepo to clone from ..." && \
+    cd /var/lib/githooks && git init >/dev/null 2>&1 && \
+    git add . >/dev/null 2>&1 && \
+    git commit -a -m "Initial release" >/dev/null 2>&1 && \
+    git tag 1.0.0-test >/dev/null 2>&1 && \
+    git commit -a --allow-empty -m "Empty to reset to trigger update" >/dev/null 2>&1
+
+# Build binaries
+RUN cd /var/lib/githooks/githooks && ./clean.sh
+RUN /var/lib/githooks/githooks/build.sh -tags debug,mock
+RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
+
+RUN /var/lib/githooks/installer --clone-url https://github.com/gabyx/githooks.git \
+                                --clone-branch feature/go-refactoring \
+                                --build-from-source
+EOF

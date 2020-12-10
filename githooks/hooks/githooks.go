@@ -12,6 +12,9 @@ import (
 	"strings"
 )
 
+// BuildVersion is the build version which is injected during build.
+var BuildVersion = ""
+
 // HookDirName denotes the directory name used for repository specific hooks.
 var HookDirName = ".githooks"
 

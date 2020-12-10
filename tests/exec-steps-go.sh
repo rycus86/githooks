@@ -11,6 +11,8 @@ SKIPPED=0
 
 FAILED_TEST_LIST=""
 
+COMMIT_BEFORE=$(cd /var/backup/githooks && git rev-parse HEAD)
+
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
@@ -27,8 +29,8 @@ for STEP in /var/lib/tests/step-*.sh; do
     rm -rf ~/.githooks
     rm -rf /tmp/*
 
-    mkdir -p /var/backup/githooks &&
-        cp -r /var/lib/githooks/* /var/backup/githooks/.
+    git -C /var/lib/githooks reset --hard "$COMMIT_BEFORE" &&
+        git -C /var/lib/githooks clean -df
 
     TEST_RUNS=$((TEST_RUNS + 1))
 
@@ -78,8 +80,6 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset init.templateDir
     git config --global --unset core.hooksPath
     rm -rf ~/.githooks 2>/dev/null
-
-    cp -r /var/backup/githooks/* /var/lib/githooks/. 2>/dev/null
 
     echo
 

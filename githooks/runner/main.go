@@ -35,6 +35,8 @@ func main() {
 
 	createLog()
 
+	log.DebugF("Runner [version: %s]", hooks.BuildVersion)
+
 	startTime := cm.GetStartTime()
 	exitCode := 0
 
@@ -121,16 +123,16 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	installDir := getInstallDir()
 
 	dialogTool, err := hooks.GetToolScript(installDir, "dialog")
-	log.AssertNoErrorWarnF(err, "Could not get status of 'dialog' tool.")
+	log.AssertNoErrorF(err, "Could not get status of 'dialog' tool.")
 	if dialogTool != nil {
 		log.DebugF("Use dialog tool '%s'", dialogTool.GetCommand())
 	}
 
 	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool)
-	log.AssertNoErrorWarnF(err, "Prompt setup failed -> using fallback.")
+	log.AssertNoErrorF(err, "Prompt setup failed -> using fallback.")
 
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
-	log.AssertNoErrorWarn(err, "Could not get trust settings.")
+	log.AssertNoError(err, "Could not get trust settings.")
 
 	failOnNonExistingHooks := gitx.GetConfig("githooks.failOnNonExistingSharedHooks", git.Traverse) == "true"
 
@@ -163,17 +165,17 @@ func getIgnorePatterns(settings *HookSettings) (patt hooks.RepoIgnorePatterns) {
 	patt.Worktree, err = hooks.GetHookIgnorePatternsWorktree(
 		settings.RepositoryPath,
 		settings.HookName)
-	log.AssertNoErrorWarn(err, "Could not get hook ignore patterns.")
+	log.AssertNoError(err, "Could not get hook ignore patterns.")
 	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree)
 
 	patt.User, err = hooks.GetHookIgnorePatternsGitDir(settings.GitDir)
-	log.AssertNoErrorWarn(err, "Could not get user ignore patterns.")
+	log.AssertNoError(err, "Could not get user ignore patterns.")
 	log.DebugF("User ignore patterns: '%q'.", patt.User)
 
 	// Legacy
 	// @todo Remove
 	legacyDisabledHooks, err := hooks.GetHookIgnorePatternsLegacy(settings.GitDir)
-	log.AssertNoErrorWarn(err, "Could not get legacy ignore patterns.")
+	log.AssertNoError(err, "Could not get legacy ignore patterns.")
 	patt.User.Add(legacyDisabledHooks)
 
 	return
@@ -190,21 +192,21 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 
 	if !loadFallback {
 		err = store.AddChecksums(cacheDir, true)
-		log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", cacheDir)
+		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", cacheDir)
 		loadFallback = err != nil
 	}
 
 	if loadFallback {
 		cacheDir = path.Join(settings.GitDir, ".githooks.checksums")
 		err = store.AddChecksums(cacheDir, true)
-		log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", cacheDir)
+		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", cacheDir)
 	}
 
 	if hooks.ReadWriteLegacyTrustFile {
 		// Legacy: Load the the old file, if existing
 		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
 		store.AddChecksums(localChecksums, false)
-		log.AssertNoErrorWarnF(err, "Could not add checksums from '%s'.", localChecksums)
+		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", localChecksums)
 	}
 
 	log.DebugF("%s", store.Summary())
@@ -225,7 +227,7 @@ func getInstallDir() string {
 		setDefault()
 	} else if exists, err := cm.IsPathExisting(installDir); !exists {
 
-		log.AssertNoErrorWarn(err,
+		log.AssertNoError(err,
 			"Could not check path '%s'", installDir)
 		log.WarnF(
 			"Githooks installation is corrupt!\n"+
@@ -252,7 +254,7 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 		log.DebugF("Register repo '%s'", gitDir)
 
 		err := hooks.RegisterRepo(gitDir, installDir, true)
-		log.AssertNoErrorWarnF(err, "Could not register repo '%s'.", gitDir)
+		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
 		if err == nil {
 			gitx.SetConfig("githooks.registered", "true", git.LocalScope)
 		}
@@ -303,7 +305,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 	log.Info("Checking for updates ...")
 	cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
 	status, err := updates.FetchUpdates(cloneDir, "", "", true, updates.ErrorOnWrongRemote)
-	log.AssertNoErrorWarn(err, "Could not fetch updates.")
+	log.AssertNoError(err, "Could not fetch updates.")
 	if err != nil {
 		return
 	}
@@ -313,7 +315,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 		err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
 
-		log.AssertNoErrorWarnF(err,
+		log.AssertNoErrorF(err,
 			"Update cannot run:\n"+
 				"Your release clone '%s' cannot be fast-forward merged.\n"+
 				"Either fix this or delete the clone to retry.",
@@ -347,7 +349,7 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 		return true
 	}
 	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
-	log.AssertNoErrorWarnF(err, "Could not parse update time")
+	log.AssertNoErrorF(err, "Could not parse update time")
 	return time.Since(time.Unix(t, 0)).Hours() > 24.0
 }
 
@@ -362,7 +364,7 @@ func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool 
 			"(Yes, no)",
 			"Y/n",
 			"Yes", "No")
-		log.AssertNoErrorWarnF(err, "Could not show prompt.")
+		log.AssertNoErrorF(err, "Could not show prompt.")
 
 		answer = strings.ToLower(answer)
 		if answer == "y" {
@@ -391,7 +393,7 @@ func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
 		// @todo installer: remove "--internal-install"
 
 		log.InfoF("Update:\n%s", output)
-		log.AssertNoErrorWarnF(err, "Updating failed")
+		log.AssertNoErrorF(err, "Updating failed")
 
 	} else {
 		log.WarnF(
@@ -411,7 +413,7 @@ func executeLFSHooks(settings *HookSettings) {
 
 	lfsIsRequired, err := cm.IsPathExisting(path.Join(
 		settings.RepositoryPath, hooks.HookDirName, ".lfs-required"))
-	log.AssertNoErrorWarnF(err, "Could not check path.")
+	log.AssertNoErrorF(err, "Could not check path.")
 
 	if lfsIsAvailable {
 		log.Debug("Excuting LFS Hook")
@@ -446,7 +448,7 @@ func executeOldHooks(settings *HookSettings,
 	hook.Path = path.Join(settings.HookDir, hookName) // Make it relative to git directory
 
 	exists, err := cm.IsPathExisting(hook.Path)
-	log.AssertNoErrorWarnF(err, "Could not check path '%s'", hook.Path)
+	log.AssertNoErrorF(err, "Could not check path '%s'", hook.Path)
 	if !exists {
 		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
 		return
@@ -538,7 +540,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 		}
 
 		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth, nil)
-		log.AssertNoErrorWarnF(err, "Updating hooks '%s' failed.", hook.OriginalURL)
+		log.AssertNoErrorF(err, "Updating hooks '%s' failed.", hook.OriginalURL)
 	}
 }
 
@@ -724,11 +726,11 @@ func getHooksIn(settings *HookSettings,
 	if parseIgnores {
 		var e error
 		ignores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, settings.HookName)
-		log.AssertNoErrorWarnF(e, "Could not get worktree ignores in '%s'", hooksDir)
+		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'", hooksDir)
 	}
 
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
-	log.AssertNoErrorWarnF(err, "Could not read namespace file in '%s'", hooksDir)
+	log.AssertNoErrorF(err, "Could not read namespace file in '%s'", hooksDir)
 
 	dirOrFile := path.Join(hooksDir, settings.HookName)
 
@@ -763,7 +765,7 @@ func getHooksIn(settings *HookSettings,
 
 			})
 
-		log.AssertNoErrorWarnF(err, "Errors while walking '%s'", dirOrFile)
+		log.AssertNoErrorF(err, "Errors while walking '%s'", dirOrFile)
 
 		// @todo make a priority list for executing all batches in parallel
 		// First good solution: all sequential
@@ -840,7 +842,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 	hookNamespacePath string) (runHook bool) {
 
 	trusted, sha1, err := checksums.IsTrusted(hookPath)
-	if !log.AssertNoErrorWarnF(err,
+	if !log.AssertNoErrorF(err,
 		"Could not check trust status '%s'.", hookPath) {
 		return
 	}
@@ -860,7 +862,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 				"(Yes, all, no, disable)",
 				"Y/a/n/d",
 				"Yes", "All", "No", "Disable")
-			log.AssertNoErrorWarn(err, "Could not show prompt.")
+			log.AssertNoError(err, "Could not show prompt.")
 
 			answer = strings.ToLower(answer)
 
@@ -969,7 +971,7 @@ func storePendingData(
 
 		// ... and store them
 		err := hooks.StoreHookIgnorePatternsGitDir(ignores.User, settings.GitDir)
-		log.AssertNoErrorWarnF(err, "Could not store disabled hooks.")
+		log.AssertNoErrorF(err, "Could not store disabled hooks.")
 	}
 
 	// Store all checksums if there are any new ones.
@@ -978,7 +980,7 @@ func storePendingData(
 
 			err := checksums.SyncChecksum(uiSettings.TrustedHooks[i])
 
-			log.AssertNoErrorWarnF(err, "Could not store checksum for hook '%s'",
+			log.AssertNoErrorF(err, "Could not store checksum for hook '%s'",
 				uiSettings.TrustedHooks[i].Path)
 		}
 	}

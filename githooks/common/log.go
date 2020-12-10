@@ -51,14 +51,14 @@ type ILogContext interface {
 	DebugIfF(condition bool, format string, args ...interface{})
 	InfoIf(condition bool, lines ...string)
 	InfoIfF(condition bool, format string, args ...interface{})
-	ErrorIf(condition bool, lines ...string)
-	ErrorIfF(condition bool, format string, args ...interface{})
 	WarnIf(condition bool, lines ...string)
 	WarnIfF(condition bool, format string, args ...interface{})
+	ErrorIf(condition bool, lines ...string)
+	ErrorIfF(condition bool, format string, args ...interface{})
 	FatalIf(condition bool, lines ...string)
 	FatalIfF(condition bool, format string, args ...interface{})
-	AssertNoErrorWarn(err error, lines ...string) bool
-	AssertNoErrorWarnF(err error, format string, args ...interface{}) bool
+	AssertNoError(err error, lines ...string) bool
+	AssertNoErrorF(err error, format string, args ...interface{}) bool
 	AssertNoErrorFatal(err error, lines ...string)
 	AssertNoErrorFatalF(err error, format string, args ...interface{})
 

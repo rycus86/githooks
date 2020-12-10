@@ -25,50 +25,27 @@ func IsPathExisting(path string) (bool, error) {
 // FileFilter is the filter for `GetFiles`.
 type FileFilter = func(path string, info os.FileInfo) bool
 
-// GetFiles returns the file in directory `root`, non-recursive.
+// GetFiles returns the filtered files in directory `root` (non-recursive).
 func GetFiles(root string, filter FileFilter) (files []string, err error) {
-
-	rootDirVisited := false
-
-	if filter == nil {
-		err = ErrorF("No lambda given")
-		return nil, err
+	f := func(path string, info os.FileInfo) {
+		if filter != nil && filter(path, info) {
+			files = append(files, path)
+		}
 	}
-
-	e := filepath.Walk(root,
-		func(path string, info os.FileInfo, e error) error {
-			if info == nil || err != nil {
-				err = CombineErrors(err, e)
-				return nil
-			}
-
-			if info.IsDir() {
-				if !rootDirVisited {
-					rootDirVisited = true
-					return nil // Skip root dir...
-				}
-				// Skip all other dirs...
-				return filepath.SkipDir
-			}
-
-			path = filepath.ToSlash(path)
-
-			if filter(path, info) {
-				files = append(files, path)
-			}
-
-			return nil
-		})
-
-	err = CombineErrors(err, e)
-
+	err = WalkFiles(root, f)
 	return
+}
+
+// GetAllFiles returns all the files in directory `root` (non-recursive).
+func GetAllFiles(root string) (files []string, err error) {
+	return GetFiles(root,
+		func(path string, info os.FileInfo) bool { return true })
 }
 
 // FileFunc is the filter for `GetFiles`.
 type FileFunc = func(path string, info os.FileInfo)
 
-// WalkFiles walks all files in directory `root` and calls `filter`.
+// WalkFiles walks all files in directory `root` (non-recursive) and calls `filter`.
 func WalkFiles(root string, filter FileFunc) (err error) {
 
 	rootDirVisited := false
