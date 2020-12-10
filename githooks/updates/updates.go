@@ -87,7 +87,7 @@ func FetchUpdates(
 	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
 
 	// Repo check function before fetch is executed.
-	check := func(gitx *git.Context, url string, branch string) (bool, error) {
+	check := func(gitx git.Context, url string, branch string) (bool, error) {
 		reclone := false
 
 		// Check if clone is dirty, if so error out.
@@ -95,7 +95,7 @@ func FetchUpdates(
 		if e != nil {
 			return false,
 				cm.CombineErrors(cm.ErrorF("Could not check dirty state in '%s'",
-					gitx.GetWorkingDir()),
+					gitx.Cwd),
 					e)
 		}
 
@@ -103,7 +103,7 @@ func FetchUpdates(
 			return false, cm.ErrorF("Cannot fetch updates because the clone\n"+
 				"'%s'\n"+
 				"is dirty! Either fix this or delete the clone\n"+
-				"to trigger a new checkout.", gitx.GetWorkingDir())
+				"to trigger a new checkout.", gitx.Cwd)
 		}
 
 		if checkRemote {
@@ -111,7 +111,7 @@ func FetchUpdates(
 
 			if e != nil {
 				return false, cm.CombineErrors(cm.ErrorF(
-					"Could not check url & branch in repository at '%s'", gitx.GetWorkingDir()), e)
+					"Could not check url & branch in repository at '%s'", gitx.Cwd), e)
 
 			} else if u != url || b != branch {
 				if checkRemoteAction != RecloneOnWrongRemote {
@@ -128,7 +128,7 @@ func FetchUpdates(
 						"    'git hooks config [set|print] clone-branch'\n"+
 						"Either fix this or delete the clone\n"+
 						"'%[1]s'\n"+
-						"to trigger a new checkout.", gitx.GetWorkingDir(), u, b, url, branch)
+						"to trigger a new checkout.", gitx.Cwd, u, b, url, branch)
 				}
 
 				// Do a reclone
@@ -206,7 +206,7 @@ func GetStatus(cloneDir string, checkRemote bool) (status ReleaseStatus, err err
 				"    'git hooks config [set|print] clone-branch'\n"+
 				"Either fix this or delete the clone\n"+
 				"'%[1]s'\n"+
-				"to trigger a new checkout.", gitx.GetWorkingDir(), u, b, url, branch)
+				"to trigger a new checkout.", gitx.Cwd, u, b, url, branch)
 
 			return
 		}

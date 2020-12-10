@@ -35,7 +35,7 @@ func Clone(repoPath string, url string, branch string, depth int) error {
 	}
 
 	args = append(args, []string{url, repoPath}...)
-	out, e := Ctx().SanitizeEnv().GetCombined(args...)
+	out, e := CtxSanitized().GetCombined(args...)
 
 	if e != nil {
 		return cm.ErrorF("Cloning of '%s'\ninto '%s' failed:\n%s", url, repoPath, out)
@@ -90,7 +90,7 @@ func (c *Context) GetRemoteURLAndBranch(remote string) (currentURL string, curre
 // existing, clones to this path.
 func PullOrClone(repoPath string, url string, branch string, depth int, repoCheck func(*Context) error) (isNewClone bool, err error) {
 
-	gitx := CtxC(repoPath)
+	gitx := CtxCSanitized(repoPath)
 	if gitx.IsGitRepo() {
 		isNewClone = false
 
@@ -100,7 +100,7 @@ func PullOrClone(repoPath string, url string, branch string, depth int, repoChec
 			}
 		}
 
-		err = gitx.SanitizeEnv().Pull("origin")
+		err = gitx.Pull("origin")
 	} else {
 		isNewClone = true
 
@@ -120,7 +120,7 @@ func PullOrClone(repoPath string, url string, branch string, depth int, repoChec
 // Return an error to abort the action.
 // Return `true` to trigger a complete reclone.
 // Available ConfigScope's
-type RepoCheck = func(*Context, string, string) (bool, error)
+type RepoCheck = func(Context, string, string) (bool, error)
 
 // FetchOrClone either executes a fetch in `repoPath` or if not
 // existing, clones to this path.
@@ -131,13 +131,14 @@ func FetchOrClone(
 	depth int,
 	repoCheck RepoCheck) (isNewClone bool, err error) {
 
-	gitx := CtxC(repoPath).SanitizeEnv()
+	gitx := CtxCSanitized(repoPath)
+
 	if gitx.IsGitRepo() {
 		isNewClone = false
 
 		if repoCheck != nil {
 			reclone := false
-			if reclone, err = repoCheck(gitx, url, branch); err != nil {
+			if reclone, err = repoCheck(*gitx, url, branch); err != nil {
 				return
 			}
 
@@ -155,7 +156,7 @@ func FetchOrClone(
 		err = Clone(repoPath, url, branch, depth)
 	} else {
 
-		err = gitx.SanitizeEnv().Fetch("origin", branch)
+		err = gitx.Fetch("origin", branch)
 	}
 
 	return

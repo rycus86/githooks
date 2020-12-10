@@ -1,18 +1,20 @@
 package main
 
 import (
+	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
 )
 
 // HookSettings defines hooks related settings for this run.
 type HookSettings struct {
-	Args               []string     // Rest arguments.
-	Git                *git.Context // Git context to execute commands (working dir is this repository)
-	RepositoryPath     string       // Repository path.
-	RepositoryHooksDir string       // Directory with hooks for this repository.
-	GitDir             string       // Git directory.
-	InstallDir         string       // Install directory.
+	Args               []string       // Rest arguments.
+	ExecX              cm.ExecContext // Execution context for executables (working dir is this repository).
+	GitX               *git.Context   // Git context to execute commands (working dir is this repository).
+	RepositoryPath     string         // Repository path.
+	RepositoryHooksDir string         // Directory with hooks for this repository.
+	GitDir             string         // Git directory.
+	InstallDir         string         // Install directory.
 
 	HookPath string // Absolute path of the hook executing this runner.
 	HookName string // Name of the hook.

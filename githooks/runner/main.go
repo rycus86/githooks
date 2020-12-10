@@ -57,14 +57,14 @@ func main() {
 	}()
 
 	settings, uiSettings := setMainVariables(cwd)
-	assertRegistered(settings.Git, settings.InstallDir, settings.GitDir)
+	assertRegistered(settings.GitX, settings.InstallDir, settings.GitDir)
 
 	checksums := getChecksumStorage(&settings)
 	ignores := getIgnorePatterns(&settings)
 
 	defer storePendingData(&settings, &uiSettings, &ignores, &checksums)
 
-	if hooks.IsGithooksDisabled(settings.Git, true) {
+	if hooks.IsGithooksDisabled(settings.GitX, true) {
 		executeLFSHooks(&settings)
 		executeOldHooks(&settings, &uiSettings, &ignores, &checksums)
 		return
@@ -102,7 +102,11 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		len(os.Args) <= 1,
 		"No arguments given! -> Abort")
 
-	gitx := git.Ctx() // Current git context, in current working dir.
+	// General execution context, in currenct working dir.
+	execx := cm.ExecContext{}
+
+	// Current git context, in current working dir.
+	gitx := git.Ctx()
 	gitDir, err := gitx.Get("rev-parse", "--git-common-dir")
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 	gitDir, err = filepath.Abs(gitDir)
@@ -122,7 +126,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		log.DebugF("Use dialog tool '%s'", dialogTool.GetCommand())
 	}
 
-	promptCtx, err := prompt.CreateContext(log, gitx, dialogTool)
+	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool)
 	log.AssertNoErrorWarnF(err, "Prompt setup failed -> using fallback.")
 
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
@@ -132,7 +136,8 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 
 	s := HookSettings{
 		Args:               os.Args[2:],
-		Git:                gitx,
+		ExecX:              execx,
+		GitX:               gitx,
 		RepositoryPath:     repoPath,
 		RepositoryHooksDir: path.Join(repoPath, hooks.HookDirName),
 		GitDir:             gitDir,
@@ -179,7 +184,7 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 	// Get the store from the config variable
 	// fallback to Git dir if not existing.
 
-	cacheDir := settings.Git.GetConfig("githooks.checksumCacheDir", git.Traverse)
+	cacheDir := settings.GitX.GetConfig("githooks.checksumCacheDir", git.Traverse)
 	loadFallback := cacheDir == ""
 	var err error
 
@@ -261,7 +266,7 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 func exportStagedFiles(settings *HookSettings) {
 	if strs.Includes(hooks.StagedFilesHookNames[:], settings.HookName) {
 
-		files, err := hooks.GetStagedFiles(settings.Git)
+		files, err := hooks.GetStagedFiles(settings.GitX)
 
 		if len(files) != 0 {
 			log.DebugF("Exporting staged files:\n- %s",
@@ -292,7 +297,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 	}
 
 	log.Info("Record update check time ...")
-	settings.Git.SetConfig("githooks.autoupdate.lastrun",
+	settings.GitX.SetConfig("githooks.autoupdate.lastrun",
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 
 	log.Info("Checking for updates ...")
@@ -332,12 +337,12 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 		return false
 	}
 
-	enabled := settings.Git.GetConfig("githooks.autoupdate.enabled", git.Traverse)
+	enabled := settings.GitX.GetConfig("githooks.autoupdate.enabled", git.Traverse)
 	if enabled != "true" && enabled != "Y" {
 		return false
 	}
 
-	timeLastUpdate := settings.Git.GetConfig("githooks.autoupdate.lastrun", git.GlobalScope)
+	timeLastUpdate := settings.GitX.GetConfig("githooks.autoupdate.lastrun", git.GlobalScope)
 	if timeLastUpdate == "" {
 		return true
 	}
@@ -377,7 +382,7 @@ func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
 	if cm.IsFile(exec.Path) {
 
 		output, err := cm.GetCombinedOutputFromExecutable(
-			settings.Git,
+			&settings.ExecX,
 			&exec,
 			false,
 			"--internal-autoupdate",
@@ -411,7 +416,7 @@ func executeLFSHooks(settings *HookSettings) {
 	if lfsIsAvailable {
 		log.Debug("Excuting LFS Hook")
 
-		err := settings.Git.CheckPiped(
+		err := settings.GitX.CheckPiped(
 			append(
 				[]string{"lfs", settings.HookName},
 				settings.Args...,
@@ -466,7 +471,7 @@ func executeOldHooks(settings *HookSettings,
 	}
 
 	log.DebugF("Executing hook: '%s'.", hook.Path)
-	err = cm.RunExecutable(settings.Git, &hook, true)
+	err = cm.RunExecutable(&settings.ExecX, &hook, true)
 
 	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
 }
@@ -497,7 +502,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 
 	if settings.HookName != "post-merge" &&
 		!(settings.HookName == "post-checkout" && settings.Args[0] == git.NullRef) &&
-		!strs.Includes(settings.Git.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
+		!strs.Includes(settings.GitX.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
 		log.Debug("Shared hooks not updated")
 		return
 	}
@@ -576,9 +581,9 @@ func getConfigSharedHooks(
 	var err error
 
 	if sharedType == hooks.SharedHookEnum.Local {
-		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.Git, git.LocalScope)
+		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
 	} else if sharedType == hooks.SharedHookEnum.Global {
-		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.Git, git.GlobalScope)
+		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
 	} else {
 		cm.DebugAssertF(false, "Wrong shared type '%v'", sharedType)
 	}
@@ -901,7 +906,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 
 	var nThreads = runtime.NumCPU()
-	nThSetting := settings.Git.GetConfig("githooks.numThreads", git.Traverse)
+	nThSetting := settings.GitX.GetConfig("githooks.numThreads", git.Traverse)
 	if n, err := strconv.Atoi(nThSetting); err == nil {
 		nThreads = n
 	}
@@ -916,19 +921,19 @@ func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 	var results []hooks.HookResult
 
 	log.DebugIf(len(hs.LocalHooks) != 0, "Launching local hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.DebugIf(len(hs.RepoSharedHooks) != 0, "Launching repository shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.RepoSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.RepoSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.DebugIf(len(hs.LocalSharedHooks) != 0, "Launching local shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.LocalSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 
 	log.DebugIf(len(hs.GlobalSharedHooks) != 0, "Launching global shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, settings.Git, &hs.GlobalSharedHooks, results, settings.Args...)
+	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.GlobalSharedHooks, results, settings.Args...)
 	logHookResults(results)
 }
 

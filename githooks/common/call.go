@@ -7,9 +7,26 @@ import (
 	"strings"
 )
 
-// IExecContext defines the context to execute commands
+// IExecContext defines the context interface to execute commands.
 type IExecContext interface {
 	GetWorkingDir() string
+	GetEnv() []string
+}
+
+// ExecContext defines a context to execute commands.
+type ExecContext struct {
+	Cwd string
+	Env []string
+}
+
+// GetWorkingDir gets the working dir.
+func (c *ExecContext) GetWorkingDir() string {
+	return c.Cwd
+}
+
+// GetEnv gets the environement variables.
+func (c *ExecContext) GetEnv() []string {
+	return c.Env
 }
 
 // GetOutputFromExecutable calls an executable and returns its stdout output.
@@ -20,6 +37,7 @@ func GetOutputFromExecutable(
 	args ...string) ([]byte, error) {
 
 	cmd := exec.Command(exe.GetCommand(), exe.GetArgs(args...)...)
+	cmd.Env = ctx.GetEnv()
 
 	if pipeStdIn {
 		cmd.Stdin = os.Stdin
@@ -37,6 +55,7 @@ func GetCombinedOutputFromExecutable(
 	args ...string) ([]byte, error) {
 
 	cmd := exec.Command(exe.GetCommand(), exe.GetArgs(args...)...)
+	cmd.Env = ctx.GetEnv()
 
 	if pipeStdIn {
 		cmd.Stdin = os.Stdin
@@ -47,7 +66,8 @@ func GetCombinedOutputFromExecutable(
 }
 
 // GetOutputFromExecutableTrimmed calls an executable and returns its trimmed stdout output.
-func GetOutputFromExecutableTrimmed(ctx IExecContext,
+func GetOutputFromExecutableTrimmed(
+	ctx IExecContext,
 	exe IExecutable,
 	pipeStdin bool,
 	args ...string) (string, error) {
@@ -63,6 +83,7 @@ func GetOutputFromExecutableSep(
 	args ...string) ([]byte, []byte, error) {
 
 	cmd := exec.Command(exe.GetCommand(), exe.GetArgs(args...)...)
+	cmd.Env = ctx.GetEnv()
 
 	if pipeIn {
 		cmd.Stdin = os.Stdin
@@ -87,6 +108,7 @@ func RunExecutable(
 	args ...string) error {
 
 	cmd := exec.Command(exe.GetCommand(), exe.GetArgs(args...)...)
+	cmd.Env = ctx.GetEnv()
 
 	if pipeAll {
 		cmd.Stdin = os.Stdin

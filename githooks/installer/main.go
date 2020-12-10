@@ -165,7 +165,7 @@ func loadInstallDir(args *Arguments) (installDir string) {
 	} else {
 		installDir = hooks.GetInstallDir()
 		if !cm.IsDirectory(installDir) {
-			log.WarnF("Install directors '%s' does not exist."+
+			log.WarnF("Install directory '%s' does not exist."+
 				"Setting to default '~/.githooks'.", installDir)
 			installDir = ""
 		}
@@ -189,13 +189,14 @@ func setInstallDirAndRunner(installDir string) {
 func buildFromSource(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
 
 	// Checkout release branch into temporary directory
-	git.Clone(tempDir, settings.cloneDir, status.RemoteBranch, 1)
+	err := git.Clone(tempDir, settings.cloneDir, status.RemoteBranch, 1)
+	log.AssertNoErrorFatalF(err, "Could not checkout release branch into '%s'", tempDir)
 
 	// Build the binaries.
 }
 
 func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
-
+	log.Fatal("Not implemented")
 }
 
 func prepareDispatch(settings *InstallSettings) {
@@ -204,15 +205,11 @@ func prepareDispatch(settings *InstallSettings) {
 	var err error
 
 	if args.internalAutoUpdate {
-
 		status, err = updates.GetStatus(settings.cloneDir, true)
-
 		log.AssertNoErrorFatal(err,
 			"Could not get status of release clone '%s'",
 			settings.cloneDir)
-
 	} else {
-
 		status, err = updates.FetchUpdates(
 			settings.cloneDir,
 			settings.args.cloneURL,
@@ -222,7 +219,6 @@ func prepareDispatch(settings *InstallSettings) {
 		log.AssertNoErrorFatal(err,
 			"Could not assert release clone '%s' existing",
 			settings.cloneDir)
-
 	}
 
 	tempDir, err := ioutil.TempDir(os.TempDir(), "githooks-update")

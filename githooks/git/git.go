@@ -23,31 +23,28 @@ type Context struct {
 	cm.CmdContext
 }
 
-// GetWorkingDir gets the current working dir of the context
-// to implement `IExecContext`
-func (c *Context) GetWorkingDir() string {
-	return c.Cwd
-}
-
-// CtxC creates a git command execution context with current working dir.
+// CtxC creates a git command execution context with
+// working dir `cwd`.
 func CtxC(cwd string) *Context {
 	return &Context{cm.CmdContext{BaseCmd: "git", Cwd: cwd}}
 }
 
-// CtxCSanitized creates a git command execution context with current working dir and sanitized environement.
+// CtxCSanitized creates a git command execution context with
+// working dir `cwd` and sanitized environement.
 func CtxCSanitized(cwd string) *Context {
-	return (&Context{cm.CmdContext{BaseCmd: "git", Cwd: cwd}}).SanitizeEnv()
+	return (&Context{cm.CmdContext{BaseCmd: "git", Cwd: cwd, Env: SanitizeEnv(os.Environ())}})
 }
 
-// Ctx creates a git command execution context with current working dir.
+// Ctx creates a git command execution context
+// with current working dir.
 func Ctx() *Context {
-	return &Context{cm.CmdContext{BaseCmd: "git"}}
+	return CtxC("")
 }
 
-// SanitizeEnv sanitizes the execution environment.
-func (c *Context) SanitizeEnv() *Context {
-	c.Env = sanitizeEnv(os.Environ())
-	return c
+// CtxSanitized creates a git command execution context
+// with current working dir and sanitized environement.
+func CtxSanitized() *Context {
+	return CtxCSanitized("")
 }
 
 // GetConfig gets a Git configuration values.
@@ -111,8 +108,9 @@ func (c *Context) IsConfigSet(key string, scope ConfigScope) bool {
 	return err == nil
 }
 
-func sanitizeEnv(env []string) []string {
+func SanitizeEnv(env []string) []string {
 	return strs.Filter(env, func(s string) bool {
-		return !strings.Contains(s, "GIT_DIR") && !strings.Contains(s, "GIT_WORK_TREE")
+		return !strings.Contains(s, "GIT_DIR") &&
+			!strings.Contains(s, "GIT_WORK_TREE")
 	})
 }
