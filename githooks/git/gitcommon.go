@@ -4,6 +4,9 @@ import (
 	"os"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
+	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -165,4 +168,30 @@ func FetchOrClone(
 // GetSHA1HashFile gets the `git hash-object` SHA1 of a `path`.
 func GetSHA1HashFile(path string) (string, error) {
 	return Ctx().Get("hash-object", path)
+}
+
+// GetVersion gets the semantic version and commit
+func GetVersion(gitx *Context, commitSHA string) (*version.Version, error) {
+
+	if strs.IsEmpty(commitSHA) {
+		commitSHA = "HEAD"
+	}
+
+	// Get the version.
+	ver, err := gitx.Get("describe", "--tags", "--abbrev=0", commitSHA)
+	if err != nil {
+		return nil, err
+	}
+
+	ver = strings.TrimPrefix(ver, "v")
+	return version.NewVersion(ver)
+}
+
+// GetCommitSHA gets the commit SHA1 of the ref.
+func GetCommitSHA(gitx *Context, ref string) (string, error) {
+	if strs.IsEmpty(ref) {
+		ref = "HEAD"
+	}
+
+	return gitx.Get("rev-parse", ref)
 }

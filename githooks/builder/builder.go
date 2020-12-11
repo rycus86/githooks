@@ -7,7 +7,6 @@ import (
 	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
-	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"strings"
 
@@ -121,9 +120,26 @@ func Build(repoPath string) (string, error) {
 		strs.Fmt("GOBIN=%s", goBinPath),
 		strs.Fmt("GOPATH=%s", goPath))
 
-	// Build the install command.
-	// Its in the form `go install -tags <tags> ./...`.
-	cmd := []string{"install"}
+	// Initialize modules.
+	vendorCmd := []string{"mod", "vendor"}
+	out, err := gox.GetCombined(vendorCmd...)
+	if err != nil {
+		return goBinPath,
+			cm.ErrorF("Module vendor command failed:\n'%s %v'\nOutput:\n%s",
+				gox.BaseCmd, vendorCmd, out)
+	}
+
+	// Genereate everything.
+	generateCmd := []string{"generate", "-mod=vendor", "./..."}
+	out, err = gox.GetCombined(generateCmd...)
+	if err != nil {
+		return goBinPath,
+			cm.ErrorF("Generate command failed:\n'%s %v'\nOutput:\n%s",
+				gox.BaseCmd, generateCmd, out)
+	}
+
+	// Compile everything.
+	cmd := []string{"install", "-mod=vendor"}
 
 	var buildTags []string
 	if runtime.GOOS == "windows" {
@@ -134,18 +150,8 @@ func Build(repoPath string) (string, error) {
 		cmd = append(cmd, append([]string{"-tags"}, buildTags...)...)
 	}
 
-	// Inject the current build version.
-	updateVersion, err := git.CtxC(repoPath).Get("describe", "--tags", "--always", "--abbrev=6")
-	if err != nil {
-		return goBinPath, cm.ErrorF("Could not get version in path '%s'", repoPath)
-	}
-	updateVersion = strings.TrimPrefix(updateVersion, "v")
-	ldflags := strs.Fmt(`-ldflags="-X '%s/hooks.BuildVersion=%s'"`, hooks.ModuleName, updateVersion)
-
-	cmd = append(cmd, ldflags, "./...")
-
-	// Compile everything.
-	out, err := gox.GetCombined(cmd...)
+	cmd = append(cmd, "./...")
+	out, err = gox.GetCombined(cmd...)
 
 	if err != nil {
 		return goBinPath,

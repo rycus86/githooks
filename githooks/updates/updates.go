@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-version"
 )
 
 // DefaultURL is the default remote url for release clones.
@@ -28,7 +29,7 @@ type ReleaseStatus struct {
 	RemoteCommitSHA string
 
 	IsUpdateAvailable bool
-	UpdateVersion     string
+	UpdateVersion     *version.Version
 
 	Branch       string
 	RemoteBranch string
@@ -253,7 +254,7 @@ func getStatus(
 		return
 	}
 
-	updateVersion := ""
+	var updateVersion *version.Version
 
 	if localSHA != remoteSHA {
 		// We have an update available,
@@ -271,7 +272,7 @@ func getStatus(
 		}
 
 		// Get the version.
-		updateVersion, err = gitx.Get("describe", "--tags", "--always", "--abbrev=6", remoteSHA)
+		updateVersion, err = git.GetVersion(gitx, remoteSHA)
 		if err != nil {
 			return
 		}
@@ -282,7 +283,7 @@ func getStatus(
 		RemoteName:        remoteName,
 		LocalCommitSHA:    localSHA,
 		RemoteCommitSHA:   remoteSHA,
-		IsUpdateAvailable: strs.IsNotEmpty(updateVersion),
+		IsUpdateAvailable: updateVersion != nil,
 		UpdateVersion:     updateVersion,
 		Branch:            branch,
 		RemoteBranch:      remoteBranch}

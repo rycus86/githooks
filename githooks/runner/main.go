@@ -1,3 +1,5 @@
+//go:generate go run tools/genversion.go
+
 // Base Git hook template from https://github.com/rycus86/githooks
 //
 // It allows you to have a .githooks (see `hooks.HookDirName`)
@@ -21,6 +23,7 @@ import (
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
+	"rycus86/githooks/version"
 	"strconv"
 	"strings"
 	"time"
@@ -35,7 +38,7 @@ func main() {
 
 	createLog()
 
-	log.DebugF("Runner [version: %s]", hooks.BuildVersion)
+	log.DebugF("Runner [version: %s]", version.BuildVersion)
 
 	startTime := cm.GetStartTime()
 	exitCode := 0

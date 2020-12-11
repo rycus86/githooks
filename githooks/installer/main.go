@@ -11,6 +11,7 @@ import (
 	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
+	"rycus86/githooks/version"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
@@ -283,7 +284,7 @@ func runUpdate() {
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
 
-	log.InfoF("Installer [version: %s]", hooks.BuildVersion)
+	log.InfoF("Installer [version: %s]", version.BuildVersion)
 
 	parseEnv(&args)
 	validateArgs(&args)

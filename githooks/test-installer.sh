@@ -19,6 +19,8 @@ tmp=$(mktemp -d)
 
 trap cleanUp EXIT INT TERM
 
+currentTag=$(git describe --tags --abbrev=0)
+
 cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
 FROM golang:1.15.3-alpine
 RUN apk add --no-cache git git-lfs bash
@@ -33,7 +35,7 @@ RUN echo "Make test gitrepo to clone from ..." && \
     cd /var/lib/githooks && git init >/dev/null 2>&1 && \
     git add . >/dev/null 2>&1 && \
     git commit -a -m "Initial release" >/dev/null 2>&1 && \
-    git tag 1.0.0-test >/dev/null 2>&1 && \
+    git tag "$currentTag-test" >/dev/null 2>&1 && \
     git commit -a --allow-empty -m "Empty to reset to trigger update" >/dev/null 2>&1
 
 # Build binaries
