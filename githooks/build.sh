@@ -8,7 +8,7 @@ set -u
 buildFlags="$@"
 
 cd "$DIR"
-buildVersion=$(git describe --tags --abbrev=6 --always)
+buildVersion=$(git describe --tags --abbrev=6 --always | sed -E "s/^v//")
 
 # shellcheck disable=SC2086
 GOPATH="$DIR/.go" \

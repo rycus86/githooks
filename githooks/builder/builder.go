@@ -7,6 +7,7 @@ import (
 	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"strings"
 
@@ -133,12 +134,13 @@ func Build(repoPath string) (string, error) {
 		cmd = append(cmd, append([]string{"-tags"}, buildTags...)...)
 	}
 
-	// Inject the current build version
+	// Inject the current build version.
 	updateVersion, err := git.CtxC(repoPath).Get("describe", "--tags", "--always", "--abbrev=6")
 	if err != nil {
 		return goBinPath, cm.ErrorF("Could not get version in path '%s'", repoPath)
 	}
-	ldflags := strs.Fmt(`-ldflags="-X 'rycus86/githooks/hooks.BuildVersion=%s'"`, updateVersion)
+	updateVersion = strings.TrimPrefix(updateVersion, "v")
+	ldflags := strs.Fmt(`-ldflags="-X '%s/hooks.BuildVersion=%s'"`, hooks.ModuleName, updateVersion)
 
 	cmd = append(cmd, ldflags, "./...")
 

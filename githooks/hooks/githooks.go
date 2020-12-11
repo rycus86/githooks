@@ -15,6 +15,9 @@ import (
 // BuildVersion is the build version which is injected during build.
 var BuildVersion = ""
 
+// ModuleName is the module name of this package.
+var ModuleName = "rycus86/githooks"
+
 // HookDirName denotes the directory name used for repository specific hooks.
 var HookDirName = ".githooks"
 
