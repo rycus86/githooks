@@ -29,7 +29,7 @@ RUN echo "Make test gitrepo to clone from ..." && \\
     cd /var/lib/githooks && git init >/dev/null 2>&1 && \\
     git add . >/dev/null 2>&1 && \\
     git commit -a -m "Before build" >/dev/null 2>&1 && \\
-    git tag "v9.9.0+test" >/dev/null 2>&1
+    git tag "v9.9.0-test" >/dev/null 2>&1
 
 # Build binaries
 RUN cd /var/lib/githooks/githooks && ./clean.sh
@@ -50,8 +50,9 @@ RUN echo "Commit build to repo ..." && \\
     cd /var/lib/githooks && \\
     git add . >/dev/null 2>&1 && \\
     git commit -a --allow-empty -m "Initial release" >/dev/null 2>&1 && \\
-    git tag -f "v9.9.0+test" && \\
-    git commit -a --allow-empty -m "Empty to reset to trigger update" >/dev/null 2>&1
+    git tag -f "v9.9.0-test" && \\
+    git commit -a --allow-empty -m "Empty to reset to trigger update" >/dev/null 2>&1 && \\
+    git tag -f "v9.9.1-test"
 
 ADD tests/exec-steps.sh tests/step-* /var/lib/tests/
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\

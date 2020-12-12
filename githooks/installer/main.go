@@ -5,13 +5,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"rycus86/githooks/build"
 	"rycus86/githooks/builder"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
-	"rycus86/githooks/version"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
@@ -205,10 +205,10 @@ func buildFromSource(settings *InstallSettings, tempDir string, status updates.R
 
 	// Clone another copy of the release clone into temporary directory
 	log.InfoF("Clone to temporary build directory '%s'", tempDir)
-	err := git.Clone(tempDir, status.RemoteURL, status.Branch, 1)
+	err := git.Clone(tempDir, status.RemoteURL, status.Branch, -1)
 	log.AssertNoErrorFatalF(err, "Could not clone release branch into '%s'.", tempDir)
 
-	// Checkout the remote commit sha (the update)
+	// Checkout the remote commit sha
 	log.InfoF("Checkout out commit '%s'", status.RemoteCommitSHA[0:6])
 	err = git.CtxC(tempDir).Check("checkout",
 		"-b", "update-to-"+status.RemoteCommitSHA[0:6],
@@ -284,7 +284,7 @@ func runUpdate() {
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
 
-	log.InfoF("Installer [version: %s]", version.BuildVersion)
+	log.InfoF("Installer [version: %s]", build.BuildVersion)
 
 	parseEnv(&args)
 	validateArgs(&args)

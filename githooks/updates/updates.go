@@ -1,10 +1,11 @@
 package updates
 
 import (
+	"regexp"
+	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-version"
@@ -28,6 +29,7 @@ type ReleaseStatus struct {
 	LocalCommitSHA  string
 	RemoteCommitSHA string
 
+	UpdateCommitSHA   string
 	IsUpdateAvailable bool
 	UpdateVersion     *version.Version
 
@@ -51,27 +53,49 @@ func SetCloneURL(url string, branch string) error {
 	return cm.CombineErrors(e1, e2)
 }
 
-func getFirstNonSkippableCommit(gitx *git.Context, firstSHA string, lastSHA string) (string, error) {
+var unskipTrailerRe = regexp.MustCompile(`Update-NoSkip:\s+true`)
 
-	// Get all commits in between
+func getNewUpdateCommit(gitx *git.Context, firstSHA string, lastSHA string) (string, *version.Version, error) {
+	commitFound := ""
+	var versionFound *version.Version
+
+	// Get all commits in (firstSHA, lastSHA]
 	commits, e := gitx.GetCommits(firstSHA, lastSHA)
 	if e != nil {
-		return "", e
+		return "", nil, e
 	}
 
 	for _, c := range commits {
-		trailer, e := gitx.GetCommitLog(c, "%(trailers:key=Update-NoSkip,valueonly")
-		if e != nil {
-			return "", e
+
+		ver, tag, err := git.GetVersionAt(gitx, c)
+
+		if err != nil {
+			return "", nil, err
+		} else if ver == nil || strs.IsEmpty(tag) {
+			continue // no version tag on this commit
 		}
 
-		if strings.Contains(trailer, "true") {
-			// Found a commit which is non-skippable.
-			return c, nil
+		if ver.LessThanOrEqual(build.GetBuildVersion()) {
+			continue // no newer version found on this commit
+		}
+
+		// We have a valid new
+		// version on commit 'c'
+		commitFound = c
+		versionFound = ver
+
+		// Check if it is an unskippable commit:
+		// Get message of the tag (or the commit, if no annotated tag)
+		mess, err := gitx.Get("tag", "-l", "--format=%(contents)", tag)
+		if err != nil {
+			return "", nil, err
+		} else if unskipTrailerRe.MatchString(mess) {
+			// We stop at this commit since this update cannot be skipped!
+			break
 		}
 	}
 
-	return lastSHA, nil
+	return commitFound, versionFound, nil
 }
 
 // RemoteCheckAction is the action type for the remote check.
@@ -86,6 +110,9 @@ const (
 
 // FetchUpdates fetches updates in the Githooks clone directory.
 // Arguments `url` and `branch` can be empty which triggers
+// Todo: Here on clone we should really clone the latest tag on the branch
+// and not checkout the HEAD.
+// The release branch can contain commits we dont wanna clone from....
 func FetchUpdates(
 	cloneDir string,
 	url string,
@@ -166,8 +193,8 @@ func FetchUpdates(
 		branch = DefaultBranch
 	}
 
-	// Fetch the repository ...
-	depth := 1
+	// Fetch or clone he repository:
+	depth := -1 // Fetch the whole branch because we need tags on the branch
 	isNewClone, err := git.FetchOrClone(cloneDir, url, branch, depth, check)
 
 	if err != nil {
@@ -186,11 +213,14 @@ func FetchUpdates(
 	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch)
 	status.IsNewClone = isNewClone
 
-	// Reset the release branch to determined remote commit sha.
-	// We could have found an unskipable commit.
-	err = gitx.UpdateRef("refs/remotes/"+remoteBranch, status.RemoteCommitSHA)
-	if err != nil {
-		return
+	if status.IsUpdateAvailable {
+		// Reset the release branch to determined update commit sha.
+		err = gitx.UpdateRef("refs/remotes/"+remoteBranch, status.UpdateCommitSHA)
+		if err != nil {
+			return
+		}
+
+		status.RemoteCommitSHA = status.UpdateCommitSHA
 	}
 
 	return
@@ -254,39 +284,30 @@ func getStatus(
 		return
 	}
 
+	var updateCommit = ""
 	var updateVersion *version.Version
 
 	if localSHA != remoteSHA {
-		// We have an update available,
-
-		// Check first if we
-		// need to reset on to the first unskippable commit in the range.
-		var unskipCommit string
-		unskipCommit, err = getFirstNonSkippableCommit(gitx, localSHA, remoteSHA)
-		if err != nil {
-			return
-		}
-
-		if unskipCommit != remoteSHA {
-			remoteSHA = unskipCommit
-		}
-
-		// Get the version.
-		updateVersion, err = git.GetVersion(gitx, remoteSHA)
+		// We have a potential update available...
+		// Get the latest update commit in the range (localSHA, remoteSHA]
+		updateCommit, updateVersion, err = getNewUpdateCommit(gitx, localSHA, remoteSHA)
 		if err != nil {
 			return
 		}
 	}
 
 	status = ReleaseStatus{
-		RemoteURL:         url,
-		RemoteName:        remoteName,
-		LocalCommitSHA:    localSHA,
-		RemoteCommitSHA:   remoteSHA,
+		RemoteURL:       url,
+		RemoteName:      remoteName,
+		LocalCommitSHA:  localSHA,
+		RemoteCommitSHA: remoteSHA,
+
 		IsUpdateAvailable: updateVersion != nil,
 		UpdateVersion:     updateVersion,
-		Branch:            branch,
-		RemoteBranch:      remoteBranch}
+		UpdateCommitSHA:   updateCommit,
+
+		Branch:       branch,
+		RemoteBranch: remoteBranch}
 
 	return
 }

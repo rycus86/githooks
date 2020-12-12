@@ -26,6 +26,12 @@ func (c *CmdContext) Get(args ...string) (string, error) {
 	cmd.Dir = c.Cwd
 	cmd.Env = c.Env
 	stdout, err := cmd.Output()
+
+	if err != nil {
+		err = CombineErrors(
+			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+	}
+
 	return strings.TrimSpace(string(stdout)), err
 }
 
@@ -34,7 +40,14 @@ func (c *CmdContext) GetCombined(args ...string) (string, error) {
 	cmd := exec.Command(c.BaseCmd, args...)
 	cmd.Dir = c.Cwd
 	cmd.Env = c.Env
+
 	stdout, err := cmd.CombinedOutput()
+
+	if err != nil {
+		err = CombineErrors(
+			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+	}
+
 	return strings.TrimSpace(string(stdout)), err
 }
 
@@ -43,7 +56,14 @@ func (c *CmdContext) Check(args ...string) error {
 	cmd := exec.Command(c.BaseCmd, args...)
 	cmd.Dir = c.Cwd
 	cmd.Env = c.Env
-	return cmd.Run()
+
+	err := cmd.Run()
+
+	if err != nil {
+		return CombineErrors(
+			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+	}
+	return nil
 }
 
 // GetExitCode get the exit code of the command.
@@ -51,6 +71,7 @@ func (c *CmdContext) GetExitCode(args ...string) (int, error) {
 	cmd := exec.Command(c.BaseCmd, args...)
 	cmd.Dir = c.Cwd
 	cmd.Env = c.Env
+
 	err := cmd.Run()
 
 	if err == nil {
@@ -59,9 +80,10 @@ func (c *CmdContext) GetExitCode(args ...string) (int, error) {
 
 	if t, ok := err.(*exec.ExitError); ok {
 		return t.ExitCode(), nil
-
 	}
-	return -1, err
+
+	return -1, CombineErrors(
+		ErrorF("Could get exit status of '%s %s'.", c.BaseCmd, args), err)
 }
 
 // CheckPiped checks if a command executed successfully.
@@ -72,5 +94,13 @@ func (c *CmdContext) CheckPiped(args ...string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Dir = c.Cwd
 	cmd.Env = c.Env
-	return cmd.Run()
+
+	err := cmd.Run()
+
+	if err != nil {
+		return CombineErrors(
+			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+	}
+
+	return nil
 }

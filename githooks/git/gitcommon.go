@@ -170,17 +170,54 @@ func GetSHA1HashFile(path string) (string, error) {
 	return Ctx().Get("hash-object", path)
 }
 
-// GetVersion gets the semantic version and commit
-func GetVersion(gitx *Context, commitSHA string) (*version.Version, error) {
-
+// GetTags gets the tags  at `commitSHA`.
+func GetTags(gitx *Context, commitSHA string) ([]string, error) {
 	if strs.IsEmpty(commitSHA) {
 		commitSHA = "HEAD"
 	}
+	return gitx.GetSplit("tag", "--points-at", commitSHA)
+}
 
-	// Get the version.
+// GetVersionAt gets the version & tag from the tag at `commitSHA`
+func GetVersionAt(gitx *Context, commitSHA string) (*version.Version, string, error) {
+	tags, err := GetTags(gitx, commitSHA)
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, tag := range tags {
+		ver, err := version.NewVersion(tag)
+		if err == nil && ver != nil {
+			return ver, tag, nil
+		}
+	}
+	return nil, "", nil
+}
+
+// GetVersion gets the semantic version and commit
+func GetVersion(gitx *Context, commitSHA string) (v *version.Version, err error) {
+
+	if strs.IsEmpty(commitSHA) || commitSHA == "HEAD" {
+		commitSHA, err = GetCommitSHA(gitx, "HEAD")
+		if err != nil {
+			return
+		}
+	}
+
+	// Get the version tag.
 	ver, err := gitx.Get("describe", "--tags", "--abbrev=0", commitSHA)
 	if err != nil {
-		return nil, err
+		return
+	}
+
+	// Get number of commits ahead.
+	commitsAhead, err := gitx.Get("rev-list", "--count", strs.Fmt("%s..%s", ver, commitSHA))
+	if err != nil {
+		return
+	}
+
+	if commitsAhead != "0" {
+		ver = strs.Fmt("%s+%s.%s", ver, commitsAhead, commitSHA[:7])
 	}
 
 	ver = strings.TrimPrefix(ver, "v")

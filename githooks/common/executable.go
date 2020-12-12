@@ -10,7 +10,7 @@ type IExecutable interface {
 type Executable struct {
 	// The absolute path of the script/executable.
 	Path string
-	// The run command for the script/executable, `nil` if its a executable.
+	// The run command for the script/executable, `nil` if its an executable.
 	RunCmd []string
 }
 
