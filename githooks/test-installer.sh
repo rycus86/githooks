@@ -20,6 +20,7 @@ tmp=$(mktemp -d)
 trap cleanUp EXIT INT TERM
 
 currentTag=$(git describe --tags --abbrev=0)
+githooksServer="/var/lib/githooks-server"
 
 cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
 FROM golang:1.15.3-alpine
@@ -27,6 +28,9 @@ RUN apk add --no-cache git git-lfs bash
 
 RUN git config --global user.email "githook@test.com" && \
     git config --global user.name "Githook Tests"
+
+ADD ./.git $githooksServer/.git
+RUN cd $githooksServer/ && rm -rf $githooksServer/.git/hooks && git reset --hard && git status
 
 ADD githooks /var/lib/githooks/githooks
 
@@ -43,7 +47,7 @@ RUN cd /var/lib/githooks/githooks && ./clean.sh
 RUN /var/lib/githooks/githooks/build.sh -tags debug,mock
 RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
 
-RUN /var/lib/githooks/installer --clone-url https://github.com/gabyx/githooks.git \
+RUN /var/lib/githooks/installer --clone-url $githooksServer \
                                 --clone-branch feature/go-refactoring \
                                 --build-from-source
 EOF
