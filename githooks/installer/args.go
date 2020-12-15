@@ -2,10 +2,10 @@ package main
 
 // Arguments repesents all CLI arguments for the installer.
 type Arguments struct {
-	internalInstall     bool
-	internalAutoUpdate  bool
-	internalPostUpdate  bool
-	internalUpdatedFrom string
+	internalInstall    bool
+	internalAutoUpdate bool
+	internalPostUpdate bool
+	internalUpdateTo   string
 
 	dryRun         bool
 	nonInteractive bool

@@ -10,7 +10,8 @@ type IExecutable interface {
 type Executable struct {
 	// The absolute path of the script/executable.
 	Path string
-	// The run command for the script/executable, `nil` if its an executable.
+
+	// The optional run command for the script/executable, `nil` if its an executable.
 	RunCmd []string
 }
 
@@ -24,9 +25,12 @@ func (e *Executable) GetCommand() string {
 
 // GetArgs gets all args.
 func (e *Executable) GetArgs(args ...string) []string {
-	s := append([]string{e.Path}, args...)
-	if len(e.RunCmd) > 0 {
-		return append(e.RunCmd[1:], s...)
+	if len(e.RunCmd) != 0 {
+		// Append the RunCmd before 'path' 'args...'
+		s := append([]string{e.Path}, args...)
+		if len(e.RunCmd) > 0 {
+			return append(e.RunCmd[1:], s...)
+		}
 	}
-	return s
+	return args
 }

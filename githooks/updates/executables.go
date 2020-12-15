@@ -2,6 +2,13 @@ package updates
 
 import "rycus86/githooks/git"
 
+// Binaries define all binaries used by githooks.
+type Binaries struct {
+	Installer string   // The installer binary.
+	Others    []string // All other binaries except the installer.
+	All       []string // All binaries.
+}
+
 // Settings defines the settings on
 // how to collect the executables (installer, cli & runner).
 type Settings struct {

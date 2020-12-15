@@ -68,16 +68,14 @@ func init() {
 
 func defineArguments(rootCmd *cobra.Command, args *Arguments) {
 	// Internal commands
-	rootCmd.PersistentFlags().BoolVar(&args.internalInstall,
-		"internal-install", false, "Internal argument, do not use!")
 	rootCmd.PersistentFlags().BoolVar(&args.internalAutoUpdate,
 		"internal-auto-update", false, "Internal argument, do not use!")
 
 	rootCmd.PersistentFlags().BoolVar(&args.internalPostUpdate,
 		"internal-post-update", false, "Internal argument, do not use!")
 
-	rootCmd.PersistentFlags().StringVar(&args.internalUpdatedFrom,
-		"internal-updated-from", "", "Internal argument, do not use!")
+	rootCmd.PersistentFlags().StringVar(&args.internalUpdateTo,
+		"internal-update-to", "", "Internal argument, do not use!")
 
 	// User commands
 	rootCmd.PersistentFlags().BoolVar(&args.dryRun,
@@ -143,8 +141,8 @@ func parseEnv(args *Arguments) {
 	if _, exists := os.LookupEnv("GITHOOKS_INTERNAL_POSTUPDATE"); exists {
 		args.internalPostUpdate = true
 	}
-	if sha, exists := os.LookupEnv("GITHOOKS_INTERNAL_UPDATED_FROM"); exists {
-		args.internalUpdatedFrom = sha
+	if sha, exists := os.LookupEnv("GITHOOKS_INTERNAL_UPDATE_TO"); exists {
+		args.internalUpdateTo = sha
 	}
 }
 
@@ -199,25 +197,27 @@ func setInstallDirAndRunner(installDir string) {
 		"Could not set runner executable '%s'", runner)
 }
 
-func buildFromSource(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
+func buildFromSource(
+	settings *InstallSettings, tempDir string,
+	url string, branch string, commitSHA string) updates.Binaries {
 
 	log.Info("Building binaries from source ...")
 
 	// Clone another copy of the release clone into temporary directory
 	log.InfoF("Clone to temporary build directory '%s'", tempDir)
-	err := git.Clone(tempDir, status.RemoteURL, status.Branch, -1)
+	err := git.Clone(tempDir, url, branch, -1)
 	log.AssertNoErrorFatalF(err, "Could not clone release branch into '%s'.", tempDir)
 
 	// Checkout the remote commit sha
-	log.InfoF("Checkout out commit '%s'", status.RemoteCommitSHA[0:6])
+	log.InfoF("Checkout out commit '%s'", commitSHA[0:6])
 	gitx := git.CtxC(tempDir)
 	err = gitx.Check("checkout",
-		"-b", "update-to-"+status.RemoteCommitSHA[0:6],
-		status.RemoteCommitSHA)
+		"-b", "update-to-"+commitSHA[0:6],
+		commitSHA)
 
 	log.AssertNoErrorFatalF(err,
 		"Could not checkout update commit '%s' in '%s'.",
-		status.RemoteCommitSHA, tempDir)
+		commitSHA, tempDir)
 
 	tag, _ := gitx.Get("describe", "--tags", "--abbrev=6")
 	log.InfoF("Building binaries at '%s'", tag)
@@ -226,17 +226,36 @@ func buildFromSource(settings *InstallSettings, tempDir string, status updates.R
 	binPath, err := builder.Build(tempDir)
 	log.AssertNoErrorFatalF(err, "Could not build release branch in '%s'.", tempDir)
 
-	binaries, err := cm.GetAllFiles(binPath)
-	log.AssertNoErrorFatalF(err, "Could not get binaries in path '%s'.", binPath)
-	log.FatalIf(len(binaries) == 0, "No binaries found in '%s'", binPath)
+	bins, err := cm.GetAllFiles(binPath)
+	log.AssertNoErrorFatalF(err, "Could not get files in path '%s'.", binPath)
+
+	binaries := updates.Binaries{}
+	strs.Map(bins, func(s string) string {
+		if cm.IsExecutable(s) {
+			if strings.Contains(s, "installer") {
+				binaries.Installer = s
+			} else {
+				binaries.Others = append(binaries.Others, s)
+			}
+			binaries.All = append(binaries.All, s)
+		}
+		return s
+	})
 
 	log.InfoF(
-		"Succesfully built %v binaries:\n - %s",
-		len(binaries),
+		"Successfully built %v binaries:\n - %s",
+		len(binaries.All),
 		strings.Join(
-			strs.Map(binaries,
+			strs.Map(binaries.All,
 				func(s string) string { return path.Base(s) }),
 			"\n - "))
+
+	log.FatalIf(
+		len(binaries.All) == 0 ||
+			strs.IsEmpty(binaries.Installer),
+		"No binaries found in '%s'", binPath)
+
+	return binaries
 }
 
 func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
@@ -249,11 +268,14 @@ func prepareDispatch(settings *InstallSettings) {
 	var err error
 
 	if args.internalAutoUpdate {
+
 		status, err = updates.GetStatus(settings.cloneDir, true)
 		log.AssertNoErrorFatal(err,
 			"Could not get status of release clone '%s'",
 			settings.cloneDir)
+
 	} else {
+
 		status, err = updates.FetchUpdates(
 			settings.cloneDir,
 			settings.args.cloneURL,
@@ -271,18 +293,33 @@ func prepareDispatch(settings *InstallSettings) {
 
 	updateSettings := updates.GetSettings()
 
+	binaries := updates.Binaries{}
 	if settings.args.buildFromSource || updateSettings.DoBuildFromSource {
-		buildFromSource(settings, tempDir, status)
+		binaries = buildFromSource(
+			settings, tempDir,
+			status.RemoteURL, status.Branch, status.RemoteCommitSHA)
 	} else {
 		downloadBinaries(settings, tempDir, status)
 	}
 
-	// Run installer binary
+	updateTo := ""
+	if status.LocalCommitSHA != status.RemoteCommitSHA {
+		updateTo = status.RemoteCommitSHA
+	}
 
+	// Run the installer binary
+	err = cm.RunExecutable(
+		&cm.ExecContext{},
+		&cm.Executable{Path: binaries.Installer},
+		true,
+		"--internal-post-update",
+		strs.Fmt("--internal-update-to=%s", updateTo))
+
+	log.AssertNoErrorFatal(err, "Running installer failed.")
 }
 
 func runUpdate() {
-
+	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
@@ -300,9 +337,10 @@ func runInstall(cmd *cobra.Command, auxArgs []string) {
 
 	if !args.internalPostUpdate {
 		prepareDispatch(&settings)
+	} else {
+		runUpdate()
 	}
 
-	runUpdate()
 }
 
 func main() {
