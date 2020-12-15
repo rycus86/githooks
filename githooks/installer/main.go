@@ -16,6 +16,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // InstallSettings are the settings for the installer.
@@ -27,7 +28,7 @@ type InstallSettings struct {
 }
 
 var log cm.ILogContext
-var args = GetDefaultArgs()
+var args = Arguments{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -46,108 +47,121 @@ func (p *ProxyWriter) Write(s []byte) (int, error) {
 	return os.Stdout.Write([]byte(p.log.ColorInfo(string(s))))
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
+// Run adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Run() {
+	cobra.OnInitialize(initArgs)
+
+	rootCmd.SetOutput(&ProxyWriter{log: log})
+	rootCmd.Version = build.BuildVersion
+
+	defineArguments(rootCmd, &args)
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func init() {
-	var err error
-	log, err = cm.CreateLogContext(false)
-	cm.AssertOrPanic(err == nil, "Could not create log")
+func initArgs() {
 
-	cobra.OnInitialize()
-	rootCmd.SetOutput(&ProxyWriter{log: log})
-	rootCmd.Version = "1.0.0"
+	viper.BindEnv("internalAutoUpdate", "GITHOOKS_INTERNAL_AUTO_UPDATE")
 
-	defineArguments(rootCmd, &args)
+	config := viper.GetString("internalConfig")
+	if strs.IsNotEmpty(config) {
+		viper.SetConfigFile(config)
+		err := viper.ReadInConfig()
+		log.AssertNoErrorFatalF(err, "Could not read config file '%s'.", config)
+	}
+
+	err := viper.Unmarshal(&args)
+	log.AssertNoErrorFatalF(err, "Could not unmarshal parameters.")
+}
+
+func writeArgs(file string, args *Arguments) {
+	err := cm.StoreJSON(file, args)
+	log.AssertNoErrorFatalF(err, "Could not write arguments to '%s'.", file)
 }
 
 func defineArguments(rootCmd *cobra.Command, args *Arguments) {
 	// Internal commands
-	rootCmd.PersistentFlags().BoolVar(&args.internalAutoUpdate,
-		"internal-auto-update", false, "Internal argument, do not use!")
+	rootCmd.PersistentFlags().String("config", "",
+		"JSON config according to the 'Arguments' struct.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.internalPostUpdate,
-		"internal-post-update", false, "Internal argument, do not use!")
-
-	rootCmd.PersistentFlags().StringVar(&args.internalUpdateTo,
-		"internal-update-to", "", "Internal argument, do not use!")
+	rootCmd.PersistentFlags().Bool("internal-auto-update", false,
+		"Internal argument, do not use!") // @todo Remove this...
 
 	// User commands
-	rootCmd.PersistentFlags().BoolVar(&args.dryRun,
-		"dry-run", false, "Dry run the installation showing whats beeing done.")
-	rootCmd.PersistentFlags().BoolVar(&args.nonInteractive,
+	rootCmd.PersistentFlags().Bool("dry-run", false,
+		"Dry run the installation showing whats beeing done.")
+
+	rootCmd.PersistentFlags().Bool(
 		"non-interactive", false,
 		"Run the installation non-interactively\n"+
 			"without showing prompts.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.singleInstall,
+	rootCmd.PersistentFlags().Bool(
 		"single", false,
 		"Install Githooks in the active repository only.\n"+
 			"This does not mean it won't install necessary\n"+
 			"files into the installation directory.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.nonInteractive,
+	rootCmd.PersistentFlags().Bool(
 		"skip-install-into-existing", false,
 		"Skip installation into existing repositories\n"+
 			"defined by a search path.")
 
-	rootCmd.PersistentFlags().StringVar(&args.installPrefix,
+	rootCmd.PersistentFlags().String(
 		"prefix", "",
 		"Githooks installation prefix such that\n"+
 			"'<prefix>/.githooks' will be the installation directory.")
 
-	rootCmd.PersistentFlags().StringVar(&args.templateDir,
+	rootCmd.PersistentFlags().String(
 		"template-dir", "",
 		"The preferred template directory to use.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.onlyServerHooks,
+	rootCmd.PersistentFlags().Bool(
 		"only-server-hooks", false,
 		"Only install and maintain server hooks.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.useCoreHooksPath,
+	rootCmd.PersistentFlags().Bool(
 		"use-core-hookspath", false,
 		"If the install mode 'core.hooksPath' should be used.")
 
-	rootCmd.PersistentFlags().StringVar(&args.cloneURL,
+	rootCmd.PersistentFlags().String(
 		"clone-url", "",
 		"The clone url from which Githooks should clone\n"+
 			"and install itself.")
 
-	rootCmd.PersistentFlags().StringVar(&args.cloneBranch,
+	rootCmd.PersistentFlags().String(
 		"clone-branch", "",
 		"The clone branch from which Githooks should\n"+
 			"clone and install itself.")
 
-	rootCmd.PersistentFlags().BoolVar(&args.buildFromSource,
+	rootCmd.PersistentFlags().Bool(
 		"build-from-source", false,
 		"If the binaries are built from source instead of\n"+
 			"downloaded from the deploy url.")
 
 	rootCmd.Args = cobra.NoArgs
-}
 
-func parseEnv(args *Arguments) {
-	if _, exists := os.LookupEnv("GITHOOKS_INTERNAL_INSTALL"); exists {
-		args.internalInstall = true
-	}
-	if _, exists := os.LookupEnv("GITHOOKS_INTERNAL_AUTOUPDATE"); exists {
-		args.internalAutoUpdate = true
-	}
-	if _, exists := os.LookupEnv("GITHOOKS_INTERNAL_POSTUPDATE"); exists {
-		args.internalPostUpdate = true
-	}
-	if sha, exists := os.LookupEnv("GITHOOKS_INTERNAL_UPDATE_TO"); exists {
-		args.internalUpdateTo = sha
-	}
+	viper.BindPFlag("internalConfig", rootCmd.PersistentFlags().Lookup("config"))
+	viper.BindPFlag("internalAutoUpdate", rootCmd.PersistentFlags().Lookup("internal-auto-update")) // @todo Remove this...
+	viper.BindPFlag("dryRun", rootCmd.PersistentFlags().Lookup("dry-run"))
+	viper.BindPFlag("nonInteractive", rootCmd.PersistentFlags().Lookup("non-interactive"))
+	viper.BindPFlag("singleInstall", rootCmd.PersistentFlags().Lookup("single"))
+	viper.BindPFlag("skipInstallIntoExisting", rootCmd.PersistentFlags().Lookup("skip-install-into-existing"))
+	viper.BindPFlag("onlyServerHooks", rootCmd.PersistentFlags().Lookup("only-server-hooks"))
+	viper.BindPFlag("useCoreHooksPath", rootCmd.PersistentFlags().Lookup("use-core-hookspath"))
+	viper.BindPFlag("cloneURL", rootCmd.PersistentFlags().Lookup("clone-url"))
+	viper.BindPFlag("cloneBranch", rootCmd.PersistentFlags().Lookup("clone-branch"))
+	viper.BindPFlag("buildFromSource", rootCmd.PersistentFlags().Lookup("build-from-source"))
+	viper.BindPFlag("installPrefix", rootCmd.PersistentFlags().Lookup("prefix"))
+	viper.BindPFlag("templateDir", rootCmd.PersistentFlags().Lookup("template-dir"))
+
 }
 
 func validateArgs(args *Arguments) {
-	log.FatalIfF(args.singleInstall && args.useCoreHooksPath,
+	log.FatalIfF(args.SingleInstall && args.UseCoreHooksPath,
 		"Cannot use --single and --use-core-hookspath together. See `--help`.")
 }
 
@@ -164,11 +178,11 @@ func setMainVariables(args *Arguments) InstallSettings {
 
 	// First check if we already have
 	// an install directory set (from --prefix)
-	if strs.IsNotEmpty(args.installPrefix) {
+	if strs.IsNotEmpty(args.InstallPrefix) {
 		var err error
-		args.installPrefix, err = cm.ReplaceTilde(filepath.ToSlash(args.installPrefix))
+		args.InstallPrefix, err = cm.ReplaceTilde(filepath.ToSlash(args.InstallPrefix))
 		log.AssertNoErrorFatal(err, "Could not replace '~' character in path.")
-		installDir = path.Join(args.installPrefix, ".githooks")
+		installDir = path.Join(args.InstallPrefix, ".githooks")
 
 	} else {
 		installDir = hooks.GetInstallDir()
@@ -229,7 +243,7 @@ func buildFromSource(
 	bins, err := cm.GetAllFiles(binPath)
 	log.AssertNoErrorFatalF(err, "Could not get files in path '%s'.", binPath)
 
-	binaries := updates.Binaries{}
+	binaries := updates.Binaries{BinDir: binPath}
 	strs.Map(bins, func(s string) string {
 		if cm.IsExecutable(s) {
 			if strings.Contains(s, "installer") {
@@ -258,8 +272,9 @@ func buildFromSource(
 	return binaries
 }
 
-func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) {
+func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) updates.Binaries {
 	log.Fatal("Not implemented")
+	return updates.Binaries{}
 }
 
 func prepareDispatch(settings *InstallSettings) {
@@ -267,7 +282,7 @@ func prepareDispatch(settings *InstallSettings) {
 	var status updates.ReleaseStatus
 	var err error
 
-	if args.internalAutoUpdate {
+	if args.InternalAutoUpdate {
 
 		status, err = updates.GetStatus(settings.cloneDir, true)
 		log.AssertNoErrorFatal(err,
@@ -278,8 +293,8 @@ func prepareDispatch(settings *InstallSettings) {
 
 		status, err = updates.FetchUpdates(
 			settings.cloneDir,
-			settings.args.cloneURL,
-			settings.args.cloneBranch,
+			settings.args.CloneURL,
+			settings.args.CloneBranch,
 			true, updates.RecloneOnWrongRemote)
 
 		log.AssertNoErrorFatalF(err,
@@ -294,12 +309,12 @@ func prepareDispatch(settings *InstallSettings) {
 	updateSettings := updates.GetSettings()
 
 	binaries := updates.Binaries{}
-	if settings.args.buildFromSource || updateSettings.DoBuildFromSource {
+	if settings.args.BuildFromSource || updateSettings.DoBuildFromSource {
 		binaries = buildFromSource(
 			settings, tempDir,
 			status.RemoteURL, status.Branch, status.RemoteCommitSHA)
 	} else {
-		downloadBinaries(settings, tempDir, status)
+		_ = downloadBinaries(settings, tempDir, status)
 	}
 
 	updateTo := ""
@@ -307,38 +322,54 @@ func prepareDispatch(settings *InstallSettings) {
 		updateTo = status.RemoteCommitSHA
 	}
 
+	runInstaller(binaries.Installer, args, tempDir, updateTo, binaries.All)
+}
+
+func runInstaller(installer string, args Arguments, tempDir string, updateTo string, binaries []string) {
+	// Set variables...
+	args.InternalPostUpdate = true
+	args.InternalUpdateTo = updateTo
+	args.InternalBinaries = binaries
+
+	file, err := ioutil.TempFile(tempDir, "*install-config.json")
+	log.AssertNoErrorFatalF(err, "Could not create temporary file in '%s'.", tempDir)
+	defer os.Remove(file.Name())
+
+	// Write the config ...
+	writeArgs(file.Name(), &args)
+
 	// Run the installer binary
 	err = cm.RunExecutable(
 		&cm.ExecContext{},
-		&cm.Executable{Path: binaries.Installer},
+		&cm.Executable{Path: installer},
 		true,
-		"--internal-post-update",
-		strs.Fmt("--internal-update-to=%s", updateTo))
+		"--config", file.Name())
 
 	log.AssertNoErrorFatal(err, "Running installer failed.")
 }
 
-func runUpdate() {
+func runUpdate(settings *InstallSettings) {
 	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
+	log.InfoF("Installing binaries in '%v'", settings.args.InternalBinaries)
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
 
 	log.InfoF("Installer [version: %s]", build.BuildVersion)
+	log.DebugF("Arguments: %+v", args)
 
-	parseEnv(&args)
 	validateArgs(&args)
 
 	settings := setMainVariables(&args)
 
-	if !args.dryRun {
+	if !args.DryRun {
 		setInstallDirAndRunner(settings.installDir)
 	}
 
-	if !args.internalPostUpdate {
+	if !args.InternalPostUpdate {
 		prepareDispatch(&settings)
 	} else {
-		runUpdate()
+		runUpdate(&settings)
 	}
 
 }
@@ -348,6 +379,9 @@ func main() {
 	cwd, err := os.Getwd()
 	cm.AssertNoErrorPanic(err, "Could not get current working dir.")
 	cwd = filepath.ToSlash(cwd)
+
+	log, err = cm.CreateLogContext(false)
+	cm.AssertOrPanic(err == nil, "Could not create log")
 
 	var exitCode int
 	defer func() { os.Exit(exitCode) }()
@@ -360,5 +394,5 @@ func main() {
 		}
 	}()
 
-	Execute()
+	Run()
 }

@@ -2,31 +2,28 @@ package main
 
 // Arguments repesents all CLI arguments for the installer.
 type Arguments struct {
-	internalInstall    bool
-	internalAutoUpdate bool
-	internalPostUpdate bool
-	internalUpdateTo   string
+	InternalConfig string
 
-	dryRun         bool
-	nonInteractive bool
+	InternalAutoUpdate bool
+	InternalPostUpdate bool
+	InternalUpdateTo   string
+	InternalBinaries   []string
 
-	singleInstall bool
+	DryRun         bool
+	NonInteractive bool
 
-	skipInstallIntoExisting bool
+	SingleInstall bool
 
-	onlyServerHooks bool
+	SkipInstallIntoExisting bool
 
-	useCoreHooksPath bool
+	OnlyServerHooks bool
 
-	cloneURL        string
-	cloneBranch     string
-	buildFromSource bool
+	UseCoreHooksPath bool
 
-	installPrefix string
-	templateDir   string
-}
+	CloneURL        string
+	CloneBranch     string
+	BuildFromSource bool
 
-// GetDefaultArgs gets all default CLI arguments.
-func GetDefaultArgs() Arguments {
-	return Arguments{}
+	InstallPrefix string
+	TemplateDir   string
 }

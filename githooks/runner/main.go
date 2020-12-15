@@ -17,13 +17,13 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
-	"rycus86/githooks/build"
 	"strconv"
 	"strings"
 	"time"
@@ -384,16 +384,22 @@ func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
 
 	exec := hooks.GetInstaller(settings.InstallDir)
 
+	execX := settings.ExecX
+	env := os.Environ()
+	env = append(env, "GITHOOKS_INTERNAL_AUTO_UPDATE=true")
+	execX.Env = env
+
 	if cm.IsFile(exec.Path) {
 
 		output, err := cm.GetCombinedOutputFromExecutable(
-			&settings.ExecX,
+			&execX,
 			&exec,
 			false,
 			"--internal-autoupdate",
 			"--internal-install")
 
 		// @todo installer: remove "--internal-install"
+		// @todo installer: remove "--internal-autoupdate"
 
 		log.InfoF("Update:\n%s", output)
 		log.AssertNoErrorF(err, "Updating failed")
