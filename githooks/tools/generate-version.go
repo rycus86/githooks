@@ -38,12 +38,8 @@ func main() {
 
 	gitx := git.Ctx()
 
-	root, err := git.Ctx().Get("rev-parse", "--show-toplevel")
-	if err != nil {
-		panic(err)
-	}
-
-	verFile = path.Join(root, "githooks", verFile)
+	root, err := gitx.Get("rev-parse", "--show-toplevel")
+	cm.AssertNoErrorPanicF(err, "Could not root dir.")
 
 	commitSHA, err := git.GetCommitSHA(gitx, "HEAD")
 	cm.AssertNoErrorPanicF(err, "GetCommitSHA failed.")
@@ -71,10 +67,11 @@ func main() {
 	cm.AssertNoErrorPanicF(err, "Formatting template failed.")
 
 	// Write to disk (in the Current Working Directory)
-	f, err := os.Create(verFile)
-	cm.AssertNoErrorPanicF(err, "Opening template file.")
+	file := path.Join(root, "githooks", verFile)
+	f, err := os.Create(file)
+	cm.AssertNoErrorPanicF(err, "Opening template file failed.")
 	defer f.Close()
 
 	_, err = f.Write(src)
-	cm.AssertNoErrorPanicF(err, "Opening template file.")
+	cm.AssertNoErrorPanicF(err, "Writting template file failed.")
 }

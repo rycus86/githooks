@@ -40,11 +40,11 @@ type ILogContext interface {
 	ErrorF(format string, args ...interface{})
 	ErrorWithStacktrace(lines ...string)
 	ErrorWithStacktraceF(format string, args ...interface{})
-	Fatal(lines ...string)
-	FatalF(format string, args ...interface{})
+	Panic(lines ...string)
+	PanicF(format string, args ...interface{})
 
 	// Assert helper functions
-	ErrorOrFatalF(isFatal bool, err error, format string, args ...interface{})
+	ErrorOrPanicF(isFatal bool, err error, format string, args ...interface{})
 	AssertWarn(condition bool, lines ...string)
 	AssertWarnF(condition bool, format string, args ...interface{})
 	DebugIf(condition bool, lines ...string)
@@ -59,8 +59,8 @@ type ILogContext interface {
 	FatalIfF(condition bool, format string, args ...interface{})
 	AssertNoError(err error, lines ...string) bool
 	AssertNoErrorF(err error, format string, args ...interface{}) bool
-	AssertNoErrorFatal(err error, lines ...string)
-	AssertNoErrorFatalF(err error, format string, args ...interface{})
+	AssertNoErrorPanic(err error, lines ...string)
+	AssertNoErrorPanicF(err error, format string, args ...interface{})
 
 	HasColors() bool
 	ColorInfo(string) string
@@ -251,14 +251,14 @@ func (c *LogContext) ErrorWithStacktraceF(format string, args ...interface{}) {
 }
 
 // Fatal logs an error and calls panic with a GithooksFailure.
-func (c *LogContext) Fatal(lines ...string) {
+func (c *LogContext) Panic(lines ...string) {
 	m := FormatMessage(errorSuffix, errorIndent, lines...)
 	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})
 }
 
 // FatalF logs an error and calls panic with a GithooksFailure.
-func (c *LogContext) FatalF(format string, args ...interface{}) {
+func (c *LogContext) PanicF(format string, args ...interface{}) {
 	m := FormatMessageF(errorSuffix, errorIndent, format, args...)
 	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})

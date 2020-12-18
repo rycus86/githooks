@@ -2,7 +2,8 @@
 set -u
 set -e
 
-rm -rf /usr/share/git-core/templates/hooks
+mkdir -p /usr/share/git-core-my/templates &&
+    mv -f /usr/share/git-core/templates/hooks /usr/share/git-core-my/templates
 
 echo 'y
 y

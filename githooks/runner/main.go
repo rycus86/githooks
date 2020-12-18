@@ -1,4 +1,5 @@
-//go:generate go run -mod=vendor ../tools/genversion.go
+//go:generate go run -mod=vendor ../tools/generate-version.go
+//go:generate go run -mod=vendor ../tools/embed-files.go
 
 // Base Git hook template from https://github.com/rycus86/githooks
 //
@@ -432,7 +433,7 @@ func executeLFSHooks(settings *HookSettings) {
 				settings.Args...,
 			)...)
 
-		log.AssertNoErrorFatal(err, "Execution of LFS Hook failed.")
+		log.AssertNoErrorPanic(err, "Execution of LFS Hook failed.")
 
 	} else {
 		log.Debug("Git LFS not available")
@@ -464,7 +465,7 @@ func executeOldHooks(settings *HookSettings,
 
 	hook.NamespacePath = path.Join("hooks", hookName)
 	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
-	log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", hook.Path)
+	log.AssertNoErrorPanicF(err, "Could not detect runner for hook\n'%s'", hook.Path)
 
 	// @todo Introduce namespacing here!
 	ignored, byUser := ingores.IsIgnored(hookName)
@@ -483,7 +484,7 @@ func executeOldHooks(settings *HookSettings,
 	log.DebugF("Executing hook: '%s'.", hook.Path)
 	err = cm.RunExecutable(&settings.ExecX, &hook, true)
 
-	log.AssertNoErrorFatalF(err, "Hook launch failed: '%q'.", hook)
+	log.AssertNoErrorPanicF(err, "Hook launch failed: '%q'.", hook)
 }
 
 func collectHooks(
@@ -562,7 +563,7 @@ func geRepoSharedHooks(
 	sharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryHooksDir)
 
 	if err != nil {
-		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err,
+		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks, err,
 			"Repository shared hooks are demanded but failed "+
 				"to parse the file:\n'%s'",
 			hooks.GetRepoSharedFile(settings.RepositoryHooksDir))
@@ -599,7 +600,7 @@ func getConfigSharedHooks(
 	}
 
 	if err != nil {
-		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
+		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks,
 			err,
 			"Shared hooks are demanded but failed "+
 				"to parse the %s config:\n'%s'",
@@ -666,7 +667,7 @@ func checkSharedHook(
 			mess += "\nContinuing..."
 		}
 
-		log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks, err, mess, hook.OriginalURL)
+		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks, err, mess, hook.OriginalURL)
 		return false
 	}
 
@@ -688,7 +689,7 @@ func checkSharedHook(
 				mess += "\nContinuing..."
 			}
 
-			log.ErrorOrFatalF(settings.FailOnNonExistingSharedHooks,
+			log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks,
 				nil, mess, hook.OriginalURL, url)
 			return false
 		}
@@ -711,7 +712,7 @@ func createHook(uiSettings *UISettings,
 	}
 
 	runCmd, err := hooks.GetHookRunCmd(hookPath)
-	log.AssertNoErrorFatalF(err, "Could not detect runner for hook\n'%s'", hookPath)
+	log.AssertNoErrorPanicF(err, "Could not detect runner for hook\n'%s'", hookPath)
 
 	return hooks.Hook{
 		Executable: cm.Executable{
@@ -955,7 +956,7 @@ func logHookResults(res []hooks.HookResult) {
 			if len(r.Output) != 0 {
 				log.GetErrorWriter().Write(r.Output)
 			}
-			log.AssertNoErrorFatalF(r.Error, "Hook '%s %q' failed!",
+			log.AssertNoErrorPanicF(r.Error, "Hook '%s %q' failed!",
 				r.Hook.GetCommand(), r.Hook.GetArgs())
 		}
 	}
@@ -996,7 +997,8 @@ func storePendingData(
 		// @todo write them to the correct file!
 		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
 		f, err := os.OpenFile(localChecksums, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
-		log.AssertNoErrorFatalF(err, "Could not open file '%s'", localChecksums)
+		log.AssertNoErrorPanicF(err, "Could not open file '%s'", localChecksums)
+		defer f.Close()
 
 		for _, d := range uiSettings.DisabledHooks {
 			f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))

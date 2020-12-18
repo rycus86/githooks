@@ -87,16 +87,16 @@ func initArgs() {
 	if strs.IsNotEmpty(config) {
 		viper.SetConfigFile(config)
 		err := viper.ReadInConfig()
-		log.AssertNoErrorFatalF(err, "Could not read config file '%s'.", config)
+		log.AssertNoErrorPanicF(err, "Could not read config file '%s'.", config)
 	}
 
 	err := viper.Unmarshal(&args)
-	log.AssertNoErrorFatalF(err, "Could not unmarshal parameters.")
+	log.AssertNoErrorPanicF(err, "Could not unmarshal parameters.")
 }
 
 func writeArgs(file string, args *Arguments) {
 	err := cm.StoreJSON(file, args)
-	log.AssertNoErrorFatalF(err, "Could not write arguments to '%s'.", file)
+	log.AssertNoErrorPanicF(err, "Could not write arguments to '%s'.", file)
 }
 
 func defineArguments(rootCmd *cobra.Command) {
@@ -217,7 +217,7 @@ func setMainVariables(args *Arguments) InstallSettings {
 	if strs.IsNotEmpty(args.InstallPrefix) {
 		var err error
 		args.InstallPrefix, err = cm.ReplaceTilde(filepath.ToSlash(args.InstallPrefix))
-		log.AssertNoErrorFatal(err, "Could not replace '~' character in path.")
+		log.AssertNoErrorPanic(err, "Could not replace '~' character in path.")
 		installDir = path.Join(args.InstallPrefix, ".githooks")
 
 	} else {
@@ -244,9 +244,9 @@ func setMainVariables(args *Arguments) InstallSettings {
 
 func setInstallDirAndRunner(installDir string) {
 	runner := hooks.GetRunnerExecutable(installDir)
-	log.AssertNoErrorFatal(hooks.SetInstallDir(installDir),
+	log.AssertNoErrorPanic(hooks.SetInstallDir(installDir),
 		"Could not set install dir '%s'", installDir)
-	log.AssertNoErrorFatal(hooks.SetRunnerExecutable(runner),
+	log.AssertNoErrorPanic(hooks.SetRunnerExecutable(runner),
 		"Could not set runner executable '%s'", runner)
 }
 
@@ -259,7 +259,7 @@ func buildFromSource(
 	// Clone another copy of the release clone into temporary directory
 	log.InfoF("Clone to temporary build directory '%s'", tempDir)
 	err := git.Clone(tempDir, url, branch, -1)
-	log.AssertNoErrorFatalF(err, "Could not clone release branch into '%s'.", tempDir)
+	log.AssertNoErrorPanicF(err, "Could not clone release branch into '%s'.", tempDir)
 
 	// Checkout the remote commit sha
 	log.InfoF("Checkout out commit '%s'", commitSHA[0:6])
@@ -268,7 +268,7 @@ func buildFromSource(
 		"-b", "update-to-"+commitSHA[0:6],
 		commitSHA)
 
-	log.AssertNoErrorFatalF(err,
+	log.AssertNoErrorPanicF(err,
 		"Could not checkout update commit '%s' in '%s'.",
 		commitSHA, tempDir)
 
@@ -277,10 +277,10 @@ func buildFromSource(
 
 	// Build the binaries.
 	binPath, err := builder.Build(tempDir, settings.args.BuildFlags)
-	log.AssertNoErrorFatalF(err, "Could not build release branch in '%s'.", tempDir)
+	log.AssertNoErrorPanicF(err, "Could not build release branch in '%s'.", tempDir)
 
 	bins, err := cm.GetAllFiles(binPath)
-	log.AssertNoErrorFatalF(err, "Could not get files in path '%s'.", binPath)
+	log.AssertNoErrorPanicF(err, "Could not get files in path '%s'.", binPath)
 
 	binaries := updates.Binaries{BinDir: binPath}
 	strs.Map(bins, func(s string) string {
@@ -312,7 +312,7 @@ func buildFromSource(
 }
 
 func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) updates.Binaries {
-	log.Fatal("Not implemented")
+	log.Panic("Not implemented")
 	return updates.Binaries{}
 }
 
@@ -324,7 +324,7 @@ func prepareDispatch(settings *InstallSettings) {
 	if args.InternalAutoUpdate {
 
 		status, err = updates.GetStatus(settings.cloneDir, true)
-		log.AssertNoErrorFatal(err,
+		log.AssertNoErrorPanic(err,
 			"Could not get status of release clone '%s'",
 			settings.cloneDir)
 
@@ -336,13 +336,13 @@ func prepareDispatch(settings *InstallSettings) {
 			settings.args.CloneBranch,
 			true, updates.RecloneOnWrongRemote)
 
-		log.AssertNoErrorFatalF(err,
+		log.AssertNoErrorPanicF(err,
 			"Could not assert release clone '%s' existing",
 			settings.cloneDir)
 	}
 
 	tempDir, err := ioutil.TempDir(os.TempDir(), "githooks-update")
-	log.AssertNoErrorFatal(err, "Can not create temporary update dir in '%s'", os.TempDir())
+	log.AssertNoErrorPanic(err, "Can not create temporary update dir in '%s'", os.TempDir())
 	defer os.RemoveAll(tempDir)
 
 	updateSettings := updates.GetSettings()
@@ -373,7 +373,7 @@ func runInstaller(installer string, args Arguments, tempDir string, updateTo str
 	args.InternalBinaries = binaries
 
 	file, err := ioutil.TempFile(tempDir, "*install-config.json")
-	log.AssertNoErrorFatalF(err, "Could not create temporary file in '%s'.", tempDir)
+	log.AssertNoErrorPanicF(err, "Could not create temporary file in '%s'.", tempDir)
 	defer os.Remove(file.Name())
 
 	// Write the config ...
@@ -386,7 +386,7 @@ func runInstaller(installer string, args Arguments, tempDir string, updateTo str
 		true,
 		"--config", file.Name())
 
-	log.AssertNoErrorFatal(err, "Running installer failed.")
+	log.AssertNoErrorPanic(err, "Running installer failed.")
 }
 
 func checkTemplateDir(targetDir string) string {
@@ -399,7 +399,7 @@ func checkTemplateDir(targetDir string) string {
 	}
 
 	targetDir, err := cm.ReplaceTilde(targetDir)
-	log.AssertNoErrorFatalF(err,
+	log.AssertNoErrorPanicF(err,
 		"Could not replace tilde '~' in '%s'.", targetDir)
 
 	if cm.IsWritable(targetDir) {
@@ -626,7 +626,7 @@ func setupNewTemplateDir(installDir string, promptCtx prompt.IContext) string {
 	}
 
 	templateDir, err := cm.ReplaceTilde(templateDir)
-	log.AssertNoErrorFatalF(err, "Could not replace tilde '~' in '%s'.", templateDir)
+	log.AssertNoErrorPanicF(err, "Could not replace tilde '~' in '%s'.", templateDir)
 
 	return templateDir
 }
@@ -647,10 +647,8 @@ func setTargetTemplateDir(settings *InstallSettings) {
 		settings.hookTemplateDir = path.Join(templateDir, "hooks")
 	}
 
-	log.DebugF("Hook template dir: '%s'.", settings.hookTemplateDir)
-
 	err := os.MkdirAll(settings.hookTemplateDir, 0775)
-	log.AssertNoErrorFatalF(err,
+	log.AssertNoErrorPanicF(err,
 		"Could not assert directory '%s' exists",
 		settings.hookTemplateDir)
 
@@ -667,7 +665,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 
 	prefix := "Setting"
 	if dryRun {
-		prefix = "Would set"
+		prefix = "[dry run] Would set"
 	}
 
 	if useCoreHooksPath {
@@ -676,13 +674,13 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 
 		if !dryRun {
 			err := gitx.SetConfig("githooks.useCoreHooksPath", true, git.GlobalScope)
-			log.AssertNoErrorFatal(err, "Could not set Git config value.")
+			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 
 			err = gitx.SetConfig("githooks.pathForUseCoreHooksPath", directory, git.GlobalScope)
-			log.AssertNoErrorFatal(err, "Could not set Git config value.")
+			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 
 			err = gitx.SetConfig("core.hooksPath", directory, git.GlobalScope)
-			log.AssertNoErrorFatal(err, "Could not set Git config value.")
+			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 		}
 
 		// Warnings:
@@ -692,7 +690,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 		if strs.IsNotEmpty(tD) && cm.IsDirectory(path.Join(tD, "hooks")) {
 			d := path.Join(tD, "hooks")
 			files, err := cm.GetAllFiles(d)
-			log.AssertNoErrorFatalF(err, "Could not get files in '%s'.", d)
+			log.AssertNoErrorPanicF(err, "Could not get files in '%s'.", d)
 
 			if len(files) > 0 {
 				msg = strs.Fmt(
@@ -706,7 +704,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 		if strs.IsNotEmpty(tDEnv) && cm.IsDirectory(path.Join(tDEnv, "hooks")) {
 			d := path.Join(tDEnv, "hooks")
 			files, err := cm.GetAllFiles(d)
-			log.AssertNoErrorFatalF(err, "Could not get files in '%s'.", d)
+			log.AssertNoErrorPanicF(err, "Could not get files in '%s'.", d)
 
 			if len(files) > 0 {
 				msg += strs.Fmt(
@@ -728,7 +726,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 
 		if !dryRun {
 			err := gitx.SetConfig("githooks.useCoreHooksPath", false, git.GlobalScope)
-			log.AssertNoErrorFatal(err, "Could not set Git config value.")
+			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 		}
 
 		if strs.IsNotEmpty(directory) {
@@ -736,7 +734,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 
 			if !dryRun {
 				err := gitx.SetConfig("init.templateDir", directory, git.GlobalScope)
-				log.AssertNoErrorFatal(err, "Could not set Git config value.")
+				log.AssertNoErrorPanic(err, "Could not set Git config value.")
 			}
 		}
 
@@ -754,6 +752,52 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 	}
 }
 
+func setupHookTemplates(
+	hookTemplateDir string,
+	cloneDir string,
+	onlyServerHooks bool,
+	dryRun bool) {
+
+	if dryRun {
+		log.InfoF("[dry run] Would install Git hook templates into '%s'.",
+			hookTemplateDir)
+		return
+	}
+
+	log.InfoF("Installing Git hook templates into '%s'.",
+		hookTemplateDir)
+
+	var hookNames []string
+	if onlyServerHooks {
+		hookNames = managedServerHookNames
+	} else {
+		hookNames = managedHookNames
+	}
+
+	for _, hookName := range hookNames {
+		dest := path.Join(hookTemplateDir, hookName)
+
+		// Check there is already a Git hook in place and replace it.
+		if cm.IsFile(dest) {
+			isTemplate, err := hooks.IsRunWrapper(dest)
+			log.AssertNoErrorF(err, "Could not detect if '%s' is a custom Git hook")
+
+			if !isTemplate {
+				log.InfoF("Saving existing Git hook '%s'.", dest)
+
+				newDest := path.Join(hookTemplateDir, hooks.GetRunWrapperReplacementName(hookName))
+
+				err := os.Rename(dest, newDest)
+				log.AssertNoErrorPanicF(err, "Could not rename file '%s' to '%s'.", dest, newDest)
+
+			}
+		}
+
+		err := hooks.WriteRunWrapper(dest)
+		log.AssertNoErrorPanicF(err, "Could not write run wrapper to '%s'.", dest)
+	}
+}
+
 func runUpdate(settings *InstallSettings) {
 	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
 	log.InfoF("Installing binaries in '%v'", settings.args.InternalBinaries)
@@ -766,6 +810,12 @@ func runUpdate(settings *InstallSettings) {
 	}
 
 	setTargetTemplateDir(settings)
+
+	setupHookTemplates(
+		settings.hookTemplateDir,
+		settings.cloneDir,
+		settings.args.OnlyServerHooks,
+		settings.args.DryRun)
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {

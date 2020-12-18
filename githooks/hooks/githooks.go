@@ -13,10 +13,10 @@ import (
 )
 
 // HookDirName denotes the directory name used for repository specific hooks.
-var HookDirName = ".githooks"
+const HookDirName = ".githooks"
 
 // DefaultBugReportingURL is the default url to report errors
-var DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
+const DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
 
 // LFSHookNames are the hook names of all Large File System (LFS) hooks.
 var LFSHookNames = [4]string{

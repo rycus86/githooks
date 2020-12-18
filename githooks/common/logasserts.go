@@ -75,14 +75,14 @@ func (c *LogContext) WarnIfF(condition bool, format string, args ...interface{})
 // FatalIf Assert a condition is `true`, otherwise log it.
 func (c *LogContext) FatalIf(condition bool, lines ...string) {
 	if condition {
-		c.Fatal(lines...)
+		c.Panic(lines...)
 	}
 }
 
 // FatalIfF Assert a condition is `true`, otherwise log it.
 func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}) {
 	if condition {
-		c.FatalF(format, args...)
+		c.PanicF(format, args...)
 	}
 }
 
@@ -105,26 +105,26 @@ func (c *LogContext) AssertNoErrorF(err error, format string, args ...interface{
 }
 
 // AssertNoErrorFatal Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorFatal(err error, lines ...string) {
+func (c *LogContext) AssertNoErrorPanic(err error, lines ...string) {
 	if err != nil {
-		c.Fatal(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
+		c.Panic(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
 	}
 }
 
 // AssertNoErrorFatalF Assert no error, and otherwise log it.
-func (c *LogContext) AssertNoErrorFatalF(err error, format string, args ...interface{}) {
+func (c *LogContext) AssertNoErrorPanicF(err error, format string, args ...interface{}) {
 	if err != nil {
-		c.FatalF(format+"\n-> error: ["+err.Error()+"]", args...)
+		c.PanicF(format+"\n-> error: ["+err.Error()+"]", args...)
 	}
 }
 
 // ErrorOrFatalF logs an error or a fatal error and also with a potential occured error.
-func (c *LogContext) ErrorOrFatalF(isFatal bool, err error, format string, args ...interface{}) {
+func (c *LogContext) ErrorOrPanicF(isFatal bool, err error, format string, args ...interface{}) {
 	if isFatal {
 		if err != nil {
-			c.FatalF(format+"\n-> error: ["+err.Error()+"]", args...)
+			c.PanicF(format+"\n-> error: ["+err.Error()+"]", args...)
 		} else {
-			c.FatalF(format, args...)
+			c.PanicF(format, args...)
 		}
 	} else {
 		if err != nil {
