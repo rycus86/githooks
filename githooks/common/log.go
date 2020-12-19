@@ -16,11 +16,11 @@ const (
 	githooksSuffix = "Githooks:"
 	debugSuffix    = "🛠  " + githooksSuffix + " "
 	debugIndent    = "   "
-	infoSuffix     = "ℹ  " + githooksSuffix + " "
+	infoSuffix     = "🦎 " + githooksSuffix + " "
 	infoIndent     = "   "
-	warnSuffix     = "⚠  " + githooksSuffix + " "
+	warnSuffix     = "⛑  " + githooksSuffix + " "
 	warnIndent     = "   "
-	errorSuffix    = warnSuffix + " "
+	errorSuffix    = "⛔ "
 	errorIndent    = "   "
 
 	promptSuffix = "❓ " + githooksSuffix + " "
@@ -55,8 +55,8 @@ type ILogContext interface {
 	WarnIfF(condition bool, format string, args ...interface{})
 	ErrorIf(condition bool, lines ...string)
 	ErrorIfF(condition bool, format string, args ...interface{})
-	FatalIf(condition bool, lines ...string)
-	FatalIfF(condition bool, format string, args ...interface{})
+	PanicIf(condition bool, lines ...string)
+	PanicIfF(condition bool, format string, args ...interface{})
 	AssertNoError(err error, lines ...string) bool
 	AssertNoErrorF(err error, format string, args ...interface{}) bool
 	AssertNoErrorPanic(err error, lines ...string)

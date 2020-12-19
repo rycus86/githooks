@@ -72,15 +72,15 @@ func (c *LogContext) WarnIfF(condition bool, format string, args ...interface{})
 	}
 }
 
-// FatalIf Assert a condition is `true`, otherwise log it.
-func (c *LogContext) FatalIf(condition bool, lines ...string) {
+// PanicIf Assert a condition is `true`, otherwise log it.
+func (c *LogContext) PanicIf(condition bool, lines ...string) {
 	if condition {
 		c.Panic(lines...)
 	}
 }
 
-// FatalIfF Assert a condition is `true`, otherwise log it.
-func (c *LogContext) FatalIfF(condition bool, format string, args ...interface{}) {
+// PanicIfF Assert a condition is `true`, otherwise log it.
+func (c *LogContext) PanicIfF(condition bool, format string, args ...interface{}) {
 	if condition {
 		c.PanicF(format, args...)
 	}

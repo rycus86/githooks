@@ -38,14 +38,14 @@ func showPromptOptions(
 		// else: Runnning fallback ...
 	}
 
-	enterCausesDefault := strs.IsNotEmpty(defaultAnswer)
+	emptyCausesDefault := strs.IsNotEmpty(defaultAnswer)
 	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
 
 	answer, isPromptDisplayed, e := p.showPromptOptionsTerminal(
 		question,
 		defaultAnswer,
 		options,
-		enterCausesDefault)
+		emptyCausesDefault)
 
 	if e == nil {
 		return answer, nil
@@ -66,7 +66,7 @@ func (p *Context) showPromptOptionsTerminal(
 	question string,
 	defaultAnswer string,
 	options []string,
-	enterCausesDefault bool) (string, bool, error) {
+	emptyCausesDefault bool) (string, bool, error) {
 
 	var err error
 	// Try to read from the controlling terminal if available.
@@ -92,7 +92,7 @@ func (p *Context) showPromptOptionsTerminal(
 					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
 				}
 
-				if strs.IsEmpty(ans) && enterCausesDefault {
+				if strs.IsEmpty(ans) && emptyCausesDefault {
 					ans = defaultAnswer
 				}
 
@@ -132,10 +132,10 @@ func showPrompt(
 	cm.PanicIf(p.tool != nil, "Not yet implemented.")
 
 	question := ""
-	enterCausesDefault := false
+	emptyCausesDefault := false
 
 	if strs.IsNotEmpty(defaultAnswer) {
-		enterCausesDefault = true
+		emptyCausesDefault = true
 		question = p.promptFmt("%s [%s]: ", text, defaultAnswer)
 	} else {
 		question = p.promptFmt("%s : ", text)
@@ -145,7 +145,7 @@ func showPrompt(
 		p.showPromptTerminal(
 			question,
 			defaultAnswer,
-			enterCausesDefault,
+			emptyCausesDefault,
 			allowEmpty)
 
 	if e == nil {
@@ -166,7 +166,7 @@ func showPrompt(
 func (p *Context) showPromptTerminal(
 	question string,
 	defaultAnswer string,
-	enterCausesDefault bool,
+	emptyCausesDefault bool,
 	allowEmpty bool) (string, bool, error) {
 
 	var err error
@@ -193,7 +193,7 @@ func (p *Context) showPromptTerminal(
 					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
 				}
 
-				if strs.IsEmpty(ans) && enterCausesDefault {
+				if strs.IsEmpty(ans) && emptyCausesDefault {
 					ans = defaultAnswer
 				}
 

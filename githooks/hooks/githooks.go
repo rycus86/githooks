@@ -131,14 +131,35 @@ func SetInstallDir(path string) error {
 	return git.Ctx().SetConfig("githooks.installDir", path, git.GlobalScope)
 }
 
-// GetRunnerExecutable gets the global Githooks runner executable.
-func GetRunnerExecutable(path string) string {
-	return filepath.ToSlash(git.Ctx().GetConfig("githooks.runner", git.GlobalScope))
+// GetBinaryDir returns the Githooks binary directory inside the install directory.
+func GetBinaryDir(installDir string) string {
+	return path.Join(installDir, "bin")
 }
 
-// SetRunnerExecutable sets the global Githooks runner executable.
-func SetRunnerExecutable(path string) error {
+// GetRunnerExecutable gets the installed Githooks runner executable.
+func GetRunnerExecutable(installDir string) string {
+	return path.Join(GetBinaryDir(installDir), "runner")
+}
+
+// GetCLIExecutable gets the global Githooks CLI executable.
+func GetCLIExecutable(installDir string) string {
+	return path.Join(GetBinaryDir(installDir), "cli.sh")
+}
+
+// SetRunnerExecutableAlias sets the global Githooks runner executable.
+func SetRunnerExecutableAlias(path string) error {
+	if !cm.IsFile(path) {
+		return cm.ErrorF("Runner executable '%s' does not exist.", path)
+	}
 	return git.Ctx().SetConfig("githooks.runner", path, git.GlobalScope)
+}
+
+// SetCLIExecutableAlias sets the global Githooks runner executable.
+func SetCLIExecutableAlias(path string) error {
+	if !cm.IsFile(path) {
+		return cm.ErrorF("CLI executable '%s' does not exist.", path)
+	}
+	return git.Ctx().SetConfig("alias.hooks", strs.Fmt("!\"%s\"", path), git.GlobalScope)
 }
 
 // GetReleaseCloneDir get the release clone directory inside the install dir.
@@ -160,7 +181,7 @@ func GetToolScript(installDir string, name string) (cm.IExecutable, error) {
 	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
 }
 
-// GetInstaller returns the installer executbale in the install directory.
+// GetInstaller returns the installer executable in the install directory.
 func GetInstaller(installDir string) cm.Executable {
 	return cm.Executable{
 		Path:   path.Join(GetReleaseCloneDir(installDir), "install.sh"),

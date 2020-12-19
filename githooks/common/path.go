@@ -1,9 +1,11 @@
 package common
 
 import (
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+	strs "rycus86/githooks/strings"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
@@ -110,4 +112,86 @@ func ReplaceTilde(p string) (string, error) {
 		return path.Join(filepath.ToSlash(usr), strings.TrimPrefix(p, "~")), nil
 	}
 	return p, nil
+}
+
+// MakeExecutbale makes a file executbale.
+func MakeExecutbale(path string) (err error) {
+	stats, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	err = os.Chmod(path, stats.Mode()|0111)
+	return
+}
+
+// CopyFile copies the contents of the file named src to the file named
+// by dst. The file will be created if it does not already exist. If the
+// destination file exists, all it's contents will be replaced by the contents
+// of the source file.
+func CopyFile(src string, dst string) (err error) {
+	in, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		cerr := out.Close()
+		err = CombineErrors(err, cerr)
+	}()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return
+	}
+
+	err = out.Sync()
+	return
+}
+
+// MoveFileWithBackup moves the contents of the file named `src` to the file named
+// by `dst`. If `dst` already exists it will be force moved to `dst + .old`.
+// After this, any failure tries to recover as good as possible
+// to not have touched/moved `dst`.
+func MoveFileWithBackup(src string, dst string) (err error) {
+	backUpPrefix := ".old"
+	backupFile := ""
+
+	if !IsFile(src) {
+		return Error("Source file '%s' does not exist.")
+	}
+
+	if IsFile(dst) {
+		// Force remove any backup file.
+		backupFile := dst + backUpPrefix
+		if IsFile(backupFile) {
+			if err = os.Remove(backupFile); err != nil {
+				return
+			}
+		}
+		// Move destination to the backup file.
+		if err = os.Rename(dst, backupFile); err != nil {
+			return
+		}
+	}
+
+	// Rollback operation if any error happens
+	defer func() {
+		if err != nil && strs.IsNotEmpty(backupFile) {
+			if e := os.Rename(backupFile, dst); e != nil {
+				err = CombineErrors(err,
+					ErrorF("Could not rollback by copying '%s' to '%s'.",
+						backupFile, dst))
+			}
+		}
+	}()
+
+	// The critical part. Move `src` to `dest`.
+	err = os.Rename(src, dst)
+
+	return
 }

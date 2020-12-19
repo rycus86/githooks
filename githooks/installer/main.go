@@ -24,8 +24,6 @@ import (
 
 // InstallSettings are the settings for the installer.
 type InstallSettings struct {
-	args *Arguments
-
 	installDir string
 	cloneDir   string
 
@@ -193,11 +191,11 @@ func validateArgs(cmd *cobra.Command, args *Arguments) {
 
 	// Check all parsed flags to not have empty value!
 	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		log.FatalIfF(f.Changed && strs.IsEmpty(f.Value.String()),
+		log.PanicIfF(f.Changed && strs.IsEmpty(f.Value.String()),
 			"Flag '%s' needs an non-empty value.", f.Name)
 	})
 
-	log.FatalIfF(args.SingleInstall && args.UseCoreHooksPath,
+	log.PanicIfF(args.SingleInstall && args.UseCoreHooksPath,
 		"Cannot use --single and --use-core-hookspath together. See `--help`.")
 }
 
@@ -236,23 +234,22 @@ func setMainVariables(args *Arguments) InstallSettings {
 	}
 
 	return InstallSettings{
-		args:       args,
 		installDir: installDir,
 		cloneDir:   hooks.GetReleaseCloneDir(installDir),
 		promptCtx:  promptCtx}
 }
 
-func setInstallDirAndRunner(installDir string) {
-	runner := hooks.GetRunnerExecutable(installDir)
+func setInstallDir(installDir string) {
 	log.AssertNoErrorPanic(hooks.SetInstallDir(installDir),
 		"Could not set install dir '%s'", installDir)
-	log.AssertNoErrorPanic(hooks.SetRunnerExecutable(runner),
-		"Could not set runner executable '%s'", runner)
 }
 
 func buildFromSource(
-	settings *InstallSettings, tempDir string,
-	url string, branch string, commitSHA string) updates.Binaries {
+	args *Arguments,
+	tempDir string,
+	url string,
+	branch string,
+	commitSHA string) updates.Binaries {
 
 	log.Info("Building binaries from source ...")
 
@@ -276,7 +273,7 @@ func buildFromSource(
 	log.InfoF("Building binaries at '%s'", tag)
 
 	// Build the binaries.
-	binPath, err := builder.Build(tempDir, settings.args.BuildFlags)
+	binPath, err := builder.Build(tempDir, args.BuildFlags)
 	log.AssertNoErrorPanicF(err, "Could not build release branch in '%s'.", tempDir)
 
 	bins, err := cm.GetAllFiles(binPath)
@@ -303,7 +300,7 @@ func buildFromSource(
 				func(s string) string { return path.Base(s) }),
 			"\n - "))
 
-	log.FatalIf(
+	log.PanicIf(
 		len(binaries.All) == 0 ||
 			strs.IsEmpty(binaries.Installer),
 		"No binaries found in '%s'", binPath)
@@ -316,7 +313,7 @@ func downloadBinaries(settings *InstallSettings, tempDir string, status updates.
 	return updates.Binaries{}
 }
 
-func prepareDispatch(settings *InstallSettings) {
+func prepareDispatch(settings *InstallSettings, args *Arguments) {
 
 	var status updates.ReleaseStatus
 	var err error
@@ -332,8 +329,8 @@ func prepareDispatch(settings *InstallSettings) {
 
 		status, err = updates.FetchUpdates(
 			settings.cloneDir,
-			settings.args.CloneURL,
-			settings.args.CloneBranch,
+			args.CloneURL,
+			args.CloneBranch,
 			true, updates.RecloneOnWrongRemote)
 
 		log.AssertNoErrorPanicF(err,
@@ -348,9 +345,9 @@ func prepareDispatch(settings *InstallSettings) {
 	updateSettings := updates.GetSettings()
 
 	binaries := updates.Binaries{}
-	if settings.args.BuildFromSource || updateSettings.DoBuildFromSource {
+	if args.BuildFromSource || updateSettings.DoBuildFromSource {
 		binaries = buildFromSource(
-			settings, tempDir,
+			args, tempDir,
 			status.RemoteURL, status.Branch, status.RemoteCommitSHA)
 	} else {
 		_ = downloadBinaries(settings, tempDir, status)
@@ -364,7 +361,7 @@ func prepareDispatch(settings *InstallSettings) {
 	runInstaller(binaries.Installer, args, tempDir, updateTo, binaries.All)
 }
 
-func runInstaller(installer string, args Arguments, tempDir string, updateTo string, binaries []string) {
+func runInstaller(installer string, args *Arguments, tempDir string, updateTo string, binaries []string) {
 	log.Info("Dispatching to build installer ...")
 
 	// Set variables...
@@ -377,7 +374,7 @@ func runInstaller(installer string, args Arguments, tempDir string, updateTo str
 	defer os.Remove(file.Name())
 
 	// Write the config ...
-	writeArgs(file.Name(), &args)
+	writeArgs(file.Name(), args)
 
 	// Run the installer binary
 	err = cm.RunExecutable(
@@ -412,8 +409,11 @@ func checkTemplateDir(targetDir string) string {
 // findGitHookTemplates returns the Git hook template directory
 // and optional a Git template dir which is only set in case of
 // not using the core.hooksPath method.
-func findGitHookTemplates(settings *InstallSettings) (string, string) {
-	args := settings.args
+func findGitHookTemplates(
+	installDir string,
+	useCoreHooksPath bool,
+	nonInteractive bool,
+	promptCtx prompt.IContext) (string, string) {
 
 	installUsesCoreHooksPath := git.Ctx().GetConfig("githooks.useCoreHooksPath", git.GlobalScope)
 	haveInstallation := strs.IsNotEmpty(installUsesCoreHooksPath)
@@ -429,7 +429,7 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 	}
 
 	// 2. Try setup from git config
-	if args.UseCoreHooksPath || installUsesCoreHooksPath == "true" {
+	if useCoreHooksPath || installUsesCoreHooksPath == "true" {
 		hooksTemplateDir := checkTemplateDir(
 			git.Ctx().GetConfig("core.hooksPath", git.GlobalScope))
 
@@ -453,7 +453,7 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 
 	// If we have an installation, and have not found
 	// the template folder by now...
-	log.FatalIfF(haveInstallation,
+	log.PanicIfF(haveInstallation,
 		"Your installation is corrupt.\n"+
 			"The global value 'githooks.useCoreHooksPath = %v'\n"+
 			"is set but the corresponding hook templates directory\n"+
@@ -461,13 +461,13 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 
 	// 4. Try setup new folder if running non-interactively
 	// and no folder is found by now
-	if args.NonInteractive {
-		templateDir := setupNewTemplateDir(settings.installDir, nil)
+	if nonInteractive {
+		templateDir := setupNewTemplateDir(installDir, nil)
 		return path.Join(templateDir, "hooks"), templateDir
 	}
 
 	// 5. Try to search for it on disk
-	answer, err := settings.promptCtx.ShowPromptOptions(
+	answer, err := promptCtx.ShowPromptOptions(
 		"Could not find the Git hook template directory.\n"+
 			"Do you want to search for it?",
 		"(yes, No)",
@@ -477,18 +477,18 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 
 	if answer == "y" {
 
-		templateDir := searchTemplateDirOnDisk(settings.promptCtx)
+		templateDir := searchTemplateDirOnDisk(promptCtx)
 
 		if strs.IsNotEmpty(templateDir) {
 
-			if settings.args.UseCoreHooksPath {
+			if useCoreHooksPath {
 				return path.Join(templateDir, "hooks"), ""
 			}
 
 			// If we dont use core.hooksPath, we ask
 			// if the user wants to continue setting this as
 			// 'init.templateDir'.
-			answer, err := settings.promptCtx.ShowPromptOptions(
+			answer, err := promptCtx.ShowPromptOptions(
 				"Do you want to set this up as the Git template\n"+
 					"directory (e.g setting 'init.templateDir')\n"+
 					"for future use?",
@@ -497,7 +497,7 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 				"Yes", "No (abort)")
 			log.AssertNoErrorF(err, "Could not show prompt.")
 
-			log.FatalIf(answer != "y",
+			log.PanicIf(answer != "y",
 				"Could not determine Git hook",
 				"templates directory. -> Abort.")
 
@@ -506,7 +506,7 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 	}
 
 	// 6. Set up as new
-	answer, err = settings.promptCtx.ShowPromptOptions(
+	answer, err = promptCtx.ShowPromptOptions(
 		"Do you want to set up a new Git templates folder?",
 		"(yes, No)",
 		"y/N",
@@ -514,7 +514,7 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 	log.AssertNoErrorF(err, "Could not show prompt.")
 
 	if answer == "y" {
-		templateDir := setupNewTemplateDir(settings.installDir, settings.promptCtx)
+		templateDir := setupNewTemplateDir(installDir, promptCtx)
 		return path.Join(templateDir, "hooks"), templateDir
 	}
 
@@ -631,33 +631,45 @@ func setupNewTemplateDir(installDir string, promptCtx prompt.IContext) string {
 	return templateDir
 }
 
-func setTargetTemplateDir(settings *InstallSettings) {
-	templateDir := settings.args.TemplateDir
+func getTargetTemplateDir(
+	installDir string,
+	templateDir string,
+	useCoreHooksPath bool,
+	nonInteractive bool,
+	dryRun bool,
+	promptCtx prompt.IContext) (hookTemplateDir string) {
 
 	if strs.IsEmpty(templateDir) {
 		// Automatically find a template directory.
-		settings.hookTemplateDir, templateDir = findGitHookTemplates(settings)
-		log.FatalIfF(strs.IsEmpty(settings.hookTemplateDir),
+		hookTemplateDir, templateDir = findGitHookTemplates(
+			installDir,
+			useCoreHooksPath,
+			nonInteractive,
+			promptCtx)
+
+		log.PanicIfF(strs.IsEmpty(hookTemplateDir),
 			"Could not determine Git hook template directory.")
 	} else {
 		// The user provided a template directory, check it and
 		// add `hooks` which is needed.
-		log.FatalIfF(!cm.IsDirectory(templateDir),
+		log.PanicIfF(!cm.IsDirectory(templateDir),
 			"Given template dir '%s' does not exist.", templateDir)
-		settings.hookTemplateDir = path.Join(templateDir, "hooks")
+		hookTemplateDir = path.Join(templateDir, "hooks")
 	}
 
-	err := os.MkdirAll(settings.hookTemplateDir, 0775)
+	err := os.MkdirAll(hookTemplateDir, 0775)
 	log.AssertNoErrorPanicF(err,
 		"Could not assert directory '%s' exists",
-		settings.hookTemplateDir)
+		hookTemplateDir)
 
 	// Set the global Git configuration
-	if settings.args.UseCoreHooksPath {
-		setGithooksDirectory(true, settings.hookTemplateDir, settings.args.DryRun)
+	if useCoreHooksPath {
+		setGithooksDirectory(true, hookTemplateDir, dryRun)
 	} else {
-		setGithooksDirectory(false, templateDir, settings.args.DryRun)
+		setGithooksDirectory(false, templateDir, dryRun)
 	}
+
+	return
 }
 
 func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) {
@@ -798,24 +810,137 @@ func setupHookTemplates(
 	}
 }
 
-func runUpdate(settings *InstallSettings) {
-	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
-	log.InfoF("Installing binaries in '%v'", settings.args.InternalBinaries)
+func installBinaries(installDir string, cloneDir string, binaries []string, dryRun bool) {
 
-	if settings.args.NonInteractive {
+	binDir := hooks.GetBinaryDir(installDir)
+
+	err := os.MkdirAll(binDir, 0775)
+	log.AssertNoErrorPanicF(err, "Could not create binary dir '%s'.", binDir)
+
+	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", s) })
+	if dryRun {
+		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
+		return
+	}
+
+	log.InfoF("Installing binaries:\n%s\n"+"to '%s'.", strings.Join(msg, "\n"), binDir)
+
+	if hooks.InstallLegacyBinaries {
+		binaries = append(binaries, path.Join(cloneDir, "cli.sh"))
+	}
+
+	for _, binary := range binaries {
+		dest := path.Join(binDir, path.Base(binary))
+		err := cm.MoveFileWithBackup(binary, dest)
+		log.AssertNoErrorPanicF(err,
+			"Could not move file '%s' to '%s'.", binary, dest)
+	}
+
+	// Set CLI executable alias.
+	cliTool := hooks.GetCLIExecutable(installDir)
+	err = hooks.SetCLIExecutableAlias(cliTool)
+	log.AssertNoErrorPanicF(err,
+		"Could not set Git config 'alias.hooks' to '%s'.", cliTool)
+
+	if hooks.InstallLegacyBinaries {
+		err = cm.MakeExecutbale(cliTool)
+		log.AssertNoErrorPanicF(err, "Making file '%s' executable failed.", cliTool)
+	}
+
+	// Set runner executable alias.
+	runner := hooks.GetRunnerExecutable(installDir)
+	err = hooks.SetRunnerExecutableAlias(runner)
+	log.AssertNoErrorPanic(err,
+		"Could not set runner executable alias '%s'.", runner)
+}
+
+func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.IContext) {
+	gitx := git.Ctx()
+	currentSetting := gitx.GetConfig("githooks.autoupdate.enable", git.GlobalScope)
+	promptMsg := ""
+
+	if currentSetting == "true" {
+		// Already enabled.
+		return
+	} else if strs.IsEmpty(currentSetting) {
+		promptMsg = "Would you like to enable automatic update checks,\ndone once a day after a commit?"
+
+	} else {
+		log.Info("Automatic update checks are currently disabled.")
+		if nonInteractive {
+			return
+		}
+		promptMsg = "Would you like to re-enable them,\ndone once a day after a commit?"
+	}
+
+	activate := false
+
+	if nonInteractive {
+		activate = true
+	} else {
+		answer, err := promptCtx.ShowPromptOptions(
+			promptMsg,
+			"(Yes, no)",
+			"Y/n", "Yes", "No")
+		log.AssertNoErrorF(err, "Could not show prompt.")
+
+		activate = answer == "y"
+	}
+
+	if activate {
+		if dryRun {
+			log.Info("[dry run] Would enable automatic update checks.")
+		} else {
+
+			if err := gitx.SetConfig(
+				"githooks.autoupdate.enabled", true, git.GlobalScope); err == nil {
+
+				log.Info("Automatic update checks are now enabled.")
+			} else {
+				log.Error("Failed to enable automatic update checks.")
+			}
+
+		}
+	} else {
+		log.Info(
+			"If you change your mind in the future, you can enable it by running:",
+			"  $ git hooks update enable")
+	}
+}
+
+func runUpdate(settings *InstallSettings, args *Arguments) {
+	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
+
+	if args.NonInteractive {
 		// disable the prompt context,
 		// no prompt must be shown in this mode
 		// if we do -> pandic...
 		settings.promptCtx = nil
 	}
 
-	setTargetTemplateDir(settings)
+	settings.hookTemplateDir = getTargetTemplateDir(
+		settings.installDir,
+		args.TemplateDir,
+		args.UseCoreHooksPath,
+		args.NonInteractive,
+		args.DryRun,
+		settings.promptCtx)
+
+	installBinaries(
+		settings.installDir,
+		settings.cloneDir,
+		args.InternalBinaries,
+		args.DryRun)
+
+	if !args.InternalAutoUpdate {
+		setupAutomaticUpdate(args.NonInteractive, args.DryRun, settings.promptCtx)
+	}
 
 	setupHookTemplates(
 		settings.hookTemplateDir,
 		settings.cloneDir,
-		settings.args.OnlyServerHooks,
-		settings.args.DryRun)
+		args.OnlyServerHooks,
+		args.DryRun)
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
@@ -826,13 +951,13 @@ func runInstall(cmd *cobra.Command, auxArgs []string) {
 	settings := setMainVariables(&args)
 
 	if !args.DryRun {
-		setInstallDirAndRunner(settings.installDir)
+		setInstallDir(settings.installDir)
 	}
 
 	if !args.InternalPostUpdate {
-		prepareDispatch(&settings)
+		prepareDispatch(&settings, &args)
 	} else {
-		runUpdate(&settings)
+		runUpdate(&settings, &args)
 	}
 
 }

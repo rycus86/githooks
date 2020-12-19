@@ -437,7 +437,7 @@ func executeLFSHooks(settings *HookSettings) {
 
 	} else {
 		log.Debug("Git LFS not available")
-		log.FatalIf(lfsIsRequired,
+		log.PanicIf(lfsIsRequired,
 			"This repository requires Git LFS, but 'git-lfs' was",
 			"not found on your PATH. If you no longer want to use",
 			strs.Fmt("Git LFS, remove the '%s/.lfs-required' file.",
@@ -633,7 +633,7 @@ func checkSharedHook(
 
 	// Check that no local paths are in repository configured
 	// shared hooks
-	log.FatalIfF(!hooks.AllowLocalURLInRepoSharedHooks() &&
+	log.PanicIfF(!hooks.AllowLocalURLInRepoSharedHooks() &&
 		sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal,
 		"Shared hooks in '%[1]s/.shared' contain a local path\n"+
 			"'%[2]s'\n"+
