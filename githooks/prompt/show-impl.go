@@ -1,15 +1,14 @@
 package prompt
 
 import (
-	"bufio"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
 
-// ShowPrompt shows a prompt to the user with `text`
+// showPromptOptions shows a prompt to the user with `text`
 // with the options `shortOptions` and optional long options `longOptions`.
-func showPrompt(
+func showPromptOptions(
 	p *Context,
 	text string,
 	hintText string,
@@ -23,6 +22,9 @@ func showPrompt(
 
 		args := append([]string{text, hintText, shortOptions}, longOptions...)
 		answer, err = cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
+		answer = strings.ToLower(answer)
+
+		p.log.DebugF("Answer returned '%s'", answer)
 
 		if err == nil {
 			if isAnswerCorrect(answer, options) {
@@ -41,11 +43,12 @@ func showPrompt(
 	enterCausesDefault := strs.IsNotEmpty(defaultAnswer)
 	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
 
-	answer, isPromptDisplayed, e := p.showPromptTerminal(
+	answer, isPromptDisplayed, e := p.showPromptOptionsTerminal(
 		question,
 		defaultAnswer,
 		options,
 		enterCausesDefault)
+
 	if e == nil {
 		return answer, nil
 	}
@@ -61,7 +64,7 @@ func showPrompt(
 	return defaultAnswer, err
 }
 
-func (p *Context) showPromptTerminal(
+func (p *Context) showPromptOptionsTerminal(
 	question string,
 	defaultAnswer string,
 	options []string,
@@ -73,22 +76,23 @@ func (p *Context) showPromptTerminal(
 	// from git), so read from /dev/tty, our controlling terminal,
 	// if it can be opened.
 	nPrompts := 0 // How many times we showed the prompt
+	maxPrompts := 3
 
 	if p.termIn != nil && p.termOut != nil {
 
-		maxPrompts := 3
-		answerIncorrect := true
-
-		for answerIncorrect && nPrompts < maxPrompts {
+		for nPrompts < maxPrompts {
 
 			p.termOut.Write([]byte(question))
 			nPrompts++
 
-			reader := bufio.NewReader(p.termIn)
-			ans, e := reader.ReadString('\n')
+			success := p.termInScanner.Scan()
 
-			if e == nil {
-				ans := strings.TrimSpace(ans)
+			if success {
+				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
+
+				if p.printAnswer {
+					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+				}
 
 				if strs.IsEmpty(ans) && enterCausesDefault {
 					ans = defaultAnswer
@@ -111,6 +115,107 @@ func (p *Context) showPromptTerminal(
 		}
 
 		warning := p.promptFmt("Could not get answer in '%q', taking default '%s'", options, defaultAnswer)
+		p.termOut.Write([]byte(warning + "\n"))
+
+	} else {
+		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")
+	}
+
+	return defaultAnswer, nPrompts != 0, err
+}
+
+// showPrompt shows a prompt to the user with `text`.
+func showPrompt(
+	p *Context,
+	text string,
+	defaultAnswer string,
+	allowEmpty bool) (answer string, err error) {
+
+	cm.PanicIf(p.tool != nil, "Not yet implemented.")
+
+	question := ""
+	enterCausesDefault := false
+
+	if strs.IsNotEmpty(defaultAnswer) {
+		enterCausesDefault = true
+		question = p.promptFmt("%s [%s]: ", text, defaultAnswer)
+	} else {
+		question = p.promptFmt("%s : ", text)
+	}
+
+	answer, isPromptDisplayed, e :=
+		p.showPromptTerminal(
+			question,
+			defaultAnswer,
+			enterCausesDefault,
+			allowEmpty)
+
+	if e == nil {
+		return answer, nil
+	}
+
+	err = cm.CombineErrors(err, e)
+
+	if !isPromptDisplayed {
+		// Show the prompt in the log output
+		p.log.Info(question)
+	}
+
+	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
+	return defaultAnswer, err
+}
+
+func (p *Context) showPromptTerminal(
+	question string,
+	defaultAnswer string,
+	enterCausesDefault bool,
+	allowEmpty bool) (string, bool, error) {
+
+	var err error
+	// Try to read from the controlling terminal if available.
+	// Our stdin is never a tty (either a pipe or /dev/null when called
+	// from git), so read from /dev/tty, our controlling terminal,
+	// if it can be opened.
+	nPrompts := 0 // How many times we showed the prompt
+	maxPrompts := 3
+
+	if p.termIn != nil && p.termOut != nil {
+
+		for nPrompts < maxPrompts {
+
+			p.termOut.Write([]byte(question))
+			nPrompts++
+
+			success := p.termInScanner.Scan()
+
+			if success {
+				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
+
+				if p.printAnswer {
+					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+				}
+
+				if strs.IsEmpty(ans) && enterCausesDefault {
+					ans = defaultAnswer
+				}
+
+				if strs.IsNotEmpty(ans) || allowEmpty {
+					return ans, nPrompts != 0, nil
+				}
+
+				if nPrompts < maxPrompts {
+					warning := p.promptFmt("Answer is empty, try again ...")
+					p.termOut.Write([]byte(warning + "\n"))
+				}
+
+			} else {
+				p.termOut.Write([]byte("\n"))
+				err = cm.ErrorF("Could not read from terminal.")
+				break
+			}
+		}
+
+		warning := p.promptFmt("Could not get non-empty answer, taking default '%s'", defaultAnswer)
 		p.termOut.Write([]byte(warning + "\n"))
 
 	} else {

@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -98,14 +99,15 @@ func MakeRelative(base string, path string) (s string, e error) {
 	return
 }
 
-// ReplaceTilde replaces a suffix tilde '~' charachter in a path with the home dir.
-func ReplaceTilde(path string) (string, error) {
-	if strings.HasSuffix(path, "~") {
+// ReplaceTilde replaces a prefix tilde '~' character in a path
+// with the home dir.
+func ReplaceTilde(p string) (string, error) {
+	if strings.HasPrefix(p, "~") {
 		usr, err := homedir.Dir()
 		if err != nil {
-			return path, err
+			return p, err
 		}
-		return filepath.ToSlash(usr), nil
+		return path.Join(filepath.ToSlash(usr), strings.TrimPrefix(p, "~")), nil
 	}
-	return path, nil
+	return p, nil
 }

@@ -8,3 +8,8 @@ import "golang.org/x/sys/unix"
 func IsExecutable(path string) bool {
 	return unix.Access(path, unix.X_OK) == nil
 }
+
+// IsWritable checks if the path is writable by the current user.
+func IsWritable(path string) bool {
+	return unix.Access(path, unix.W_OK) == nil
+}

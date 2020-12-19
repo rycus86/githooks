@@ -29,7 +29,7 @@ var BuildTag = "{{ .Tag }}"
 
 func GetBuildVersion() *version.Version {
 	ver, _ := version.NewVersion(BuildVersion)
-	cm.DebugAssert(ver != nil, "Wrong build version")
+	cm.DebugAssertF(ver != nil, "Wrong build version '%s'", ver)
 	return ver
 }
 `))

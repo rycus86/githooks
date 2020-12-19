@@ -131,7 +131,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		log.DebugF("Use dialog tool '%s'", dialogTool.GetCommand())
 	}
 
-	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool)
+	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool, true, false)
 	log.AssertNoErrorF(err, "Prompt setup failed -> using fallback.")
 
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
@@ -363,13 +363,12 @@ func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool 
 			strs.Fmt(" -> Forward-merge to version '%s'\n", status.UpdateVersion) +
 			"Would you like to install it now?"
 
-		answer, err := uiSettings.PromptCtx.ShowPrompt(question,
+		answer, err := uiSettings.PromptCtx.ShowPromptOptions(question,
 			"(Yes, no)",
 			"Y/n",
 			"Yes", "No")
 		log.AssertNoErrorF(err, "Could not show prompt.")
 
-		answer = strings.ToLower(answer)
 		if answer == "y" {
 			return true
 		}
@@ -867,13 +866,11 @@ func executeSafetyChecks(uiSettings *UISettings,
 
 			question := mess + "\nDo you accept the changes?"
 
-			answer, err := uiSettings.PromptCtx.ShowPrompt(question,
+			answer, err := uiSettings.PromptCtx.ShowPromptOptions(question,
 				"(Yes, all, no, disable)",
 				"Y/a/n/d",
 				"Yes", "All", "No", "Disable")
 			log.AssertNoError(err, "Could not show prompt.")
-
-			answer = strings.ToLower(answer)
 
 			switch answer {
 			case "a":

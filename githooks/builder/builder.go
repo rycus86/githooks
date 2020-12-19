@@ -81,7 +81,7 @@ func findGoExec() (cm.CmdContext, error) {
 
 // Build compiles this repos executable with Go and reports
 // the output binary directory where all built binaries reside.
-func Build(repoPath string) (string, error) {
+func Build(repoPath string, buildTags []string) (string, error) {
 
 	goSrc := path.Join(repoPath, relPathGoSrc)
 	if !cm.IsDirectory(goSrc) {
@@ -141,13 +141,12 @@ func Build(repoPath string) (string, error) {
 	// Compile everything.
 	cmd := []string{"install", "-mod=vendor"}
 
-	var buildTags []string
 	if runtime.GOOS == "windows" {
 		buildTags = append(buildTags, "windows")
 	}
 
 	if len(buildTags) != 0 {
-		cmd = append(cmd, append([]string{"-tags"}, buildTags...)...)
+		cmd = append(cmd, "-tags", strings.Join(buildTags, ","))
 	}
 
 	cmd = append(cmd, "./...")

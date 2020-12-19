@@ -36,7 +36,7 @@ func GetSharedHookTypeString(sharedType int) string {
 	case SharedHookEnum.Global:
 		return "global"
 	default:
-		cm.DebugAssert(false)
+		cm.DebugAssertF(false, "Wrong type '%s'", sharedType)
 		return "wrong-value"
 	}
 }

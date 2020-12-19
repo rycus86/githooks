@@ -33,7 +33,7 @@ func IsRepoTrusted(
 				"Do you want to allow running every current and future hooks?"
 
 			var answer string
-			answer, err = promptCtx.ShowPrompt(question, "(yes, No)", "y/N", "Yes", "No")
+			answer, err = promptCtx.ShowPromptOptions(question, "(yes, No)", "y/N", "Yes", "No")
 
 			if err == nil && answer == "y" || answer == "Y" {
 				err = gitx.SetConfig("githooks.trust.all", true, git.LocalScope)
@@ -161,7 +161,7 @@ func (t *ChecksumStore) AddChecksum(sha1 string, filePath string) bool {
 
 // SyncChecksum adds a SHA1 checksum of a path to the first search directory.
 func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
-	cm.DebugAssert(len(checksum.SHA1) >= 2, "Wrong SHA1 hash")
+	cm.DebugAssertF(len(checksum.SHA1) >= 2, "Wrong SHA1 hash '%s'", checksum.SHA1)
 
 	if len(t.checksumDirs) == 0 {
 		return cm.Error("No checksum directory.")

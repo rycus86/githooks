@@ -3,6 +3,7 @@
 package common
 
 import (
+	"os"
 	"path/filepath"
 	"syscall"
 	"unsafe"
@@ -46,4 +47,24 @@ func IsExecutable(path string) bool {
 		0)
 
 	return e == 0 && (t == scs32BitBinary || t == scs64BitBinary)
+}
+
+// IsWritable tests if a `path` is writable.
+func IsWritable(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	err = nil
+	if !info.IsDir() {
+		return false
+	}
+
+	// Check if the user bit is enabled in file permission
+	if info.Mode().Perm()&(1<<(uint(7))) == 0 {
+		return false
+	}
+
+	return true
 }

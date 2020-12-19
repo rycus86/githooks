@@ -1,8 +1,8 @@
 package common
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"runtime/debug"
 	strs "rycus86/githooks/strings"
@@ -78,10 +78,10 @@ type ILogContext interface {
 
 // LogContext defines the data for a log context
 type LogContext struct {
-	debug *log.Logger
-	info  *log.Logger
-	warn  *log.Logger
-	error *log.Logger
+	debug io.Writer
+	info  io.Writer
+	warn  io.Writer
+	error io.Writer
 
 	infoIsATerminal  bool
 	errorIsATerminal bool
@@ -95,7 +95,7 @@ type LogContext struct {
 // CreateLogContext creates a log context
 func CreateLogContext(onlyStderr bool) (ILogContext, error) {
 
-	var debug, info, warn, error *log.Logger
+	var debug, info, warn, error io.Writer
 
 	if onlyStderr {
 
@@ -103,12 +103,12 @@ func CreateLogContext(onlyStderr bool) (ILogContext, error) {
 		// might read stdin for certain hooks.
 		// Either do redirection (which needs to be bombproof)
 		// or just use stderr.
-		info = log.New(os.Stderr, "", 0)
+		info = os.Stderr
 		warn = info
 		error = info
 	} else {
-		info = log.New(os.Stdout, "", 0)
-		warn = log.New(os.Stderr, "", 0)
+		info = os.Stdout
+		warn = os.Stderr
 		error = warn
 	}
 
@@ -166,12 +166,12 @@ func (c *LogContext) ColorPrompt(s string) string {
 
 // GetInfoWriter returns the info writer.
 func (c *LogContext) GetInfoWriter() io.Writer {
-	return c.info.Writer()
+	return c.info
 }
 
 // GetErrorWriter returns the error writer.
 func (c *LogContext) GetErrorWriter() io.Writer {
-	return c.error.Writer()
+	return c.error
 }
 
 // IsInfoATerminal returns `true` if the info log is connected to a terminal.
@@ -187,45 +187,45 @@ func (c *LogContext) IsErrorATerminal() bool {
 // Debug logs a debug message.
 func (c *LogContext) Debug(lines ...string) {
 	if DebugLog {
-		c.debug.Printf(c.colorInfo(FormatMessage(debugSuffix, debugIndent, lines...)))
+		fmt.Fprint(c.debug, c.colorInfo(FormatMessage(debugSuffix, debugIndent, lines...)), "\n")
 	}
 }
 
 // DebugF logs a debug message.
 func (c *LogContext) DebugF(format string, args ...interface{}) {
 	if DebugLog {
-		c.debug.Printf(c.colorInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)))
+		fmt.Fprint(c.debug, c.colorInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)), "\n")
 	}
 }
 
 // Info logs a info message.
 func (c *LogContext) Info(lines ...string) {
-	c.info.Printf(c.colorInfo(FormatMessage(infoSuffix, infoIndent, lines...)))
+	fmt.Fprint(c.info, c.colorInfo(FormatMessage(infoSuffix, infoIndent, lines...)), "\n")
 }
 
 // InfoF logs a info message.
 func (c *LogContext) InfoF(format string, args ...interface{}) {
-	c.info.Printf(c.colorInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)))
+	fmt.Fprint(c.info, c.colorInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)), "\n")
 }
 
 // Warn logs a warning message.
 func (c *LogContext) Warn(lines ...string) {
-	c.warn.Printf(c.colorError(FormatMessage(warnSuffix, warnIndent, lines...)))
+	fmt.Fprint(c.warn, c.colorError(FormatMessage(warnSuffix, warnIndent, lines...)), "\n")
 }
 
 // WarnF logs a warning message.
 func (c *LogContext) WarnF(format string, args ...interface{}) {
-	c.warn.Printf(c.colorError(FormatMessageF(warnSuffix, warnIndent, format, args...)))
+	fmt.Fprint(c.warn, c.colorError(FormatMessageF(warnSuffix, warnIndent, format, args...)), "\n")
 }
 
 // Error logs an error.
 func (c *LogContext) Error(lines ...string) {
-	c.error.Printf(c.colorError(FormatMessage(errorSuffix, errorIndent, lines...)))
+	fmt.Fprint(c.error, c.colorError(FormatMessage(errorSuffix, errorIndent, lines...)), "\n")
 }
 
 // ErrorF logs an error.
 func (c *LogContext) ErrorF(format string, args ...interface{}) {
-	c.error.Printf(c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)))
+	fmt.Fprint(c.error, c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)), "\n")
 }
 
 // GetPromptFormatter colors a prompt.
@@ -253,14 +253,14 @@ func (c *LogContext) ErrorWithStacktraceF(format string, args ...interface{}) {
 // Fatal logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) Fatal(lines ...string) {
 	m := FormatMessage(errorSuffix, errorIndent, lines...)
-	c.error.Printf(c.colorError(m))
+	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})
 }
 
 // FatalF logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) FatalF(format string, args ...interface{}) {
 	m := FormatMessageF(errorSuffix, errorIndent, format, args...)
-	c.error.Printf(c.colorError(m))
+	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})
 }
 

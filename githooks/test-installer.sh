@@ -40,10 +40,9 @@ RUN echo "Make test gitrepo to clone from ..." && \
 
 # Build binaries
 RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh -tags debug,mock
+RUN /var/lib/githooks/githooks/build.sh -tags "debug,mock,docker"
 RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
 
-RUN /var/lib/githooks/installer --clone-url /var/lib/githooks \
-                                --clone-branch feature/go-refactoring \
-                                --build-from-source
+
+RUN bash /var/lib/githooks/githooks/test-installer-run.sh
 EOF

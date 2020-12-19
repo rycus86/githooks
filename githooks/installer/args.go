@@ -2,7 +2,7 @@ package main
 
 // Arguments repesents all CLI arguments for the installer.
 type Arguments struct {
-	InternalConfig string
+	config string
 
 	InternalAutoUpdate bool
 	InternalPostUpdate bool
@@ -20,10 +20,14 @@ type Arguments struct {
 
 	UseCoreHooksPath bool
 
-	CloneURL        string
-	CloneBranch     string
+	CloneURL    string
+	CloneBranch string
+
 	BuildFromSource bool
+	BuildFlags      []string
 
 	InstallPrefix string
 	TemplateDir   string
+
+	UseStdin bool
 }

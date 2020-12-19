@@ -143,7 +143,7 @@ func SetRunnerExecutable(path string) error {
 
 // GetReleaseCloneDir get the release clone directory inside the install dir.
 func GetReleaseCloneDir(installDir string) string {
-	cm.DebugAssert(strs.IsNotEmpty(installDir))
+	cm.DebugAssert(strs.IsNotEmpty(installDir), "Empty install dir.")
 	return path.Join(installDir, "release")
 }
 
