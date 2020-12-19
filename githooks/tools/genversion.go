@@ -25,6 +25,7 @@ import 	(
 
 var BuildCommit = "{{ .Commit }}"
 var BuildVersion = "{{ .Version }}"
+var BuildTag = "{{ .Tag }}"
 
 func GetBuildVersion() *version.Version {
 	ver, _ := version.NewVersion(BuildVersion)
@@ -47,7 +48,7 @@ func main() {
 	commitSHA, err := git.GetCommitSHA(gitx, "HEAD")
 	cm.AssertNoErrorPanicF(err, "GetCommitSHA failed.")
 
-	ver, err := git.GetVersion(gitx, "HEAD")
+	ver, tag, err := git.GetVersion(gitx, "HEAD")
 	cm.AssertNoErrorPanicF(err, "GetVersion failed.")
 
 	// Create or overwrite the go file from template
@@ -55,10 +56,12 @@ func main() {
 	err = versionTpl.Execute(&buf, struct {
 		Package string
 		Version string
+		Tag     string
 		Commit  string
 	}{
 		Package: pkg,
 		Version: ver.String(),
+		Tag:     tag,
 		Commit:  commitSHA,
 	})
 	cm.AssertNoErrorPanicF(err, "Setting template failed.")

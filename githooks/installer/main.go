@@ -210,7 +210,8 @@ func buildFromSource(settings *InstallSettings, tempDir string, status updates.R
 
 	// Checkout the remote commit sha
 	log.InfoF("Checkout out commit '%s'", status.RemoteCommitSHA[0:6])
-	err = git.CtxC(tempDir).Check("checkout",
+	gitx := git.CtxC(tempDir)
+	err = gitx.Check("checkout",
 		"-b", "update-to-"+status.RemoteCommitSHA[0:6],
 		status.RemoteCommitSHA)
 
@@ -218,8 +219,10 @@ func buildFromSource(settings *InstallSettings, tempDir string, status updates.R
 		"Could not checkout update commit '%s' in '%s'.",
 		status.RemoteCommitSHA, tempDir)
 
+	tag, _ := gitx.Get("describe", "--tags", "--abbrev=6")
+	log.InfoF("Building binaries at '%s'", tag)
+
 	// Build the binaries.
-	log.Info("Building binaries ...")
 	binPath, err := builder.Build(tempDir)
 	log.AssertNoErrorFatalF(err, "Could not build release branch in '%s'.", tempDir)
 

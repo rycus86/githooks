@@ -76,11 +76,6 @@ func (c *Context) GetCommitLog(commitSHA string, format string) (string, error) 
 	return c.Get("log", strs.Fmt("--format=%s", format), commitSHA)
 }
 
-// UpdateRef executes `git update-ref`.
-func (c *Context) UpdateRef(ref string, commitSHA string) error {
-	return c.Check("update-ref", ref, commitSHA)
-}
-
 // GetRemoteURLAndBranch reports the `remote`s `url` and
 // the current `branch` of HEAD.
 func (c *Context) GetRemoteURLAndBranch(remote string) (currentURL string, currentBranch string, err error) {
@@ -158,7 +153,6 @@ func FetchOrClone(
 		}
 		err = Clone(repoPath, url, branch, depth)
 	} else {
-
 		err = gitx.Fetch("origin", branch)
 	}
 
@@ -178,7 +172,7 @@ func GetTags(gitx *Context, commitSHA string) ([]string, error) {
 	return gitx.GetSplit("tag", "--points-at", commitSHA)
 }
 
-// GetVersionAt gets the version & tag from the tag at `commitSHA`
+// GetVersionAt gets the version & tag from the tags at `commitSHA`
 func GetVersionAt(gitx *Context, commitSHA string) (*version.Version, string, error) {
 	tags, err := GetTags(gitx, commitSHA)
 	if err != nil {
@@ -194,21 +188,18 @@ func GetVersionAt(gitx *Context, commitSHA string) (*version.Version, string, er
 	return nil, "", nil
 }
 
-// GetVersion gets the semantic version and commit
-func GetVersion(gitx *Context, commitSHA string) (v *version.Version, err error) {
+// GetVersion gets the semantic version and its tag.
+func GetVersion(gitx *Context, commitSHA string) (v *version.Version, tag string, err error) {
 
-	if strs.IsEmpty(commitSHA) || commitSHA == "HEAD" {
+	if commitSHA == "HEAD" {
 		commitSHA, err = GetCommitSHA(gitx, "HEAD")
 		if err != nil {
 			return
 		}
 	}
 
-	// Get the version tag.
-	ver, err := gitx.Get("describe", "--tags", "--abbrev=0", commitSHA)
-	if err != nil {
-		return
-	}
+	tag, err = gitx.Get("describe", "--tags", "--abbrev=0", commitSHA)
+	ver := tag
 
 	// Get number of commits ahead.
 	commitsAhead, err := gitx.Get("rev-list", "--count", strs.Fmt("%s..%s", ver, commitSHA))
@@ -221,7 +212,8 @@ func GetVersion(gitx *Context, commitSHA string) (v *version.Version, err error)
 	}
 
 	ver = strings.TrimPrefix(ver, "v")
-	return version.NewVersion(ver)
+	v, err = version.NewVersion(ver)
+	return v, tag, err
 }
 
 // GetCommitSHA gets the commit SHA1 of the ref.

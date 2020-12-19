@@ -2,7 +2,6 @@ package updates
 
 import (
 	"regexp"
-	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
@@ -10,14 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-version"
 )
-
-// DefaultURL is the default remote url for release clones.
-var DefaultURL = "https://github.com/rycus86/githooks.git"
-
-// DefaultBranch is the default branch for release clones.
-var DefaultBranch = "master"
-
-var defaultRemote = "origin"
 
 // ReleaseStatus contains the status of the release clone.
 type ReleaseStatus struct {
@@ -75,10 +66,6 @@ func getNewUpdateCommit(gitx *git.Context, firstSHA string, lastSHA string) (str
 			continue // no version tag on this commit
 		}
 
-		if ver.LessThanOrEqual(build.GetBuildVersion()) {
-			continue // no newer version found on this commit
-		}
-
 		// We have a valid new
 		// version on commit 'c'
 		commitFound = c
@@ -110,9 +97,6 @@ const (
 
 // FetchUpdates fetches updates in the Githooks clone directory.
 // Arguments `url` and `branch` can be empty which triggers
-// Todo: Here on clone we should really clone the latest tag on the branch
-// and not checkout the HEAD.
-// The release branch can contain commits we dont wanna clone from....
 func FetchUpdates(
 	cloneDir string,
 	url string,
@@ -196,31 +180,61 @@ func FetchUpdates(
 	// Fetch or clone he repository:
 	depth := -1 // Fetch the whole branch because we need tags on the branch
 	isNewClone, err := git.FetchOrClone(cloneDir, url, branch, depth, check)
-
 	if err != nil {
 		return
 	}
 
+	gitx := git.CtxCSanitized(cloneDir)
+	resetRemoteTo := ""
+
 	if isNewClone {
-		// Set the values back...
+		// Set the url/branch back...
 		if err = SetCloneURL(url, branch); err != nil {
+			return
+		}
+
+		// Reset to latest release tag on the branch
+		tag, e := gitx.Get("describe", "--tags", "--abbrev=0", "HEAD")
+
+		if e != nil {
+			err = cm.CombineErrors(
+				cm.ErrorF("No version tag could be found on branch '%s'",
+					branch), e)
+			return
+		}
+
+		e = gitx.Check("reset", "--hard", tag)
+		if e != nil {
+			err = cm.CombineErrors(
+				cm.ErrorF("Could not reset branch '%s' to tag '%s'",
+					branch, tag), e)
+			return
+		}
+
+		// Get the commit it points to and reset the remote to it
+		resetRemoteTo, e = gitx.Get("rev-list", "-n", "1", tag)
+		if e != nil {
+			err = e
 			return
 		}
 	}
 
 	remoteBranch := defaultRemote + "/" + branch
-	gitx := git.CtxCSanitized(cloneDir)
 	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch)
-	status.IsNewClone = isNewClone
 
+	status.IsNewClone = isNewClone
 	if status.IsUpdateAvailable {
+		resetRemoteTo = status.UpdateCommitSHA
+	}
+
+	if strs.IsNotEmpty(resetRemoteTo) {
 		// Reset the release branch to determined update commit sha.
-		err = gitx.UpdateRef("refs/remotes/"+remoteBranch, status.UpdateCommitSHA)
+		err = gitx.Check("update-ref", "refs/remotes/"+remoteBranch, resetRemoteTo)
 		if err != nil {
 			return
 		}
 
-		status.RemoteCommitSHA = status.UpdateCommitSHA
+		status.RemoteCommitSHA = resetRemoteTo
 	}
 
 	return
