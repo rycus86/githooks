@@ -13,9 +13,11 @@ require (
 	github.com/loov/hrtime v1.0.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pbenner/threadpool v0.0.0-20200729220145-19cbae573817
+	github.com/schollz/progressbar/v3 v3.7.2
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
-	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
+	github.com/yargevad/filepathx v0.0.0-20161019152617-907099cb5a62
+	golang.org/x/sys v0.0.0-20201113135734-0a15ea8d9b02
 	golang.org/x/term v0.0.0-20191110171634-ad39bd3f0407
 )

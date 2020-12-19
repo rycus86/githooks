@@ -24,8 +24,6 @@ func showPromptOptions(
 		answer, err = cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
 		answer = strings.ToLower(answer)
 
-		p.log.DebugF("Answer returned '%s'", answer)
-
 		if err == nil {
 			if isAnswerCorrect(answer, options) {
 				return

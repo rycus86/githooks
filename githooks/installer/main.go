@@ -14,6 +14,7 @@ import (
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -388,11 +389,6 @@ func runInstaller(installer string, args Arguments, tempDir string, updateTo str
 	log.AssertNoErrorFatal(err, "Running installer failed.")
 }
 
-func disableStdInput() {
-	null, _ := os.Open(os.DevNull)
-	os.Stdin = null
-}
-
 func checkTemplateDir(targetDir string) string {
 	if strs.IsEmpty(targetDir) {
 		return ""
@@ -480,7 +476,8 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 	log.AssertNoErrorF(err, "Could not show prompt.")
 
 	if answer == "y" {
-		templateDir := searchTemplateDirOnDisk(settings)
+
+		templateDir := searchTemplateDirOnDisk(settings.promptCtx)
 
 		if strs.IsNotEmpty(templateDir) {
 
@@ -524,8 +521,98 @@ func findGitHookTemplates(settings *InstallSettings) (string, string) {
 	return "", ""
 }
 
-func searchTemplateDirOnDisk(settings *InstallSettings) string {
+func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
+
+	for _, dir := range startDirs {
+
+		log.InfoF("Searching for potential locations in '%s'...", dir)
+
+		spinner := cm.GetProgressBar(log, "Searching ...", -1)
+
+		// Search in go routine...
+		matchCh := make(chan []string, 1)
+		go func() {
+			matches, err := cm.Glob(path.Join(dir,
+				"**/templates/hooks/pre-commit.sample"))
+			if err == nil {
+				matchCh <- matches
+			}
+		}()
+
+		var matches []string
+		running := true
+
+		spinnerT := time.NewTicker(10 * time.Millisecond)
+		stillSearching := time.After(10 * time.Second)
+		timeout := time.After(300 * time.Second)
+
+		for running {
+			select {
+			case matches = <-matchCh:
+				running = false
+				if spinner != nil {
+					spinner.Clear()
+				}
+
+			case <-stillSearching:
+				if spinner == nil {
+					log.Info("Still searching ...")
+				} else {
+					spinner.Describe("Still searching ...")
+				}
+			case <-spinnerT.C:
+				if spinner != nil {
+					spinner.Add(1)
+				}
+			case <-timeout:
+				log.Warn("Searching took too long -> timed out.")
+				running = false
+			}
+		}
+
+		for _, match := range matches {
+
+			templateDir := path.Dir(path.Dir(filepath.ToSlash(match)))
+
+			answer, err := promptCtx.ShowPromptOptions(
+				strs.Fmt("--> Is it '%s'", templateDir),
+				"(yes, No)",
+				"y/N",
+				"Yes", "No")
+			log.AssertNoErrorF(err, "Could not show prompt.")
+
+			if answer == "y" {
+				return templateDir
+			}
+		}
+	}
+
 	return ""
+}
+
+func searchTemplateDirOnDisk(promptCtx prompt.IContext) string {
+
+	first, second := GetDefaultTemplateSearchDir()
+
+	templateDir := searchPreCommitFile(first, promptCtx)
+
+	if strs.IsEmpty(templateDir) {
+
+		answer, err := promptCtx.ShowPromptOptions(
+			"Git hook template directory not found\n"+
+				"Do you want to keep searching?",
+			"(yes, No)",
+			"y/N",
+			"Yes", "No")
+
+		log.AssertNoErrorF(err, "Could not show prompt.")
+
+		if answer == "y" {
+			templateDir = searchPreCommitFile(second, promptCtx)
+		}
+	}
+
+	return templateDir
 }
 
 func setupNewTemplateDir(installDir string, promptCtx prompt.IContext) string {
@@ -672,7 +759,10 @@ func runUpdate(settings *InstallSettings) {
 	log.InfoF("Installing binaries in '%v'", settings.args.InternalBinaries)
 
 	if settings.args.NonInteractive {
-		disableStdInput()
+		// disable the prompt context,
+		// no prompt must be shown in this mode
+		// if we do -> pandic...
+		settings.promptCtx = nil
 	}
 
 	setTargetTemplateDir(settings)

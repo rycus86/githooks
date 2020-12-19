@@ -2,7 +2,6 @@ package git
 
 import (
 	"os"
-	"runtime"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
@@ -224,12 +223,4 @@ func GetCommitSHA(gitx *Context, ref string) (string, error) {
 	}
 
 	return gitx.Get("rev-parse", ref)
-}
-
-// GetDefaultTemplateDir gets the default Git template dir.
-func GetDefaultTemplateDir() string {
-	if runtime.GOOS == "windows" {
-		return "C:/Program Files/Git/mingw64/libexec/git-core/templates"
-	}
-	return "/usr/share/git-core/templates"
 }

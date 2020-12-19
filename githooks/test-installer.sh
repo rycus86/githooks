@@ -20,7 +20,8 @@ tmp=$(mktemp -d)
 
 trap cleanUp EXIT INT TERM
 
-cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
+runTest() {
+    cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
 FROM golang:1.15.3-alpine
 RUN apk add --no-cache git git-lfs bash
 
@@ -44,5 +45,10 @@ RUN /var/lib/githooks/githooks/build.sh -tags "debug,mock,docker"
 RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
 
 
-RUN bash /var/lib/githooks/githooks/test-installer-run.sh
+RUN bash /var/lib/githooks/githooks/test-installer-run-$1.sh
 EOF
+
+}
+
+runTest "2"
+runTest "1"
