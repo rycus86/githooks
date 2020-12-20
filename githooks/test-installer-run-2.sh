@@ -15,6 +15,8 @@ if [ -f /usr/share/git-core/templates/hooks ]; then
     sudo mv -f /usr/share/git-core/templates/hooks /usr/share/git-core-my/templates
 fi
 
+sudo chown -R "$USER:$USER" /usr/share/git-core-my
+
 echo "# git-lfs" | sudo tee "/usr/share/git-core-my/templates/pre-commit" >/dev/null 2>&1
 
 echo 'y

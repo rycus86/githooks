@@ -20,6 +20,6 @@ git config --global --unset alias.hooks
 git config --global --unset init.templateDir
 git config --global --unset core.hooksPath
 
-rm -rf ~/.githooks
+rm -rf ~/.githooks /usr/share/git-core-my/templates
 
 exit 0
