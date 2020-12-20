@@ -17,7 +17,7 @@ func IsEmpty(s string) bool {
 
 // SplitLines splits a string into an array of strings.
 func SplitLines(s string) []string {
-	return strings.Split(strings.Replace(s, "\r\n", "\n", -1), "\n")
+	return strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
 }
 
 // Fmt returns a formatted string.

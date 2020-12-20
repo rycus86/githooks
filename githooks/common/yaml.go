@@ -23,6 +23,7 @@ func LoadYAML(file string, repr interface{}) error {
 	if err := yaml.Unmarshal(bytes, repr); err != nil {
 		return ErrorF("Could not parse file '%s'.", file)
 	}
+
 	return nil
 }
 
@@ -42,5 +43,6 @@ func StoreYAML(file string, repr interface{}) error {
 	if _, err := yamlFile.Write(bytes); err != nil {
 		return err
 	}
+
 	return nil
 }

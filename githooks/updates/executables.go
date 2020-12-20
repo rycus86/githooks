@@ -25,8 +25,10 @@ type Settings struct {
 func GetSettings() (settings Settings) {
 	gitx := git.Ctx()
 	buildBinaries := gitx.GetConfig("githooks.buildFromSource", git.GlobalScope)
+
 	if buildBinaries == "true" {
 		settings.DoBuildFromSource = true
 	}
+
 	return
 }

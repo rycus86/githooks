@@ -10,15 +10,16 @@ import (
 // ConfigScope Defines the scope of a config file, such as local, global or system.
 type ConfigScope string
 
-// Available ConfigScope's
+// Available ConfigScope's.
 const (
 	LocalScope  ConfigScope = "--local"
 	GlobalScope ConfigScope = "--global"
 	System      ConfigScope = "--system"
 	Traverse    ConfigScope = ""
+	HEAD        string      = "HEAD"
 )
 
-// Context defines the context to execute it commands
+// Context defines the context to execute it commands.
 type Context struct {
 	cm.CmdContext
 }
@@ -51,14 +52,17 @@ func CtxSanitized() *Context {
 func (c *Context) GetConfig(key string, scope ConfigScope) string {
 	var out string
 	var err error
+
 	if scope != Traverse {
 		out, err = c.Get("config", string(scope), key)
 	} else {
 		out, err = c.Get("config", key)
 	}
+
 	if err == nil {
 		return out
 	}
+
 	return ""
 }
 
@@ -66,14 +70,17 @@ func (c *Context) GetConfig(key string, scope ConfigScope) string {
 func (c *Context) getConfigWithArgs(key string, scope ConfigScope, args ...string) string {
 	var out string
 	var err error
+
 	if scope != Traverse {
 		out, err = c.Get(append(append([]string{"config"}, args...), string(scope), key)...)
 	} else {
 		out, err = c.Get(append(append([]string{"config"}, args...), key)...)
 	}
+
 	if err == nil {
 		return out
 	}
+
 	return ""
 }
 
@@ -94,6 +101,7 @@ func (c *Context) SetConfig(key string, value interface{}, scope ConfigScope) er
 	if scope != Traverse {
 		return c.Check("config", string(scope), key, v)
 	}
+
 	return c.Check("config", key, v)
 }
 
@@ -105,6 +113,7 @@ func (c *Context) IsConfigSet(key string, scope ConfigScope) bool {
 	} else {
 		err = c.Check("config", key)
 	}
+
 	return err == nil
 }
 

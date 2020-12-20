@@ -17,6 +17,7 @@ type CmdContext struct {
 // GetSplit executes a command and splits the output by newlines.
 func (c *CmdContext) GetSplit(args ...string) ([]string, error) {
 	out, err := c.Get(args...)
+
 	return strs.SplitLines(out), err
 }
 
@@ -63,6 +64,7 @@ func (c *CmdContext) Check(args ...string) error {
 		return CombineErrors(
 			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
 	}
+
 	return nil
 }
 

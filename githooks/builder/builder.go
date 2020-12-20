@@ -111,12 +111,12 @@ func Build(repoPath string, buildTags []string) (string, error) {
 	gox.Cwd = goSrc
 
 	// Modify environment for compile.
-	env := strs.Filter(os.Environ(), func(s string) bool {
+	gox.Env = strs.Filter(os.Environ(), func(s string) bool {
 		return !strings.Contains(s, "GOBIN") &&
 			!strings.Contains(s, "GOPATH")
 	})
 
-	gox.Env = append(env,
+	gox.Env = append(gox.Env,
 		strs.Fmt("GOBIN=%s", goBinPath),
 		strs.Fmt("GOPATH=%s", goPath))
 

@@ -5,7 +5,7 @@ const (
 	// @todo This feature needs to be set to `false` and removed.
 	ReadWriteLegacyTrustFile = true
 
-	// ReadLegacyIgnoreFiles enables the reading of legacy ignore files `.ignore`
+	// ReadLegacyIgnoreFiles enables the reading of legacy ignore files `.ignore`.
 	ReadLegacyIgnoreFiles = true
 	// ReadLegacyIgnoreFileFixPatters add a '**/' to each pattern, because thats
 	// what it needs to make legacy patterns compatible.

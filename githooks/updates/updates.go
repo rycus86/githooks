@@ -33,6 +33,7 @@ func GetCloneURL() (url string, branch string) {
 	gitx := git.Ctx()
 	url = gitx.GetConfig("githooks.cloneUrl", git.GlobalScope)
 	branch = gitx.GetConfig("githooks.cloneBranch", git.GlobalScope)
+
 	return
 }
 
@@ -41,6 +42,7 @@ func SetCloneURL(url string, branch string) error {
 	gitx := git.Ctx()
 	e1 := gitx.SetConfig("githooks.cloneUrl", url, git.GlobalScope)
 	e2 := gitx.SetConfig("githooks.cloneBranch", branch, git.GlobalScope)
+
 	return cm.CombineErrors(e1, e2)
 }
 
@@ -96,7 +98,7 @@ const (
 )
 
 // FetchUpdates fetches updates in the Githooks clone directory.
-// Arguments `url` and `branch` can be empty which triggers
+// Arguments `url` and `branch` can be empty which triggers.
 func FetchUpdates(
 	cloneDir string,
 	url string,
@@ -111,7 +113,7 @@ func FetchUpdates(
 		reclone := false
 
 		// Check if clone is dirty, if so error out.
-		exitCode, e := gitx.GetExitCode("diff-index", "--quiet", "HEAD")
+		exitCode, e := gitx.GetExitCode("diff-index", "--quiet", git.HEAD)
 		if e != nil {
 			return false,
 				cm.CombineErrors(cm.ErrorF("Could not check dirty state in '%s'",
@@ -194,12 +196,13 @@ func FetchUpdates(
 		}
 
 		// Reset to latest release tag on the branch
-		tag, e := gitx.Get("describe", "--tags", "--abbrev=0", "HEAD")
+		tag, e := gitx.Get("describe", "--tags", "--abbrev=0", git.HEAD)
 
 		if e != nil {
 			err = cm.CombineErrors(
 				cm.ErrorF("No version tag could be found on branch '%s'",
 					branch), e)
+
 			return
 		}
 
@@ -208,6 +211,7 @@ func FetchUpdates(
 			err = cm.CombineErrors(
 				cm.ErrorF("Could not reset branch '%s' to tag '%s'",
 					branch, tag), e)
+
 			return
 		}
 
@@ -215,7 +219,7 @@ func FetchUpdates(
 		resetRemoteTo, e = gitx.Get("rev-list", "-n", "1", tag)
 		if e != nil {
 			err = e
-			return
+			return //nolint:nlreturn
 		}
 	}
 
@@ -329,7 +333,7 @@ func getStatus(
 // MergeUpdates merges updates in the Githooks clone directory.
 // Only a fast-forward merge of the remote branch into the local
 // branch is performed.
-func MergeUpdates(cloneDir string, dryRun bool) error {
+func MergeUpdates(cloneDir string, dryRun bool) (err error) {
 	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
 
 	_, branch := GetCloneURL()
@@ -345,17 +349,17 @@ func MergeUpdates(cloneDir string, dryRun bool) error {
 		// Checkout a temporary branch from the current
 		// and merge the remote to see if it works.
 		branch = "update-" + uuid.New().String()
-		if e := gitxClone.Check("branch", branch); e != nil {
-			return e
+		if err = gitxClone.Check("branch", branch); err != nil {
+			return
 		}
-		defer gitxClone.Check("branch", "-D", branch)
+		defer func() { err = gitxClone.Check("branch", "-D", branch) }()
 	}
 
 	// Fast-forward merge with fetch.
 	refSpec := strs.Fmt("%s:%s", remoteBranch, branch)
-	if e := gitxClone.Check("fetch", ".", refSpec); e != nil {
-		return e
+	if err = gitxClone.Check("fetch", ".", refSpec); err != nil {
+		return
 	}
 
-	return nil
+	return
 }

@@ -32,10 +32,11 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool) erro
 	}
 
 	repos.Insert(absGitDir)
+
 	return repos.Store(installDir)
 }
 
-// Load gets the registered repos from a file
+// Load gets the registered repos from a file.
 func (r *RegisterRepos) Load(installDir string) (err error) {
 
 	file := getRegisterFile(installDir)
@@ -65,32 +66,39 @@ func (r *RegisterRepos) Load(installDir string) (err error) {
 			}
 		}
 	}
+
 	return err
 }
 
-// Store sets the registered repos to a file
-func (r *RegisterRepos) Store(installDir string) error {
+// Store sets the registered repos to a file.
+func (r *RegisterRepos) Store(installDir string) (err error) {
 
 	// Legacy: Store legacy register file
 	// @todo: Remove this as soon as possible
-	f, err := os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
-	if err == nil {
-		defer f.Close()
-		for _, gitdir := range r.GitDirs {
-			f.Write([]byte(gitdir + "\n"))
+	var f *os.File
+	f, err = os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
+	if err != nil {
+		return
+	}
+
+	defer f.Close()
+	for _, gitdir := range r.GitDirs {
+		if _, err = f.Write([]byte(gitdir + "\n")); err != nil {
+			return
 		}
 	}
 
 	file := getRegisterFile(installDir)
-	return cm.CombineErrors(err, cm.StoreYAML(file, &r))
+
+	return cm.StoreYAML(file, &r)
 }
 
-// Insert adds a repository Git directory uniquely
+// Insert adds a repository Git directory uniquely.
 func (r *RegisterRepos) Insert(gitDir string) {
 	r.GitDirs = strs.AppendUnique(r.GitDirs, gitDir)
 }
 
-// Remove removes a repository Git directory
+// Remove removes a repository Git directory.
 func (r *RegisterRepos) Remove(gitDir string) {
 	r.GitDirs = strs.Remove(r.GitDirs, gitDir)
 }
@@ -100,7 +108,7 @@ func (r *RegisterRepos) FilterExisting() {
 	r.GitDirs = strs.Filter(r.GitDirs,
 		func(v string) bool {
 			exists, _ := cm.IsPathExisting(v)
-			return exists
+			return exists //nolint:nlreturn
 		})
 }
 

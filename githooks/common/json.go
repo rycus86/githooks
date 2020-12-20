@@ -22,6 +22,7 @@ func LoadJSON(file string, repr interface{}) error {
 	if err := json.Unmarshal(bytes, repr); err != nil {
 		return ErrorF("Could not parse file '%s'.", file)
 	}
+
 	return nil
 }
 
@@ -41,5 +42,6 @@ func StoreJSON(file string, repr interface{}) error {
 	if _, err := jsonFile.Write(bytes); err != nil {
 		return err
 	}
+
 	return nil
 }

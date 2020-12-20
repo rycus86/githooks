@@ -27,7 +27,7 @@ const (
 	promptIndent = "   "
 )
 
-// ILogContext defines the log interace
+// ILogContext defines the log interface.
 type ILogContext interface {
 	// Log functions
 	Debug(lines ...string)
@@ -76,7 +76,7 @@ type ILogContext interface {
 	IsErrorATerminal() bool
 }
 
-// LogContext defines the data for a log context
+// LogContext defines the data for a log context.
 type LogContext struct {
 	debug io.Writer
 	info  io.Writer
@@ -92,7 +92,7 @@ type LogContext struct {
 	colorPrompt func(string) string
 }
 
-// CreateLogContext creates a log context
+// CreateLogContext creates a log context.
 func CreateLogContext(onlyStderr bool) (ILogContext, error) {
 
 	var debug, info, warn, error io.Writer
@@ -149,17 +149,17 @@ func (c *LogContext) HasColors() bool {
 	return c.isColorSupported
 }
 
-// ColorInfo returns the colorized string for info-like messages
+// ColorInfo returns the colorized string for info-like messages.
 func (c *LogContext) ColorInfo(s string) string {
 	return c.colorInfo(s)
 }
 
-// ColorError returns the colorized string for error-like messages
+// ColorError returns the colorized string for error-like messages.
 func (c *LogContext) ColorError(s string) string {
 	return c.colorError(s)
 }
 
-// ColorPrompt returns the colorized string for prompt-like messages
+// ColorPrompt returns the colorized string for prompt-like messages.
 func (c *LogContext) ColorPrompt(s string) string {
 	return c.colorPrompt(s)
 }
@@ -272,5 +272,5 @@ func FormatMessage(suffix string, indent string, lines ...string) string {
 // FormatMessageF formats  several lines with a suffix and indent.
 func FormatMessageF(suffix string, indent string, format string, args ...interface{}) string {
 	s := suffix + strs.Fmt(format, args...)
-	return strings.ReplaceAll(s, "\n", "\n"+indent)
+	return strings.ReplaceAll(s, "\n", "\n"+indent) //nolint:nlreturn
 }

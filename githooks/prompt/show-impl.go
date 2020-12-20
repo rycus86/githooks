@@ -59,6 +59,7 @@ func showPromptOptions(
 	}
 
 	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
+
 	return defaultAnswer, err
 }
 
@@ -80,7 +81,7 @@ func (p *Context) showPromptOptionsTerminal(
 
 		for nPrompts < maxPrompts {
 
-			p.termOut.Write([]byte(question))
+			_, err = p.termOut.Write([]byte(question))
 			nPrompts++
 
 			success := p.termInScanner.Scan()
@@ -89,7 +90,8 @@ func (p *Context) showPromptOptionsTerminal(
 				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
 
 				if p.printAnswer {
-					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+					_, e := p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+					err = cm.CombineErrors(err, e)
 				}
 
 				if strs.IsEmpty(ans) && emptyCausesDefault {
@@ -102,18 +104,21 @@ func (p *Context) showPromptOptionsTerminal(
 
 				if nPrompts < maxPrompts {
 					warning := p.promptFmt("Answer '%s' not in '%q', try again ...", ans, options)
-					p.termOut.Write([]byte(warning + "\n"))
+					_, e := p.termOut.Write([]byte(warning + "\n"))
+					err = cm.CombineErrors(err, e)
 				}
 
 			} else {
-				p.termOut.Write([]byte("\n"))
-				err = cm.ErrorF("Could not read from terminal.")
+				_, e := p.termOut.Write([]byte("\n"))
+				err = cm.CombineErrors(err, e, cm.ErrorF("Could not read from terminal."))
+
 				break
 			}
 		}
 
 		warning := p.promptFmt("Could not get answer in '%q', taking default '%s'", options, defaultAnswer)
-		p.termOut.Write([]byte(warning + "\n"))
+		_, e := p.termOut.Write([]byte(warning + "\n"))
+		err = cm.CombineErrors(err, e)
 
 	} else {
 		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")
@@ -160,6 +165,7 @@ func showPrompt(
 	}
 
 	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
+
 	return defaultAnswer, err
 }
 
@@ -181,7 +187,8 @@ func (p *Context) showPromptTerminal(
 
 		for nPrompts < maxPrompts {
 
-			p.termOut.Write([]byte(question))
+			_, e := p.termOut.Write([]byte(question))
+			err = cm.CombineErrors(err, e)
 			nPrompts++
 
 			success := p.termInScanner.Scan()
@@ -190,7 +197,8 @@ func (p *Context) showPromptTerminal(
 				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
 
 				if p.printAnswer {
-					p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+					_, e := p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
+					err = cm.CombineErrors(err, e)
 				}
 
 				if strs.IsEmpty(ans) && emptyCausesDefault {
@@ -203,18 +211,21 @@ func (p *Context) showPromptTerminal(
 
 				if nPrompts < maxPrompts {
 					warning := p.promptFmt("Answer is empty, try again ...")
-					p.termOut.Write([]byte(warning + "\n"))
+					_, e := p.termOut.Write([]byte(warning + "\n"))
+					err = cm.CombineErrors(err, e)
 				}
 
 			} else {
-				p.termOut.Write([]byte("\n"))
-				err = cm.ErrorF("Could not read from terminal.")
+				_, e := p.termOut.Write([]byte("\n"))
+				err = cm.CombineErrors(err, e, cm.ErrorF("Could not read from terminal."))
+
 				break
 			}
 		}
 
 		warning := p.promptFmt("Could not get non-empty answer, taking default '%s'", defaultAnswer)
-		p.termOut.Write([]byte(warning + "\n"))
+		_, e := p.termOut.Write([]byte(warning + "\n"))
+		err = cm.CombineErrors(err, e)
 
 	} else {
 		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// GithooksFailure is a normal hook failure
+// GithooksFailure is a normal hook failure.
 type GithooksFailure struct {
 	error string
 }

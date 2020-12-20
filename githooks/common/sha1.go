@@ -30,7 +30,8 @@ func GetSHA1HashFile(path string) (string, error) {
 func GetSHA1HashString(strs ...string) string {
 	h := sha1.New()
 	for _, s := range strs {
-		h.Write([]byte(s))
+		_, _ = h.Write([]byte(s))
 	}
+
 	return hex.EncodeToString(h.Sum(nil))
 }

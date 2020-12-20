@@ -51,8 +51,10 @@ func (globs Globs) Expand() ([]string, error) {
 						hits = append(hits, path)
 						hitMap[path] = true
 					}
+
 					return nil
 				})
+
 				if err != nil {
 					return nil, err
 				}

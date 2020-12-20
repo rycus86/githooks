@@ -73,6 +73,7 @@ func main() {
 	if hooks.IsGithooksDisabled(settings.GitX, true) {
 		executeLFSHooks(&settings)
 		executeOldHooks(&settings, &uiSettings, &ignores, &checksums)
+
 		return
 	}
 
@@ -113,11 +114,9 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 
 	// Current git context, in current working dir.
 	gitx := git.Ctx()
-	gitDir, err := gitx.Get("rev-parse", "--git-common-dir")
+
+	gitDir, err := gitx.GetGitCommonDir()
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
-	gitDir, err = filepath.Abs(gitDir)
-	cm.AssertNoErrorPanic(err, "Could not get git directory.")
-	gitDir = filepath.ToSlash(gitDir)
 
 	hookPath, err := filepath.Abs(os.Args[1])
 	cm.AssertNoErrorPanicF(err, "Could not abs. path from '%s'.",
@@ -209,11 +208,12 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 	if hooks.ReadWriteLegacyTrustFile {
 		// Legacy: Load the the old file, if existing
 		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
-		store.AddChecksums(localChecksums, false)
+		err = store.AddChecksums(localChecksums, false)
 		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", localChecksums)
 	}
 
 	log.DebugF("%s", store.Summary())
+
 	return store
 }
 
@@ -247,6 +247,7 @@ func getInstallDir() string {
 	}
 
 	log.Debug(strs.Fmt("Install dir set to: '%s'.", installDir))
+
 	return installDir
 }
 
@@ -259,9 +260,8 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 
 		err := hooks.RegisterRepo(gitDir, installDir, true)
 		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
-		if err == nil {
-			gitx.SetConfig("githooks.registered", "true", git.LocalScope)
-		}
+		err = gitx.SetConfig("githooks.registered", "true", git.LocalScope)
+		log.AssertNoErrorF(err, "Could not set register flag in repo '%s'.", gitDir)
 
 	} else {
 		log.Debug(
@@ -286,7 +286,7 @@ func exportStagedFiles(settings *HookSettings) {
 			cm.DebugAssertF(
 				func() bool {
 					_, exists := os.LookupEnv(hooks.EnvVariableStagedFiles)
-					return !exists
+					return !exists //nolint:nlreturn
 				}(),
 				"Env. variable '%s' already defined.", hooks.EnvVariableStagedFiles)
 
@@ -303,8 +303,9 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 	}
 
 	log.Info("Record update check time ...")
-	settings.GitX.SetConfig("githooks.autoupdate.lastrun",
+	err := settings.GitX.SetConfig("githooks.autoupdate.lastrun",
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
+	log.AssertNoError(err, "Could not record update time.")
 
 	log.Info("Checking for updates ...")
 	cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
@@ -354,6 +355,7 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	}
 	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
 	log.AssertNoErrorF(err, "Could not parse update time")
+
 	return time.Since(time.Unix(t, 0)).Hours() > 24.0
 }
 
@@ -377,6 +379,7 @@ func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool 
 	} else {
 		log.Info("Githooks is on the latest version")
 	}
+
 	return false
 }
 
@@ -460,6 +463,7 @@ func executeOldHooks(settings *HookSettings,
 	log.AssertNoErrorF(err, "Could not check path '%s'", hook.Path)
 	if !exists {
 		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
+
 		return
 	}
 
@@ -472,12 +476,14 @@ func executeOldHooks(settings *HookSettings,
 	if ignored && byUser {
 		// Old hook can only be ignored by user patterns!
 		log.DebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
+
 		return
 	}
 
 	if !settings.IsRepoTrusted &&
 		!executeSafetyChecks(uiSettings, checksums, hook.Path, hook.NamespacePath) {
 		log.DebugF("Hook '%s' skipped", hook.Path)
+
 		return
 	}
 
@@ -499,14 +505,24 @@ func collectHooks(
 	// All shared hooks
 	var allAddedShared = make([]string, 0)
 	h.RepoSharedHooks = geRepoSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared)
-	h.LocalSharedHooks = getConfigSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared, hooks.SharedHookEnum.Local)
-	h.GlobalSharedHooks = getConfigSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared, hooks.SharedHookEnum.Global)
+
+	h.LocalSharedHooks = getConfigSharedHooks(
+		settings,
+		uiSettings,
+		ignores,
+		checksums,
+		&allAddedShared,
+		hooks.SharedHookEnum.Local)
+
+	h.GlobalSharedHooks = getConfigSharedHooks(
+		settings,
+		uiSettings,
+		ignores,
+		checksums,
+		&allAddedShared,
+		hooks.SharedHookEnum.Global)
+
 	return
-}
-
-func isHookNameSharedUpdateTrigger(gitx *git.Context, hookName string) bool {
-
-	return true
 }
 
 func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType int) {
@@ -515,6 +531,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 		!(settings.HookName == "post-checkout" && settings.Args[0] == git.NullRef) &&
 		!strs.Includes(settings.GitX.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
 		log.Debug("Shared hooks not updated")
+
 		return
 	}
 
@@ -538,6 +555,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 				"and deleting it from the '.shared' file manually by\n"+
 				"  $ git hooks shared remove --shared '%[2]s'\n",
 				hooks.HookDirName, hook.OriginalURL)
+
 			continue
 		}
 
@@ -577,6 +595,7 @@ func geRepoSharedHooks(
 			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
 		}
 	}
+
 	return
 }
 
@@ -591,11 +610,12 @@ func getConfigSharedHooks(
 	var sharedHooks []hooks.SharedHook
 	var err error
 
-	if sharedType == hooks.SharedHookEnum.Local {
+	switch sharedType {
+	case hooks.SharedHookEnum.Local:
 		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
-	} else if sharedType == hooks.SharedHookEnum.Global {
+	case hooks.SharedHookEnum.Global:
 		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
-	} else {
+	default:
 		cm.DebugAssertF(false, "Wrong shared type '%v'", sharedType)
 	}
 
@@ -614,6 +634,7 @@ func getConfigSharedHooks(
 			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
 		}
 	}
+
 	return
 }
 
@@ -668,6 +689,7 @@ func checkSharedHook(
 		}
 
 		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks, err, mess, hook.OriginalURL)
+
 		return false
 	}
 
@@ -691,6 +713,7 @@ func checkSharedHook(
 
 			log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks,
 				nil, mess, hook.OriginalURL, url)
+
 			return false
 		}
 	}
@@ -708,6 +731,7 @@ func createHook(uiSettings *UISettings,
 	if !isRepoTrusted &&
 		!executeSafetyChecks(uiSettings, checksums, hookPath, hookNamespacePath) {
 		log.DebugF("Hook '%s' skipped", hookPath)
+
 		return hooks.Hook{}, false
 	}
 
@@ -764,7 +788,7 @@ func getHooksIn(settings *HookSettings,
 
 				if ignored {
 					log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-					return
+					return //nolint:nlreturn
 				}
 
 				allHooks = append(allHooks,
@@ -798,7 +822,7 @@ func getHooksIn(settings *HookSettings,
 
 		if ignored {
 			log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-			return
+			return //nolint:nlreturn
 		}
 
 		hook, use := createHook(uiSettings, settings.IsRepoTrusted, dirOrFile, namespacedPath, checksums)
@@ -876,7 +900,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 			switch answer {
 			case "a":
 				uiSettings.AcceptAllChanges = true
-				fallthrough
+				fallthrough //nolint:nlreturn
 			case "y":
 				acceptHook = true
 				runHook = true
@@ -928,21 +952,26 @@ func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 	}
 
 	var results []hooks.HookResult
+	var err error
 
 	log.DebugIf(len(hs.LocalHooks) != 0, "Launching local hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalHooks, results, settings.Args...)
+	results, err = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalHooks, results, settings.Args...)
+	log.AssertNoErrorPanic(err, "Local hook execution failed.")
 	logHookResults(results)
 
 	log.DebugIf(len(hs.RepoSharedHooks) != 0, "Launching repository shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.RepoSharedHooks, results, settings.Args...)
+	results, err = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.RepoSharedHooks, results, settings.Args...)
+	log.AssertNoErrorPanic(err, "Local hook execution failed.")
 	logHookResults(results)
 
 	log.DebugIf(len(hs.LocalSharedHooks) != 0, "Launching local shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalSharedHooks, results, settings.Args...)
+	results, err = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.LocalSharedHooks, results, settings.Args...)
+	log.AssertNoErrorPanic(err, "Local hook execution failed.")
 	logHookResults(results)
 
 	log.DebugIf(len(hs.GlobalSharedHooks) != 0, "Launching global shared hooks ...")
-	results = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.GlobalSharedHooks, results, settings.Args...)
+	results, err = hooks.ExecuteHooksParallel(pool, &settings.ExecX, &hs.GlobalSharedHooks, results, settings.Args...)
+	log.AssertNoErrorPanic(err, "Local hook execution failed.")
 	logHookResults(results)
 }
 
@@ -950,11 +979,11 @@ func logHookResults(res []hooks.HookResult) {
 	for _, r := range res {
 		if r.Error == nil {
 			if len(r.Output) != 0 {
-				log.GetInfoWriter().Write(r.Output)
+				_, _ = log.GetInfoWriter().Write(r.Output)
 			}
 		} else {
 			if len(r.Output) != 0 {
-				log.GetErrorWriter().Write(r.Output)
+				_, _ = log.GetErrorWriter().Write(r.Output)
 			}
 			log.AssertNoErrorPanicF(r.Error, "Hook '%s %q' failed!",
 				r.Hook.GetCommand(), r.Hook.GetArgs())
@@ -1001,11 +1030,13 @@ func storePendingData(
 		defer f.Close()
 
 		for _, d := range uiSettings.DisabledHooks {
-			f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
+			_, err := f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
+			cm.AssertNoErrorPanic(err)
 		}
 
 		for _, d := range uiSettings.TrustedHooks {
-			f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
+			_, err := f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
+			cm.AssertNoErrorPanic(err)
 		}
 	}
 }

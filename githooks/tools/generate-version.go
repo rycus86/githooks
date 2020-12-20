@@ -41,10 +41,10 @@ func main() {
 	root, err := gitx.Get("rev-parse", "--show-toplevel")
 	cm.AssertNoErrorPanicF(err, "Could not root dir.")
 
-	commitSHA, err := git.GetCommitSHA(gitx, "HEAD")
+	commitSHA, err := git.GetCommitSHA(gitx, git.HEAD)
 	cm.AssertNoErrorPanicF(err, "GetCommitSHA failed.")
 
-	ver, tag, err := git.GetVersion(gitx, "HEAD")
+	ver, tag, err := git.GetVersion(gitx, git.HEAD)
 	cm.AssertNoErrorPanicF(err, "GetVersion failed.")
 
 	// Create or overwrite the go file from template

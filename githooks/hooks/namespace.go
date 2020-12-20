@@ -20,5 +20,6 @@ func GetHooksNamespace(hookDir string) (s string, err error) {
 		data, err = ioutil.ReadFile(f)
 		s = strings.TrimSpace(string(data))
 	}
+
 	return
 }

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "! Skipping golangci-lint - not installed"
+    exit 0
+fi
+
+cd githooks || exit 1
+
+if golangci-lint run -E godot \
+                     -E gomnd \
+                     -E goconst \
+                     -E gochecknoinits \
+                     -E nlreturn \
+                     -E misspell \
+                     -E lll \
+                     -E exportloopref \
+                     -E gocritic \
+                     --max-same-issues 0 ./...; then
+    echo "* golangci-lint OK"
+else
+    echo "! golangci-lint problems detected"
+    exit 1
+fi

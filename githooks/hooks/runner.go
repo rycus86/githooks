@@ -38,6 +38,7 @@ func GetHookRunCmd(hookPath string) ([]string, error) {
 		if e != nil {
 			return nil, cm.ErrorF("Could not parse runner file '%s'", runnerFile)
 		}
+
 		return args, nil
 	}
 

@@ -57,7 +57,7 @@ const (
 	SHA1Length = 40
 )
 
-// ChecksumResult defines the SHA1 hash and the path it was computed with togehter with the
+// ChecksumResult defines the SHA1 hash and the path it was computed with together with the
 // namespaced path.
 type ChecksumResult struct {
 	SHA1          string // SHA1 hash.
@@ -100,6 +100,7 @@ func newChecksumData(paths ...string) ChecksumData {
 func NewChecksumStore(path string, addAsDirIfNonExisting bool) (ChecksumStore, error) {
 	c := ChecksumStore{}
 	err := c.AddChecksums(path, addAsDirIfNonExisting)
+
 	return c, err
 }
 
@@ -152,16 +153,18 @@ func (t *ChecksumStore) AddChecksum(sha1 string, filePath string) bool {
 	if data, exists := t.checksums[sha1]; exists {
 		p := &data.Paths
 		*p = append(*p, filePath)
+
 		return true
 	}
 
 	t.checksums[sha1] = newChecksumData(filePath)
+
 	return false
 }
 
 // SyncChecksum adds a SHA1 checksum of a path to the first search directory.
 func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
-	cm.DebugAssertF(len(checksum.SHA1) >= 2, "Wrong SHA1 hash '%s'", checksum.SHA1)
+	cm.DebugAssertF(len(checksum.SHA1) == 40, "Wrong SHA1 hash '%s'", checksum.SHA1) //nolint:gomnd
 
 	if len(t.checksumDirs) == 0 {
 		return cm.Error("No checksum directory.")

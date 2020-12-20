@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// SharedHook is the data for a shared hook
+// SharedHook is the data for a shared hook.
 type SharedHook struct {
 	OriginalURL string
 
@@ -38,10 +38,11 @@ func getSharedCloneDir(installDir string, entry string) string {
 	sha1 := cm.GetSHA1HashString("blob ", strs.Fmt("%v", len([]byte(entry))), "\u0000", entry)
 
 	name := []rune(entry)
-	if len(entry) > 48 {
+	if len(entry) > 48 { //nolint:gomnd
 		name = name[0:48]
 	}
 	nameAbrev := getReEscapeURL().ReplaceAllLiteralString(string(name), "-")
+
 	return path.Join(installDir, "shared", sha1+"-"+nameAbrev)
 }
 
@@ -51,6 +52,7 @@ func getReURLScheme() *regexp.Regexp {
 	if reURLScheme == nil {
 		reURLScheme = regexp.MustCompile(`(?m)^[^:/?#]+://`)
 	}
+
 	return reURLScheme
 }
 
@@ -60,6 +62,7 @@ func getReShortSCPSyntax() *regexp.Regexp {
 	if reShortSCPSyntax == nil {
 		reShortSCPSyntax = regexp.MustCompile(`(?m)^.+@.+:.+`)
 	}
+
 	return reShortSCPSyntax
 }
 
@@ -69,6 +72,7 @@ func getReFileURLScheme() *regexp.Regexp {
 	if reFileURLScheme == nil {
 		reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
 	}
+
 	return reFileURLScheme
 }
 
@@ -78,6 +82,7 @@ func getReEscapeURL() *regexp.Regexp {
 	if reEscapeURL == nil {
 		reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 	}
+
 	return reEscapeURL
 }
 
@@ -146,6 +151,7 @@ func parseData(installDir string, data string) (hooks []SharedHook, err error) {
 			hooks = append(hooks, hook)
 		}
 	}
+
 	return
 }
 
@@ -173,5 +179,6 @@ func LoadConfigSharedHooks(installDir string, ctx *git.Context, scope git.Config
 	if data != "" {
 		hooks, err = parseData(installDir, data)
 	}
+
 	return
 }

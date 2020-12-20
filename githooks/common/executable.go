@@ -20,6 +20,7 @@ func (e *Executable) GetCommand() string {
 	if len(e.RunCmd) == 0 {
 		return e.Path
 	}
+
 	return e.RunCmd[0]
 }
 
@@ -32,5 +33,6 @@ func (e *Executable) GetArgs(args ...string) []string {
 			return append(e.RunCmd[1:], s...)
 		}
 	}
+
 	return args
 }

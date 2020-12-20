@@ -6,7 +6,7 @@ import (
 	thx "github.com/pbenner/threadpool"
 )
 
-// Hook contains the data to an executbale hook
+// Hook contains the data to an executbale hook.
 type Hook struct {
 	cm.Executable
 	NamespacePath string // The namespaced path of the hook `<namespace>/<relPath>`.
@@ -24,9 +24,9 @@ type sharedHookEnum struct {
 }
 
 // SharedHookEnum enumerates all types of shared hooks.
-var SharedHookEnum = &sharedHookEnum{Repo: 0, Local: 1, Global: 2}
+var SharedHookEnum = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} //nolint:gomnd
 
-// GetSharedHookTypeString translates the shared type enum to a string
+// GetSharedHookTypeString translates the shared type enum to a string.
 func GetSharedHookTypeString(sharedType int) string {
 	switch sharedType {
 	case SharedHookEnum.Repo:
@@ -37,7 +37,7 @@ func GetSharedHookTypeString(sharedType int) string {
 		return "global"
 	default:
 		cm.DebugAssertF(false, "Wrong type '%s'", sharedType)
-		return "wrong-value"
+		return "wrong-value" //nolint:nlreturn
 	}
 }
 
@@ -56,13 +56,13 @@ type HookResult struct {
 	Error  error
 }
 
-// ExecuteHooksParallel executes hooks in paralell over a thread pool.
+// ExecuteHooksParallel executes hooks in parallel over a thread pool.
 func ExecuteHooksParallel(
 	pool *thx.ThreadPool,
 	exec cm.IExecContext,
 	hs *HookPrioList,
 	res []HookResult,
-	args ...string) []HookResult {
+	args ...string) ([]HookResult, error) {
 
 	// Count number of results we need
 	nResults := 0
@@ -86,16 +86,16 @@ func ExecuteHooksParallel(
 		}
 
 		if pool == nil {
-			for idx, hook := range hooksGroup {
+			for idx := range hooksGroup {
 				var err error
-				res[currIdx+idx].Output, err = cm.GetCombinedOutputFromExecutable(exec, &hook, true, args...)
+				res[currIdx+idx].Output, err = cm.GetCombinedOutputFromExecutable(exec, &hooksGroup[idx], true, args...)
 				res[currIdx+idx].Error = err
-				res[currIdx+idx].Hook = &hook
+				res[currIdx+idx].Hook = &hooksGroup[idx]
 			}
 		} else {
 			g := pool.NewJobGroup()
 
-			pool.AddRangeJob(0, nHooks, g,
+			err := pool.AddRangeJob(0, nHooks, g,
 				func(idx int, pool thx.ThreadPool, erf func() error) error {
 					hook := &hooksGroup[idx]
 					var err error
@@ -108,13 +108,20 @@ func ExecuteHooksParallel(
 					return nil
 				})
 
-			pool.Wait(g)
+			if err != nil {
+				return nil, err
+			}
+
+			if err = pool.Wait(g); err != nil {
+				return nil, err
+			}
+
 		}
 
 		currIdx += nHooks
 	}
 
-	return res
+	return res, nil
 }
 
 // GetHooksCount gets the number of all hooks.
@@ -122,12 +129,13 @@ func (h *Hooks) GetHooksCount() int {
 	return len(h.LocalHooks) + len(h.RepoSharedHooks) + len(h.LocalSharedHooks) + len(h.GlobalSharedHooks)
 }
 
-// AllHooksSuccessful returns `true`
+// AllHooksSuccessful returns `true`.
 func AllHooksSuccessful(results []HookResult) bool {
 	for _, h := range results {
 		if h.Error != nil {
 			return false
 		}
 	}
+
 	return true
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// IContext defines the interface to show a prompt to the user
+// IContext defines the interface to show a prompt to the user.
 type IContext interface {
 	ShowPromptOptions(
 		text string,
@@ -49,7 +49,7 @@ type Context struct {
 	tool    cm.IExecutable
 }
 
-// Close closes the prompt context
+// Close closes the prompt context.
 func (p *Context) Close() {
 	if p.termIn != nil {
 		p.termIn.Close()
@@ -107,11 +107,12 @@ func getDefaultAnswer(options []string) string {
 			return strings.ToLower(r)
 		}
 	}
+
 	return ""
 }
 
 func isAnswerCorrect(answer string, options []string) bool {
 	return strs.Any(options, func(o string) bool {
-		return strings.ToLower(answer) == strings.ToLower(o)
+		return strings.EqualFold(answer, o)
 	})
 }

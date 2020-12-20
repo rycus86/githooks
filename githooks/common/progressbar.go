@@ -11,8 +11,8 @@ func GetProgressBar(log ILogContext, title string, length int) (bar *pb.Progress
 			pb.OptionSetWriter(log.GetInfoWriter()),
 			pb.OptionEnableColorCodes(log.HasColors()),
 			pb.OptionShowBytes(false),
-			pb.OptionSetWidth(15),
-			pb.OptionSpinnerType(69),
+			pb.OptionSetWidth(15),    //nolint:gomnd
+			pb.OptionSpinnerType(69), //nolint:gomnd
 			pb.OptionSetDescription(title),
 			pb.OptionSetTheme(pb.Theme{
 				Saucer:        "[green]=[reset]",
@@ -22,5 +22,6 @@ func GetProgressBar(log ILogContext, title string, length int) (bar *pb.Progress
 				BarEnd:        "]",
 			}))
 	}
+
 	return
 }

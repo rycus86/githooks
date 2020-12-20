@@ -9,5 +9,6 @@ func GetStagedFiles(gitx *git.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return changed, nil
 }

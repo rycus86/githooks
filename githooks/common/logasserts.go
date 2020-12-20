@@ -90,8 +90,9 @@ func (c *LogContext) PanicIfF(condition bool, format string, args ...interface{}
 func (c *LogContext) AssertNoError(err error, lines ...string) bool {
 	if err != nil {
 		c.Warn(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
-		return false
+		return false //nolint:nlreturn
 	}
+
 	return true
 }
 
@@ -99,8 +100,9 @@ func (c *LogContext) AssertNoError(err error, lines ...string) bool {
 func (c *LogContext) AssertNoErrorF(err error, format string, args ...interface{}) bool {
 	if err != nil {
 		c.WarnF(format+"\n-> error: ["+err.Error()+"]", args...)
-		return false
+		return false //nolint:nlreturn
 	}
+
 	return true
 }
 
@@ -118,7 +120,7 @@ func (c *LogContext) AssertNoErrorPanicF(err error, format string, args ...inter
 	}
 }
 
-// ErrorOrFatalF logs an error or a fatal error and also with a potential occured error.
+// ErrorOrFatalF logs an error or a fatal error and also with a potential occurred error.
 func (c *LogContext) ErrorOrPanicF(isFatal bool, err error, format string, args ...interface{}) {
 	if isFatal {
 		if err != nil {

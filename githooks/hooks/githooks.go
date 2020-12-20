@@ -15,7 +15,7 @@ import (
 // HookDirName denotes the directory name used for repository specific hooks.
 const HookDirName = ".githooks"
 
-// DefaultBugReportingURL is the default url to report errors
+// DefaultBugReportingURL is the default url to report errors.
 const DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
 
 // LFSHookNames are the hook names of all Large File System (LFS) hooks.
@@ -25,7 +25,7 @@ var LFSHookNames = [4]string{
 	"post-merge",
 	"pre-push"}
 
-// StagedFilesHookNames are the hook names on which staged files are exported
+// StagedFilesHookNames are the hook names on which staged files are exported.
 var StagedFilesHookNames = [3]string{"pre-commit", "prepare-commit-msg", "commit-msg"}
 
 // EnvVariableStagedFiles is the environment variable which holds the staged files.
@@ -57,6 +57,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 
 	// Check global Git config
 	info = git.Ctx().GetConfig("githooks.bugReportInfo", git.GlobalScope)
+
 	return
 }
 
@@ -85,13 +86,16 @@ func HandleCLIErrors(err interface{}, cwd string, log cm.ILogContext) bool {
 		withTrace = true
 	}
 
-	if log != nil && withTrace {
-		log.ErrorWithStacktrace(message...)
-	} else if log != nil && !withTrace {
-		log.Error(message...)
+	if log != nil {
+		if withTrace {
+			log.ErrorWithStacktrace(message...)
+		} else {
+			log.Error(message...)
+		}
 	} else {
 		os.Stderr.WriteString(strings.Join(message, "\n"))
 	}
+
 	return true
 }
 
@@ -110,6 +114,7 @@ func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
 	}
 
 	disabled := gitx.GetConfig("githooks.disable", git.Traverse)
+
 	return disabled == "true" ||
 		disabled == "y" || // Legacy
 		disabled == "Y" // Legacy
@@ -118,6 +123,7 @@ func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
 // IsLFSAvailable tells if git-lfs is available in the path.
 func IsLFSAvailable() bool {
 	_, err := exec.LookPath("git-lfs")
+
 	return err == nil
 }
 
@@ -151,6 +157,7 @@ func SetRunnerExecutableAlias(path string) error {
 	if !cm.IsFile(path) {
 		return cm.ErrorF("Runner executable '%s' does not exist.", path)
 	}
+
 	return git.Ctx().SetConfig("githooks.runner", path, git.GlobalScope)
 }
 
@@ -159,25 +166,28 @@ func SetCLIExecutableAlias(path string) error {
 	if !cm.IsFile(path) {
 		return cm.ErrorF("CLI executable '%s' does not exist.", path)
 	}
+
 	return git.Ctx().SetConfig("alias.hooks", strs.Fmt("!\"%s\"", path), git.GlobalScope)
 }
 
 // GetReleaseCloneDir get the release clone directory inside the install dir.
 func GetReleaseCloneDir(installDir string) string {
 	cm.DebugAssert(strs.IsNotEmpty(installDir), "Empty install dir.")
+
 	return path.Join(installDir, "release")
 }
 
-// GetToolScript gets the tool script associated with the name `tool`
+// GetToolScript gets the tool script associated with the name `tool`.
 func GetToolScript(installDir string, name string) (cm.IExecutable, error) {
 
 	tool := path.Join(installDir, "tools", name, "run")
-	exists, err := cm.IsPathExisting(tool)
+	exists, _ := cm.IsPathExisting(tool)
 	if !exists {
 		return nil, nil
 	}
 
 	runCmd, err := GetToolRunCmd(tool)
+
 	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-// IsPathError returns `true` if the error is a `os.PathError`
+// IsPathError returns `true` if the error is a `os.PathError`.
 func IsPathError(err error) bool {
 	return err != nil && err.(*os.PathError) != nil
 }
@@ -22,6 +22,7 @@ func IsPathExisting(path string) (bool, error) {
 	if os.IsNotExist(err) || IsPathError(err) {
 		return false, nil
 	}
+
 	return err == nil, err
 }
 
@@ -35,7 +36,9 @@ func GetFiles(root string, filter FileFilter) (files []string, err error) {
 			files = append(files, path)
 		}
 	}
+
 	err = WalkFiles(root, f)
+
 	return
 }
 
@@ -61,13 +64,13 @@ func WalkFiles(root string, filter FileFunc) (err error) {
 		func(path string, info os.FileInfo, e error) error {
 			if info == nil || err != nil {
 				err = CombineErrors(err, e)
-				return nil
+				return nil //nolint:nlreturn
 			}
 
 			if info.IsDir() {
 				if !rootDirVisited {
 					rootDirVisited = true
-					return nil // Skip root dir...
+					return nil //nolint:nlreturn // Skip root dir...
 				}
 				// Skip all other dirs...
 				return filepath.SkipDir
@@ -79,18 +82,21 @@ func WalkFiles(root string, filter FileFunc) (err error) {
 		})
 
 	err = CombineErrors(err, e)
+
 	return
 }
 
 // IsDirectory checks if a path is a existing directory.
 func IsDirectory(path string) bool {
 	s, err := os.Stat(path)
+
 	return err == nil && s.IsDir()
 }
 
 // IsFile checks if a path is a existing file.
 func IsFile(path string) bool {
 	s, err := os.Stat(path)
+
 	return err == nil && !s.IsDir()
 }
 
@@ -98,6 +104,7 @@ func IsFile(path string) bool {
 func MakeRelative(base string, path string) (s string, e error) {
 	s, e = filepath.Rel(base, path)
 	s = filepath.ToSlash(s)
+
 	return
 }
 
@@ -109,8 +116,10 @@ func ReplaceTilde(p string) (string, error) {
 		if err != nil {
 			return p, err
 		}
+
 		return path.Join(filepath.ToSlash(usr), strings.TrimPrefix(p, "~")), nil
 	}
+
 	return p, nil
 }
 
@@ -120,7 +129,10 @@ func MakeExecutbale(path string) (err error) {
 	if err != nil {
 		return
 	}
-	err = os.Chmod(path, stats.Mode()|0111)
+
+	var executeMask os.FileMode = 0111
+	err = os.Chmod(path, stats.Mode()|executeMask)
+
 	return
 }
 
@@ -150,6 +162,7 @@ func CopyFile(src string, dst string) (err error) {
 	}
 
 	err = out.Sync()
+
 	return
 }
 

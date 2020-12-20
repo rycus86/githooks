@@ -1,17 +1,18 @@
 package strs
 
 // AppendUnique appends the string to the array
-// if its not existing
+// if its not existing.
 func AppendUnique(slice []string, s string) []string {
 	for _, el := range slice {
 		if el == s {
 			return slice
 		}
 	}
+
 	return append(slice, s)
 }
 
-// Remove removes all occurances from the slice.
+// Remove removes all occurrences from the slice.
 func Remove(slice []string, s string) []string {
 	newitems := []string{}
 
@@ -32,6 +33,7 @@ func Index(vs []string, t string) int {
 			return i
 		}
 	}
+
 	return -1
 }
 
@@ -49,6 +51,7 @@ func Any(vs []string, f func(string) bool) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -60,6 +63,7 @@ func All(vs []string, f func(string) bool) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -72,6 +76,7 @@ func Filter(vs []string, f func(string) bool) []string {
 			vsf = append(vsf, v)
 		}
 	}
+
 	return vsf
 }
 
@@ -82,5 +87,6 @@ func Map(vs []string, f func(string) string) []string {
 	for i, v := range vs {
 		vsm[i] = f(v)
 	}
+
 	return vsm
 }

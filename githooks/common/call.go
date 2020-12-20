@@ -86,10 +86,11 @@ func GetOutputFromExecutableTrimmed(
 	pipeStdin bool,
 	args ...string) (string, error) {
 	data, err := GetOutputFromExecutable(ctx, exe, pipeStdin, args...)
+
 	return strings.TrimSpace(string(data)), err
 }
 
-// GetOutputFromExecutableSep calls an executable and gets stdout and stderr seperate.
+// GetOutputFromExecutableSep calls an executable and gets stdout and stderr separate.
 func GetOutputFromExecutableSep(
 	ctx IExecContext,
 	exe IExecutable,

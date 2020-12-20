@@ -8,6 +8,7 @@ func Any(vs []interface{}, f func(interface{}) bool) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -19,6 +20,7 @@ func All(vs []interface{}, f func(interface{}) bool) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -31,6 +33,7 @@ func Filter(vs []interface{}, f func(interface{}) bool) []interface{} {
 			vsf = append(vsf, v)
 		}
 	}
+
 	return vsf
 }
 
@@ -41,5 +44,6 @@ func Map(vs []interface{}, f func(interface{}) interface{}) []interface{} {
 	for i, v := range vs {
 		vsm[i] = f(v)
 	}
+
 	return vsm
 }
