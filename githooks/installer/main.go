@@ -24,18 +24,19 @@ import (
 
 // InstallSettings are the settings for the installer.
 type InstallSettings struct {
-	installDir string
-	cloneDir   string
+	Cwd        string
+	InstallDir string
+	CloneDir   string
 
-	promptCtx prompt.IContext
+	PromptCtx prompt.IContext
 
-	hookTemplateDir string
+	HookTemplateDir string
 }
 
 var log cm.ILogContext
 var args = Arguments{}
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "githooks-installer",
 	Short: "Githooks installer application",
@@ -79,7 +80,8 @@ func Run() {
 
 func initArgs() {
 
-	viper.BindEnv("internalAutoUpdate", "GITHOOKS_INTERNAL_AUTO_UPDATE")
+	err := viper.BindEnv("internalAutoUpdate", "GITHOOKS_INTERNAL_AUTO_UPDATE")
+	cm.AssertNoErrorPanic(err)
 
 	config := viper.GetString("config")
 	if strs.IsNotEmpty(config) {
@@ -88,7 +90,7 @@ func initArgs() {
 		log.AssertNoErrorPanicF(err, "Could not read config file '%s'.", config)
 	}
 
-	err := viper.Unmarshal(&args)
+	err = viper.Unmarshal(&args)
 	log.AssertNoErrorPanicF(err, "Could not unmarshal parameters.")
 }
 
@@ -101,15 +103,17 @@ func defineArguments(rootCmd *cobra.Command) {
 	// Internal commands
 	rootCmd.PersistentFlags().String("config", "",
 		"JSON config according to the 'Arguments' struct.")
-	rootCmd.MarkPersistentFlagDirname("config")
-	rootCmd.PersistentFlags().MarkHidden("config")
+	err := rootCmd.MarkPersistentFlagDirname("config")
+	cm.AssertNoErrorPanic(err)
+	err = rootCmd.PersistentFlags().MarkHidden("config")
+	cm.AssertNoErrorPanic(err)
 
 	rootCmd.PersistentFlags().Bool("internal-auto-update", false,
 		"Internal argument, do not use!") // @todo Remove this...
 
 	// User commands
 	rootCmd.PersistentFlags().Bool("dry-run", false,
-		"Dry run the installation showing whats beeing done.")
+		"Dry run the installation showing whats being done.")
 
 	rootCmd.PersistentFlags().Bool(
 		"non-interactive", false,
@@ -131,7 +135,8 @@ func defineArguments(rootCmd *cobra.Command) {
 		"prefix", "",
 		"Githooks installation prefix such that\n"+
 			"'<prefix>/.githooks' will be the installation directory.")
-	rootCmd.MarkPersistentFlagDirname("config")
+	err = rootCmd.MarkPersistentFlagDirname("config")
+	cm.AssertNoErrorPanic(err)
 
 	rootCmd.PersistentFlags().String(
 		"template-dir", "",
@@ -170,21 +175,37 @@ func defineArguments(rootCmd *cobra.Command) {
 
 	rootCmd.Args = cobra.NoArgs
 
-	viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
-	viper.BindPFlag("internalAutoUpdate", rootCmd.PersistentFlags().Lookup("internal-auto-update")) // @todo Remove this...
-	viper.BindPFlag("dryRun", rootCmd.PersistentFlags().Lookup("dry-run"))
-	viper.BindPFlag("nonInteractive", rootCmd.PersistentFlags().Lookup("non-interactive"))
-	viper.BindPFlag("singleInstall", rootCmd.PersistentFlags().Lookup("single"))
-	viper.BindPFlag("skipInstallIntoExisting", rootCmd.PersistentFlags().Lookup("skip-install-into-existing"))
-	viper.BindPFlag("onlyServerHooks", rootCmd.PersistentFlags().Lookup("only-server-hooks"))
-	viper.BindPFlag("useCoreHooksPath", rootCmd.PersistentFlags().Lookup("use-core-hookspath"))
-	viper.BindPFlag("cloneURL", rootCmd.PersistentFlags().Lookup("clone-url"))
-	viper.BindPFlag("cloneBranch", rootCmd.PersistentFlags().Lookup("clone-branch"))
-	viper.BindPFlag("buildFromSource", rootCmd.PersistentFlags().Lookup("build-from-source"))
-	viper.BindPFlag("buildFlags", rootCmd.PersistentFlags().Lookup("build-flags"))
-	viper.BindPFlag("installPrefix", rootCmd.PersistentFlags().Lookup("prefix"))
-	viper.BindPFlag("templateDir", rootCmd.PersistentFlags().Lookup("template-dir"))
-	viper.BindPFlag("useStdin", rootCmd.PersistentFlags().Lookup("stdin"))
+	err = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	cm.AssertNoErrorPanic(err)
+	// @todo Remove this internalAutoUpdate...
+	err = viper.BindPFlag("internalAutoUpdate", rootCmd.PersistentFlags().Lookup("internal-auto-update"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("dryRun", rootCmd.PersistentFlags().Lookup("dry-run"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("nonInteractive", rootCmd.PersistentFlags().Lookup("non-interactive"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("singleInstall", rootCmd.PersistentFlags().Lookup("single"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("skipInstallIntoExisting", rootCmd.PersistentFlags().Lookup("skip-install-into-existing"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("onlyServerHooks", rootCmd.PersistentFlags().Lookup("only-server-hooks"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("useCoreHooksPath", rootCmd.PersistentFlags().Lookup("use-core-hookspath"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("cloneURL", rootCmd.PersistentFlags().Lookup("clone-url"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("cloneBranch", rootCmd.PersistentFlags().Lookup("clone-branch"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("buildFromSource", rootCmd.PersistentFlags().Lookup("build-from-source"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("buildFlags", rootCmd.PersistentFlags().Lookup("build-flags"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("installPrefix", rootCmd.PersistentFlags().Lookup("prefix"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("templateDir", rootCmd.PersistentFlags().Lookup("template-dir"))
+	cm.AssertNoErrorPanic(err)
+	err = viper.BindPFlag("useStdin", rootCmd.PersistentFlags().Lookup("stdin"))
+	cm.AssertNoErrorPanic(err)
 }
 
 func validateArgs(cmd *cobra.Command, args *Arguments) {
@@ -203,6 +224,9 @@ func setMainVariables(args *Arguments) InstallSettings {
 
 	var promptCtx prompt.IContext
 	var err error
+
+	cwd, err := os.Getwd()
+	log.AssertNoErrorPanic(err, "Could not get current working directory.")
 
 	if !args.NonInteractive {
 		promptCtx, err = prompt.CreateContext(log, &cm.ExecContext{}, nil, false, args.UseStdin)
@@ -234,9 +258,10 @@ func setMainVariables(args *Arguments) InstallSettings {
 	}
 
 	return InstallSettings{
-		installDir: installDir,
-		cloneDir:   hooks.GetReleaseCloneDir(installDir),
-		promptCtx:  promptCtx}
+		Cwd:        cwd,
+		InstallDir: installDir,
+		CloneDir:   hooks.GetReleaseCloneDir(installDir),
+		PromptCtx:  promptCtx}
 }
 
 func setInstallDir(installDir string) {
@@ -289,6 +314,7 @@ func buildFromSource(
 			}
 			binaries.All = append(binaries.All, s)
 		}
+
 		return s
 	})
 
@@ -296,8 +322,7 @@ func buildFromSource(
 		"Successfully built %v binaries:\n - %s",
 		len(binaries.All),
 		strings.Join(
-			strs.Map(binaries.All,
-				func(s string) string { return path.Base(s) }),
+			strs.Map(binaries.All, path.Base),
 			"\n - "))
 
 	log.PanicIf(
@@ -310,7 +335,7 @@ func buildFromSource(
 
 func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) updates.Binaries {
 	log.Panic("Not implemented")
-	return updates.Binaries{}
+	return updates.Binaries{} //nolint:nlreturn
 }
 
 func prepareDispatch(settings *InstallSettings, args *Arguments) {
@@ -320,22 +345,22 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) {
 
 	if args.InternalAutoUpdate {
 
-		status, err = updates.GetStatus(settings.cloneDir, true)
+		status, err = updates.GetStatus(settings.CloneDir, true)
 		log.AssertNoErrorPanic(err,
 			"Could not get status of release clone '%s'",
-			settings.cloneDir)
+			settings.CloneDir)
 
 	} else {
 
 		status, err = updates.FetchUpdates(
-			settings.cloneDir,
+			settings.CloneDir,
 			args.CloneURL,
 			args.CloneBranch,
 			true, updates.RecloneOnWrongRemote)
 
 		log.AssertNoErrorPanicF(err,
 			"Could not assert release clone '%s' existing",
-			settings.cloneDir)
+			settings.CloneDir)
 	}
 
 	tempDir, err := ioutil.TempDir(os.TempDir(), "githooks-update")
@@ -463,7 +488,7 @@ func findGitHookTemplates(
 	// and no folder is found by now
 	if nonInteractive {
 		templateDir := setupNewTemplateDir(installDir, nil)
-		return path.Join(templateDir, "hooks"), templateDir
+		return path.Join(templateDir, "hooks"), templateDir //nolint:nlreturn
 	}
 
 	// 5. Try to search for it on disk
@@ -515,7 +540,7 @@ func findGitHookTemplates(
 
 	if answer == "y" {
 		templateDir := setupNewTemplateDir(installDir, promptCtx)
-		return path.Join(templateDir, "hooks"), templateDir
+		return path.Join(templateDir, "hooks"), templateDir //nolint:nlreturn
 	}
 
 	return "", ""
@@ -542,16 +567,16 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
 		var matches []string
 		running := true
 
-		spinnerT := time.NewTicker(10 * time.Millisecond)
-		stillSearching := time.After(10 * time.Second)
-		timeout := time.After(300 * time.Second)
+		spinnerT := time.NewTicker(10 * time.Millisecond) //nolint:gomnd
+		stillSearching := time.After(10 * time.Second)    //nolint:gomnd
+		timeout := time.After(300 * time.Second)          //nolint:gomnd
 
 		for running {
 			select {
 			case matches = <-matchCh:
 				running = false
 				if spinner != nil {
-					spinner.Clear()
+					_ = spinner.Clear()
 				}
 
 			case <-stillSearching:
@@ -562,7 +587,7 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
 				}
 			case <-spinnerT.C:
 				if spinner != nil {
-					spinner.Add(1)
+					_ = spinner.Add(1)
 				}
 			case <-timeout:
 				log.Warn("Searching took too long -> timed out.")
@@ -768,12 +793,14 @@ func setupHookTemplates(
 	hookTemplateDir string,
 	cloneDir string,
 	onlyServerHooks bool,
-	dryRun bool) {
+	nonInteractive bool,
+	dryRun bool,
+	promptCtx prompt.IContext) {
 
 	if dryRun {
 		log.InfoF("[dry run] Would install Git hook templates into '%s'.",
 			hookTemplateDir)
-		return
+		return //nolint:nlreturn
 	}
 
 	log.InfoF("Installing Git hook templates into '%s'.",
@@ -786,28 +813,12 @@ func setupHookTemplates(
 		hookNames = managedHookNames
 	}
 
-	for _, hookName := range hookNames {
-		dest := path.Join(hookTemplateDir, hookName)
+	err := hooks.InstallRunWrappers(
+		hookTemplateDir,
+		hookNames,
+		getHookDisableCallback(log, nonInteractive, dryRun, promptCtx))
 
-		// Check there is already a Git hook in place and replace it.
-		if cm.IsFile(dest) {
-			isTemplate, err := hooks.IsRunWrapper(dest)
-			log.AssertNoErrorF(err, "Could not detect if '%s' is a custom Git hook")
-
-			if !isTemplate {
-				log.InfoF("Saving existing Git hook '%s'.", dest)
-
-				newDest := path.Join(hookTemplateDir, hooks.GetRunWrapperReplacementName(hookName))
-
-				err := os.Rename(dest, newDest)
-				log.AssertNoErrorPanicF(err, "Could not rename file '%s' to '%s'.", dest, newDest)
-
-			}
-		}
-
-		err := hooks.WriteRunWrapper(dest)
-		log.AssertNoErrorPanicF(err, "Could not write run wrapper to '%s'.", dest)
-	}
+	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookTemplateDir)
 }
 
 func installBinaries(installDir string, cloneDir string, binaries []string, dryRun bool) {
@@ -820,7 +831,7 @@ func installBinaries(installDir string, cloneDir string, binaries []string, dryR
 	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", s) })
 	if dryRun {
 		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
-		return
+		return //nolint:nlreturn
 	}
 
 	log.InfoF("Installing binaries:\n%s\n"+"to '%s'.", strings.Join(msg, "\n"), binDir)
@@ -859,13 +870,12 @@ func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.ICo
 	currentSetting := gitx.GetConfig("githooks.autoupdate.enable", git.GlobalScope)
 	promptMsg := ""
 
-	if currentSetting == "true" {
-		// Already enabled.
-		return
-	} else if strs.IsEmpty(currentSetting) {
+	switch {
+	case currentSetting == "true":
+		return // Already enabled.
+	case strs.IsEmpty(currentSetting):
 		promptMsg = "Would you like to enable automatic update checks,\ndone once a day after a commit?"
-
-	} else {
+	default:
 		log.Info("Automatic update checks are currently disabled.")
 		if nonInteractive {
 			return
@@ -908,6 +918,45 @@ func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.ICo
 	}
 }
 
+func installGitHooksIntoRepo(
+	repoGitDir string,
+	onlyServerHooks bool, nonInteractive bool, dryRun bool,
+	promptCtx prompt.IContext) {
+
+	// gitx := git.CtxC(repoGitDir)
+	// isBare := gitx.IsBareRepo()
+
+	hookDir := path.Join(repoGitDir, "hooks")
+	if !cm.IsDirectory(hookDir) {
+		err := os.MkdirAll(hookDir, 0775)
+		log.AssertNoErrorPanic(err,
+			"Could not create hook directory in '%s'.", repoGitDir)
+	}
+
+	var hookNames []string
+	if onlyServerHooks {
+		hookNames = managedServerHookNames
+	} else {
+		hookNames = managedHookNames
+	}
+
+	err := hooks.InstallRunWrappers(hookDir, hookNames,
+		getHookDisableCallback(log, nonInteractive, dryRun, promptCtx))
+
+	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookDir)
+}
+
+func getCurrentGitDir(cwd string) (gitDir string) {
+	gitx := git.CtxC(cwd)
+	log.PanicIfF(!gitx.IsGitRepo(),
+		"The current directory is not a Git repository.")
+
+	gitDir, err := gitx.GetGitCommonDir()
+	cm.AssertNoErrorPanic(err, "Could not get git directory in '%s'.", cwd)
+
+	return
+}
+
 func runUpdate(settings *InstallSettings, args *Arguments) {
 	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
 
@@ -915,32 +964,53 @@ func runUpdate(settings *InstallSettings, args *Arguments) {
 		// disable the prompt context,
 		// no prompt must be shown in this mode
 		// if we do -> pandic...
-		settings.promptCtx = nil
+		settings.PromptCtx = nil
 	}
 
-	settings.hookTemplateDir = getTargetTemplateDir(
-		settings.installDir,
+	settings.HookTemplateDir = getTargetTemplateDir(
+		settings.InstallDir,
 		args.TemplateDir,
 		args.UseCoreHooksPath,
 		args.NonInteractive,
 		args.DryRun,
-		settings.promptCtx)
+		settings.PromptCtx)
 
 	installBinaries(
-		settings.installDir,
-		settings.cloneDir,
+		settings.InstallDir,
+		settings.CloneDir,
 		args.InternalBinaries,
 		args.DryRun)
 
+	setupHookTemplates(
+		settings.HookTemplateDir,
+		settings.CloneDir,
+		args.OnlyServerHooks,
+		args.NonInteractive,
+		args.DryRun,
+		settings.PromptCtx)
+
 	if !args.InternalAutoUpdate {
-		setupAutomaticUpdate(args.NonInteractive, args.DryRun, settings.promptCtx)
+		setupAutomaticUpdate(args.NonInteractive, args.DryRun, settings.PromptCtx)
 	}
 
-	setupHookTemplates(
-		settings.hookTemplateDir,
-		settings.cloneDir,
-		args.OnlyServerHooks,
-		args.DryRun)
+	if !args.SkipInstallIntoExisting {
+		if args.SingleInstall {
+
+			installGitHooksIntoRepo(
+				getCurrentGitDir(settings.Cwd),
+				args.OnlyServerHooks,
+				args.NonInteractive,
+				args.DryRun,
+				settings.PromptCtx)
+
+		}
+		// else {
+		// 	// if !args.InternalAutoUpdate {
+		// 	// 	//installGitHooksIntoExistingRepos()
+		// 	// }
+		// 	//installGitHooksIntoRegisteredRepos()
+		// }
+	}
 }
 
 func runInstall(cmd *cobra.Command, auxArgs []string) {
@@ -951,7 +1021,7 @@ func runInstall(cmd *cobra.Command, auxArgs []string) {
 	settings := setMainVariables(&args)
 
 	if !args.DryRun {
-		setInstallDir(settings.installDir)
+		setInstallDir(settings.InstallDir)
 	}
 
 	if !args.InternalPostUpdate {

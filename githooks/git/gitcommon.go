@@ -25,6 +25,23 @@ func (c *Context) IsGitRepo() bool {
 	return c.Check("rev-parse") == nil
 }
 
+// GetGitCommonDir returns the common Git directory.
+func (c *Context) GetGitCommonDir() (gitDir string, err error) {
+	gitDir, err = c.Get("rev-parse", "--git-common-dir")
+	if err != nil {
+		return
+	}
+
+	gitDir, err = filepath.Abs(gitDir)
+	if err != nil {
+		return
+	}
+
+	gitDir = filepath.ToSlash(gitDir)
+
+	return
+}
+
 // Clone an URL to a path `repoPath`.
 func Clone(repoPath string, url string, branch string, depth int) error {
 	args := []string{"clone", "-c", "core.hooksPath=", "--template=", "--single-branch"}

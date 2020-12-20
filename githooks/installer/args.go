@@ -2,7 +2,7 @@ package main
 
 // Arguments repesents all CLI arguments for the installer.
 type Arguments struct {
-	config string
+	Config string
 
 	InternalAutoUpdate bool
 	InternalPostUpdate bool
