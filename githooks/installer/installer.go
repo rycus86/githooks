@@ -166,8 +166,8 @@ func defineArguments(rootCmd *cobra.Command) {
 			"downloaded from the deploy url.")
 
 	rootCmd.PersistentFlags().StringSlice(
-		"build-flags", nil,
-		"Build flags for building from source (get extended with defaults).")
+		"build-tags", nil,
+		"Build tags for building from source (get extended with defaults).")
 
 	rootCmd.PersistentFlags().Bool(
 		"stdin", false,
@@ -198,7 +198,7 @@ func defineArguments(rootCmd *cobra.Command) {
 	cm.AssertNoErrorPanic(err)
 	err = viper.BindPFlag("buildFromSource", rootCmd.PersistentFlags().Lookup("build-from-source"))
 	cm.AssertNoErrorPanic(err)
-	err = viper.BindPFlag("buildFlags", rootCmd.PersistentFlags().Lookup("build-flags"))
+	err = viper.BindPFlag("buildTags", rootCmd.PersistentFlags().Lookup("build-tags"))
 	cm.AssertNoErrorPanic(err)
 	err = viper.BindPFlag("installPrefix", rootCmd.PersistentFlags().Lookup("prefix"))
 	cm.AssertNoErrorPanic(err)
@@ -270,7 +270,7 @@ func setInstallDir(installDir string) {
 }
 
 func buildFromSource(
-	args *Arguments,
+	buildTags []string,
 	tempDir string,
 	url string,
 	branch string,
@@ -298,7 +298,7 @@ func buildFromSource(
 	log.InfoF("Building binaries at '%s'", tag)
 
 	// Build the binaries.
-	binPath, err := builder.Build(tempDir, args.BuildFlags)
+	binPath, err := builder.Build(tempDir, buildTags)
 	log.AssertNoErrorPanicF(err, "Could not build release branch in '%s'.", tempDir)
 
 	bins, err := cm.GetAllFiles(binPath)
@@ -333,11 +333,6 @@ func buildFromSource(
 	return binaries
 }
 
-func downloadBinaries(settings *InstallSettings, tempDir string, status updates.ReleaseStatus) updates.Binaries {
-	log.Panic("Not implemented")
-	return updates.Binaries{} //nolint:nlreturn
-}
-
 func prepareDispatch(settings *InstallSettings, args *Arguments) {
 
 	var status updates.ReleaseStatus
@@ -367,15 +362,16 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) {
 	log.AssertNoErrorPanic(err, "Can not create temporary update dir in '%s'", os.TempDir())
 	defer os.RemoveAll(tempDir)
 
-	updateSettings := updates.GetSettings()
-
 	binaries := updates.Binaries{}
-	if args.BuildFromSource || updateSettings.DoBuildFromSource {
+	if args.BuildFromSource {
 		binaries = buildFromSource(
-			args, tempDir,
-			status.RemoteURL, status.Branch, status.RemoteCommitSHA)
+			args.BuildTags,
+			tempDir,
+			status.RemoteURL,
+			status.Branch,
+			status.RemoteCommitSHA)
 	} else {
-		_ = downloadBinaries(settings, tempDir, status)
+		binaries = downloadBinaries(settings, tempDir, status)
 	}
 
 	updateTo := ""
@@ -441,7 +437,7 @@ func findGitHookTemplates(
 	promptCtx prompt.IContext) (string, string) {
 
 	installUsesCoreHooksPath := git.Ctx().GetConfig("githooks.useCoreHooksPath", git.GlobalScope)
-	haveInstallation := strs.IsNotEmpty(installUsesCoreHooksPath)
+	haveInstall := strs.IsNotEmpty(installUsesCoreHooksPath)
 
 	// 1. Try setup from environment variables
 	gitTempDir, exists := os.LookupEnv("GIT_TEMPLATE_DIR")
@@ -478,11 +474,11 @@ func findGitHookTemplates(
 
 	// If we have an installation, and have not found
 	// the template folder by now...
-	log.PanicIfF(haveInstallation,
+	log.PanicIfF(haveInstall,
 		"Your installation is corrupt.\n"+
 			"The global value 'githooks.useCoreHooksPath = %v'\n"+
 			"is set but the corresponding hook templates directory\n"+
-			"is not found.")
+			"is not found.", installUsesCoreHooksPath)
 
 	// 4. Try setup new folder if running non-interactively
 	// and no folder is found by now
@@ -828,7 +824,7 @@ func installBinaries(installDir string, cloneDir string, binaries []string, dryR
 	err := os.MkdirAll(binDir, 0775)
 	log.AssertNoErrorPanicF(err, "Could not create binary dir '%s'.", binDir)
 
-	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", s) })
+	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", path.Base(s)) })
 	if dryRun {
 		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
 		return //nolint:nlreturn

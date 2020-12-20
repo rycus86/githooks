@@ -175,7 +175,7 @@ func MoveFileWithBackup(src string, dst string) (err error) {
 	backupFile := ""
 
 	if !IsFile(src) {
-		return Error("Source file '%s' does not exist.")
+		return ErrorF("Source file '%s' does not exist.", src)
 	}
 
 	if IsFile(dst) {

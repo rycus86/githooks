@@ -117,7 +117,7 @@ func InstallRunWrappers(
 
 			if err != nil {
 				err = cm.CombineErrors(err,
-					cm.Error("Could not detect if '%s' is a Githooks run template."))
+					cm.ErrorF("Could not detect if '%s' is a Githooks run template.", dest))
 				return //nolint:nlreturn
 			}
 

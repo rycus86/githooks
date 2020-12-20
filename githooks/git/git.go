@@ -48,7 +48,7 @@ func CtxSanitized() *Context {
 	return CtxCSanitized("")
 }
 
-// GetConfig gets a Git configuration values.
+// GetConfig gets a Git configuration value.
 func (c *Context) GetConfig(key string, scope ConfigScope) string {
 	var out string
 	var err error
@@ -64,6 +64,24 @@ func (c *Context) GetConfig(key string, scope ConfigScope) string {
 	}
 
 	return ""
+}
+
+// LookupConfig gets a Git configuration value and report if it exists or nots.
+func (c *Context) LookupConfig(key string, scope ConfigScope) (string, bool) {
+	var out string
+	var err error
+
+	if scope != Traverse {
+		out, err = c.Get("config", string(scope), key)
+	} else {
+		out, err = c.Get("config", key)
+	}
+
+	if err == nil {
+		return out, true
+	}
+
+	return "", false
 }
 
 // getConfigWithArgs gets a Git configuration values.

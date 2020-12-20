@@ -8,11 +8,11 @@ if [ ! -f "$1" ] || grep -q "fixup!" "$1"; then
     exit 0
 fi
 
-EMOJIS=":heart: :yellow_heart: :blue_heart: :purple_heart: :green_heart:"
-EMOJIS="$EMOJIS :sparkles: :star: :boom: :fire: :zap: :tada:"
+# EMOJIS=":heart: :yellow_heart: :blue_heart: :purple_heart: :green_heart:"
+# EMOJIS="$EMOJIS :sparkles: :star: :boom: :fire: :zap: :tada:"
 
-POSITION=$(($(od -A n -t d -N 1 /dev/urandom | tr -d ' ') % 11 + 1))
-SELECTED=$(echo "$EMOJIS" | awk -v N=$POSITION '{ print $N }')
+# POSITION=$(($(od -A n -t d -N 1 /dev/urandom | tr -d ' ') % 11 + 1))
+SELECTED=":anchor:" #$(echo "$EMOJIS" | awk -v N=$POSITION '{ print $N }')
 
 MESSAGE=$(sed -E "1s/(.*)/\\1 $SELECTED/" <"$1")
 

@@ -24,7 +24,7 @@ type Arguments struct {
 	CloneBranch string
 
 	BuildFromSource bool
-	BuildFlags      []string
+	BuildTags       []string
 
 	InstallPrefix string
 	TemplateDir   string
