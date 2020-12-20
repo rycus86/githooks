@@ -23,6 +23,8 @@ trap cleanUp EXIT INT TERM
 runTest() {
     cat <<EOF | docker build --force-rm -t githooks:go-installer-test -f - "$REPO_DIR"
 FROM golang:1.15.3-alpine
+
+RUN go get github.com/go-delve/delve
 RUN apk add --no-cache git git-lfs bash
 
 RUN git config --global user.email "githook@test.com" && \
@@ -40,15 +42,18 @@ RUN echo "Make test gitrepo to clone from ..." && \
     git tag "v9.9.1+test"
 
 # Build binaries
+ENV GOPATH="/var/lib/githooks/githooks/.go"
+ENV GOBIN="//var/lib/githooks/githooks/bin"
+ENV GITHOOKS_REPO="/var/lib/githooks"
+ENV GITHOOKS_BIN="/var/lib/githooks/githooks/bin"
 RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh -tags "debug,mock,docker"
-RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
+RUN /var/lib/githooks/githooks/build.sh --build-flags '-tags "debug,mock,docker,dev"'
 
-
+RUN dlv debug --headless --listen=:2345 --log --api-version=2
 RUN bash /var/lib/githooks/githooks/test-installer-run-$1.sh
 EOF
 
 }
 
 runTest "2"
-runTest "1"
+# runTest "1"
