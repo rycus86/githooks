@@ -1,6 +1,6 @@
 
 if [[ ! -d ~/.zplug ]];then
-    apk add gawk # https://github.com/zplug/zplug/issues/359#issuecomment-349534715
+    sudo apt-get install -y gawk # https://github.com/zplug/zplug/issues/359#issuecomment-349534715
     git clone https://github.com/zplug/zplug ~/.zplug
 fi
 
@@ -31,6 +31,9 @@ bindkey "^[[1;5C" forward-word
 bindkey "^[[1;5D" backward-word
 
 # History
-HISTFILE=~/.zsh_history
+HISTFILE="$GITHOOKS_REPO/.devcontainer/.zsh_history"
 SAVEHIST=100000
 HISTSIZE=100000
+
+# To customize prompt, run 'p10k configure' or edit ~/.p10k.zsh.
+[[ ! -f "$GITHOOKS_REPO/.devcontainer/.p10k.zsh" ]] || source "$GITHOOKS_REPO/.devcontainer/.p10k.zsh"
