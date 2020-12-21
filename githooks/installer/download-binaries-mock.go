@@ -5,6 +5,8 @@ package main
 import (
 	"os"
 	"path"
+	cm "rycus86/githooks/common"
+	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
 )
 
@@ -14,6 +16,7 @@ func downloadBinaries(
 	status updates.ReleaseStatus) updates.Binaries {
 
 	bin := os.Getenv("GITHOOKS_DOWNLOAD_BIN_DIR")
+	cm.PanicIf(strs.IsEmpty(bin))
 
 	others := []string{
 		path.Join(bin, "cli"),

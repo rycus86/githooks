@@ -333,7 +333,7 @@ func buildFromSource(
 	return binaries
 }
 
-func prepareDispatch(settings *InstallSettings, args *Arguments) {
+func prepareDispatch(settings *InstallSettings, args *Arguments) bool {
 
 	var status updates.ReleaseStatus
 	var err error
@@ -379,16 +379,31 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) {
 		updateTo = status.RemoteCommitSHA
 	}
 
-	runInstaller(binaries.Installer, args, tempDir, updateTo, binaries.All)
+	return runInstaller(
+		binaries.Installer,
+		args,
+		tempDir,
+		updateTo,
+		binaries.All)
 }
 
-func runInstaller(installer string, args *Arguments, tempDir string, updateTo string, binaries []string) {
+func runInstaller(
+	installer string,
+	args *Arguments,
+	tempDir string,
+	updateTo string,
+	binaries []string) bool {
+
 	log.Info("Dispatching to build installer ...")
 
 	// Set variables...
 	args.InternalPostUpdate = true
 	args.InternalUpdateTo = updateTo
 	args.InternalBinaries = binaries
+
+	if IsDispatchSkipped {
+		return false
+	}
 
 	file, err := ioutil.TempFile(tempDir, "*install-config.json")
 	log.AssertNoErrorPanicF(err, "Could not create temporary file in '%s'.", tempDir)
@@ -405,6 +420,8 @@ func runInstaller(installer string, args *Arguments, tempDir string, updateTo st
 		"--config", file.Name())
 
 	log.AssertNoErrorPanic(err, "Running installer failed.")
+
+	return true
 }
 
 func checkTemplateDir(targetDir string) string {
@@ -832,15 +849,18 @@ func installBinaries(installDir string, cloneDir string, binaries []string, dryR
 
 	log.InfoF("Installing binaries:\n%s\n"+"to '%s'.", strings.Join(msg, "\n"), binDir)
 
-	if hooks.InstallLegacyBinaries {
-		binaries = append(binaries, path.Join(cloneDir, "cli.sh"))
-	}
-
 	for _, binary := range binaries {
 		dest := path.Join(binDir, path.Base(binary))
 		err := cm.MoveFileWithBackup(binary, dest)
 		log.AssertNoErrorPanicF(err,
 			"Could not move file '%s' to '%s'.", binary, dest)
+	}
+
+	if hooks.InstallLegacyBinaries {
+		src := path.Join(cloneDir, "cli.sh")
+		dest := path.Join(binDir, path.Base(src))
+		err := cm.CopyFile(src, dest)
+		log.AssertNoErrorPanicF(err, "Could not copy legacy executable '%s'.", src)
 	}
 
 	// Set CLI executable alias.
@@ -1021,11 +1041,12 @@ func runInstall(cmd *cobra.Command, auxArgs []string) {
 	}
 
 	if !args.InternalPostUpdate {
-		prepareDispatch(&settings, &args)
-	} else {
-		runUpdate(&settings, &args)
+		if isDispatched := prepareDispatch(&settings, &args); isDispatched {
+			return
+		}
 	}
 
+	runUpdate(&settings, &args)
 }
 
 func main() {

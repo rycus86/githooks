@@ -1,0 +1,99 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "go-build",
+      "type": "shell",
+      "command": "${workspaceFolder}/githooks/build.sh --build-flags '-tags=debug'",
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "[Dev Container] clean-install",
+      "type": "shell",
+      "command": "${workspaceFolder}/githooks/clean-install.sh",
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+    },
+    {
+      "label": "[Dev Container] go-build-temp",
+      "type": "shell",
+      "command": "${workspaceFolder}/githooks/build.sh",
+      "args": [
+        "--build-flags",
+        "-tags=debug,mock,dev",
+        "--bin-dir",
+        "/tmp/githooks"
+      ],
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "[Dev Container] go-delve-installer",
+      "type": "shell",
+      "command": "dlv",
+      "args": [
+        "debug",
+        "--headless",
+        "--listen=127.0.1.1:2345",
+        "--log",
+        "--build-flags",
+        "-tags debug,mock,dev",
+        "--api-version=2",
+        "./installer",
+        "--",
+        "--clone-url=${env:GITHOOKS_REPO}",
+        "--clone-branch=feature/go-refactoring"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/githooks",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        },
+        "env": {
+          "GOPATH": "${workspaceFolder}/githooks/.go",
+          "GOBIN": "${workspaceFolder}/githooks/bin",
+          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "dependsOn": [
+        "[Dev Container] clean-install",
+        "[Dev Container] go-build-temp"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

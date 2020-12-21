@@ -1,5 +1,6 @@
 #!/bin/sh
 
+echo "Unset all githooks configs ..."
 git config --global --unset githooks.runner
 git config --global --unset-all githooks.shared
 git config --global --unset githooks.failOnNonExistingSharedHooks
@@ -20,6 +21,11 @@ git config --global --unset alias.hooks
 git config --global --unset init.templateDir
 git config --global --unset core.hooksPath
 
-rm -rf ~/.githooks /usr/share/git-core-my/templates
+echo "Remove all test artefacts..."
+rm -rf ~/.githooks \
+    /usr/share/git-core-my/templates
+
+mkdir -p ~/.githooks/templates/hooks
+echo "# git-lfs" >~/.githooks/templates/hooks/pre-commit
 
 exit 0

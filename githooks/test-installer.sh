@@ -45,9 +45,9 @@ RUN echo "Make test gitrepo to clone from ..." && \
 ENV GOPATH="/var/lib/githooks/githooks/.go"
 ENV GOBIN="//var/lib/githooks/githooks/bin"
 ENV GITHOOKS_REPO="/var/lib/githooks"
-ENV GITHOOKS_BIN="/var/lib/githooks/githooks/bin"
+ENV GITHOOKS_BIN_DIR="/var/lib/githooks/githooks/bin"
 RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh --build-flags '-tags "debug,mock,docker,dev"'
+RUN /var/lib/githooks/githooks/build.sh --build-flags '-tags "debug,mock,docker"'
 
 RUN dlv debug --headless --listen=:2345 --log --api-version=2
 RUN bash /var/lib/githooks/githooks/test-installer-run-$1.sh

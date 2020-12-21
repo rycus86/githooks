@@ -39,6 +39,7 @@ BUILD_VERSION=$(git describe --tags --abbrev=6 --always | sed -E "s/^v//")
 export GOPATH="$DIR/.go"
 export GOBIN="$DIR/bin"
 if [ -n "$BIN_DIR" ]; then
+    rm -rf "$BIN_DIR" || true
     export GOBIN="$BIN_DIR"
 fi
 

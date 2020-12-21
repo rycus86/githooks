@@ -28,7 +28,7 @@ func getHookDisableCallback(
 			var err error
 			userAnswer, err = promptCtx.ShowPromptOptions(
 				"There is an LFS command statement in hook:\n"+
-					"'%s'\n"+
+					strs.Fmt("'%s'\n", file)+
 					"Githooks will call LFS hooks internally and LFS\n"+
 					"should not be called twice.\n"+
 					"Do you want to delete this hook instead of\n"+

@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Go",
+      "name": "Debug Go [file]",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -17,6 +17,19 @@
       "buildFlags": "-tags=debug",
       "args": [],
       "cwd": "${workspaceFolder}/githooks"
+    },
+    {
+      "name": "Debug Go [remote delve]",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "${workspaceFolder}/githooks",
+      "cwd": "${workspaceFolder}/githooks",
+      "port": 2345,
+      "host": "127.0.1.1"
+      // Launch VSCode Tasks:
+      // - '[Dev Container] go-delve-installer'
+      // first and attach to it with this debug configuration.
     }
   ]
 }

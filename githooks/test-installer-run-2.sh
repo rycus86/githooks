@@ -4,16 +4,25 @@ DIR="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
 set -u
 set -e
 
-"$DIR/test-clean-install.sh"
+cleanUp() {
+    if [ -d "$tmp" ]; then
+        rm -rf "$tmp"
+    fi
+    "$DIR/clean-githooks.sh"
+}
 
-temp=$(mktemp -d)
-"$GITHOOKS_REPO/githooks/build.sh" --build-flags '-tags debug,mock,dev' --bin-dir "$temp"
-export GITHOOKS_DOWNLOAD_BIN_DIR="$temp"
+tmp=$(mktemp -d)
 
-sudo mkdir -p /usr/share/git-core-my/templates
-if [ -f /usr/share/git-core/templates/hooks ]; then
-    sudo mv -f /usr/share/git-core/templates/hooks /usr/share/git-core-my/templates
-fi
+trap cleanUp EXIT INT TERM
+
+"$DIR/clean-githooks.sh"
+
+"$GITHOOKS_REPO/githooks/build.sh" --build-flags '-tags debug,mock' --bin-dir "$tmp"
+export GITHOOKS_DOWNLOAD_BIN_DIR="$tmp"
+
+sudo rm -rf /usr/share/git-core/templates/hooks || true
+sudo mkdir -p /usr/share/git-core-my/templates/hooks &&
+    sudo touch /usr/share/git-core-my/templates/hooks/pre-commit.sample
 
 sudo chown -R "$USER:$USER" /usr/share/git-core-my
 
@@ -22,7 +31,7 @@ echo "# git-lfs" | sudo tee "/usr/share/git-core-my/templates/pre-commit" >/dev/
 echo 'y
 y
 y
-' | "$GITHOOKS_BIN/installer" --clone-url "$GITHOOKS_REPO" \
+' | "$GITHOOKS_BIN_DIR/installer" --clone-url "$GITHOOKS_REPO" \
     --clone-branch feature/go-refactoring \
     --stdin
 

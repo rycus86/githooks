@@ -21,7 +21,7 @@ RUN go get github.com/go-delve/delve/cmd/dlv
 ENV GOPATH="/var/lib/githooks/githooks/.go"
 ENV GOBIN="/var/lib/githooks/githooks/bin"
 RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh -tags "debug,mock,docker,dev"
+RUN /var/lib/githooks/githooks/build.sh -tags "debug,mock,docker"
 RUN cp /var/lib/githooks/githooks/bin/installer /var/lib/githooks/installer
 
 RUN dlv debug --headless --listen=:2345 --log --api-version=2 /var/lib/githooks/githooks/bin/installer

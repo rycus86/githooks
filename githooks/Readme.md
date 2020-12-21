@@ -15,6 +15,17 @@ Run tests:
 sh tests/exec-tests-go.sh {001..120}
 ```
 
+## Debugging in Dev Container
+
+There is a docker development container for debugging purposes in `.devcontainer`. VS Code can be launched in this remote docker container with the extension `ms-vscode-remote.remote-containers`.
+Use ``Remote-Containers: Open Workspace in Container...` and `Remote-Containers: Rebuild Container`.
+
+Once in the development container: You can launch the VS Code tasks:
+
+- `[Dev Container] go-delve-installer`
+
+which will start the `delve` debugger headless as a server in a terminal. You can then attach to the debug server with the debug configuration `Debug Go [remote delve]`. Set breakpoints in the source code to trigger them
+
 ## New and Deprecated Stuff
 
 So far we comply 99% to the original implementation. Internally we wrap legacy stuff such that we agree the most with the original implementation. The following summarizes the new features and gives rational about why we deprecate other behavior.
