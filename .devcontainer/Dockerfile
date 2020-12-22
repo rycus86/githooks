@@ -28,11 +28,25 @@ COPY .zshrc /home/vscode/.zshrc
 ENV LANG=en_US.UTF-8
 RUN /bin/zsh -c "source /home/vscode/.zshrc"
 
+
+# Install Go tools
+RUN go get github.com/mdempsky/gocode
+RUN go get github.com/uudashr/gopkgs/v2/cmd/gopkgs
+RUN go get github.com/ramya-rao-a/go-outline
+RUN go get github.com/acroca/go-symbols
+RUN go get golang.org/x/tools/cmd/guru
+RUN go get golang.org/x/tools/cmd/gorename
+RUN go get github.com/cweill/gotests
+RUN go get github.com/fatih/gomodifytags
+RUN go get github.com/josharian/impl
+RUN go get github.com/davidrjenni/reftools/cmd/fillstruct
+RUN go get github.com/godoctor/godoctor
+RUN go get github.com/go-delve/delve/cmd/dlv
+RUN go get github.com/stamblerre/gocode
+RUN go get github.com/rogpeppe/godef
+RUN go get golang.org/x/tools/cmd/goimports
+RUN brew install golangci-lint
+
 # Githooks settings
-ENV GOPATH="/workspaces/githooks/githooks/.go"
-ENV GOBIN="/workspaces/githooks/githooks/bin"
 ENV GITHOOKS_REPO="/workspaces/githooks"
 ENV GITHOOKS_BIN_DIR="/workspaces/githooks/githooks/bin"
-
-
-

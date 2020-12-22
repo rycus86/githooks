@@ -26,6 +26,70 @@ func (c *Context) IsGitRepo() bool {
 	return c.Check("rev-parse") == nil
 }
 
+// GetAllWorktrees returns all worktrees based on the current context's working directory.
+func (c *Context) GetAllWorktrees() (list []string, err error) {
+
+	// This feature is kind of buggy in earlier version of git < 2.28.0
+	// it returns a git directory instead of the work tree
+	// We strip "/.git" from the output.
+
+	list, err = c.GetSplit("worktree", "list", "--porcelain")
+	if err != nil {
+		return
+	}
+
+	// Filter results...
+	list = strs.Filter(list, func(s string) bool {
+		return strings.HasPrefix(s, "worktree")
+	})
+
+	// Split results... (may not be empty...)
+	list = strs.Map(list, func(s string) string {
+
+		tree := strings.TrimSuffix(
+			strings.TrimSpace(strings.TrimPrefix(s, "worktree")),
+			"/.git")
+
+		if strs.IsEmpty(tree) {
+			err = cm.CombineErrors(err,
+				cm.ErrorF("Could not get worktrees in '%s'", c.Cwd))
+		}
+
+		return filepath.ToSlash(tree)
+	})
+
+	return
+}
+
+// GetMainWorktree returns the main worktree
+// based on the current context's working directory.
+func (c *Context) GetMainWorktree() (string, error) {
+
+	// This feature is kind of buggy in earlier version of git < 2.28.0
+	// it returns a git directory instead of the work tree
+	// We strip "/.git" from the output.
+	trees, err := c.Get("worktree", "list", "--porcelain")
+	if err != nil {
+		return "", err
+	}
+
+	list := strs.SplitLinesN(trees, 1)
+	if len(list) == 0 {
+		return "", cm.ErrorF("Could not get main worktree in '%s'", c.Cwd)
+	}
+
+	tree := strings.TrimSuffix(
+		strings.TrimSpace(
+			strings.TrimPrefix(list[0], "worktree")),
+		"/.git")
+
+	if strs.IsEmpty(tree) {
+		return "", cm.ErrorF("Could not get main worktree in '%s'", c.Cwd)
+	}
+
+	return filepath.ToSlash(tree), nil
+}
+
 // GetGitCommonDir returns the common Git directory.
 func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	gitDir, err = c.Get("rev-parse", "--git-common-dir")

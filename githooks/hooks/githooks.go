@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
@@ -14,6 +15,8 @@ import (
 
 // HookDirName denotes the directory name used for repository specific hooks.
 const HookDirName = ".githooks"
+
+const GithooksWebpage = "https://github.com/rycus86/githooks"
 
 // DefaultBugReportingURL is the default url to report errors.
 const DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
@@ -142,9 +145,59 @@ func GetBinaryDir(installDir string) string {
 	return path.Join(installDir, "bin")
 }
 
+// AssertTemporaryDir returns the Githooks temporary directory inside the install directory.
+func GetTemporaryDir(installDir string) string {
+	cm.DebugAssert(strs.IsNotEmpty(installDir))
+
+	return path.Join(installDir, "tmp")
+}
+
+// AssertTemporaryDir returns the Githooks temporary directory inside the install directory.
+func AssertTemporaryDir(installDir string) (tempDir string, err error) {
+	tempDir = GetTemporaryDir(installDir)
+	err = os.MkdirAll(GetTemporaryDir(installDir), cm.DefaultDirectoryFileMode)
+
+	return
+}
+
+func removeTemporaryDir(installDir string) (err error) {
+	cm.DebugAssert(strs.IsNotEmpty(installDir))
+	tempDir := GetTemporaryDir(installDir)
+
+	if err = os.RemoveAll(tempDir); err != nil {
+		return
+	}
+
+	return
+}
+
+// CleanTemporaryDir returns the Githooks temporary directory inside the install directory.
+func CleanTemporaryDir(installDir string) (string, error) {
+	if err := removeTemporaryDir(installDir); err != nil {
+		return "", err
+	}
+
+	return AssertTemporaryDir(installDir)
+}
+
 // GetRunnerExecutable gets the installed Githooks runner executable.
-func GetRunnerExecutable(installDir string) string {
-	return path.Join(GetBinaryDir(installDir), "runner")
+func GetRunnerExecutable(installDir string) (p string) {
+	p = path.Join(GetBinaryDir(installDir), "runner")
+	if runtime.GOOS == "windows" {
+		p += ".exe"
+	}
+
+	return
+}
+
+// GetInstallerExecutable gets the global Githooks installer executable.
+func GetInstallerExecutable(installDir string) (p string) {
+	p = path.Join(GetBinaryDir(installDir), "installer")
+	if runtime.GOOS == "windows" {
+		p += ".exe"
+	}
+
+	return
 }
 
 // GetCLIExecutable gets the global Githooks CLI executable.

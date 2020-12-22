@@ -25,7 +25,7 @@ echo "Remove all test artefacts..."
 rm -rf ~/.githooks \
     /usr/share/git-core-my/templates
 
-mkdir -p ~/.githooks/templates/hooks
-echo "# git-lfs" >~/.githooks/templates/hooks/pre-commit
+mkdir -p ~/.githooks/templates/hooks &&
+    echo "# git-lfs" >~/.githooks/templates/hooks/pre-commit
 
 exit 0

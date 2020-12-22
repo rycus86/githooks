@@ -16,9 +16,9 @@ func IsRunWrapper(filePath string) (bool, error) {
 	return cm.MatchLineRegexInFile(filePath, runWrapperDetectionRegex)
 }
 
-// GetRunWrapperReplacementName returns the file name of a replaced custom Git hook.
-func GetRunWrapperReplacementName(fileName string) string {
-	return fileName + "replaced.githooks"
+// getHookReplacementName returns the file name of a replaced custom Git hook.
+func getHookReplacementName(fileName string) string {
+	return path.Join(path.Dir(fileName), path.Base(fileName)+".replaced.githooks")
 }
 
 // GetRunWrapperContent gets the bytes of the hook template.
@@ -39,18 +39,18 @@ func WriteRunWrapper(filePath string) (err error) {
 
 	_, err = file.Write(runWrapperContent)
 	if err != nil {
-		return err
+		return
 	}
 	err = file.Sync()
 	if err != nil {
-		return err
+		return
 	}
 
 	// Make executable
 	_ = file.Close()
 	err = cm.MakeExecutbale(filePath)
 
-	return err
+	return
 }
 
 var lfsDetectionRe = regexp.MustCompile(`(git\s+lfs|git-lfs)`)
@@ -68,7 +68,8 @@ const (
 
 func disableHookIfLFSDetected(
 	filePath string,
-	disableCallBack func(file string) HookDisableOption) (disabled bool, err error) {
+	tempDir string,
+	disableCallBack func(file string) HookDisableOption) (disabled bool, deleted bool, err error) {
 
 	found, err := cm.MatchLineRegexInFile(filePath, lfsDetectionRe)
 	if err != nil {
@@ -85,8 +86,12 @@ func disableHookIfLFSDetected(
 			err = os.Rename(filePath, filePath+".disabled.githooks")
 			disabled = true
 		case DeleteHook:
-			err = os.Remove(filePath)
+			// Don't delete the hook yet, move it to the temporary directory.
+			// The file could potentially be opened/read.
+			moveFile := cm.GetTempFileName(tempDir, "-"+path.Base(filePath))
+			err = os.Rename(filePath, moveFile)
 			disabled = true
+			deleted = true
 		}
 
 		if err != nil {
@@ -97,62 +102,105 @@ func disableHookIfLFSDetected(
 	return
 }
 
+func moveExistingHooks(
+	dest string,
+	tempDir string,
+	disableHookIfLFS func(file string) HookDisableOption,
+	log cm.ILogContext) error {
+
+	// Check there is already a Git hook in place and replace it.
+	if cm.IsFile(dest) {
+
+		isTemplate, err := IsRunWrapper(dest)
+
+		if err != nil {
+			return cm.CombineErrors(err,
+				cm.ErrorF("Could not detect if '%s' is a Githooks run wrapper.", dest))
+		}
+
+		if !isTemplate {
+
+			// Try to detect a potential LFS statements and
+			// disable the hook (backup or delete).
+			if disableHookIfLFS != nil {
+				disabled, deleted, err := disableHookIfLFSDetected(dest, tempDir, disableHookIfLFS)
+				if err != nil {
+					return err
+				}
+
+				if log != nil {
+					if disabled && deleted {
+						log.WarnF("Hook '%s' is now disabled (deleted)", dest)
+					} else if disabled && !deleted {
+						log.WarnF("Hook '%s' is now disabled (backuped)", dest)
+					}
+				}
+			}
+
+			// Replace the file normally if it is still existing.
+			if cm.IsFile(dest) {
+				if log != nil {
+					log.InfoF("Saving existing Git hook '%s'.", dest)
+				}
+
+				newDest := getHookReplacementName(dest)
+				err = os.Rename(dest, newDest)
+				if err != nil {
+					return cm.CombineErrors(err,
+						cm.ErrorF("Could not rename file '%s' to '%s'.", dest, newDest))
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // InstallRunWrappers installs run wrappers for the given `hookNames` in `dir`.
-// Existing hooks get renamed.
+// Existing custom hooks get renamed.
+// All deleted hooks by this function get moved to the `tempDir` directory, because
+// we should not delete them yet.
 func InstallRunWrappers(
 	dir string,
 	hookNames []string,
-	disableHookIfLFS func(file string) HookDisableOption) (err error) {
+	tempDir string,
+	disableHookIfLFS func(file string) HookDisableOption,
+	log cm.ILogContext) error {
 
 	for _, hookName := range hookNames {
 
 		dest := path.Join(dir, hookName)
 
-		isTemplate := false
+		err := moveExistingHooks(dest, tempDir, disableHookIfLFS, log)
+		if err != nil {
+			return err
+		}
 
-		// Check there is already a Git hook in place and replace it.
+		if log != nil {
+			log.InfoF("Saving Githooks run wrapper to '%s'.", dest)
+		}
+
 		if cm.IsFile(dest) {
-
-			isTemplate, err = IsRunWrapper(dest)
-
+			// If still existing:
+			// The file `dest` could be currently running,
+			// therefore we move it to the temporary directly.
+			// On Unix we could simply remove the file.
+			// But on Windows, an opened file (mostly) cannot be deleted.
+			// it might work, but is ugly.
+			moveDest := cm.GetTempFileName(tempDir, "-"+path.Base(dest))
+			err = os.Rename(dest, moveDest)
 			if err != nil {
-				err = cm.CombineErrors(err,
-					cm.ErrorF("Could not detect if '%s' is a Githooks run template.", dest))
-				return //nolint:nlreturn
-			}
-
-			if !isTemplate {
-
-				// Try to detect a potential LFS statements and disable the hook.
-				if disableHookIfLFS != nil {
-					_, e := disableHookIfLFSDetected(dest, disableHookIfLFS)
-					if e != nil {
-						err = e
-						return //nolint:nlreturn
-					}
-				}
-
-				// Move the file normally if it is still existing.
-				if cm.IsFile(dest) {
-					newDest := path.Join(dir, GetRunWrapperReplacementName(hookName))
-
-					err = os.Rename(dest, newDest)
-					if err != nil {
-						err = cm.CombineErrors(err,
-							cm.ErrorF("Could not rename file '%s' to '%s'.", dest, newDest))
-						return //nolint:nlreturn
-					}
-				}
+				return cm.CombineErrors(err,
+					cm.ErrorF("Could not move file '%s' to '%s'.", dest, moveDest))
 			}
 		}
 
 		err = WriteRunWrapper(dest)
 		if err != nil {
-			err = cm.CombineErrors(err,
-				cm.ErrorF("Could not write run wrapper to '%s'.", dest))
-			return //nolint:nlreturn
+			return cm.CombineErrors(err,
+				cm.ErrorF("Could not write Githooks run wrapper to '%s'.", dest))
 		}
 	}
 
-	return
+	return nil
 }

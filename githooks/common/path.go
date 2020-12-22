@@ -11,6 +11,10 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+const (
+	DefaultDirectoryFileMode = os.FileMode(0775) //nolint:gomnd
+)
+
 // IsPathError returns `true` if the error is a `os.PathError`.
 func IsPathError(err error) bool {
 	return err != nil && err.(*os.PathError) != nil
@@ -166,12 +170,29 @@ func CopyFile(src string, dst string) (err error) {
 	return
 }
 
+// GetTempFileName creates a random non-existing filename with a postfix `postfix` in directory `dir`.
+func GetTempFileName(dir string, postfix string) (file string) {
+	DebugAssert(strs.IsNotEmpty(dir), "Wrong input.")
+
+	maxLoops := 10
+	i := 0
+
+	file = path.Join(dir, strs.RandomString(8)+postfix) //nolint:gomnd
+	for IsFile(file) && i < maxLoops {
+		file = path.Join(dir, strs.RandomString(8)+postfix) //nolint:gomnd
+		i++
+	}
+
+	PanicIfF(i == maxLoops, "Could not create random filename in dir '%s'.", dir)
+
+	return
+}
+
 // MoveFileWithBackup moves the contents of the file named `src` to the file named
-// by `dst`. If `dst` already exists it will be force moved to `dst + .old`.
+// by `dst`. If `dst` already exists it will be force moved to `backupDir/dst`.
 // After this, any failure tries to recover as good as possible
 // to not have touched/moved `dst`.
-func MoveFileWithBackup(src string, dst string) (err error) {
-	backUpPrefix := ".old"
+func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
 	backupFile := ""
 
 	if !IsFile(src) {
@@ -180,12 +201,8 @@ func MoveFileWithBackup(src string, dst string) (err error) {
 
 	if IsFile(dst) {
 		// Force remove any backup file.
-		backupFile := dst + backUpPrefix
-		if IsFile(backupFile) {
-			if err = os.Remove(backupFile); err != nil {
-				return
-			}
-		}
+		backupFile := GetTempFileName(backupDir, "-"+dst)
+
 		// Move destination to the backup file.
 		if err = os.Rename(dst, backupFile); err != nil {
 			return

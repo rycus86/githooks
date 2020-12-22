@@ -13,17 +13,17 @@ import (
 )
 
 const (
-	githooksSuffix = "Githooks:"
-	debugSuffix    = "🛠  " + githooksSuffix + " "
+	githooksSuffix = "" // If you like you can make it: "Githooks: "
+	debugSuffix    = "🛠  " + githooksSuffix
 	debugIndent    = "   "
-	infoSuffix     = "🦎 " + githooksSuffix + " "
+	infoSuffix     = "🦎 " + githooksSuffix
 	infoIndent     = "   "
-	warnSuffix     = "⛑  " + githooksSuffix + " "
+	warnSuffix     = "⛑  " + githooksSuffix
 	warnIndent     = "   "
 	errorSuffix    = "⛔ "
 	errorIndent    = "   "
 
-	promptSuffix = "❓ " + githooksSuffix + " "
+	promptSuffix = "❓ " + githooksSuffix
 	promptIndent = "   "
 )
 

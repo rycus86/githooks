@@ -171,7 +171,7 @@ func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
 	}
 
 	dir := path.Join(t.checksumDirs[0], checksum.SHA1[0:2])
-	err := os.MkdirAll(dir, 0775)
+	err := os.MkdirAll(dir, cm.DefaultDirectoryFileMode)
 	if err != nil {
 		return err
 	}

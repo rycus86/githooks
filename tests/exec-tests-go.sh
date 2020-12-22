@@ -33,7 +33,7 @@ RUN echo "Make test gitrepo to clone from ..." && \\
 
 # Build binaries
 RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh -tags debug,mock
+RUN /var/lib/githooks/githooks/build.sh --build-flags "-tags debug,mock"
 RUN cp /var/lib/githooks/githooks/bin/runner /var/lib/githooks/base-template.sh
 
 # Do not use the terminal in tests
@@ -64,11 +64,6 @@ RUN git config --global githooks.deleteDetectedLFSHooks "n"
 
 ${ADDITIONAL_INSTALL_STEPS:-}
 RUN git --version
-
-# Build binaries
-RUN cd /var/lib/githooks/githooks && ./clean.sh
-RUN /var/lib/githooks/githooks/build.sh -tags debug,mock
-RUN cp /var/lib/githooks/githooks/bin/runner /var/lib/githooks/base-template.sh
 
 RUN sh /var/lib/tests/exec-steps.sh --sequence $SEQUENCE
 EOF
