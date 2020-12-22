@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+type AnswerValidator func(string) error
+
 // IContext defines the interface to show a prompt to the user.
 type IContext interface {
 	ShowPromptOptions(
@@ -21,7 +23,7 @@ type IContext interface {
 	ShowPrompt(
 		text string,
 		defaultAnswer string,
-		allowEmpty bool) (string, error)
+		validator AnswerValidator) (string, error)
 
 	Close()
 }
@@ -115,4 +117,23 @@ func isAnswerCorrect(answer string, options []string) bool {
 	return strs.Any(options, func(o string) bool {
 		return strings.EqualFold(answer, o)
 	})
+}
+
+var ValidatorAnswerNotEmpty AnswerValidator = func(s string) error {
+	if strs.IsEmpty(strings.TrimSpace(s)) {
+		return cm.Error("Answer must not be empty.")
+	}
+
+	return nil
+}
+
+func CreateValidatorIsDirectory(tildeRepl string) AnswerValidator {
+	return func(s string) error {
+		s = cm.ReplaceTildeWith(s, tildeRepl)
+		if !cm.IsDirectory(s) {
+			return cm.Error("Answer must be an existing directory.")
+		}
+
+		return nil
+	}
 }

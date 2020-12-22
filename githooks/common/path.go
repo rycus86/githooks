@@ -112,6 +112,16 @@ func MakeRelative(base string, path string) (s string, e error) {
 	return
 }
 
+// ReplaceTildeWith replaces a prefix tilde '~' character in a path
+// with the string `repl`.
+func ReplaceTildeWith(p string, repl string) string {
+	if strings.HasPrefix(p, "~") {
+		return path.Join(repl, strings.TrimPrefix(p, "~"))
+	}
+
+	return p
+}
+
 // ReplaceTilde replaces a prefix tilde '~' character in a path
 // with the home dir.
 func ReplaceTilde(p string) (string, error) {

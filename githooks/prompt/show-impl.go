@@ -103,7 +103,8 @@ func (p *Context) showPromptOptionsTerminal(
 				}
 
 				if nPrompts < maxPrompts {
-					warning := p.promptFmt("Answer '%s' not in '%q', try again ...", ans, options)
+					warning := p.promptFmt("Answer '%s' not in '%q', remaining tries %v/%v...",
+						ans, options, nPrompts, maxPrompts)
 					_, e := p.termOut.Write([]byte(warning + "\n"))
 					err = cm.CombineErrors(err, e)
 				}
@@ -132,15 +133,12 @@ func showPrompt(
 	p *Context,
 	text string,
 	defaultAnswer string,
-	allowEmpty bool) (answer string, err error) {
+	validator func(string) error) (answer string, err error) {
 
 	cm.PanicIf(p.tool != nil, "Not yet implemented.")
 
 	question := ""
-	emptyCausesDefault := false
-
 	if strs.IsNotEmpty(defaultAnswer) {
-		emptyCausesDefault = true
 		question = p.promptFmt("%s [%s]: ", text, defaultAnswer)
 	} else {
 		question = p.promptFmt("%s : ", text)
@@ -150,8 +148,7 @@ func showPrompt(
 		p.showPromptTerminal(
 			question,
 			defaultAnswer,
-			emptyCausesDefault,
-			allowEmpty)
+			validator)
 
 	if e == nil {
 		return answer, nil
@@ -172,8 +169,7 @@ func showPrompt(
 func (p *Context) showPromptTerminal(
 	question string,
 	defaultAnswer string,
-	emptyCausesDefault bool,
-	allowEmpty bool) (string, bool, error) {
+	validator AnswerValidator) (string, bool, error) {
 
 	var err error
 	// Try to read from the controlling terminal if available.
@@ -201,16 +197,29 @@ func (p *Context) showPromptTerminal(
 					err = cm.CombineErrors(err, e)
 				}
 
-				if strs.IsEmpty(ans) && emptyCausesDefault {
+				if strs.IsEmpty(ans) {
+					// User pressed `Enter`
 					ans = defaultAnswer
 				}
 
-				if strs.IsNotEmpty(ans) || allowEmpty {
+				// Validate the answer if possible.
+				if validator == nil {
 					return ans, nPrompts != 0, nil
+
+				} else {
+					e := validator(ans)
+
+					if e != nil {
+						warning := p.promptFmt("Answer validation error: '%s'", e.Error())
+						_, e := p.termOut.Write([]byte(warning + "\n"))
+						err = cm.CombineErrors(err, e)
+					} else {
+						return ans, nPrompts != 0, nil
+					}
 				}
 
 				if nPrompts < maxPrompts {
-					warning := p.promptFmt("Answer is empty, try again ...")
+					warning := p.promptFmt("Answer incorrect, remaining tries %v...", maxPrompts-nPrompts)
 					_, e := p.termOut.Write([]byte(warning + "\n"))
 					err = cm.CombineErrors(err, e)
 				}

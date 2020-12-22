@@ -425,7 +425,8 @@ func runInstaller(
 	log.AssertNoErrorPanicF(err, "Could not create temporary file in '%s'.")
 	defer os.Remove(file.Name())
 
-	// Write the config ...
+	// Write the config to
+	// make the installer gettings all settings
 	writeArgs(file.Name(), args)
 
 	// Run the installer binary
@@ -672,14 +673,19 @@ func searchTemplateDirOnDisk(promptCtx prompt.IContext) string {
 func setupNewTemplateDir(installDir string, promptCtx prompt.IContext) string {
 	templateDir := path.Join(installDir, "templates")
 
+	homeDir, err := homedir.Dir()
+	cm.AssertNoErrorPanic(err, "Could not get home directory.")
+
 	if promptCtx != nil {
 		var err error
 		templateDir, err = promptCtx.ShowPrompt(
-			"Enter the target folder", templateDir, false)
+			"Enter the target folder",
+			templateDir,
+			prompt.CreateValidatorIsDirectory(homeDir))
 		log.AssertNoErrorF(err, "Could not show prompt.")
 	}
 
-	templateDir, err := cm.ReplaceTilde(templateDir)
+	templateDir = cm.ReplaceTildeWith(templateDir, homeDir)
 	log.AssertNoErrorPanicF(err, "Could not replace tilde '~' in '%s'.", templateDir)
 
 	return templateDir
@@ -1104,6 +1110,77 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 	return
 }
 
+func installGitHooksIntoExistingRepos(
+	nonInteractive bool,
+	dryRun bool,
+	promptCtx prompt.IContext) {
+
+	gitx := git.Ctx()
+	homeDir, err := homedir.Dir()
+	cm.AssertNoErrorPanic(err, "Could not get home directory.")
+
+	preSearchDir := gitx.GetConfig("githooks.previousSearchDir", git.GlobalScope)
+	hasPreSearchDir := strs.IsNotEmpty(preSearchDir)
+
+	if !hasPreSearchDir {
+		preSearchDir = homeDir
+	}
+
+	if nonInteractive {
+		if hasPreSearchDir {
+			log.InfoF("Installing hooks into existing repositories\nunder '%s'.",
+				preSearchDir)
+		} else {
+			// Non-interactive set and no pre start dir set -> abort
+			return
+		}
+	} else {
+
+		var questionPrompt []string
+		if hasPreSearchDir {
+			questionPrompt = []string{"(Yes, no)", "Y/n"}
+		} else {
+			questionPrompt = []string{"(yo, No)", "y/N"}
+		}
+
+		answer, err := promptCtx.ShowPromptOptions(
+			"Do you want to install the hooks into\n"+
+				"existing repositories?",
+			questionPrompt[0],
+			questionPrompt[1],
+			"Yes", "No")
+		log.AssertNoError(err, "Could not show prompt.")
+
+		if answer == "n" {
+			return
+		}
+
+		searchDir, err := promptCtx.ShowPrompt(
+			"Where do you want to start the search?",
+			preSearchDir,
+			prompt.CreateValidatorIsDirectory(homeDir))
+		log.AssertNoError(err, "Could not show prompt.")
+
+		searchDir = cm.ReplaceTildeWith(searchDir, homeDir)
+
+		if !cm.IsDirectory(searchDir) {
+			log.WarnF("Search directory\n'%s'\nis not a directory.\n" +
+				"Existing repositories won't get the Githooks hooks.")
+
+			return
+		}
+
+		err = gitx.SetConfig("githooks.previousSearchDir", searchDir, git.GlobalScope)
+		log.AssertNoError(err, "Could not set git config 'githooks.previousSearchDir'")
+
+	}
+
+}
+
+func installGitHooksIntoRegisteredRepos() {
+
+}
+
 func setupSharedHookRepositories() {
 
 }
@@ -1168,13 +1245,12 @@ func runUpdate(
 				args.DryRun,
 				uiSettings)
 
+		} else {
+			if !args.InternalAutoUpdate {
+				installGitHooksIntoExistingRepos(args.NonInteractive, args.DryRun, uiSettings.PromptCtx)
+			}
+			installGitHooksIntoRegisteredRepos()
 		}
-		// else {
-		// 	// if !args.InternalAutoUpdate {
-		// 	// 	//installGitHooksIntoExistingRepos()
-		// 	// }
-		// 	//installGitHooksIntoRegisteredRepos()
-		// }
 	}
 
 	if !args.InternalAutoUpdate && !args.NonInteractive && !args.SingleInstall {

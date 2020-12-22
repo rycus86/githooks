@@ -41,6 +41,6 @@ func (p *Context) ShowPromptOptions(text string,
 func (p *Context) ShowPrompt(
 	text string,
 	defaultAnswer string,
-	allowEmpty bool) (answer string, err error) {
-	return showPrompt(p, text, defaultAnswer, allowEmpty)
+	validator AnswerValidator) (answer string, err error) {
+	return showPrompt(p, text, defaultAnswer, validator)
 }
