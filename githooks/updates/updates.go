@@ -219,7 +219,7 @@ func FetchUpdates(
 		resetRemoteTo, e = gitx.Get("rev-list", "-n", "1", tag)
 		if e != nil {
 			err = e
-			return //nolint:nlreturn
+			return // nolint:nlreturn
 		}
 	}
 

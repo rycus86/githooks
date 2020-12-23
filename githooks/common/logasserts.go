@@ -90,7 +90,7 @@ func (c *LogContext) PanicIfF(condition bool, format string, args ...interface{}
 func (c *LogContext) AssertNoError(err error, lines ...string) bool {
 	if err != nil {
 		c.Warn(append(lines, strs.SplitLines("-> error: ["+err.Error()+"]")...)...)
-		return false //nolint:nlreturn
+		return false // nolint:nlreturn
 	}
 
 	return true
@@ -100,7 +100,7 @@ func (c *LogContext) AssertNoError(err error, lines ...string) bool {
 func (c *LogContext) AssertNoErrorF(err error, format string, args ...interface{}) bool {
 	if err != nil {
 		c.WarnF(format+"\n-> error: ["+err.Error()+"]", args...)
-		return false //nolint:nlreturn
+		return false // nolint:nlreturn
 	}
 
 	return true

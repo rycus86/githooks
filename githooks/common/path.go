@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DefaultDirectoryFileMode = os.FileMode(0775) //nolint:gomnd
+	DefaultDirectoryFileMode = os.FileMode(0775) // nolint:gomnd
 )
 
 // IsPathError returns `true` if the error is a `os.PathError`.
@@ -68,13 +68,13 @@ func WalkFiles(root string, filter FileFunc) (err error) {
 		func(path string, info os.FileInfo, e error) error {
 			if info == nil || err != nil {
 				err = CombineErrors(err, e)
-				return nil //nolint:nlreturn
+				return nil // nolint:nlreturn
 			}
 
 			if info.IsDir() {
 				if !rootDirVisited {
 					rootDirVisited = true
-					return nil //nolint:nlreturn // Skip root dir...
+					return nil // nolint:nlreturn // Skip root dir...
 				}
 				// Skip all other dirs...
 				return filepath.SkipDir
@@ -187,9 +187,9 @@ func GetTempFileName(dir string, postfix string) (file string) {
 	maxLoops := 10
 	i := 0
 
-	file = path.Join(dir, strs.RandomString(8)+postfix) //nolint:gomnd
+	file = path.Join(dir, strs.RandomString(8)+postfix) // nolint:gomnd
 	for IsFile(file) && i < maxLoops {
-		file = path.Join(dir, strs.RandomString(8)+postfix) //nolint:gomnd
+		file = path.Join(dir, strs.RandomString(8)+postfix) // nolint:gomnd
 		i++
 	}
 

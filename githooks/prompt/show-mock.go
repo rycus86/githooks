@@ -44,3 +44,11 @@ func (p *Context) ShowPrompt(
 	validator AnswerValidator) (answer string, err error) {
 	return showPrompt(p, text, defaultAnswer, validator)
 }
+
+// ShowPromptMulti shows multiple prompts to enter multiple answers and
+// validates it with a validator. An empty answer exits the prompt.
+func (p *Context) ShowPromptMulti(
+	text string,
+	validator AnswerValidator) (answers []string, err error) {
+	return showPromptMulti(p, text, validator)
+}

@@ -1,11 +1,33 @@
 {
-    "go.useLanguageServer": false,
-    "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true,
-        "**/.go": true
-    }
+  "go.useLanguageServer": false,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/.go": true
+  },
+  "go.lintFlags": [
+    "-E",
+    "godot",
+    "-E",
+    "gomnd",
+    "-E",
+    "goconst",
+    "-E",
+    "gochecknoinits",
+    "-E",
+    "nlreturn",
+    "-E",
+    "misspell",
+    "-E",
+    "lll",
+    "-E",
+    "exportloopref",
+    "-E",
+    "gocritic",
+    "--max-same-issues",
+    "0"
+  ]
 }

@@ -16,17 +16,24 @@ func showPromptOptions(
 	longOptions ...string) (answer string, err error) {
 
 	options := strings.Split(shortOptions, "/")
+	validator := CreateValidatorAnswerOptions(options)
+
 	defaultAnswer := getDefaultAnswer(options)
 
 	if p.tool != nil {
 
 		args := append([]string{text, hintText, shortOptions}, longOptions...)
-		answer, err = cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
-		answer = strings.ToLower(answer)
+		ans, e := cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
+		ans = strings.ToLower(ans)
 
-		if err == nil {
-			if isAnswerCorrect(answer, options) {
-				return
+		if e == nil {
+
+			// Validate the answer if possible.
+			if validator == nil {
+				return ans, nil
+
+			} else if e := validator(ans); e == nil {
+				return ans, nil
 			}
 
 			return defaultAnswer,
@@ -34,24 +41,25 @@ func showPromptOptions(
 					answer, options)
 		}
 
-		err = cm.CombineErrors(err, cm.ErrorF("Could not execute dialog script '%q'", p.tool))
+		err = cm.CombineErrors(e, cm.ErrorF("Could not execute dialog script '%q'", p.tool))
 		// else: Runnning fallback ...
 	}
 
 	emptyCausesDefault := strs.IsNotEmpty(defaultAnswer)
 	question := p.promptFmt("%s %s [%s]: ", text, hintText, shortOptions)
 
-	answer, isPromptDisplayed, e := p.showPromptOptionsTerminal(
-		question,
-		defaultAnswer,
-		options,
-		emptyCausesDefault)
+	answer, isPromptDisplayed, e :=
+		showPromptOptionsTerminal(
+			p,
+			question,
+			defaultAnswer,
+			options,
+			emptyCausesDefault,
+			validator)
 
 	if e == nil {
 		return answer, nil
 	}
-
-	err = cm.CombineErrors(err, e)
 
 	if !isPromptDisplayed {
 		// Show the prompt in the log output
@@ -60,70 +68,90 @@ func showPromptOptions(
 
 	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
 
-	return defaultAnswer, err
+	return defaultAnswer, cm.CombineErrors(err, e)
 }
 
-func (p *Context) showPromptOptionsTerminal(
+func showPromptOptionsTerminal(
+	p *Context,
 	question string,
 	defaultAnswer string,
 	options []string,
-	emptyCausesDefault bool) (string, bool, error) {
+	emptyCausesDefault bool,
+	validator AnswerValidator) (string, bool, error) {
 
-	var err error
-	// Try to read from the controlling terminal if available.
-	// Our stdin is never a tty (either a pipe or /dev/null when called
-	// from git), so read from /dev/tty, our controlling terminal,
-	// if it can be opened.
+	var err error // all errors
+
 	nPrompts := 0 // How many times we showed the prompt
 	maxPrompts := 3
 
-	if p.termIn != nil && p.termOut != nil {
-
-		for nPrompts < maxPrompts {
-
-			_, err = p.termOut.Write([]byte(question))
-			nPrompts++
-
-			success := p.termInScanner.Scan()
-
-			if success {
-				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
-
-				if p.printAnswer {
-					_, e := p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
-					err = cm.CombineErrors(err, e)
-				}
-
-				if strs.IsEmpty(ans) && emptyCausesDefault {
-					ans = defaultAnswer
-				}
-
-				if isAnswerCorrect(ans, options) {
-					return ans, nPrompts != 0, nil
-				}
-
-				if nPrompts < maxPrompts {
-					warning := p.promptFmt("Answer '%s' not in '%q', remaining tries %v/%v...",
-						ans, options, nPrompts, maxPrompts)
-					_, e := p.termOut.Write([]byte(warning + "\n"))
-					err = cm.CombineErrors(err, e)
-				}
-
-			} else {
-				_, e := p.termOut.Write([]byte("\n"))
-				err = cm.CombineErrors(err, e, cm.ErrorF("Could not read from terminal."))
-
-				break
-			}
-		}
-
-		warning := p.promptFmt("Could not get answer in '%q', taking default '%s'", options, defaultAnswer)
-		_, e := p.termOut.Write([]byte(warning + "\n"))
-		err = cm.CombineErrors(err, e)
-
-	} else {
-		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")
+	switch {
+	case p.termIn == nil:
+		err = cm.ErrorF("No terminal input available to show prompt.")
+		return defaultAnswer, false, err // nolint: nlreturn
+	case p.termOut == nil:
+		err = cm.ErrorF("No terminal output available to show prompt.")
+		return defaultAnswer, false, err // nolint: nlreturn
 	}
+
+	// Write to terminal output.
+	writeOut := func(s string) error {
+		_, e := p.termOut.Write([]byte(s))
+		return e // nolint: nlreturn
+	}
+
+	for nPrompts < maxPrompts {
+
+		err = writeOut(question)
+		nPrompts++
+
+		success := p.termInScanner.Scan()
+
+		if success {
+
+			ans := p.termInScanner.Text()
+
+			if p.printAnswer {
+				_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
+			}
+
+			// Fallback to default answer.
+			if strs.IsEmpty(ans) && emptyCausesDefault {
+				ans = defaultAnswer
+			}
+
+			// Trim everything.
+			ans = strings.ToLower(strings.TrimSpace(ans))
+
+			// Validate the answer if possible.
+			if validator == nil {
+				return ans, true, nil
+			}
+
+			e := validator(ans)
+			if e == nil {
+				return ans, true, nil
+			}
+
+			warning := p.errorFmt("Answer validation error: %s", e.Error())
+			err = cm.CombineErrors(err, writeOut(warning+"\n"))
+
+			if nPrompts < maxPrompts {
+				warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
+				err = cm.CombineErrors(err, writeOut(warning+"\n"))
+			}
+
+		} else {
+			err = cm.CombineErrors(err,
+				writeOut("\n"),
+				cm.ErrorF("Could not read from terminal."))
+
+			break
+		}
+	}
+
+	warning := p.errorFmt("Could not get answer in '%q', taking default '%s'.",
+		options, defaultAnswer)
+	err = cm.CombineErrors(err, writeOut(warning+"\n"))
 
 	return defaultAnswer, nPrompts != 0, err
 }
@@ -137,16 +165,16 @@ func showPrompt(
 
 	cm.PanicIf(p.tool != nil, "Not yet implemented.")
 
-	question := ""
 	if strs.IsNotEmpty(defaultAnswer) {
-		question = p.promptFmt("%s [%s]: ", text, defaultAnswer)
+		text = p.promptFmt("%s [%s]: ", text, defaultAnswer)
 	} else {
-		question = p.promptFmt("%s : ", text)
+		text = p.promptFmt("%s : ", text)
 	}
 
 	answer, isPromptDisplayed, e :=
-		p.showPromptTerminal(
-			question,
+		showPromptTerminal(
+			p,
+			text,
 			defaultAnswer,
 			validator)
 
@@ -158,16 +186,17 @@ func showPrompt(
 
 	if !isPromptDisplayed {
 		// Show the prompt in the log output
-		p.log.Info(question)
+		p.log.Info(text)
 	}
 
-	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
+	p.log.DebugF("Answer not received -> Using default '%s'.", defaultAnswer)
 
 	return defaultAnswer, err
 }
 
-func (p *Context) showPromptTerminal(
-	question string,
+func showPromptTerminal(
+	p *Context,
+	text string,
 	defaultAnswer string,
 	validator AnswerValidator) (string, bool, error) {
 
@@ -178,67 +207,125 @@ func (p *Context) showPromptTerminal(
 	// if it can be opened.
 	nPrompts := 0 // How many times we showed the prompt
 	maxPrompts := 3
-
-	if p.termIn != nil && p.termOut != nil {
-
-		for nPrompts < maxPrompts {
-
-			_, e := p.termOut.Write([]byte(question))
-			err = cm.CombineErrors(err, e)
-			nPrompts++
-
-			success := p.termInScanner.Scan()
-
-			if success {
-				ans := strings.ToLower(strings.TrimSpace(p.termInScanner.Text()))
-
-				if p.printAnswer {
-					_, e := p.termOut.Write([]byte(strs.Fmt(" -> Received: '%s'\n", ans)))
-					err = cm.CombineErrors(err, e)
-				}
-
-				if strs.IsEmpty(ans) {
-					// User pressed `Enter`
-					ans = defaultAnswer
-				}
-
-				// Validate the answer if possible.
-				if validator == nil {
-					return ans, nPrompts != 0, nil
-
-				} else {
-					e := validator(ans)
-
-					if e != nil {
-						warning := p.promptFmt("Answer validation error: '%s'", e.Error())
-						_, e := p.termOut.Write([]byte(warning + "\n"))
-						err = cm.CombineErrors(err, e)
-					} else {
-						return ans, nPrompts != 0, nil
-					}
-				}
-
-				if nPrompts < maxPrompts {
-					warning := p.promptFmt("Answer incorrect, remaining tries %v...", maxPrompts-nPrompts)
-					_, e := p.termOut.Write([]byte(warning + "\n"))
-					err = cm.CombineErrors(err, e)
-				}
-
-			} else {
-				_, e := p.termOut.Write([]byte("\n"))
-				err = cm.CombineErrors(err, e, cm.ErrorF("Could not read from terminal."))
-
-				break
-			}
-		}
-
-		warning := p.promptFmt("Could not get non-empty answer, taking default '%s'", defaultAnswer)
-		_, e := p.termOut.Write([]byte(warning + "\n"))
-		err = cm.CombineErrors(err, e)
-
-	} else {
-		err = cm.ErrorF("Do not have a controlling terminal to show prompt.")
+	switch {
+	case p.termIn == nil:
+		err = cm.ErrorF("No terminal input available to show prompt.")
+		return defaultAnswer, false, err // nolint: nlreturn
+	case p.termOut == nil:
+		err = cm.ErrorF("No terminal output available to show prompt.")
+		return defaultAnswer, false, err // nolint: nlreturn
 	}
 
+	// Write to terminal output.
+	writeOut := func(s string) error {
+		_, e := p.termOut.Write([]byte(s))
+		return e // nolint: nlreturn
+	}
+
+	for nPrompts < maxPrompts {
+
+		err = writeOut(text)
+		nPrompts++
+
+		success := p.termInScanner.Scan()
+
+		if success {
+			ans := p.termInScanner.Text()
+
+			if p.printAnswer {
+				_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
+			}
+
+			if strs.IsEmpty(ans) {
+				// User pressed `Enter`
+				ans = defaultAnswer
+			}
+
+			// Trim everything.
+			ans = strings.ToLower(strings.TrimSpace(ans))
+
+			// Validate the answer if possible.
+			if validator == nil {
+				return ans, true, nil
+			}
+
+			e := validator(ans)
+			if e == nil {
+				return ans, true, nil
+			}
+
+			warning := p.errorFmt("Answer validation error: %s", e.Error())
+			err = cm.CombineErrors(err, writeOut(warning+"\n"))
+
+			if nPrompts < maxPrompts {
+				warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
+				err = cm.CombineErrors(err, writeOut(warning+"\n"))
+			}
+
+		} else {
+			err = cm.CombineErrors(err,
+				writeOut("\n"), cm.ErrorF("Could not read from terminal."))
+
+			break
+		}
+	}
+
+	warning := p.errorFmt("Could not get answer, taking default '%s'.", defaultAnswer)
+	err = cm.CombineErrors(err, writeOut(warning+"\n"))
+
 	return defaultAnswer, nPrompts != 0, err
+}
+
+func showPromptMulti(
+	p *Context,
+	text string,
+	validator AnswerValidator) (answers []string, err error) {
+
+	cm.PanicIf(p.tool != nil, "Not yet implemented.")
+
+	doParse := true
+
+	// Write to terminal output.
+	writeOut := func(s string) error {
+		_, e := p.termOut.Write([]byte(s))
+		return e // nolint: nlreturn
+	}
+
+	ans := ""
+	isPromptDisplayed := false
+	prompt := p.promptFmt(text + " : ")
+
+	for doParse {
+
+		ans, isPromptDisplayed, err = showPromptTerminal(p, prompt, "", nil)
+
+		if err == nil {
+
+			if strs.IsEmpty(ans) {
+
+				doParse = false
+				continue // nolint: nlreturn
+
+			} else if validator != nil {
+				// Validate the answer if possible.
+				if e := validator(ans); e != nil {
+					_ = writeOut(p.errorFmt("Entry validation error: %s", e.Error()))
+					continue // nolint: nlreturn
+				}
+			}
+
+			// Add the entry.
+			answers = append(answers, ans)
+
+		} else {
+			doParse = false
+
+			if !isPromptDisplayed {
+				// Show the prompt in the log output
+				p.log.Info(text)
+			}
+		}
+	}
+
+	return
 }

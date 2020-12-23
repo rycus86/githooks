@@ -31,6 +31,7 @@ func GetRepoSharedFile(repoHooksDir string) string {
 // SharedConfigName defines the config name used to define local/global
 // shared hooks in the local/global Git configuration.
 var SharedConfigName string = "githooks.shared"
+var reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
 func getSharedCloneDir(installDir string, entry string) string {
 	// Legacy: As we used `git hash-object --stdin` we need to model the same behavior here
@@ -38,60 +39,24 @@ func getSharedCloneDir(installDir string, entry string) string {
 	sha1 := cm.GetSHA1HashString("blob ", strs.Fmt("%v", len([]byte(entry))), "\u0000", entry)
 
 	name := []rune(entry)
-	if len(entry) > 48 { //nolint:gomnd
+	if len(entry) > 48 { // nolint:gomnd
 		name = name[0:48]
 	}
-	nameAbrev := getReEscapeURL().ReplaceAllLiteralString(string(name), "-")
+	nameAbrev := reEscapeURL.ReplaceAllLiteralString(string(name), "-")
 
 	return path.Join(installDir, "shared", sha1+"-"+nameAbrev)
 }
 
-var reURLScheme *regexp.Regexp
-
-func getReURLScheme() *regexp.Regexp {
-	if reURLScheme == nil {
-		reURLScheme = regexp.MustCompile(`(?m)^[^:/?#]+://`)
-	}
-
-	return reURLScheme
-}
-
-var reShortSCPSyntax *regexp.Regexp
-
-func getReShortSCPSyntax() *regexp.Regexp {
-	if reShortSCPSyntax == nil {
-		reShortSCPSyntax = regexp.MustCompile(`(?m)^.+@.+:.+`)
-	}
-
-	return reShortSCPSyntax
-}
-
-var reFileURLScheme *regexp.Regexp
-
-func getReFileURLScheme() *regexp.Regexp {
-	if reFileURLScheme == nil {
-		reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
-	}
-
-	return reFileURLScheme
-}
-
-var reEscapeURL *regexp.Regexp
-
-func getReEscapeURL() *regexp.Regexp {
-	if reEscapeURL == nil {
-		reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
-	}
-
-	return reEscapeURL
-}
+var reURLScheme *regexp.Regexp = regexp.MustCompile(`(?m)^[^:/?#]+://`)
+var reShortSCPSyntax = regexp.MustCompile(`(?m)^.+@.+:.+`)
+var reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
 
 func isSharedEntryALocalPath(url string) bool {
-	return !(getReURLScheme().MatchString(url) || getReShortSCPSyntax().MatchString(url))
+	return !(reURLScheme.MatchString(url) || reShortSCPSyntax.MatchString(url))
 }
 
 func isSharedEntryALocalURL(url string) bool {
-	return getReFileURLScheme().MatchString(url)
+	return reFileURLScheme.MatchString(url)
 }
 
 func parseSharedEntry(installDir string, entry string) (SharedHook, error) {

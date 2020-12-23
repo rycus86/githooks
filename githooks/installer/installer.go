@@ -23,18 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// InstallSettings are the settings for the installer.
-type InstallSettings struct {
-	Cwd        string // The current working directory.
-	InstallDir string // The install directory.
-	CloneDir   string // The release clone dir inside the install dir.
-	TempDir    string // The temporary directory inside the install dir.
-
-	PromptCtx prompt.IContext // The prompt context for UI prompts.
-
-	HookTemplateDir string // The chosen hook template directory.
-}
-
 var log cm.ILogContext
 var args = Arguments{}
 
@@ -259,15 +247,25 @@ func setMainVariables(args *Arguments) (InstallSettings, UISettings) {
 		installDir = path.Join(filepath.ToSlash(installDir), hooks.HookDirName)
 	}
 
+	// Read registered file if existing.
+	// We ensured during load, that only existing Git directories
+	// are listed.
+	registered := hooks.RegisterRepos{}
+	err = registered.Load(installDir, true, true)
+	log.AssertNoErrorPanicF(err,
+		"Could not load register file in '%s'.", installDir)
+
 	// Remove temporary directory if existing
 	tempDir, err := hooks.CleanTemporaryDir(installDir)
-	log.AssertNoErrorPanicF(err, "Could not clean temporary directory in '%s'", installDir)
+	log.AssertNoErrorPanicF(err,
+		"Could not clean temporary directory in '%s'", installDir)
 
 	return InstallSettings{
-			Cwd:        cwd,
-			InstallDir: installDir,
-			CloneDir:   hooks.GetReleaseCloneDir(installDir),
-			TempDir:    tempDir},
+			Cwd:               cwd,
+			InstallDir:        installDir,
+			CloneDir:          hooks.GetReleaseCloneDir(installDir),
+			TempDir:           tempDir,
+			RegisteredGitDirs: registered},
 		UISettings{PromptCtx: promptCtx}
 }
 
@@ -518,7 +516,7 @@ func findGitHookTemplates(
 	// and no folder is found by now
 	if nonInteractive {
 		templateDir := setupNewTemplateDir(installDir, nil)
-		return path.Join(templateDir, "hooks"), templateDir //nolint:nlreturn
+		return path.Join(templateDir, "hooks"), templateDir // nolint:nlreturn
 	}
 
 	// 5. Try to search for it on disk
@@ -570,7 +568,7 @@ func findGitHookTemplates(
 
 	if answer == "y" {
 		templateDir := setupNewTemplateDir(installDir, promptCtx)
-		return path.Join(templateDir, "hooks"), templateDir //nolint:nlreturn
+		return path.Join(templateDir, "hooks"), templateDir // nolint:nlreturn
 	}
 
 	return "", ""
@@ -597,9 +595,9 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
 		var matches []string
 		running := true
 
-		spinnerT := time.NewTicker(10 * time.Millisecond) //nolint:gomnd
-		stillSearching := time.After(10 * time.Second)    //nolint:gomnd
-		timeout := time.After(300 * time.Second)          //nolint:gomnd
+		spinnerT := time.NewTicker(10 * time.Millisecond) // nolint:gomnd
+		stillSearching := time.After(10 * time.Second)    // nolint:gomnd
+		timeout := time.After(300 * time.Second)          // nolint:gomnd
 
 		for running {
 			select {
@@ -831,12 +829,12 @@ func setupHookTemplates(
 	onlyServerHooks bool,
 	nonInteractive bool,
 	dryRun bool,
-	promptCtx prompt.IContext) {
+	uiSettings *UISettings) {
 
 	if dryRun {
 		log.InfoF("[dry run] Would install Git hook templates into '%s'.",
 			hookTemplateDir)
-		return //nolint:nlreturn
+		return // nolint:nlreturn
 	}
 
 	log.InfoF("Installing Git hook templates into '%s'.",
@@ -853,7 +851,7 @@ func setupHookTemplates(
 		hookTemplateDir,
 		hookNames,
 		tempDir,
-		getHookDisableCallback(log, nonInteractive, dryRun, promptCtx),
+		getHookDisableCallback(log, nonInteractive, dryRun, uiSettings),
 		log)
 
 	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookTemplateDir)
@@ -878,7 +876,7 @@ func installBinaries(
 	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", path.Base(s)) })
 	if dryRun {
 		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
-		return //nolint:nlreturn
+		return // nolint:nlreturn
 	}
 
 	log.InfoF("Installing binaries:\n%s\n"+"to '%s'.", strings.Join(msg, "\n"), binDir)
@@ -893,8 +891,10 @@ func installBinaries(
 	if hooks.InstallLegacyBinaries {
 		src := path.Join(cloneDir, "cli.sh")
 		dest := path.Join(binDir, path.Base(src))
-		err := cm.CopyFile(src, dest)
-		log.AssertNoErrorPanicF(err, "Could not copy legacy executable '%s'.", src)
+		_ = os.Remove(dest)
+		err := cm.CombineErrors(cm.CopyFile(src, dest))
+		err = cm.CombineErrors(err, cm.MakeExecutbale(dest))
+		log.AssertNoErrorPanicF(err, "Could not copy legacy executable '%s'.", dest)
 	}
 
 	// Set CLI executable alias.
@@ -902,11 +902,6 @@ func installBinaries(
 	err = hooks.SetCLIExecutableAlias(cliTool)
 	log.AssertNoErrorPanicF(err,
 		"Could not set Git config 'alias.hooks' to '%s'.", cliTool)
-
-	if hooks.InstallLegacyBinaries {
-		err = cm.MakeExecutbale(cliTool)
-		log.AssertNoErrorPanicF(err, "Making file '%s' executable failed.", cliTool)
-	}
 
 	// Set runner executable alias.
 	runner := hooks.GetRunnerExecutable(installDir)
@@ -1059,7 +1054,7 @@ func installGitHooksIntoRepo(
 	tempDir string,
 	nonInteractive bool,
 	dryRun bool,
-	uiSettings *UISettings) {
+	uiSettings *UISettings) bool {
 
 	hookDir := path.Join(repoGitDir, "hooks")
 	if !cm.IsDirectory(hookDir) {
@@ -1079,7 +1074,7 @@ func installGitHooksIntoRepo(
 
 	err := hooks.InstallRunWrappers(
 		hookDir, hookNames, tempDir,
-		getHookDisableCallback(log, nonInteractive, dryRun, uiSettings.PromptCtx),
+		getHookDisableCallback(log, nonInteractive, dryRun, uiSettings),
 		nil)
 	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookDir)
 
@@ -1093,10 +1088,14 @@ func installGitHooksIntoRepo(
 	if dryRun {
 		log.InfoF("[dry run] Hooks would have been installed into\n'%s'.",
 			repoGitDir)
-	} else {
-		log.InfoF("Hooks installed into\n'%s'.",
-			repoGitDir)
+
+		return false
 	}
+
+	log.InfoF("Hooks installed into\n'%s'.",
+		repoGitDir)
+
+	return true
 }
 
 func getCurrentGitDir(cwd string) (gitDir string) {
@@ -1111,25 +1110,22 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 }
 
 func installGitHooksIntoExistingRepos(
+	tempDir string,
 	nonInteractive bool,
 	dryRun bool,
-	promptCtx prompt.IContext) {
+	installedRepos InstallMap,
+	uiSettings *UISettings) {
 
 	gitx := git.Ctx()
 	homeDir, err := homedir.Dir()
 	cm.AssertNoErrorPanic(err, "Could not get home directory.")
 
-	preSearchDir := gitx.GetConfig("githooks.previousSearchDir", git.GlobalScope)
-	hasPreSearchDir := strs.IsNotEmpty(preSearchDir)
-
-	if !hasPreSearchDir {
-		preSearchDir = homeDir
-	}
+	searchDir := gitx.GetConfig("githooks.previousSearchDir", git.GlobalScope)
+	hasSearchDir := strs.IsNotEmpty(searchDir)
 
 	if nonInteractive {
-		if hasPreSearchDir {
-			log.InfoF("Installing hooks into existing repositories\nunder '%s'.",
-				preSearchDir)
+		if hasSearchDir {
+			log.InfoF("Installing hooks into existing repositories under:\n'%s'.", searchDir)
 		} else {
 			// Non-interactive set and no pre start dir set -> abort
 			return
@@ -1137,13 +1133,14 @@ func installGitHooksIntoExistingRepos(
 	} else {
 
 		var questionPrompt []string
-		if hasPreSearchDir {
+		if hasSearchDir {
 			questionPrompt = []string{"(Yes, no)", "Y/n"}
 		} else {
+			searchDir = homeDir
 			questionPrompt = []string{"(yo, No)", "y/N"}
 		}
 
-		answer, err := promptCtx.ShowPromptOptions(
+		answer, err := uiSettings.PromptCtx.ShowPromptOptions(
 			"Do you want to install the hooks into\n"+
 				"existing repositories?",
 			questionPrompt[0],
@@ -1155,38 +1152,194 @@ func installGitHooksIntoExistingRepos(
 			return
 		}
 
-		searchDir, err := promptCtx.ShowPrompt(
+		searchDir, err = uiSettings.PromptCtx.ShowPrompt(
 			"Where do you want to start the search?",
-			preSearchDir,
+			searchDir,
 			prompt.CreateValidatorIsDirectory(homeDir))
 		log.AssertNoError(err, "Could not show prompt.")
+	}
 
-		searchDir = cm.ReplaceTildeWith(searchDir, homeDir)
+	searchDir = cm.ReplaceTildeWith(searchDir, homeDir)
 
-		if !cm.IsDirectory(searchDir) {
-			log.WarnF("Search directory\n'%s'\nis not a directory.\n" +
-				"Existing repositories won't get the Githooks hooks.")
+	if !cm.IsDirectory(searchDir) {
+		log.WarnF("Search directory\n'%s'\nis not a directory.\n" +
+			"Existing repositories won't get the Githooks hooks.")
 
-			return
+		return
+	}
+
+	err = gitx.SetConfig("githooks.previousSearchDir", searchDir, git.GlobalScope)
+	log.AssertNoError(err, "Could not set git config 'githooks.previousSearchDir'")
+
+	gitDirs, err := git.FindGitDirs(searchDir)
+	log.AssertNoError(err, "Could not find Git directories in '%s'.", searchDir)
+	if err != nil {
+		return
+	}
+
+	if len(gitDirs) == 0 {
+		log.InfoF("No Git directories found in '%s'.", searchDir)
+	}
+
+	for _, gitDir := range gitDirs {
+
+		if installGitHooksIntoRepo(
+			gitDir, tempDir,
+			nonInteractive, dryRun, uiSettings) {
+
+			installedRepos.Insert(gitDir, false)
 		}
-
-		err = gitx.SetConfig("githooks.previousSearchDir", searchDir, git.GlobalScope)
-		log.AssertNoError(err, "Could not set git config 'githooks.previousSearchDir'")
-
 	}
 
 }
 
-func installGitHooksIntoRegisteredRepos() {
+func installGitHooksIntoRegisteredRepos(
+	tempDir string,
+	nonInteractive bool,
+	dryRun bool,
+	installedRepos InstallMap,
+	registeredRepos *hooks.RegisterRepos,
+	uiSettings *UISettings) {
+
+	if len(registeredRepos.GitDirs) == 0 {
+		return
+	}
+
+	if !nonInteractive {
+
+		answer, err := uiSettings.PromptCtx.ShowPromptOptions(
+			"The following remaining registered repositories\n"+
+				"contain Githooks installation:\n"+
+				strings.Join(
+					strs.Map(registeredRepos.GitDirs,
+						func(s string) string {
+							return strs.Fmt("- '%s'", s)
+						}), "\n")+
+				"\nDo you want to install updated run wrappers\n"+
+				"to all of them?",
+			"(Yes, no)", "Y/n", "Yes", "No")
+		log.AssertNoError(err, "Could not show prompt.")
+
+		if answer == "n" {
+			return
+		}
+	}
+
+	for _, gitDir := range registeredRepos.GitDirs {
+
+		if installGitHooksIntoRepo(
+			gitDir, tempDir,
+			nonInteractive, dryRun, uiSettings) {
+
+			registeredRepos.Insert(gitDir)
+			installedRepos.Insert(gitDir, true)
+		}
+	}
 
 }
 
-func setupSharedHookRepositories() {
+func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *UISettings) {
+
+	gitx := git.Ctx()
+	sharedRepos := gitx.GetConfigAll("githooks.shared", git.GlobalScope)
+
+	var question string
+	if len(sharedRepos) != 0 {
+		question = "Looks like you already have shared hook\n" +
+			"repositories setup, do you want to change them now?"
+	} else {
+		question = "You can set up shared hook repositories to avoid\n" +
+			"duplicating common hooks across repositories you work on\n" +
+			"See information on what are these in the project's documentation:\n" +
+			strs.Fmt("'%s#shared-hook-repositories'\n", hooks.GithooksWebpage) +
+			"Note: you can also have a .githooks/.shared file listing the\n" +
+			"      repositories where you keep the shared hook files.\n" +
+			"Would you like to set up shared hook repos now?"
+	}
+
+	answer, err := uiSettings.PromptCtx.ShowPromptOptions(
+		question,
+		"(yes, No)", "y/N", "Yes", "No")
+	log.AssertNoError(err, "Could not show prompt")
+
+	if answer == "n" {
+		return
+	}
+
+	log.Info("Let's input shared hook repository urls",
+		"one-by-one and leave the input empty to stop.")
+
+	entries, err := uiSettings.PromptCtx.ShowPromptMulti(
+		"Enter the clone URL of a shared repository",
+		prompt.ValidatorAnswerNotEmpty)
+
+	if err != nil {
+		log.Error("Could not show prompt. Not settings shared hook repositories.")
+		return // nolint: nlreturn
+	}
+
+	// Unset all shared configs.
+	err = gitx.UnsetConfig("githooks.shared", git.GlobalScope)
+	log.AssertNoError(err,
+		"Could not unset Git config 'githooks.shared'.",
+		"Failed to setup shared hook repositories.")
+	if err != nil {
+		return
+	}
+
+	// Add all entries.
+	for _, entry := range entries {
+		err := gitx.AddConfig("githooks.shared", entry, git.GlobalScope)
+		log.AssertNoError(err,
+			"Could not add Git config 'githooks.shared'.",
+			"Failed to setup shared hook repositories.")
+		if err != nil {
+			return
+		}
+	}
+
+	if len(entries) == 0 {
+		log.Info(
+			"Shared hook repositories are now unset.",
+			"If you want to set them up again in the future",
+			"run this script again, or change the 'githooks.shared'",
+			"Git config variable manually.",
+			"Note: Shared hook repos listed in the .githooks/.shared",
+			"file will still be executed")
+	} else {
+		// @todo This functionality should be shared
+		// with cli/runner and here
+		err := cm.RunExecutable(
+			&cm.ExecContext{},
+			&cm.Executable{Path: cliExectuable, RunCmd: []string{"sh"}},
+			false,
+			"shared", "update", "--global")
+		log.AssertNoError(err, "Could not update shared hook repositories.")
+
+		log.Info(
+			"Shared hook repositories have been set up.",
+			"You can change them any time by running this script",
+			"again, or manually by changing the 'githooks.shared'",
+			"Git config variable.",
+			"Note: you can also list the shared hook repos per",
+			"project within the .githooks/.shared file")
+	}
+}
+
+func storeSettings(settings *InstallSettings, uiSettings *UISettings) {
+	// Store cached UI values back.
+	err := git.Ctx().SetConfig("githooks.deleteDetectedLFSHooks", uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
+	log.AssertNoError(err, "Could not store config 'githooks.deleteDetectedLFSHooks'.")
+
+	err = settings.RegisteredGitDirs.Store(settings.InstallDir)
+	log.AssertNoError(err,
+		"Could not store registered file in '%s'.",
+		settings.InstallDir)
 
 }
 
 func thankYou() {
-	log.InfoF("\nAll done! Enjoy!\n"+
+	log.InfoF("All done! Enjoy!\n"+
 		"Please support the project by starring the project\n"+
 		"at '%s', and report\n"+
 		"bugs or missing features or improvements as issues.\n"+
@@ -1229,7 +1382,7 @@ func runUpdate(
 		args.OnlyServerHooks,
 		args.NonInteractive,
 		args.DryRun,
-		uiSettings.PromptCtx)
+		uiSettings)
 
 	if !args.InternalAutoUpdate {
 		setupAutomaticUpdate(args.NonInteractive, args.DryRun, uiSettings.PromptCtx)
@@ -1246,15 +1399,35 @@ func runUpdate(
 				uiSettings)
 
 		} else {
+
 			if !args.InternalAutoUpdate {
-				installGitHooksIntoExistingRepos(args.NonInteractive, args.DryRun, uiSettings.PromptCtx)
+				installGitHooksIntoExistingRepos(
+					settings.TempDir,
+					args.NonInteractive,
+					args.DryRun,
+					settings.InstalledGitDirs,
+					uiSettings)
 			}
-			installGitHooksIntoRegisteredRepos()
+
+			installGitHooksIntoRegisteredRepos(
+				settings.TempDir,
+				args.NonInteractive,
+				args.DryRun,
+				settings.InstalledGitDirs,
+				&settings.RegisteredGitDirs,
+				uiSettings)
 		}
 	}
 
 	if !args.InternalAutoUpdate && !args.NonInteractive && !args.SingleInstall {
-		setupSharedHookRepositories()
+		setupSharedHookRepositories(
+			hooks.GetCLIExecutable(settings.InstallDir),
+			args.DryRun,
+			uiSettings)
+	}
+
+	if !args.DryRun {
+		storeSettings(settings, uiSettings)
 	}
 
 	thankYou()

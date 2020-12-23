@@ -6,7 +6,7 @@ type IExecutable interface {
 	GetArgs(args ...string) []string
 }
 
-// Executable contains the data to a script/executbale file.
+// Executable contains the data to a script/executable file.
 type Executable struct {
 	// The absolute path of the script/executable.
 	Path string

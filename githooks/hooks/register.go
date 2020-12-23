@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
@@ -17,18 +18,14 @@ type RegisterRepos struct {
 }
 
 // RegisterRepo registers the Git directory in the install directory.
-func RegisterRepo(absGitDir string, installDir string, filterExisting bool) error {
+func RegisterRepo(absGitDir string, installDir string, filterExisting bool, filterGitDirs bool) error {
 	cm.DebugAssertF(filepath.IsAbs(absGitDir),
 		"Not an absolute Git dir '%s'", absGitDir)
 
 	var repos RegisterRepos
-	err := repos.Load(installDir)
+	err := repos.Load(installDir, filterExisting, filterGitDirs)
 	if err != nil {
 		return err
-	}
-
-	if filterExisting {
-		repos.FilterExisting()
 	}
 
 	repos.Insert(absGitDir)
@@ -36,8 +33,9 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool) erro
 	return repos.Store(installDir)
 }
 
-// Load gets the registered repos from a file.
-func (r *RegisterRepos) Load(installDir string) (err error) {
+// Load gets the registered repos loaded from the register file in the
+// install folder.
+func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDirs bool) (err error) {
 
 	file := getRegisterFile(installDir)
 	exists, e := cm.IsPathExisting(file)
@@ -67,10 +65,19 @@ func (r *RegisterRepos) Load(installDir string) (err error) {
 		}
 	}
 
+	if filterExisting {
+		r.FilterExisting()
+	}
+
+	if filterGitDirs {
+		r.FilterGitDirs()
+	}
+
 	return err
 }
 
-// Store sets the registered repos to a file.
+// Store sets the registered repos to the register file in the
+// install folder.
 func (r *RegisterRepos) Store(installDir string) (err error) {
 
 	// Legacy: Store legacy register file
@@ -103,12 +110,20 @@ func (r *RegisterRepos) Remove(gitDir string) {
 	r.GitDirs = strs.Remove(r.GitDirs, gitDir)
 }
 
-// FilterExisting filters non existing Git directories.
+// FilterExisting filter by existing directories.
 func (r *RegisterRepos) FilterExisting() {
 	r.GitDirs = strs.Filter(r.GitDirs,
 		func(v string) bool {
 			exists, _ := cm.IsPathExisting(v)
-			return exists //nolint:nlreturn
+			return exists // nolint:nlreturn
+		})
+}
+
+// FilterGitDirs filter by Git directories.
+func (r *RegisterRepos) FilterGitDirs() {
+	r.GitDirs = strs.Filter(r.GitDirs,
+		func(v string) bool {
+			return git.CtxC(v).IsGitDir()
 		})
 }
 

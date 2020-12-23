@@ -164,7 +164,7 @@ func (t *ChecksumStore) AddChecksum(sha1 string, filePath string) bool {
 
 // SyncChecksum adds a SHA1 checksum of a path to the first search directory.
 func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
-	cm.DebugAssertF(len(checksum.SHA1) == 40, "Wrong SHA1 hash '%s'", checksum.SHA1) //nolint:gomnd
+	cm.DebugAssertF(len(checksum.SHA1) == 40, "Wrong SHA1 hash '%s'", checksum.SHA1) // nolint:gomnd
 
 	if len(t.checksumDirs) == 0 {
 		return cm.Error("No checksum directory.")

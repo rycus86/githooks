@@ -16,11 +16,11 @@ func LoadJSON(file string, repr interface{}) error {
 
 	bytes, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		return ErrorF("Could not read file '%s'.", file)
+		return CombineErrors(err, ErrorF("Could not read file '%s'.", file))
 	}
 
 	if err := json.Unmarshal(bytes, repr); err != nil {
-		return ErrorF("Could not parse file '%s'.", file)
+		return CombineErrors(err, ErrorF("Could not unmarshal file '%s'.", file))
 	}
 
 	return nil
@@ -36,11 +36,11 @@ func StoreJSON(file string, repr interface{}) error {
 
 	bytes, err := json.Marshal(repr)
 	if err != nil {
-		return err
+		return CombineErrors(err, ErrorF("Could not marshal representation to file '%s'.", file))
 	}
 
 	if _, err := jsonFile.Write(bytes); err != nil {
-		return err
+		return CombineErrors(err, ErrorF("Could not write file '%s'.", file))
 	}
 
 	return nil

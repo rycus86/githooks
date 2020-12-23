@@ -24,7 +24,7 @@ type sharedHookEnum struct {
 }
 
 // SharedHookEnum enumerates all types of shared hooks.
-var SharedHookEnum = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} //nolint:gomnd
+var SharedHookEnum = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} // nolint:gomnd
 
 // GetSharedHookTypeString translates the shared type enum to a string.
 func GetSharedHookTypeString(sharedType int) string {
@@ -37,7 +37,7 @@ func GetSharedHookTypeString(sharedType int) string {
 		return "global"
 	default:
 		cm.DebugAssertF(false, "Wrong type '%s'", sharedType)
-		return "wrong-value" //nolint:nlreturn
+		return "wrong-value" // nolint:nlreturn
 	}
 }
 

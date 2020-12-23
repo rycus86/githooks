@@ -12,4 +12,7 @@ type UISettings struct {
 
 	// Cached answer for the readme setup prompt.
 	AnswerSetupIncludedReadme string
+
+	// Cached answer for the LFS detection prompt.
+	DeleteDetectedLFSHooks string
 }

@@ -2,6 +2,7 @@ package git
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
@@ -15,15 +16,22 @@ const (
 	NullRef = "0000000000000000000000000000000000000000"
 )
 
-// IsBareRepo returns `true` if `path` is a bare repository.
+// IsBareRepo returns `true` if `c.Cwd` is a bare repository.
 func (c *Context) IsBareRepo() bool {
 	out, _ := c.Get("rev-parse", "--is-bare-repository")
-	return out == "true" //nolint:nlreturn
+	return out == "true" // nolint:nlreturn
 }
 
 // IsGitRepo returns `true` if `path` is a git repository (bare or non-bare).
 func (c *Context) IsGitRepo() bool {
 	return c.Check("rev-parse") == nil
+}
+
+// IsGitDir returns `true` if `c.Cwd` is a git repository (bare or non-bare).
+func (c *Context) IsGitDir() bool {
+	s, err := c.Get("rev-parse", "--is-inside-git-dir")
+
+	return err == nil && s == "true"
 }
 
 // GetAllWorktrees returns all worktrees based on the current context's working directory.
@@ -103,6 +111,33 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	}
 
 	gitDir = filepath.ToSlash(gitDir)
+
+	return
+}
+
+func FindGitDirs(searchDir string) (all []string, err error) {
+	candidates, err := cm.Glob(path.Join(searchDir, "**/HEAD"))
+	if err != nil {
+		return
+	}
+
+	repos := make(strs.StringSet, len(candidates))
+
+	// Filter wrong dirs out.
+	for i := range candidates {
+		base := path.Base(candidates[i])
+
+		gitDir, e := CtxC(base).GetGitCommonDir()
+
+		// Check if its really a git directory.
+		if !repos[gitDir] && // Is not already in the set.
+			e == nil &&
+			CtxC(gitDir).IsGitRepo() {
+			repos[gitDir] = true
+		}
+	}
+
+	all = repos.ToList()
 
 	return
 }
@@ -195,7 +230,7 @@ func PullOrClone(
 
 		if err = os.RemoveAll(repoPath); err != nil {
 			err = cm.ErrorF("Could not remove directory '%s'.", repoPath)
-			return //nolint:nlreturn
+			return // nolint:nlreturn
 		}
 
 		err = Clone(repoPath, url, branch, depth)

@@ -12,5 +12,5 @@ func downloadBinaries(
 	tempDir string,
 	status updates.ReleaseStatus) updates.Binaries {
 	cm.Panic("Not implemented")
-	return updates.Binaries{} //nolint:nlreturn
+	return updates.Binaries{} // nolint:nlreturn
 }

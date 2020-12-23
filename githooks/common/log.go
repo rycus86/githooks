@@ -67,6 +67,7 @@ type ILogContext interface {
 	ColorError(string) string
 	ColorPrompt(string) string
 
+	GetErrorFormatter() func(format string, args ...interface{}) string
 	GetPromptFormatter() func(format string, args ...interface{}) string
 
 	GetInfoWriter() io.Writer
@@ -228,14 +229,18 @@ func (c *LogContext) ErrorF(format string, args ...interface{}) {
 	fmt.Fprint(c.error, c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)), "\n")
 }
 
-// GetPromptFormatter colors a prompt.
+// GetPromptFormatter formats a prompt.
 func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
-
-	fmt := func(format string, args ...interface{}) string {
+	return func(format string, args ...interface{}) string {
 		return c.colorPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))
 	}
+}
 
-	return fmt
+// GetErrorFormatter formats an error.
+func (c *LogContext) GetErrorFormatter() func(format string, args ...interface{}) string {
+	return func(format string, args ...interface{}) string {
+		return c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...))
+	}
 }
 
 // ErrorWithStacktrace logs and error with the stack trace.
@@ -272,5 +277,5 @@ func FormatMessage(suffix string, indent string, lines ...string) string {
 // FormatMessageF formats  several lines with a suffix and indent.
 func FormatMessageF(suffix string, indent string, format string, args ...interface{}) string {
 	s := suffix + strs.Fmt(format, args...)
-	return strings.ReplaceAll(s, "\n", "\n"+indent) //nolint:nlreturn
+	return strings.ReplaceAll(s, "\n", "\n"+indent) // nolint:nlreturn
 }

@@ -90,3 +90,18 @@ func Map(vs []string, f func(string) string) []string {
 
 	return vsm
 }
+
+type StringSet map[string]bool
+
+// Gets the keys of a string set.
+func (s *StringSet) ToList() (keys []string) {
+	keys = make([]string, len(*s))
+
+	i := 0
+	for k := range *s {
+		keys[i] = k
+		i++
+	}
+
+	return
+}

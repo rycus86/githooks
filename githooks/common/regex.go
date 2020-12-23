@@ -19,7 +19,7 @@ func MatchLineRegexInFile(filePath string, regex *regexp.Regexp) (found bool, er
 	for scanner.Scan() {
 		if regex.MatchString(scanner.Text()) {
 			found = true
-			return //nolint:nlreturn
+			return // nolint:nlreturn
 		}
 	}
 

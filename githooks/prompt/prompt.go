@@ -25,6 +25,10 @@ type IContext interface {
 		defaultAnswer string,
 		validator AnswerValidator) (string, error)
 
+	ShowPromptMulti(
+		text string,
+		validator AnswerValidator) ([]string, error)
+
 	Close()
 }
 
@@ -36,8 +40,8 @@ type Formatter func(format string, args ...interface{}) string
 type Context struct {
 	log cm.ILogContext
 
-	// Fallback prompt over the log context if available.
 	promptFmt Formatter
+	errorFmt  Formatter
 
 	termOut io.Writer
 
@@ -88,6 +92,7 @@ func CreateContext(
 	p := Context{
 		log: log,
 
+		errorFmt:      log.GetErrorFormatter(),
 		promptFmt:     log.GetPromptFormatter(),
 		termOut:       output,
 		termIn:        input,
@@ -113,10 +118,22 @@ func getDefaultAnswer(options []string) string {
 	return ""
 }
 
-func isAnswerCorrect(answer string, options []string) bool {
-	return strs.Any(options, func(o string) bool {
-		return strings.EqualFold(answer, o)
-	})
+func CreateValidatorAnswerOptions(options []string) AnswerValidator {
+
+	return func(answer string) error {
+
+		correct := strs.Any(
+			options,
+			func(o string) bool {
+				return strings.EqualFold(answer, o)
+			})
+
+		if !correct {
+			return cm.ErrorF("Answer '%s' not in '%q'.", answer, options)
+		}
+
+		return nil
+	}
 }
 
 var ValidatorAnswerNotEmpty AnswerValidator = func(s string) error {

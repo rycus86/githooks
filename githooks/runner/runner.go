@@ -257,8 +257,9 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 
 		log.DebugF("Register repo '%s'", gitDir)
 
-		err := hooks.RegisterRepo(gitDir, installDir, true)
+		err := hooks.RegisterRepo(gitDir, installDir, true, false)
 		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
+
 		err = gitx.SetConfig("githooks.registered", "true", git.LocalScope)
 		log.AssertNoErrorF(err, "Could not set register flag in repo '%s'.", gitDir)
 
@@ -285,7 +286,7 @@ func exportStagedFiles(settings *HookSettings) {
 			cm.DebugAssertF(
 				func() bool {
 					_, exists := os.LookupEnv(hooks.EnvVariableStagedFiles)
-					return !exists //nolint:nlreturn
+					return !exists // nolint:nlreturn
 				}(),
 				"Env. variable '%s' already defined.", hooks.EnvVariableStagedFiles)
 
@@ -503,7 +504,7 @@ func collectHooks(
 
 	// All shared hooks
 	var allAddedShared = make([]string, 0)
-	h.RepoSharedHooks = geRepoSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared)
+	h.RepoSharedHooks = getRepoSharedHooks(settings, uiSettings, ignores, checksums, &allAddedShared)
 
 	h.LocalSharedHooks = getConfigSharedHooks(
 		settings,
@@ -527,9 +528,12 @@ func collectHooks(
 func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType int) {
 
 	if settings.HookName != "post-merge" &&
-		!(settings.HookName == "post-checkout" && settings.Args[0] == git.NullRef) &&
-		!strs.Includes(settings.GitX.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse), settings.HookName) {
-		log.Debug("Shared hooks not updated")
+		!(settings.HookName == "post-checkout" &&
+			settings.Args[0] == git.NullRef) &&
+		!strs.Includes(settings.GitX.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse),
+			settings.HookName) {
+
+		log.Debug("Shared hooks not updated.")
 
 		return
 	}
@@ -570,7 +574,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 	}
 }
 
-func geRepoSharedHooks(
+func getRepoSharedHooks(
 	settings *HookSettings,
 	uiSettings *UISettings,
 	ignores *hooks.RepoIgnorePatterns,
@@ -787,7 +791,7 @@ func getHooksIn(settings *HookSettings,
 
 				if ignored {
 					log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-					return //nolint:nlreturn
+					return // nolint:nlreturn
 				}
 
 				allHooks = append(allHooks,
@@ -821,7 +825,7 @@ func getHooksIn(settings *HookSettings,
 
 		if ignored {
 			log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-			return //nolint:nlreturn
+			return // nolint:nlreturn
 		}
 
 		hook, use := createHook(uiSettings, settings.IsRepoTrusted, dirOrFile, namespacedPath, checksums)
@@ -899,7 +903,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 			switch answer {
 			case "a":
 				uiSettings.AcceptAllChanges = true
-				fallthrough //nolint:nlreturn
+				fallthrough // nolint:nlreturn
 			case "y":
 				acceptHook = true
 				runHook = true
