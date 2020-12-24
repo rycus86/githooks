@@ -715,6 +715,8 @@ func getTargetTemplateDir(
 		hookTemplateDir = path.Join(templateDir, "hooks")
 	}
 
+	log.Info("Hook template dir set to '%s'.", hookTemplateDir)
+
 	err := os.MkdirAll(hookTemplateDir, cm.DefaultDirectoryFileMode)
 	log.AssertNoErrorPanicF(err,
 		"Could not assert directory '%s' exists",

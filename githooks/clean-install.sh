@@ -23,7 +23,13 @@ git config --global --unset core.hooksPath
 
 echo "Remove all test artefacts..."
 rm -rf ~/.githooks \
-    /usr/share/git-core-my/templates
+    /usr/share/git-core-my/templates \
+    /tmp/test
+
+# Make some test repos
+mkdir -p /tmp/test/p001 && mkdir -p /tmp/test/p002 || exit 1
+cd /tmp/test/p001 && git init || exit 1
+cd /tmp/test/p002 && git init || exit 1
 
 mkdir -p ~/.githooks/templates/hooks &&
     echo "# git-lfs" >~/.githooks/templates/hooks/pre-commit

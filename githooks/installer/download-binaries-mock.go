@@ -16,7 +16,7 @@ func downloadBinaries(
 	status updates.ReleaseStatus) updates.Binaries {
 
 	bin := os.Getenv("GITHOOKS_DOWNLOAD_BIN_DIR")
-	cm.PanicIf(strs.IsEmpty(bin))
+	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_DOWNLOAD_BIN_DIR undefined")
 
 	others := []string{
 		path.Join(bin, "cli"),

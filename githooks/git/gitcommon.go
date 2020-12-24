@@ -125,9 +125,9 @@ func FindGitDirs(searchDir string) (all []string, err error) {
 
 	// Filter wrong dirs out.
 	for i := range candidates {
-		base := path.Base(candidates[i])
+		dir := path.Dir(candidates[i])
 
-		gitDir, e := CtxC(base).GetGitCommonDir()
+		gitDir, e := CtxC(dir).GetGitCommonDir()
 
 		// Check if its really a git directory.
 		if !repos[gitDir] && // Is not already in the set.
