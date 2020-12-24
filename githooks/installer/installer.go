@@ -265,7 +265,9 @@ func setMainVariables(args *Arguments) (InstallSettings, UISettings) {
 			InstallDir:        installDir,
 			CloneDir:          hooks.GetReleaseCloneDir(installDir),
 			TempDir:           tempDir,
-			RegisteredGitDirs: registered},
+			RegisteredGitDirs: registered,
+			InstalledGitDirs:  make(InstallMap, 10)
+		},
 		UISettings{PromptCtx: promptCtx}
 }
 
@@ -1094,7 +1096,7 @@ func installGitHooksIntoRepo(
 		return false
 	}
 
-	log.InfoF("Hooks installed into\n'%s'.",
+	log.InfoF("Hooks installed into '%s'.",
 		repoGitDir)
 
 	return true
