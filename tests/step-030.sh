@@ -2,13 +2,16 @@
 # Test:
 #   Direct template execution: auto-update is not enabled
 
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
+# Pseudo installation.
+mkdir -p ~/.githooks/release &&
+    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
+    exit 1
 mkdir -p /tmp/test30 && cd /tmp/test30 || exit 1
 git init || exit 1
 
 git config --global githooks.autoupdate.enabled false || exit 1
 
-ACCEPT_CHANGES=A ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit
+ACCEPT_CHANGES=A ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-commit
 
 # shellcheck disable=SC2181
 if cd ~/.githooks/release && git rev-parse HEAD; then

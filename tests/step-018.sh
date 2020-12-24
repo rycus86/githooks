@@ -4,7 +4,11 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
+# Pseudo installation.
+mkdir -p ~/.githooks/release &&
+    cp -r /var/lib/githooks/githooks/bin ~/.githooks &&
+    cp /var/lib/githooks/*.sh ~/.githooks/release ||
+    exit 1
 mkdir -p /tmp/shared/hooks-018.git/pre-commit &&
     echo 'exit 1' >/tmp/shared/hooks-018.git/pre-commit/fail &&
     cd /tmp/shared/hooks-018.git &&
@@ -21,7 +25,7 @@ mkdir -p .githooks &&
     ~/.githooks/release/cli.sh shared update ||
     exit 1
 
-~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit
+~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected to fail on shared hook execution"

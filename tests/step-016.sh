@@ -4,7 +4,10 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
+# Pseudo installation.
+mkdir -p ~/.githooks/release &&
+    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
+    exit 1
 mkdir -p /tmp/shared/hooks-016-a.git/pre-commit &&
     echo 'echo "From shared hook A" >> /tmp/test-016.out' \
         >/tmp/shared/hooks-016-a.git/pre-commit/say-hello &&
@@ -29,10 +32,10 @@ git init || exit 1
 mkdir -p .githooks &&
     git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
     echo 'file:///tmp/shared/hooks-016-b.git' >.githooks/.shared &&
-    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused ||
+    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused ||
     exit 1
 
-~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
+~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 if ! grep -q 'From shared hook A' /tmp/test-016.out; then
@@ -46,7 +49,7 @@ if ! grep -q 'From shared hook B' /tmp/test-016.out; then
 fi
 
 # Trigger the shared hooks update
-OUT=$(~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused 2>&1)
+OUT=$(~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused 2>&1)
 if ! echo "$OUT" | grep -q "Updating shared hooks from"; then
     echo "! Expected shared hooks update"
     exit 1

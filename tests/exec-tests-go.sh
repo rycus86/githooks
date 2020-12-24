@@ -34,6 +34,7 @@ RUN echo "Make test gitrepo to clone from ..." && \\
 # Build binaries
 RUN cd /var/lib/githooks/githooks && ./clean.sh
 RUN /var/lib/githooks/githooks/build.sh --build-flags "-tags debug,mock"
+# @todo remove once install is ready, replace...
 RUN cp /var/lib/githooks/githooks/bin/runner /var/lib/githooks/base-template.sh
 
 # Do not use the terminal in tests

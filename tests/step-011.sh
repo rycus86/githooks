@@ -2,7 +2,10 @@
 # Test:
 #   Direct template execution: test pre-commit hooks
 
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/*.sh ~/.githooks/release || exit 1
+mkdir -p ~/.githooks/release &&
+    cp -r /var/lib/githooks/githooks/bin ~/.githooks &&
+    cp /var/lib/githooks/*.sh ~/.githooks/release ||
+    exit 1
 mkdir -p /tmp/test11 && cd /tmp/test11 || exit 1
 git init || exit 1
 
@@ -19,7 +22,7 @@ git config --unset githooks.runner
 
 mkdir -p .githooks/pre-commit &&
     echo 'echo "Direct execution" > /tmp/test011.out' >.githooks/pre-commit/test &&
-    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/pre-commit ||
+    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 grep -q 'Direct execution' /tmp/test011.out
