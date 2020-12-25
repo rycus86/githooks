@@ -44,9 +44,11 @@ if [ -n "$BIN_DIR" ]; then
     export GOBIN="$BIN_DIR"
 fi
 
-echo "go vendor ..."
-go mod vendor
-go generate -mod=vendor ./...
+if [ ! -d "$DIR/vendor" ]; then
+    echo "go vendor ..."
+    go mod vendor
+    go generate -mod=vendor ./...
+fi
 
 echo "go install ..."
 # shellcheck disable=SC2086

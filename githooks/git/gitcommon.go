@@ -116,7 +116,7 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 }
 
 func FindGitDirs(searchDir string) (all []string, err error) {
-	candidates, err := cm.Glob(path.Join(searchDir, "**/HEAD"))
+	candidates, err := cm.Glob(path.Join(searchDir, "**/HEAD"), true)
 	if err != nil {
 		return
 	}

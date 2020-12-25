@@ -22,12 +22,12 @@ type globs []string
 
 // Glob adds double-star support to the core path/filepath Glob function.
 // It's useful when your globs might have double-stars, but you're not sure.
-func Glob(pattern string) (l []string, err error) {
+func Glob(pattern string, ignoreErrors bool) (l []string, err error) {
 	if !strings.Contains(pattern, "**") {
 		// passthru to core package if no double-star
 		l, err = filepath.Glob(pattern)
 	} else {
-		l, err = globs(strings.Split(pattern, "**")).expand()
+		l, err = globs(strings.Split(pattern, "**")).expand(ignoreErrors)
 	}
 
 	// Only Unix paths ...
@@ -38,7 +38,7 @@ func Glob(pattern string) (l []string, err error) {
 }
 
 // Expand finds matches for the provided Globs.
-func (g globs) expand() ([]string, error) {
+func (g globs) expand(ignoreErrors bool) ([]string, error) {
 	var matches = []string{""} // accumulate here
 
 	for _, glob := range g {
@@ -47,12 +47,20 @@ func (g globs) expand() ([]string, error) {
 		for _, match := range matches {
 			paths, err := filepath.Glob(match + glob)
 			if err != nil {
+				if ignoreErrors {
+					continue
+				}
+
 				return nil, err
 			}
 			for _, path := range paths {
 				err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 					if err != nil {
-						return err
+						if ignoreErrors {
+							return filepath.SkipDir
+						} else {
+							return err
+						}
 					}
 					// save deduped match from current iteration
 					if _, ok := hitMap[path]; !ok {

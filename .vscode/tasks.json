@@ -63,7 +63,7 @@
       "args": [
         "debug",
         "--headless",
-        "--listen=127.0.1.1:2345",
+        "--listen=127.0.0.1:2345",
         "--log",
         "--build-flags",
         "-tags debug,mock,dev",

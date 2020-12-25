@@ -1145,17 +1145,27 @@ func installGitHooksIntoExistingRepos(
 	err = gitx.SetConfig("githooks.previousSearchDir", searchDir, git.GlobalScope)
 	log.AssertNoError(err, "Could not set git config 'githooks.previousSearchDir'")
 
-	gitDirs, err := git.FindGitDirs(searchDir)
-	log.AssertNoError(err, "Could not find Git directories in '%s'.", searchDir)
+	log.InfoF("Searching for Git directories in '%s'...", searchDir)
+
+	settings := cm.CreateDefaultProgressSettings(
+		"Searching ...", "Still searching ...")
+	taskIn := GitDirsSearchTask{Dir: searchDir}
+
+	resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings)
 	if err != nil {
+		log.AssertNoErrorF(err, "Could not find Git directories in '%s'.", searchDir)
 		return
 	}
 
-	if len(gitDirs) == 0 {
+	taskOut := resultTask.(*GitDirsSearchTask)
+	cm.DebugAssert(taskOut != nil, "Wrong output.")
+
+	if len(taskOut.Matches) == 0 {
 		log.InfoF("No Git directories found in '%s'.", searchDir)
+		return
 	}
 
-	for _, gitDir := range gitDirs {
+	for _, gitDir := range taskOut.Matches {
 
 		if installGitHooksIntoRepo(
 			gitDir, tempDir,

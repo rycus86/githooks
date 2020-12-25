@@ -26,7 +26,7 @@
       "remotePath": "${workspaceFolder}/githooks",
       "cwd": "${workspaceFolder}/githooks",
       "port": 2345,
-      "host": "127.0.1.1"
+      "host": "127.0.0.1"
       // Launch VSCode Tasks:
       // - '[Dev Container] go-delve-installer'
       // first and attach to it with this debug configuration.
