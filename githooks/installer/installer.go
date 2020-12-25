@@ -266,8 +266,7 @@ func setMainVariables(args *Arguments) (InstallSettings, UISettings) {
 			CloneDir:          hooks.GetReleaseCloneDir(installDir),
 			TempDir:           tempDir,
 			RegisteredGitDirs: registered,
-			InstalledGitDirs:  make(InstallMap, 10)
-		},
+			InstalledGitDirs:  make(InstallMap, 10)},
 		UISettings{PromptCtx: promptCtx}
 }
 
@@ -576,56 +575,26 @@ func findGitHookTemplates(
 	return "", ""
 }
 
-func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
+func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) (result string) {
 
 	for _, dir := range startDirs {
 
 		log.InfoF("Searching for potential locations in '%s'...", dir)
 
-		spinner := cm.GetProgressBar(log, "Searching ...", -1)
+		settings := cm.CreateDefaultProgressSettings(
+			"Searching ...", "Still searching ...")
+		taskIn := PreCommitSearchTask{Dir: dir}
 
-		// Search in go routine...
-		matchCh := make(chan []string, 1)
-		go func() {
-			matches, err := cm.Glob(path.Join(dir,
-				"**/templates/hooks/pre-commit.sample"))
-			if err == nil {
-				matchCh <- matches
-			}
-		}()
-
-		var matches []string
-		running := true
-
-		spinnerT := time.NewTicker(10 * time.Millisecond) // nolint:gomnd
-		stillSearching := time.After(10 * time.Second)    // nolint:gomnd
-		timeout := time.After(300 * time.Second)          // nolint:gomnd
-
-		for running {
-			select {
-			case matches = <-matchCh:
-				running = false
-				if spinner != nil {
-					_ = spinner.Clear()
-				}
-
-			case <-stillSearching:
-				if spinner == nil {
-					log.Info("Still searching ...")
-				} else {
-					spinner.Describe("Still searching ...")
-				}
-			case <-spinnerT.C:
-				if spinner != nil {
-					_ = spinner.Add(1)
-				}
-			case <-timeout:
-				log.Warn("Searching took too long -> timed out.")
-				running = false
-			}
+		resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings)
+		if err != nil {
+			log.AssertNoError(err, "Searching failed.")
+			return
 		}
 
-		for _, match := range matches {
+		taskOut := resultTask.(*PreCommitSearchTask)
+		cm.DebugAssert(taskOut != nil, "Wrong output.")
+
+		for _, match := range taskOut.Matches {
 
 			templateDir := path.Dir(path.Dir(filepath.ToSlash(match)))
 
@@ -637,12 +606,13 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) string {
 			log.AssertNoErrorF(err, "Could not show prompt.")
 
 			if answer == "y" {
-				return templateDir
+				result = templateDir
+				break
 			}
 		}
 	}
 
-	return ""
+	return
 }
 
 func searchTemplateDirOnDisk(promptCtx prompt.IContext) string {

@@ -1,5 +1,5 @@
 {
-  "go.useLanguageServer": false,
+  "go.useLanguageServer": true,
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,
@@ -29,5 +29,11 @@
     "gocritic",
     "--max-same-issues",
     "0"
-  ]
+  ],
+  "go.lintTool": "golangci-lint",
+  "go.buildFlags": [
+    "-tags",
+    "debug"
+  ],
+  "go.trace.server": "messages"
 }

@@ -34,19 +34,21 @@ parseArgs() {
 parseArgs "$@" || die "Parsing args failed."
 
 cd "$DIR"
-BUILD_VERSION=$(git describe --tags --abbrev=6 --always | sed -E "s/^v//")
 
-export GOPATH="$DIR/.go"
+export GOPATH="$DIR/.go:${GOPATH:-}"
 export GOBIN="$DIR/bin"
 if [ -n "$BIN_DIR" ]; then
-    rm -rf "$BIN_DIR" || true
+    if [ -d "$BIN_DIR" ]; then
+        rm -rf "$BIN_DIR" || true
+    fi
     export GOBIN="$BIN_DIR"
 fi
 
+echo "go vendor ..."
 go mod vendor
 go generate -mod=vendor ./...
 
+echo "go install ..."
 # shellcheck disable=SC2086
 go install -mod=vendor \
-    -ldflags="-X 'rycus86/githooks/hooks.BuildVersion=$BUILD_VERSION'" \
     -tags debug $BUILD_FLAGS ./...

@@ -247,6 +247,5 @@ func GetToolScript(installDir string, name string) (cm.IExecutable, error) {
 // GetInstaller returns the installer executable in the install directory.
 func GetInstaller(installDir string) cm.Executable {
 	return cm.Executable{
-		Path:   path.Join(GetReleaseCloneDir(installDir), "install.sh"),
-		RunCmd: []string{"sh"}}
+		Path: path.Join(GetReleaseCloneDir(installDir), "install.sh")}
 }
