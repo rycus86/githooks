@@ -18,7 +18,6 @@ trap cleanUp EXIT INT TERM
 "$DIR/clean-githooks.sh"
 
 "$GITHOOKS_REPO/githooks/build.sh" --build-flags '-tags debug,mock' --bin-dir "$tmp"
-export GITHOOKS_DOWNLOAD_BIN_DIR="$tmp"
 
 sudo rm -rf /usr/share/git-core/templates/hooks || true
 sudo mkdir -p /usr/share/git-core-my/templates/hooks &&

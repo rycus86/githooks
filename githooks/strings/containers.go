@@ -93,6 +93,21 @@ func Map(vs []string, f func(string) string) []string {
 
 type StringSet map[string]bool
 
+// Add adds `s` to the set.
+func (m StringSet) Add(s string) {
+	m[s] = true
+}
+
+// Remove removes `s` from the set.
+func (m StringSet) Remove(s string) {
+	m[s] = false
+}
+
+// Exists checks existence of `s` in the set.
+func (m StringSet) Exists(s string) bool {
+	return m[s]
+}
+
 // Gets the keys of a string set.
 func (s *StringSet) ToList() (keys []string) {
 	keys = make([]string, len(*s))

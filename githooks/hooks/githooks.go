@@ -13,8 +13,8 @@ import (
 	"strings"
 )
 
-// HookDirName denotes the directory name used for repository specific hooks.
-const HookDirName = ".githooks"
+// HooksDirName denotes the directory name used for repository specific hooks.
+const HooksDirName = ".githooks"
 
 const GithooksWebpage = "https://github.com/rycus86/githooks"
 
@@ -47,7 +47,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 
 	// Check in the repo if possible
 	if !strs.IsEmpty(repoPath) {
-		file := path.Join(repoPath, HookDirName, ".bug-report")
+		file := path.Join(repoPath, HooksDirName, ".bug-report")
 		exists, err = cm.IsPathExisting(file)
 
 		if exists {
@@ -155,7 +155,7 @@ func GetTemporaryDir(installDir string) string {
 // AssertTemporaryDir returns the Githooks temporary directory inside the install directory.
 func AssertTemporaryDir(installDir string) (tempDir string, err error) {
 	tempDir = GetTemporaryDir(installDir)
-	err = os.MkdirAll(GetTemporaryDir(installDir), cm.DefaultDirectoryFileMode)
+	err = os.MkdirAll(GetTemporaryDir(installDir), cm.DefaultFileModeDirectory)
 
 	return
 }

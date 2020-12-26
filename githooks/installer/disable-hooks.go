@@ -10,7 +10,6 @@ import (
 func getHookDisableCallback(
 	log cm.ILogContext,
 	nonInteractive bool,
-	dryRun bool,
 	uiSettings *UISettings) func(file string) hooks.HookDisableOption {
 
 	gitx := git.Ctx()
@@ -25,9 +24,7 @@ func getHookDisableCallback(
 		userAnswer := "n"
 		if strs.IsNotEmpty(uiSettings.DeleteDetectedLFSHooks) {
 			userAnswer = uiSettings.DeleteDetectedLFSHooks
-		}
-
-		if !nonInteractive {
+		} else if !nonInteractive {
 			var err error
 			userAnswer, err = uiSettings.PromptCtx.ShowPromptOptions(
 				"There is an LFS command statement in hook:\n"+
@@ -41,7 +38,7 @@ func getHookDisableCallback(
 
 			log.AssertNoError(err, "Could not show prompt.")
 
-			if (userAnswer == "s" || userAnswer == "a") && !dryRun {
+			if userAnswer == "s" || userAnswer == "a" {
 				uiSettings.DeleteDetectedLFSHooks = userAnswer // Store the decision.
 			}
 

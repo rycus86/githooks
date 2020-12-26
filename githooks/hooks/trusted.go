@@ -20,7 +20,7 @@ func IsRepoTrusted(
 	repoPath string,
 	promptUser bool) (bool, error) {
 
-	trustFile := path.Join(repoPath, HookDirName, "trust-all")
+	trustFile := path.Join(repoPath, HooksDirName, "trust-all")
 	var isTrusted bool = false
 
 	exists, err := cm.IsPathExisting(trustFile)
@@ -171,7 +171,7 @@ func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
 	}
 
 	dir := path.Join(t.checksumDirs[0], checksum.SHA1[0:2])
-	err := os.MkdirAll(dir, cm.DefaultDirectoryFileMode)
+	err := os.MkdirAll(dir, cm.DefaultFileModeDirectory)
 	if err != nil {
 		return err
 	}

@@ -33,6 +33,12 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool, filt
 	return repos.Store(installDir)
 }
 
+// MarkRegistered sets the register flag inside the repo
+// to denote the repository as registered.
+func MarkRegistered(gitx *git.Context) error {
+	return gitx.SetConfig("githooks.registered", true, git.LocalScope)
+}
+
 // Load gets the registered repos loaded from the register file in the
 // install folder.
 func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDirs bool) (err error) {
@@ -82,16 +88,18 @@ func (r *RegisterRepos) Store(installDir string) (err error) {
 
 	// Legacy: Store legacy register file
 	// @todo: Remove this as soon as possible
-	var f *os.File
-	f, err = os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
-	if err != nil {
-		return
-	}
-
-	defer f.Close()
-	for _, gitdir := range r.GitDirs {
-		if _, err = f.Write([]byte(gitdir + "\n")); err != nil {
+	if len(r.GitDirs) != 0 {
+		var f *os.File
+		f, err = os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
+		if err != nil {
 			return
+		}
+
+		defer f.Close()
+		for _, gitdir := range r.GitDirs {
+			if _, err = f.Write([]byte(gitdir + "\n")); err != nil {
+				return
+			}
 		}
 	}
 

@@ -47,10 +47,10 @@ fi
 if [ ! -d "$DIR/vendor" ]; then
     echo "go vendor ..."
     go mod vendor
-    go generate -mod=vendor ./...
 fi
 
 echo "go install ..."
+go generate -mod=vendor ./...
 # shellcheck disable=SC2086
 go install -mod=vendor \
     -tags debug $BUILD_FLAGS ./...

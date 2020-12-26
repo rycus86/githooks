@@ -105,6 +105,10 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 		return
 	}
 
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(c.Cwd, gitDir)
+	}
+
 	gitDir, err = filepath.Abs(gitDir)
 	if err != nil {
 		return
@@ -115,17 +119,41 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	return
 }
 
+// FindGitDirs returns Git directories inside `searchDir`.
+// Paths relative to `searchDir` containing `.dotfiles` (hidden files)
+// will never be reported.
 func FindGitDirs(searchDir string) (all []string, err error) {
 	candidates, err := cm.Glob(path.Join(searchDir, "**/HEAD"), true)
 	if err != nil {
 		return
 	}
 
+	// We obtain a list of HEAD files, e.g.
+	// 	- ~/a/b/normal/.git/HEAD
+	// 	- ~/a/b/normal/.git/.../HEAD  1) filter out
+	// 	- ~/a/b/bare-repo/HEAD
+	// 	- ~/a/b/bare-repo/.../HEAD
+
 	repos := make(strs.StringSet, len(candidates))
+	var dir, relPath string
 
 	// Filter wrong dirs out.
 	for i := range candidates {
-		dir := path.Dir(candidates[i])
+		dir = path.Dir(candidates[i])
+
+		relPath, err = filepath.Rel(searchDir, dir)
+		if err != nil {
+			return
+		}
+
+		normalGitDir := path.Base(dir) == ".git"
+
+		if normalGitDir && cm.ContainsDotFile(path.Dir(relPath)) ||
+			!normalGitDir && cm.ContainsDotFile(relPath) {
+			// With that we filter out matches which
+			// contain .dotfiles in the relative path to the search dir.
+			continue
+		}
 
 		gitDir, e := CtxC(dir).GetGitCommonDir()
 

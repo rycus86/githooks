@@ -15,15 +15,21 @@ func downloadBinaries(
 	tempDir string,
 	status updates.ReleaseStatus) updates.Binaries {
 
-	bin := os.Getenv("GITHOOKS_DOWNLOAD_BIN_DIR")
-	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_DOWNLOAD_BIN_DIR undefined")
+	bin := os.Getenv("GITHOOKS_BIN_DIR")
+	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_BIN_DIR undefined")
 
 	others := []string{
-		path.Join(bin, "cli"),
-		path.Join(bin, "runner")}
-	installer := path.Join(bin, "installer")
+		path.Join(tempDir, "cli"),
+		path.Join(tempDir, "runner")}
+	installer := path.Join(tempDir, "installer")
 
 	all := append(others, installer)
+
+	for _, exe := range all {
+		src := path.Join(bin, path.Base(exe))
+		err := cm.CopyFile(src, exe)
+		cm.AssertNoErrorPanicF(err, "Copy from '%s' to '%s' failed.", src, exe)
+	}
 
 	return updates.Binaries{
 		Installer: installer,

@@ -2,7 +2,7 @@
 
 // Base Git hook template from https://github.com/rycus86/githooks
 //
-// It allows you to have a .githooks (see `hooks.HookDirName`)
+// It allows you to have a .githooks (see `hooks.HooksDirName`)
 // folder per-project that contains
 // its hooks to execute on various Git triggers.
 //
@@ -143,7 +143,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		ExecX:              execx,
 		GitX:               gitx,
 		RepositoryPath:     repoPath,
-		RepositoryHooksDir: path.Join(repoPath, hooks.HookDirName),
+		RepositoryHooksDir: path.Join(repoPath, hooks.HooksDirName),
 		GitDir:             gitDir,
 		InstallDir:         installDir,
 
@@ -223,7 +223,7 @@ func getInstallDir() string {
 		usr, err := homedir.Dir()
 		cm.AssertNoErrorPanic(err, "Could not get home directory.")
 		usr = filepath.ToSlash(usr)
-		installDir = path.Join(usr, hooks.HookDirName)
+		installDir = path.Join(usr, hooks.HooksDirName)
 	}
 
 	if strs.IsEmpty(installDir) {
@@ -260,7 +260,7 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 		err := hooks.RegisterRepo(gitDir, installDir, true, false)
 		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
 
-		err = gitx.SetConfig("githooks.registered", "true", git.LocalScope)
+		err = hooks.MarkRegistered(gitx)
 		log.AssertNoErrorF(err, "Could not set register flag in repo '%s'.", gitDir)
 
 	} else {
@@ -318,7 +318,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 	if shouldRunUpdate(uiSettings, status) {
 
-		err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
+		_, err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
 
 		log.AssertNoErrorF(err,
 			"Update cannot run:\n"+
@@ -398,10 +398,8 @@ func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
 			&execX,
 			&exec,
 			false,
-			"--internal-autoupdate",
-			"--internal-install")
+			"--internal-auto-update")
 
-		// @todo installer: remove "--internal-install"
 		// @todo installer: remove "--internal-autoupdate"
 
 		log.InfoF("Update:\n%s", output)
@@ -424,7 +422,7 @@ func executeLFSHooks(settings *HookSettings) {
 	lfsIsAvailable := hooks.IsLFSAvailable()
 
 	lfsIsRequired, err := cm.IsPathExisting(path.Join(
-		settings.RepositoryPath, hooks.HookDirName, ".lfs-required"))
+		settings.RepositoryPath, hooks.HooksDirName, ".lfs-required"))
 	log.AssertNoErrorF(err, "Could not check path.")
 
 	if lfsIsAvailable {
@@ -444,7 +442,7 @@ func executeLFSHooks(settings *HookSettings) {
 			"This repository requires Git LFS, but 'git-lfs' was",
 			"not found on your PATH. If you no longer want to use",
 			strs.Fmt("Git LFS, remove the '%s/.lfs-required' file.",
-				hooks.HookDirName),
+				hooks.HooksDirName),
 		)
 	}
 }
@@ -454,9 +452,9 @@ func executeOldHooks(settings *HookSettings,
 	ingores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) {
 
-	// e.g. 'hooks/pre-commit.replaced.githook'
+	// e.g. 'hooks/pre-commit.replaced.githook's
 	hook := hooks.Hook{}
-	hookName := settings.HookName + ".replaced.githook"
+	hookName := hooks.GetHookReplacementFileName(settings.HookName)
 	hook.Path = path.Join(settings.HookDir, hookName) // Make it relative to git directory
 
 	exists, err := cm.IsPathExisting(hook.Path)
@@ -557,7 +555,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 				"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
 				"and deleting it from the '.shared' file manually by\n"+
 				"  $ git hooks shared remove --shared '%[2]s'\n",
-				hooks.HookDirName, hook.OriginalURL)
+				hooks.HooksDirName, hook.OriginalURL)
 
 			continue
 		}
@@ -670,7 +668,7 @@ func checkSharedHook(
 			"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
 			"and deleting it from the '.shared' file by\n"+
 			"  $ git hooks shared remove --shared '%[2]s'",
-		hooks.HookDirName, hook.OriginalURL)
+		hooks.HooksDirName, hook.OriginalURL)
 
 	// Check if existing otherwise skip or fail...
 	exists, err := cm.IsPathExisting(hook.RootDir)

@@ -85,13 +85,13 @@ func (h *RepoIgnorePatterns) IsIgnored(namespacePath string) (bool, bool) {
 // GetHookIgnorePatternsWorktree gets all ignored hooks in the current worktree.
 func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns HookIgnorePatterns, err error) {
 
-	file := path.Join(repoDir, HookDirName, ".ignore.yaml")
+	file := path.Join(repoDir, HooksDirName, ".ignore.yaml")
 	exists1, err := cm.IsPathExisting(file)
 	if exists1 {
 		patterns, err = loadIgnorePatterns(file)
 	}
 
-	file = path.Join(repoDir, HookDirName, hookName, ".ignore.yaml")
+	file = path.Join(repoDir, HooksDirName, hookName, ".ignore.yaml")
 	exists2, e := cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
 
@@ -204,13 +204,13 @@ func MakeNamespacePath(basePath string, path string, namespace string) (string, 
 
 func loadIgnorePatternsLegacy(repoDir string, hookName string) (patterns HookIgnorePatterns, err error) {
 
-	file := path.Join(repoDir, HookDirName, ".ignore")
+	file := path.Join(repoDir, HooksDirName, ".ignore")
 	exists1, err := cm.IsPathExisting(file)
 	if exists1 {
 		patterns, err = loadIgnorePatternsLegacyFile(file)
 	}
 
-	file = path.Join(repoDir, HookDirName, hookName, ".ignore")
+	file = path.Join(repoDir, HooksDirName, hookName, ".ignore")
 	exists2, e := cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
 

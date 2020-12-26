@@ -66,8 +66,6 @@ func showPromptOptions(
 		p.log.Info(question)
 	}
 
-	p.log.DebugF("Answer not received -> Using default '%s'", defaultAnswer)
-
 	return defaultAnswer, cm.CombineErrors(err, e)
 }
 
@@ -81,8 +79,8 @@ func showPromptOptionsTerminal(
 
 	var err error // all errors
 
-	nPrompts := 0 // How many times we showed the prompt
-	maxPrompts := 3
+	nPrompts := uint(0) // How many times we showed the prompt
+	maxPrompts := p.maxTries
 
 	switch {
 	case p.termIn == nil:
@@ -188,8 +186,6 @@ func showPrompt(
 		// Show the prompt in the log output
 		p.log.Info(text)
 	}
-
-	p.log.DebugF("Answer not received -> Using default '%s'.", defaultAnswer)
 
 	return defaultAnswer, err
 }

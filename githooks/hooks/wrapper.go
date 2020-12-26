@@ -16,9 +16,9 @@ func IsRunWrapper(filePath string) (bool, error) {
 	return cm.MatchLineRegexInFile(filePath, runWrapperDetectionRegex)
 }
 
-// getHookReplacementName returns the file name of a replaced custom Git hook.
-func getHookReplacementName(fileName string) string {
-	return path.Join(path.Dir(fileName), path.Base(fileName)+".replaced.githooks")
+// GetHookReplacementFileName returns the file name of a replaced custom Git hook.
+func GetHookReplacementFileName(fileName string) string {
+	return path.Base(fileName) + ".replaced.githook"
 }
 
 // GetRunWrapperContent gets the bytes of the hook template.
@@ -143,7 +143,7 @@ func moveExistingHooks(
 					log.InfoF("Saving existing Git hook '%s'.", dest)
 				}
 
-				newDest := getHookReplacementName(dest)
+				newDest := path.Join(path.Dir(dest), GetHookReplacementFileName(dest))
 				err = os.Rename(dest, newDest)
 				if err != nil {
 					return cm.CombineErrors(err,

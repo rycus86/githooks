@@ -332,34 +332,53 @@ func getStatus(
 
 // MergeUpdates merges updates in the Githooks clone directory.
 // Only a fast-forward merge of the remote branch into the local
-// branch is performed.
-func MergeUpdates(cloneDir string, dryRun bool) (err error) {
-	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
-
-	_, branch := GetCloneURL()
-	if strs.IsEmpty(branch) {
-		branch = "master"
+// branch is performed, no remote fetch is performed.
+// Returns the commit SHA after the fast-forward.
+func MergeUpdates(cloneDir string, dryRun bool) (currentSHA string, err error) {
+	if !cm.IsDirectory(cloneDir) {
+		err = cm.ErrorF("Clone directory '%s' does not exist.", cloneDir)
+		return //nolint: nlreturn
 	}
 
+	// Get configured branches...
+	_, branch := GetCloneURL()
 	remoteBranch := "origin/" + branch
 
-	gitxClone := git.CtxCSanitized(cloneDir)
+	gitx := git.CtxCSanitized(cloneDir)
+
+	// Safety check that branches are the same.
+	currentBranch, err := gitx.Get("rev-parse", "--abbrev-ref", git.HEAD)
+	if err != nil {
+		return
+	}
+
+	if currentBranch != branch {
+		err = cm.ErrorF("Current branch of clone directory\n'%s'\n"+
+			"does not point to the configured branch '%s'\n"+
+			"but instead to '%s'.", cloneDir, branch, currentBranch)
+		return //nolint: nlreturn
+	}
 
 	if dryRun {
 		// Checkout a temporary branch from the current
 		// and merge the remote to see if it works.
 		branch = "update-" + uuid.New().String()
-		if err = gitxClone.Check("branch", branch); err != nil {
+		if err = gitx.Check("branch", branch); err != nil {
 			return
 		}
-		defer func() { err = gitxClone.Check("branch", "-D", branch) }()
+		// Delete the branch on exit.
+		defer func() {
+			err = cm.CombineErrors(err, gitx.Check("branch", "-D", branch))
+		}()
 	}
 
-	// Fast-forward merge with fetch.
-	refSpec := strs.Fmt("%s:%s", remoteBranch, branch)
-	if err = gitxClone.Check("fetch", ".", refSpec); err != nil {
+	// Fast-forward merge.
+	if err = gitx.Check("merge", "--ff-only", remoteBranch); err != nil {
 		return
 	}
+
+	// Get the current commit SHA1 after the merge.
+	currentSHA, err = gitx.Get("rev-parse", branch)
 
 	return
 }

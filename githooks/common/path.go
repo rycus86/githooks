@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	DefaultDirectoryFileMode = os.FileMode(0775) // nolint:gomnd
+	DefaultFileModeDirectory = os.FileMode(0775) // nolint:gomnd
+	DefaultFileModeFile      = os.FileMode(0664) // nolint:gomnd
+
 )
 
 // IsPathError returns `true` if the error is a `os.PathError`.
@@ -28,6 +30,24 @@ func IsPathExisting(path string) (bool, error) {
 	}
 
 	return err == nil, err
+}
+
+// SplitPath splits a path `p` (only forward slashes)
+// into each directory name.
+func SplitPath(p string) []string {
+	return strings.Split(path.Clean(p), "/")
+}
+
+// ContainsDotFile checks if path `p` contains `.*` parts (dotfiles)
+// in the path.
+func ContainsDotFile(p string) bool {
+	for _, d := range SplitPath(p) {
+		if strings.HasPrefix(d, ".") && len(d) >= 2 && d != "." && d != ".." {
+			return true
+		}
+	}
+
+	return false
 }
 
 // FileFilter is the filter for `GetFiles`.
@@ -161,11 +181,16 @@ func CopyFile(src string, dst string) (err error) {
 	}
 	defer in.Close()
 
-	out, err := os.Create(dst)
+	// Get the stats
+	statIn, err := in.Stat()
 	if err != nil {
 		return
 	}
 
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
 	defer func() {
 		cerr := out.Close()
 		err = CombineErrors(err, cerr)
@@ -177,12 +202,18 @@ func CopyFile(src string, dst string) (err error) {
 
 	err = out.Sync()
 
+	// Adapt permissions.
+	err = out.Chmod(statIn.Mode())
+	if err != nil {
+		return
+	}
+
 	return
 }
 
-// GetTempFileName creates a random non-existing filename with a postfix `postfix` in directory `dir`.
+// GetTempFileName creates a random non-existing filename
+// with a postfix `postfix` in directory `dir` (can be empty to use the working dir).
 func GetTempFileName(dir string, postfix string) (file string) {
-	DebugAssert(strs.IsNotEmpty(dir), "Wrong input.")
 
 	maxLoops := 10
 	i := 0
@@ -211,7 +242,7 @@ func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
 
 	if IsFile(dst) {
 		// Force remove any backup file.
-		backupFile := GetTempFileName(backupDir, "-"+dst)
+		backupFile := GetTempFileName(backupDir, "-"+path.Base(dst))
 
 		// Move destination to the backup file.
 		if err = os.Rename(dst, backupFile); err != nil {

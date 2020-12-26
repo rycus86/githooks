@@ -244,7 +244,7 @@ func setMainVariables(args *Arguments) (InstallSettings, UISettings) {
 	if strs.IsEmpty(installDir) {
 		installDir, err = homedir.Dir()
 		cm.AssertNoErrorPanic(err, "Could not get home directory.")
-		installDir = path.Join(filepath.ToSlash(installDir), hooks.HookDirName)
+		installDir = path.Join(filepath.ToSlash(installDir), hooks.HooksDirName)
 	}
 
 	// Read registered file if existing.
@@ -365,7 +365,9 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) bool {
 	}
 
 	updateAvailable := status.LocalCommitSHA != status.RemoteCommitSHA
-	haveInstaller := cm.IsFile(hooks.GetInstallerExecutable(settings.InstallDir))
+
+	installer := hooks.GetInstallerExecutable(settings.InstallDir)
+	haveInstaller := cm.IsFile(installer)
 
 	// We download/build the binaries if an update is available
 	// or the installer is missing.
@@ -389,6 +391,8 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) bool {
 		} else {
 			binaries = downloadBinaries(settings, tempDir, status)
 		}
+
+		installer = binaries.Installer
 	}
 
 	updateTo := ""
@@ -396,29 +400,25 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) bool {
 		updateTo = status.RemoteCommitSHA
 	}
 
-	return runInstaller(
-		binaries.Installer,
-		args,
-		updateTo,
-		binaries.All)
-}
-
-func runInstaller(
-	installer string,
-	args *Arguments,
-	updateTo string,
-	binaries []string) bool {
-
-	log.Info("Dispatching to build installer ...")
-
-	// Set variables...
+	// Set variables for further update
+	// procedure...
 	args.InternalPostUpdate = true
 	args.InternalUpdateTo = updateTo
-	args.InternalBinaries = binaries
+	args.InternalBinaries = binaries.All
 
 	if IsDispatchSkipped {
 		return false
 	}
+
+	runInstaller(installer, args)
+
+	return true
+}
+
+func runInstaller(installer string, args *Arguments) {
+
+	log.Info("Dispatching to new installer ...")
+	log.PanicIfF(!cm.IsFile(installer), "Installer '%s' is not existing.", installer)
 
 	file, err := ioutil.TempFile("", "*install-config.json")
 	log.AssertNoErrorPanicF(err, "Could not create temporary file in '%s'.")
@@ -436,8 +436,6 @@ func runInstaller(
 		"--config", file.Name())
 
 	log.AssertNoErrorPanic(err, "Running installer failed.")
-
-	return true
 }
 
 func checkTemplateDir(targetDir string) string {
@@ -585,16 +583,16 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) (result 
 			"Searching ...", "Still searching ...")
 		taskIn := PreCommitSearchTask{Dir: dir}
 
-		resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings)
+		resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings) //nolint: gomnd
 		if err != nil {
 			log.AssertNoError(err, "Searching failed.")
-			return
+			return //nolint: nlreturn
 		}
 
 		taskOut := resultTask.(*PreCommitSearchTask)
 		cm.DebugAssert(taskOut != nil, "Wrong output.")
 
-		for _, match := range taskOut.Matches {
+		for _, match := range taskOut.Matches { //nolint: staticcheck
 
 			templateDir := path.Dir(path.Dir(filepath.ToSlash(match)))
 
@@ -607,7 +605,8 @@ func searchPreCommitFile(startDirs []string, promptCtx prompt.IContext) (result 
 
 			if answer == "y" {
 				result = templateDir
-				break
+
+				break //nolint: nlreturn
 			}
 		}
 	}
@@ -687,9 +686,9 @@ func getTargetTemplateDir(
 		hookTemplateDir = path.Join(templateDir, "hooks")
 	}
 
-	log.Info("Hook template dir set to '%s'.", hookTemplateDir)
+	log.InfoF("Hook template dir set to '%s'.", hookTemplateDir)
 
-	err := os.MkdirAll(hookTemplateDir, cm.DefaultDirectoryFileMode)
+	err := os.MkdirAll(hookTemplateDir, cm.DefaultFileModeDirectory)
 	log.AssertNoErrorPanicF(err,
 		"Could not assert directory '%s' exists",
 		hookTemplateDir)
@@ -825,7 +824,7 @@ func setupHookTemplates(
 		hookTemplateDir,
 		hookNames,
 		tempDir,
-		getHookDisableCallback(log, nonInteractive, dryRun, uiSettings),
+		getHookDisableCallback(log, nonInteractive, uiSettings),
 		log)
 
 	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookTemplateDir)
@@ -843,8 +842,12 @@ func installBinaries(
 	binaries []string,
 	dryRun bool) {
 
+	if len(args.InternalBinaries) == 0 {
+		return
+	}
+
 	binDir := hooks.GetBinaryDir(installDir)
-	err := os.MkdirAll(binDir, cm.DefaultDirectoryFileMode)
+	err := os.MkdirAll(binDir, cm.DefaultFileModeDirectory)
 	log.AssertNoErrorPanicF(err, "Could not create binary dir '%s'.", binDir)
 
 	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", path.Base(s)) })
@@ -886,7 +889,7 @@ func installBinaries(
 
 func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.IContext) {
 	gitx := git.Ctx()
-	currentSetting := gitx.GetConfig("githooks.autoupdate.enable", git.GlobalScope)
+	currentSetting := gitx.GetConfig("githooks.autoupdate.enabled", git.GlobalScope)
 	promptMsg := ""
 
 	switch {
@@ -951,7 +954,7 @@ func setupReadme(
 		return
 	}
 
-	hookDir := path.Join(mainWorktree, hooks.HookDirName)
+	hookDir := path.Join(mainWorktree, hooks.HooksDirName)
 	readme := hooks.GetReadmeFile(hookDir)
 
 	if !cm.IsFile(readme) {
@@ -972,7 +975,7 @@ func setupReadme(
 					"Looks like you don't have a '%s' folder in repository\n"+
 						"'%s' yet.\n"+
 						"Would you like to create one with a 'README'\n"+
-						"containing a brief overview of Githooks?", hooks.HookDirName, mainWorktree)
+						"containing a brief overview of Githooks?", hooks.HooksDirName, mainWorktree)
 			} else {
 				msg = strs.Fmt(
 					"Looks like you don't have a 'README.md' in repository\n"+
@@ -980,7 +983,7 @@ func setupReadme(
 						"A 'README' file might help contributors\n"+
 						"and other team members learn about what is this for.\n"+
 						"Would you like to add one now containing a\n"+
-						"brief overview of Githooks?", hookDir)
+						"brief overview of Githooks?", mainWorktree)
 			}
 
 			answer, err := uiSettings.PromptCtx.ShowPromptOptions(
@@ -1000,6 +1003,7 @@ func setupReadme(
 				createFile = true
 			}
 		}
+
 		if createFile {
 
 			if dryRun {
@@ -1008,7 +1012,7 @@ func setupReadme(
 				return
 			}
 
-			err := os.MkdirAll(path.Base(readme), cm.DefaultDirectoryFileMode)
+			err := os.MkdirAll(path.Dir(readme), cm.DefaultFileModeDirectory)
 
 			if err != nil {
 				log.WarnF("Could not create directory for '%s'.\n"+
@@ -1019,6 +1023,7 @@ func setupReadme(
 
 			err = hooks.WriteReadmeFile(readme)
 			log.AssertNoErrorF(err, "Could not write README file '%s'.", readme)
+			log.InfoF("Readme file has been written to '%s'.", readme)
 		}
 	}
 }
@@ -1032,7 +1037,7 @@ func installGitHooksIntoRepo(
 
 	hookDir := path.Join(repoGitDir, "hooks")
 	if !cm.IsDirectory(hookDir) {
-		err := os.MkdirAll(hookDir, cm.DefaultDirectoryFileMode)
+		err := os.MkdirAll(hookDir, cm.DefaultFileModeDirectory)
 		log.AssertNoErrorPanic(err,
 			"Could not create hook directory in '%s'.", repoGitDir)
 	}
@@ -1046,11 +1051,18 @@ func installGitHooksIntoRepo(
 		hookNames = managedHookNames
 	}
 
-	err := hooks.InstallRunWrappers(
-		hookDir, hookNames, tempDir,
-		getHookDisableCallback(log, nonInteractive, dryRun, uiSettings),
-		nil)
-	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookDir)
+	if dryRun {
+		log.InfoF("[dry run] Hooks would have been installed into\n'%s'.",
+			repoGitDir)
+	} else {
+		err := hooks.InstallRunWrappers(
+			hookDir, hookNames, tempDir,
+			getHookDisableCallback(log, nonInteractive, uiSettings),
+			nil)
+		log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookDir)
+		log.InfoF("Hooks installed into '%s'.",
+			repoGitDir)
+	}
 
 	// Offer to setup the intro README if running in interactive mode
 	// Let's skip this in non-interactive mode or in a bare repository
@@ -1059,17 +1071,7 @@ func installGitHooksIntoRepo(
 		setupReadme(repoGitDir, dryRun, uiSettings)
 	}
 
-	if dryRun {
-		log.InfoF("[dry run] Hooks would have been installed into\n'%s'.",
-			repoGitDir)
-
-		return false
-	}
-
-	log.InfoF("Hooks installed into '%s'.",
-		repoGitDir)
-
-	return true
+	return !dryRun
 }
 
 func getCurrentGitDir(cwd string) (gitDir string) {
@@ -1083,11 +1085,21 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 	return
 }
 
+func setGitDirRegistered(registeredRepos *hooks.RegisterRepos, gitDir string, onlyMark bool) {
+	if !onlyMark {
+		registeredRepos.Insert(gitDir)
+	}
+
+	err := hooks.MarkRegistered(git.CtxC(gitDir))
+	log.AssertNoErrorF(err, "Could not mark Git directory '%s' as registered.", gitDir)
+}
+
 func installGitHooksIntoExistingRepos(
 	tempDir string,
 	nonInteractive bool,
 	dryRun bool,
 	installedRepos InstallMap,
+	registeredRepos *hooks.RegisterRepos,
 	uiSettings *UISettings) {
 
 	gitx := git.Ctx()
@@ -1151,18 +1163,18 @@ func installGitHooksIntoExistingRepos(
 		"Searching ...", "Still searching ...")
 	taskIn := GitDirsSearchTask{Dir: searchDir}
 
-	resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings)
+	resultTask, err := cm.RunTaskWithProgress(&taskIn, log, 300*time.Second, settings) //nolint: gomnd
 	if err != nil {
 		log.AssertNoErrorF(err, "Could not find Git directories in '%s'.", searchDir)
-		return
+		return //nolint: nlreturn
 	}
 
 	taskOut := resultTask.(*GitDirsSearchTask)
 	cm.DebugAssert(taskOut != nil, "Wrong output.")
 
-	if len(taskOut.Matches) == 0 {
+	if len(taskOut.Matches) == 0 { //nolint: staticcheck
 		log.InfoF("No Git directories found in '%s'.", searchDir)
-		return
+		return //nolint: nlreturn
 	}
 
 	for _, gitDir := range taskOut.Matches {
@@ -1171,7 +1183,8 @@ func installGitHooksIntoExistingRepos(
 			gitDir, tempDir,
 			nonInteractive, dryRun, uiSettings) {
 
-			installedRepos.Insert(gitDir, false)
+			setGitDirRegistered(registeredRepos, gitDir, false)
+			installedRepos.Add(gitDir)
 		}
 	}
 
@@ -1189,13 +1202,18 @@ func installGitHooksIntoRegisteredRepos(
 		return
 	}
 
-	if !nonInteractive {
+	dirsWithNoInstalls := strs.Filter(registeredRepos.GitDirs,
+		func(s string) bool {
+			return !installedRepos.Exists(s)
+		})
+
+	if !nonInteractive && len(dirsWithNoInstalls) != 0 {
 
 		answer, err := uiSettings.PromptCtx.ShowPromptOptions(
 			"The following remaining registered repositories\n"+
 				"contain Githooks installation:\n"+
 				strings.Join(
-					strs.Map(registeredRepos.GitDirs,
+					strs.Map(dirsWithNoInstalls,
 						func(s string) string {
 							return strs.Fmt("- '%s'", s)
 						}), "\n")+
@@ -1209,14 +1227,14 @@ func installGitHooksIntoRegisteredRepos(
 		}
 	}
 
-	for _, gitDir := range registeredRepos.GitDirs {
+	for _, gitDir := range dirsWithNoInstalls {
 
 		if installGitHooksIntoRepo(
 			gitDir, tempDir,
 			nonInteractive, dryRun, uiSettings) {
 
-			registeredRepos.Insert(gitDir)
-			installedRepos.Insert(gitDir, true)
+			setGitDirRegistered(registeredRepos, gitDir, true)
+			installedRepos.Add(gitDir)
 		}
 	}
 
@@ -1322,6 +1340,26 @@ func storeSettings(settings *InstallSettings, uiSettings *UISettings) {
 
 }
 
+func updateClone(cloneDir string, updateToSHA string) {
+
+	if strs.IsEmpty(updateToSHA) {
+		return // We don't need to update the relase clone.
+	}
+
+	commitSHA, err := updates.MergeUpdates(cloneDir, false)
+
+	log.AssertNoErrorF(err,
+		"Could not finalize by updating the local branch to the\n"+
+			"remote branch in the release clone\n"+
+			"'%s'.\n"+
+			"This seems rather odd.\n"+
+			"Either fix the problems or delete the clone\n",
+		"to trigger a new checkout.", cloneDir)
+
+	cm.DebugAssert(err != nil ||
+		commitSHA == updateToSHA, "Wrong updateToSHA.")
+}
+
 func thankYou() {
 	log.InfoF("All done! Enjoy!\n"+
 		"Please support the project by starring the project\n"+
@@ -1335,12 +1373,12 @@ func runUpdate(
 	uiSettings *UISettings,
 	args *Arguments) {
 
-	log.InfoF("Running update to version '%s' ...", build.BuildVersion)
+	log.InfoF("Running install to version '%s' ...", build.BuildVersion)
 
 	if args.NonInteractive {
 		// disable the prompt context,
 		// no prompt must be shown in this mode
-		// if we do -> pandic...
+		// if we do -> panic...
 		uiSettings.PromptCtx = nil
 	}
 
@@ -1390,6 +1428,7 @@ func runUpdate(
 					args.NonInteractive,
 					args.DryRun,
 					settings.InstalledGitDirs,
+					&settings.RegisteredGitDirs,
 					uiSettings)
 			}
 
@@ -1412,6 +1451,7 @@ func runUpdate(
 
 	if !args.DryRun {
 		storeSettings(settings, uiSettings)
+		updateClone(settings.CloneDir, args.InternalUpdateTo)
 	}
 
 	thankYou()

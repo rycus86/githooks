@@ -19,25 +19,25 @@ func main() {
 	root, err := git.Ctx().Get("rev-parse", "--show-toplevel")
 	cm.AssertNoErrorPanicF(err, "Could not root dir.")
 
-	githooksRoot := path.Join(root, "githooks")
+	srcRoot := path.Join(root, "githooks")
 
 	template := path.Join(root, "base-template-wrapper.sh")
-	readme := hooks.GetReadmeFile(root)
+	readme := hooks.GetReadmeFile(path.Join(root, hooks.HooksDirName))
 
 	c := bindata.Config{
 		Input: []bindata.InputConfig{
-			bindata.InputConfig{Path: template, Recursive: false},
-			bindata.InputConfig{Path: readme, Recursive: false}},
+			{Path: template, Recursive: false},
+			{Path: readme, Recursive: false}},
 		Package:        pkg,
 		NoMemCopy:      false,
 		NoCompress:     false,
 		HttpFileSystem: false,
 		Debug:          false,
 		Prefix:         root,
-		Output:         path.Join(githooksRoot, embeddedFile)}
+		Output:         path.Join(srcRoot, embeddedFile)}
 
 	err = bindata.Translate(&c)
 
 	cm.AssertNoErrorPanicF(err,
-		"Tranlating file '%s' into embedded binary failed.", template)
+		"Translating file '%s' into embedded binary failed.", template)
 }

@@ -3,9 +3,10 @@ package main
 import (
 	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
+	strs "rycus86/githooks/strings"
 )
 
-type InstallMap map[string]bool
+type InstallMap = strs.StringSet
 
 // InstallSettings are the settings for the installer.
 type InstallSettings struct {
@@ -24,8 +25,4 @@ type InstallSettings struct {
 	// All repositories Git directories where Githooks run wrappers have been installed.
 	// Bool indicates if it is already registered.
 	InstalledGitDirs InstallMap
-}
-
-func (m InstallMap) Insert(gitDir string, registered bool) {
-	m[gitDir] = registered
 }
