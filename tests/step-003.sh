@@ -3,7 +3,7 @@
 #   Run a simple install and verify multiple hooks trigger properly
 
 # run the default install
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 mkdir -p /tmp/test3 && cd /tmp/test3 || exit 1
 git init || exit 1

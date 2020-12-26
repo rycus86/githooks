@@ -19,7 +19,7 @@ echo 'y
 y
 y
 y
-' | sh /var/lib/githooks/install.sh || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 if ! [ -f /tmp/git-templates/templates/hooks/pre-commit ]; then
     # verify that a new hook file was installed

@@ -4,7 +4,7 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-if ! sh /var/lib/githooks/install.sh; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi

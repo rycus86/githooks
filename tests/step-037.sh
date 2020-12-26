@@ -4,7 +4,7 @@
 
 git config --global githooks.autoupdate.enabled false || exit 1
 echo 'y
-' | sh /var/lib/githooks/install.sh || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 if [ "$(git config --global --get githooks.autoupdate.enabled)" != "true" ]; then
     echo "! Automatic update checks are not enabled"

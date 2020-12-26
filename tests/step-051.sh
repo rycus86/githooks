@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: print version number
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 if ! git hooks version | grep -q "Version: "; then
     echo "! Unexpected cli version output"

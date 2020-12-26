@@ -2,7 +2,7 @@
 # Test:
 #   Run the cli tool trying to list hooks of invalid type
 
-if ! sh /var/lib/githooks/install.sh; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi

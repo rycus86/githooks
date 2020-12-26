@@ -11,7 +11,7 @@ mkdir -p ~/.githooks/release && cp /var/lib/githooks/cli.sh ~/.githooks/release 
 
 rm -rf /usr/share/git-core/templates/hooks || exit 1
 
-sh /var/lib/githooks/install.sh --non-interactive || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin --non-interactive || exit 1
 
 if [ -n "$(git config init.templateDir)" ]; then
     echo "! Expected to have init.templateDir not set!" >&2

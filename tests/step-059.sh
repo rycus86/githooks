@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list shows ignored files
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 mkdir -p /tmp/test059/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/test059/.githooks/pre-commit/first &&

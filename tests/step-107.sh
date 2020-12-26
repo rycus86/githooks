@@ -9,7 +9,7 @@ if git-lfs --version; then
 fi
 
 # run Githooks install
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 # setup the first repository
 mkdir -p /tmp/test107a/.githooks &&

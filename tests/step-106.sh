@@ -11,7 +11,7 @@ mkdir -p /tmp/test106-lfs &&
 
 export PATH=/tmp/test106-lfs:"$PATH" || exit 2
 
-sh /var/lib/githooks/install.sh || exit 3
+/var/lib/githooks/githooks/bin/installer --stdin || exit 3
 
 mkdir -p /tmp/test106 &&
     cd /tmp/test106 &&
@@ -55,7 +55,7 @@ if ! grep -q 'post-commit' lfs.out || [ -f hook.out ]; then
 fi
 
 # an extra invocation for coverage
-~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused ||
+~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused ||
     exit 12
 
 if ! grep -q 'post-merge' lfs.out; then

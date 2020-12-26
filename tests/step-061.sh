@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: update shared hook repos
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
     mkdir -p /tmp/shared/second-shared.git/.githooks/pre-commit &&

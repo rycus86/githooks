@@ -5,7 +5,7 @@
 mkdir -p /tmp/test099/.git/hooks &&
     cd /tmp/test099 &&
     git init &&
-    sh /var/lib/githooks/install.sh &&
+    /var/lib/githooks/githooks/bin/installer --stdin &&
     git config githooks.autoupdate.enabled false ||
     exit 1
 

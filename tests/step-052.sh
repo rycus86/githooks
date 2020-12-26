@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: print help and usage
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 if ! git hooks help | grep -q "Prints this help message"; then
     echo "! Unexpected cli help output"

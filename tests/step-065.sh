@@ -5,7 +5,7 @@
 rm -rf /usr/share/git-core/templates/hooks
 
 echo 'n
-' | sh /var/lib/githooks/install.sh
+' | /var/lib/githooks/githooks/bin/installer --stdin
 
 # shellcheck disable=SC2181
 if [ $? -eq 0 ]; then

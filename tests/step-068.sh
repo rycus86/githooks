@@ -4,7 +4,7 @@
 
 mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
 
-if ! sh /var/lib/githooks/install.sh; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi

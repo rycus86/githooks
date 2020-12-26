@@ -2,7 +2,7 @@
 # Test:
 #   Test urls and local paths in shared hooks
 
-if ! sh /var/lib/githooks/install.sh; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -60,7 +60,7 @@ fi
 echo "file://///tmp/shared/shared-cloned.git" >.githooks/.shared || exit 1
 
 # Invoke shared hooks update
-OUT=$(~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-merge unused 2>&1)
+OUT=$(~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused 2>&1)
 # shellcheck disable=SC2181
 if echo "$OUT" | grep -q "Shared hook: test1" ||
     ! echo "$OUT" | grep -q "Update will be skipped" ||

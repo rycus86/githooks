@@ -2,7 +2,7 @@
 # Test:
 #   Test registering mechanism.
 
-if ! sh /var/lib/githooks/install.sh; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -60,7 +60,7 @@ mkdir -p /tmp/test116.3 && cd /tmp/test116.3 && git init
 
 echo 'Y
 /tmp
-' | sh /var/lib/githooks/install.sh || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
     ! grep -q /tmp/test116.2/.git "$REGISTER_FILE" ||
@@ -98,7 +98,7 @@ fi
 echo 'Y
 y
 /tmp
-' | sh /var/lib/githooks/install.sh || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 # Update Test
 # Set all other hooks to dirty by adding something

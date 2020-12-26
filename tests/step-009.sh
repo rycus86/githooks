@@ -20,7 +20,7 @@ mkdir -p /tmp/test9/.githooks/pre-commit &&
 echo 'n
 y
 /tmp/test9
-' | sh /var/lib/githooks/install.sh || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 git commit -m ''
 

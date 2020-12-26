@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: run an update
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 mkdir -p /tmp/test063 &&
     cd /tmp/test063 &&
@@ -18,7 +18,6 @@ fi
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
 if ! git hooks update; then
     echo "! Failed to run the update"
-    exit 1
 fi
 AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"
 

@@ -8,7 +8,9 @@ cd /usr/share/git-core/templates/hooks &&
     chmod +x pre-commit ||
     exit 1
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
+
+ls -al /usr/share/git-core/templates/hooks
 
 mkdir -p /tmp/test8/.githooks/pre-commit &&
     cd /tmp/test8 &&

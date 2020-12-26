@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list hooks for all types of hook sources
 
-sh /var/lib/githooks/install.sh || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 mkdir -p ~/.githooks/shared/repo1/.githooks/pre-commit &&
     cd ~/.githooks/shared/repo1 &&

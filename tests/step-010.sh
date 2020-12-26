@@ -8,7 +8,7 @@ git init || exit 1
 echo 'n
 y
 /
-' | sh /var/lib/githooks/install.sh --dry-run || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin --dry-run || exit 1
 
 mkdir -p /tmp/test10/b && cd /tmp/test10/b || exit 1
 git init || exit 1

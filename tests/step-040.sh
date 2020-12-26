@@ -11,7 +11,7 @@ mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
 
 git init || exit 1
 
-if ! sh /var/lib/githooks/install.sh --single --non-interactive; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin --single --non-interactive; then
     echo "! Installation failed"
     exit 1
 fi

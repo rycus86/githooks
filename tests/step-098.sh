@@ -12,7 +12,7 @@ fi
 mkdir -p /tmp/test098/.git/hooks &&
     cd /tmp/test098 &&
     git init &&
-    sh /var/lib/githooks/install.sh $SINGLE &&
+    /var/lib/githooks/githooks/bin/installer --stdin $SINGLE &&
     git config githooks.autoupdate.enabled false ||
     exit 1
 

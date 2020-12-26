@@ -17,7 +17,7 @@ mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
 
 git init || exit 1
 
-if ! sh /var/lib/githooks/install.sh --single; then
+if ! /var/lib/githooks/githooks/bin/installer --stdin --single; then
     echo "! Installation failed"
     exit 1
 fi
@@ -40,24 +40,10 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
     exit 1
 fi
 
-# Test update again with deprecated single flag
-git config --local githooks.single.install "true" || exit 1
-OUTPUT=$(
-    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit 2>&1
-)
-if ! echo "$OUTPUT" | grep -iq "DEPRECATION WARNING: Single install" ||
-    ! echo "$OUTPUT" | grep -iq "Install failed due to deprecated single install"; then
-    echo "$OUTPUT"
-    echo "! Expected installation to fail because of single install flag"
-    exit 1
-fi
-
-# Test update again without single flag
-git config --local --unset githooks.single.install || exit 1
 git config --global --unset githooks.autoupdate.lastrun
 
 OUTPUT=$(
-    ~/.githooks/release/base-template.sh "$(pwd)"/.git/hooks/post-commit 2>&1
+    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then

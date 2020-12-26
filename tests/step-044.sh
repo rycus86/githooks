@@ -17,7 +17,7 @@ y
 /tmp/test044
 n
 y
-" | sh /var/lib/githooks/install.sh || exit 1
+" | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
 
 find /tmp/test044
 

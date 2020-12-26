@@ -13,10 +13,10 @@ OUTPUT=$(
     echo 'n
 y
 /does/not/exist
-' | sh /var/lib/githooks/install.sh 2>&1
+' | /var/lib/githooks/githooks/bin/installer --stdin 2>&1
 )
 
-if ! echo "$OUTPUT" | grep "Existing repositories won't get the Githooks hooks"; then
+if ! echo "$OUTPUT" | grep "Answer must be an existing directory"; then
     echo "$OUTPUT"
     echo "! Expected error message not found"
     exit 1

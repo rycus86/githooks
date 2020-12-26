@@ -21,7 +21,7 @@ fi
 echo 'n
 y
 
-' | sh /var/lib/githooks/install.sh --skip-install-into-existing || exit 1
+' | /var/lib/githooks/githooks/bin/installer --stdin --skip-install-into-existing || exit 1
 
 if grep -r 'github.com/rycus86/githooks' ~/test100/; then
     echo "! Hooks were installed but shouldn't have"
@@ -32,7 +32,7 @@ fi
 echo 'n
 y
 
-' | sh /var/lib/githooks/install.sh
+' | /var/lib/githooks/githooks/bin/installer --stdin
 
 if ! grep -r 'github.com/rycus86/githooks' ~/test100/p001/.git/hooks; then
     echo "! Hooks were not installed successfully"

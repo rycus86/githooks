@@ -3,7 +3,7 @@
 #   Run a simple install non-interactively and verify the hooks are in place
 
 # run the default install
-sh /var/lib/githooks/install.sh --non-interactive || exit 1
+/var/lib/githooks/githooks/bin/installer --stdin --non-interactive || exit 1
 
 mkdir -p /tmp/test1 && cd /tmp/test1 || exit 1
 git init || exit 1

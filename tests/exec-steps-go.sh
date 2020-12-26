@@ -5,17 +5,27 @@ if ! grep '/docker/' </proc/self/cgroup >/dev/null 2>&1; then
     exit 1
 fi
 
+SEQUENCE=""
+if [ "$1" = "--sequence" ]; then
+    shift
+    SEQUENCE=$(for f in "$@"; do echo "step-$f"; done)
+fi
+
 TEST_RUNS=0
 FAILED=0
 SKIPPED=0
 
 FAILED_TEST_LIST=""
 
-COMMIT_BEFORE=$(cd /var/backup/githooks && git rev-parse HEAD)
+COMMIT_BEFORE=$(cd /var/lib/githooks && git rev-parse HEAD)
 
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
+
+    if [ -n "$SEQUENCE" ] && ! echo "$SEQUENCE" | grep -q "$STEP_NAME"; then
+        continue
+    fi
 
     echo "> Executing $STEP_NAME"
     echo "  :: $STEP_DESC"
@@ -29,8 +39,8 @@ for STEP in /var/lib/tests/step-*.sh; do
     rm -rf ~/.githooks
     rm -rf /tmp/*
 
-    git -C /var/lib/githooks reset --hard "$COMMIT_BEFORE" &&
-        git -C /var/lib/githooks clean -df
+    git -C /var/lib/githooks reset --hard "$COMMIT_BEFORE" >/dev/null 2>&1 &&
+        git -C /var/lib/githooks clean -df >/dev/null 2>&1
 
     TEST_RUNS=$((TEST_RUNS + 1))
 
