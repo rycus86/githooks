@@ -121,7 +121,7 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 
 // FindGitDirs returns Git directories inside `searchDir`.
 // Paths relative to `searchDir` containing `.dotfiles` (hidden files)
-// will never be reported.
+// will never be reported. Optionally the output can be sorted.
 func FindGitDirs(searchDir string) (all []string, err error) {
 	candidates, err := cm.Glob(path.Join(searchDir, "**/HEAD"), true)
 	if err != nil {

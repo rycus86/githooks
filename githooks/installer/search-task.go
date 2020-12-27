@@ -4,6 +4,7 @@ import (
 	"path"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"sort"
 )
 
 // PreCommitSearchTask is a task to search for pre-commit files.
@@ -16,6 +17,10 @@ func (t *PreCommitSearchTask) Run(exitCh chan bool) (err error) {
 	t.Matches, err = cm.Glob(path.Join(t.Dir,
 		"**/templates/hooks/pre-commit.sample"),
 		true)
+
+	if TestingSortAllGlobs {
+		sort.Strings(t.Matches)
+	}
 
 	return err
 }
@@ -34,6 +39,10 @@ type GitDirsSearchTask struct {
 
 func (t *GitDirsSearchTask) Run(exitCh chan bool) (err error) {
 	t.Matches, err = git.FindGitDirs(t.Dir)
+
+	if TestingSortAllGlobs {
+		sort.Strings(t.Matches)
+	}
 
 	return
 }

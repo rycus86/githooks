@@ -406,7 +406,7 @@ func prepareDispatch(settings *InstallSettings, args *Arguments) bool {
 	args.InternalUpdateTo = updateTo
 	args.InternalBinaries = binaries.All
 
-	if IsDispatchSkipped {
+	if DevIsDispatchSkipped {
 		return false
 	}
 
