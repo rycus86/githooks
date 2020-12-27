@@ -203,7 +203,7 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 	}
 
 	if loadFallback {
-		cacheDir = path.Join(settings.GitDir, ".githooks.checksums")
+		cacheDir = hooks.GetChecksumDirectoryGitDir(settings.GitDir)
 		err = store.AddChecksums(cacheDir, true)
 		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", cacheDir)
 	}

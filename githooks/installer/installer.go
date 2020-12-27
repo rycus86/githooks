@@ -559,7 +559,7 @@ func setupNewTemplateDir(installDir string, promptCtx prompt.IContext) string {
 		templateDir, err = promptCtx.ShowPrompt(
 			"Enter the target folder",
 			templateDir,
-			prompt.CreateValidatorIsDirectory(homeDir))
+			nil)
 		log.AssertNoErrorF(err, "Could not show prompt.")
 	}
 
@@ -994,19 +994,24 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 	return
 }
 
-func installIntoCurrent(settings *Settings, uiSettings *UISettings) {
-
-	gitDir := getCurrentGitDir(settings.Cwd)
+func installIntoCurrentRepo(
+	gitDir string,
+	tempDir string,
+	nonInteractive bool,
+	dryRun bool,
+	installedGitDirs InstallSet,
+	registeredGitDirs *hooks.RegisterRepos,
+	uiSettings *UISettings) {
 
 	if installIntoRepo(
 		gitDir,
-		settings.TempDir,
-		args.NonInteractive,
-		args.DryRun,
+		tempDir,
+		nonInteractive,
+		dryRun,
 		uiSettings) {
 
-		settings.RegisteredGitDirs.Insert(gitDir)
-		settings.InstalledGitDirs.Insert(gitDir)
+		registeredGitDirs.Insert(gitDir)
+		installedGitDirs.Insert(gitDir)
 	}
 }
 
@@ -1252,7 +1257,14 @@ func runUpdate(
 
 	if args.SingleInstall {
 
-		installIntoCurrent(settings, uiSettings)
+		installIntoCurrentRepo(
+			getCurrentGitDir(settings.Cwd),
+			settings.TempDir,
+			args.NonInteractive,
+			args.DryRun,
+			settings.InstalledGitDirs,
+			&settings.RegisteredGitDirs,
+			uiSettings)
 
 	} else {
 

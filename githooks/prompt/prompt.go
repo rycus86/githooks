@@ -48,8 +48,9 @@ type Context struct {
 	termIn        *os.File
 	termInScanner *bufio.Scanner
 
-	printAnswer bool
-	maxTries    uint
+	printAnswer     bool
+	maxTries        uint
+	panicIfMaxTries bool
 
 	// Prompt over the tool script if existing.
 	execCtx cm.IExecContext
@@ -101,8 +102,9 @@ func CreateContext(
 		termIn:        input,
 		termInScanner: bufio.NewScanner(input),
 
-		maxTries:    maxTries,
-		printAnswer: printAnswer,
+		maxTries:        maxTries,
+		panicIfMaxTries: true,
+		printAnswer:     printAnswer,
 
 		execCtx: execCtx,
 		tool:    tool}

@@ -14,7 +14,7 @@ func AppendUnique(slice []string, s string) []string {
 
 // Remove removes all occurrences from the slice.
 func Remove(slice []string, s string) []string {
-	newitems := []string{}
+	newitems := make([]string, 0, len(slice))
 
 	for _, el := range slice {
 		if el != s {

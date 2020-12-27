@@ -112,10 +112,15 @@ func GetHookIgnorePatternsWorktree(repoDir string, hookName string) (patterns Ho
 	return
 }
 
+// GetHookIgnoreFileGitDir gets
+// the file of all ignored hooks in the current Git directory.
+func GetHookIgnoreFileGitDir(gitDir string) string {
+	return path.Join(gitDir, ".githooks.ignore.yaml")
+}
+
 // GetHookIgnorePatternsGitDir gets all ignored hooks in the current Git directory.
 func GetHookIgnorePatternsGitDir(gitDir string) (HookIgnorePatterns, error) {
-
-	file := path.Join(gitDir, ".githooks.ignore.yaml")
+	file := GetHookIgnoreFileGitDir(gitDir)
 	exists, err := cm.IsPathExisting(file)
 	if exists {
 		return loadIgnorePatterns(file)

@@ -20,7 +20,8 @@ func downloadBinaries(
 
 	others := []string{
 		path.Join(tempDir, "cli"),
-		path.Join(tempDir, "runner")}
+		path.Join(tempDir, "runner"),
+		path.Join(tempDir, "uninstaller")}
 	installer := path.Join(tempDir, "installer")
 
 	all := append(others, installer)

@@ -43,7 +43,7 @@ func MarkRegistered(gitx *git.Context) error {
 // install folder.
 func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDirs bool) (err error) {
 
-	file := getRegisterFile(installDir)
+	file := GetRegisterFile(installDir)
 	exists, e := cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
 
@@ -53,7 +53,7 @@ func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDi
 
 	// Legacy: Load legacy register file
 	// @todo: Remove this as soon as possible
-	file = getLegacyRegisterFile(installDir)
+	file = GetLegacyRegisterFile(installDir)
 	exists, e = cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
 
@@ -90,7 +90,7 @@ func (r *RegisterRepos) Store(installDir string) (err error) {
 	// @todo: Remove this as soon as possible
 	if len(r.GitDirs) != 0 {
 		var f *os.File
-		f, err = os.OpenFile(getLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
+		f, err = os.OpenFile(GetLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
 		if err != nil {
 			return
 		}
@@ -103,7 +103,7 @@ func (r *RegisterRepos) Store(installDir string) (err error) {
 		}
 	}
 
-	file := getRegisterFile(installDir)
+	file := GetRegisterFile(installDir)
 
 	return cm.StoreYAML(file, &r)
 }
@@ -135,10 +135,10 @@ func (r *RegisterRepos) FilterGitDirs() {
 		})
 }
 
-func getRegisterFile(installDir string) string {
+func GetRegisterFile(installDir string) string {
 	return path.Join(installDir, "registered.yaml")
 }
 
-func getLegacyRegisterFile(installDir string) string {
+func GetLegacyRegisterFile(installDir string) string {
 	return path.Join(installDir, "registered")
 }

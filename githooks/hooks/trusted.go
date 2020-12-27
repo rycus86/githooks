@@ -217,3 +217,8 @@ func (t *ChecksumStore) Summary() string {
 		len(t.checksumFiles),
 		len(t.checksumDirs))
 }
+
+// GetChecksumFileGitDir gets the checksum file inside the Git directory.
+func GetChecksumDirectoryGitDir(gitDir string) string {
+	return path.Join(gitDir, ".githooks.checksums")
+}

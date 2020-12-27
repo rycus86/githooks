@@ -110,46 +110,47 @@ func moveExistingHooks(
 	log cm.ILogContext) error {
 
 	// Check there is already a Git hook in place and replace it.
-	if cm.IsFile(dest) {
+	if !cm.IsFile(dest) {
+		return nil
+	}
 
-		isRunWrapper, err := IsRunWrapper(dest)
+	isRunWrapper, err := IsRunWrapper(dest)
 
-		if err != nil {
-			return cm.CombineErrors(err,
-				cm.ErrorF("Could not detect if '%s' is a Githooks run wrapper.", dest))
-		}
+	if err != nil {
+		return cm.CombineErrors(err,
+			cm.ErrorF("Could not detect if '%s' is a Githooks run wrapper.", dest))
+	}
 
-		if !isRunWrapper {
+	if !isRunWrapper {
 
-			// Try to detect a potential LFS statements and
-			// disable the hook (backup or delete).
-			if disableHookIfLFS != nil {
-				disabled, deleted, err := disableHookIfLFSDetected(dest, tempDir, disableHookIfLFS)
-				if err != nil {
-					return err
-				}
-
-				if log != nil {
-					if disabled && deleted {
-						log.WarnF("Previous hook '%s' is now disabled (deleted)", dest)
-					} else if disabled && !deleted {
-						log.WarnF("Previous hook '%s' is now disabled (backuped)", dest)
-					}
-				}
+		// Try to detect a potential LFS statements and
+		// disable the hook (backup or delete).
+		if disableHookIfLFS != nil {
+			disabled, deleted, err := disableHookIfLFSDetected(dest, tempDir, disableHookIfLFS)
+			if err != nil {
+				return err
 			}
 
-			// Replace the file normally if it is still existing.
-			if cm.IsFile(dest) {
-				if log != nil {
-					log.InfoF("Saving existing Git hook '%s'.", dest)
+			if log != nil {
+				if disabled && deleted {
+					log.WarnF("Previous hook '%s' is now disabled (deleted)", dest)
+				} else if disabled && !deleted {
+					log.WarnF("Previous hook '%s' is now disabled (backuped)", dest)
 				}
+			}
+		}
 
-				newDest := path.Join(path.Dir(dest), GetHookReplacementFileName(dest))
-				err = os.Rename(dest, newDest)
-				if err != nil {
-					return cm.CombineErrors(err,
-						cm.ErrorF("Could not rename file '%s' to '%s'.", dest, newDest))
-				}
+		// Replace the file normally if it is still existing.
+		if cm.IsFile(dest) {
+			if log != nil {
+				log.InfoF("Saving existing Git hook '%s'.", dest)
+			}
+
+			newDest := path.Join(path.Dir(dest), GetHookReplacementFileName(dest))
+			err = os.Rename(dest, newDest)
+			if err != nil {
+				return cm.CombineErrors(err,
+					cm.ErrorF("Could not rename file '%s' to '%s'.", dest, newDest))
 			}
 		}
 	}
@@ -213,6 +214,10 @@ func UninstallRunWrappers(dir string, hookNames []string) (err error) {
 	for _, hookName := range hookNames {
 
 		dest := path.Join(dir, hookName)
+
+		if !cm.IsFile(dest) {
+			continue
+		}
 
 		isRunWrapper, e := IsRunWrapper(dest)
 

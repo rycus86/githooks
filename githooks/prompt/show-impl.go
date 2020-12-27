@@ -104,47 +104,46 @@ func showPromptOptionsTerminal(
 
 		success := p.termInScanner.Scan()
 
-		if success {
-
-			ans := p.termInScanner.Text()
-
-			if p.printAnswer {
-				_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
-			}
-
-			// Fallback to default answer.
-			if strs.IsEmpty(ans) && emptyCausesDefault {
-				ans = defaultAnswer
-			}
-
-			// Trim everything.
-			ans = strings.ToLower(strings.TrimSpace(ans))
-
-			// Validate the answer if possible.
-			if validator == nil {
-				return ans, true, nil
-			}
-
-			e := validator(ans)
-			if e == nil {
-				return ans, true, nil
-			}
-
-			warning := p.errorFmt("Answer validation error: %s", e.Error())
-			err = cm.CombineErrors(err, writeOut(warning+"\n"))
-
-			if nPrompts < maxPrompts {
-				warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
-				err = cm.CombineErrors(err, writeOut(warning+"\n"))
-			}
-
-		} else {
+		if !success {
 			err = cm.CombineErrors(err,
 				writeOut("\n"),
 				cm.ErrorF("Could not read from terminal."))
 
 			break
 		}
+
+		ans := p.termInScanner.Text()
+
+		if p.printAnswer {
+			_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
+		}
+
+		// Fallback to default answer.
+		if strs.IsEmpty(ans) && emptyCausesDefault {
+			ans = defaultAnswer
+		}
+
+		// Trim everything.
+		ans = strings.ToLower(strings.TrimSpace(ans))
+
+		// Validate the answer if possible.
+		if validator == nil {
+			return ans, true, nil
+		}
+
+		e := validator(ans)
+		if e == nil {
+			return ans, true, nil
+		}
+
+		warning := p.errorFmt("Answer validation error: %s", e.Error())
+		err = cm.CombineErrors(err, writeOut(warning+"\n"))
+
+		if nPrompts < maxPrompts {
+			warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
+			err = cm.CombineErrors(err, writeOut(warning+"\n"))
+		}
+
 	}
 
 	warning := p.errorFmt("Could not get answer in '%q', taking default '%s'.",
@@ -201,8 +200,9 @@ func showPromptTerminal(
 	// Our stdin is never a tty (either a pipe or /dev/null when called
 	// from git), so read from /dev/tty, our controlling terminal,
 	// if it can be opened.
-	nPrompts := 0 // How many times we showed the prompt
-	maxPrompts := 3
+	nPrompts := uint(0) // How many times we showed the prompt
+	maxPrompts := p.maxTries
+
 	switch {
 	case p.termIn == nil:
 		err = cm.ErrorF("No terminal input available to show prompt.")
@@ -218,51 +218,52 @@ func showPromptTerminal(
 		return e // nolint: nlreturn
 	}
 
-	for nPrompts < maxPrompts {
+	for nPrompts < p.maxTries {
 
 		err = writeOut(text)
 		nPrompts++
 
 		success := p.termInScanner.Scan()
 
-		if success {
-			ans := p.termInScanner.Text()
-
-			if p.printAnswer {
-				_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
-			}
-
-			if strs.IsEmpty(ans) {
-				// User pressed `Enter`
-				ans = defaultAnswer
-			}
-
-			// Trim everything.
-			ans = strings.ToLower(strings.TrimSpace(ans))
-
-			// Validate the answer if possible.
-			if validator == nil {
-				return ans, true, nil
-			}
-
-			e := validator(ans)
-			if e == nil {
-				return ans, true, nil
-			}
-
-			warning := p.errorFmt("Answer validation error: %s", e.Error())
-			err = cm.CombineErrors(err, writeOut(warning+"\n"))
-
-			if nPrompts < maxPrompts {
-				warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
-				err = cm.CombineErrors(err, writeOut(warning+"\n"))
-			}
-
-		} else {
+		if !success {
 			err = cm.CombineErrors(err,
 				writeOut("\n"), cm.ErrorF("Could not read from terminal."))
 
 			break
+		}
+
+		ans := p.termInScanner.Text()
+
+		if p.printAnswer {
+			_ = writeOut(strs.Fmt(" -> Received: '%s'\n", ans))
+		}
+
+		if strs.IsEmpty(ans) {
+			// User pressed `Enter`
+			ans = defaultAnswer
+		}
+
+		// Trim everything.
+		ans = strings.ToLower(strings.TrimSpace(ans))
+
+		// Validate the answer if possible.
+		if validator == nil {
+			return ans, true, nil
+		}
+
+		e := validator(ans)
+		if e == nil {
+			return ans, true, nil
+		}
+
+		warning := p.errorFmt("Answer validation error: %s", e.Error())
+		err = cm.CombineErrors(err, writeOut(warning+"\n"))
+
+		if nPrompts < maxPrompts {
+			warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
+			err = cm.CombineErrors(err, writeOut(warning+"\n"))
+		} else if p.panicIfMaxTries {
+			p.log.PanicF("Could not validate answer in '%v' tries.", maxPrompts)
 		}
 	}
 

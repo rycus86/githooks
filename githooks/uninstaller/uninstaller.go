@@ -139,7 +139,7 @@ func setMainVariables(args *Arguments) (Settings, UISettings) {
 
 func prepareDispatch(settings *Settings, args *Arguments) bool {
 
-	uninstaller := hooks.GetInstallerExecutable(settings.InstallDir)
+	uninstaller := hooks.GetUninstallerExecutable(settings.InstallDir)
 	if !cm.IsFile(uninstaller) {
 		log.WarnF("There is no existing Githooks uninstaller present\n"+
 			"in install dir '%s'.\n"+
@@ -202,16 +202,25 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 func cleanArtefactsInRepo(gitDir string) {
 
 	// Remove checksum files...
-	cacheDir := path.Join(gitDir, ".githooks.checksums")
+	cacheDir := hooks.GetChecksumDirectoryGitDir(gitDir)
 	if cm.IsDirectory(cacheDir) {
 		log.AssertNoErrorF(os.RemoveAll(cacheDir),
 			"Could not delete checksum cache dir '%s'.", cacheDir)
 	}
 
+	ignoreFile := hooks.GetHookIgnoreFileGitDir(gitDir)
+	if cm.IsDirectory(ignoreFile) {
+		log.AssertNoErrorF(os.RemoveAll(ignoreFile),
+			"Could not delete ignore file '%s'.", ignoreFile)
+	}
+
+	// @todo remove as soon as possible
 	if hooks.ReadWriteLegacyTrustFile {
 		localChecksums := path.Join(gitDir, ".githooks.checksum")
-		log.AssertNoErrorF(os.Remove(localChecksums),
-			"Could not delete checksum file '%s'.", localChecksums)
+		if cm.IsFile(localChecksums) {
+			log.AssertNoErrorF(os.Remove(localChecksums),
+				"Could not delete checksum file '%s'.", localChecksums)
+		}
 	}
 
 }
@@ -266,9 +275,30 @@ func uninstallFromRepo(
 	cleanArtefactsInRepo(gitDir)
 	cleanGitConfigInRepo(gitDir)
 
-	log.InfoF("Githooks uninstalled from\n'%s'.", gitDir)
+	log.InfoF("Githooks uninstalled from '%s'.", gitDir)
 
 	return true
+}
+
+func uninstallFromCurrentRepo(
+	gitDir string,
+	lfsAvailable bool,
+	tempDir string,
+	nonInteractive bool,
+	uninstalledRepos UninstallSet,
+	registeredRepos *hooks.RegisterRepos,
+	uiSettings *UISettings) {
+
+	if uninstallFromRepo(
+		gitDir,
+		lfsAvailable,
+		tempDir,
+		nonInteractive,
+		uiSettings) {
+
+		registeredRepos.Remove(gitDir)
+		uninstalledRepos.Insert(gitDir)
+	}
 }
 
 func uninstallFromExistingRepos(
@@ -439,7 +469,29 @@ func cleanGitConfig() {
 	}
 }
 
+func cleanRegister(installDir string) {
+
+	registerFile := hooks.GetRegisterFile(installDir)
+
+	if cm.IsFile(registerFile) {
+		err := os.Remove(registerFile)
+		log.AssertNoError(err,
+			"Could not delete register file '%s'.", registerFile)
+	}
+
+	// @todo remove as soon as possible
+	registerFile = hooks.GetLegacyRegisterFile(installDir)
+
+	if cm.IsFile(registerFile) {
+		err := os.Remove(registerFile)
+		log.AssertNoError(err,
+			"Could not delete register file '%s'.", registerFile)
+	}
+
+}
+
 func storeSettings(settings *Settings) {
+	log.InfoF("reg: %v", settings.RegisteredGitDirs.GitDirs)
 	err := settings.RegisteredGitDirs.Store(settings.InstallDir)
 	log.AssertNoError(err,
 		"Could not store registered file in '%s'.",
@@ -451,14 +503,23 @@ func runUninstallSteps(
 	uiSettings *UISettings,
 	args *Arguments) {
 
+	// Read registered file if existing.
+	// We ensured during load, that only existing Git directories are listed.
+	err := settings.RegisteredGitDirs.Load(settings.InstallDir, true, true)
+	log.AssertNoErrorPanicF(err, "Could not load register file in '%s'.",
+		settings.InstallDir)
+
 	log.InfoF("Running uninstall at version '%s' ...", build.BuildVersion)
 
 	if args.SingleUninstall {
-		uninstallFromRepo(
+
+		uninstallFromCurrentRepo(
 			getCurrentGitDir(settings.Cwd),
 			settings.LFSAvailable,
 			settings.TempDir,
 			args.NonInteractive,
+			settings.UninstalledGitDirs,
+			&settings.RegisteredGitDirs,
 			uiSettings)
 
 		storeSettings(settings)
@@ -486,6 +547,7 @@ func runUninstallSteps(
 		cleanSharedClones(settings.InstallDir)
 		cleanReleaseClone(settings.InstallDir)
 		cleanBinaries(settings.InstallDir, settings.TempDir)
+		cleanRegister(settings.InstallDir)
 
 		cleanGitConfig()
 	}
@@ -493,10 +555,10 @@ func runUninstallSteps(
 	if logStats.ErrorCount() == 0 {
 		thankYou()
 	} else {
-		log.ErrorF("Tried my best at uninstalling, but\n" +
-			"- %v errors\n" +
-			"- %v warnings\n" +
-			"occurred!")
+		log.ErrorF("Tried my best at uninstalling, but\n"+
+			"- %v errors\n"+
+			"- %v warnings\n"+
+			"occurred!", logStats.ErrorCount(), logStats.WarningCount())
 	}
 }
 
