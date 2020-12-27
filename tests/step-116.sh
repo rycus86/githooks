@@ -2,7 +2,7 @@
 # Test:
 #   Test registering mechanism.
 
-if ! /var/lib/githooks/githooks/bin/installer --stdin; then
+if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -60,7 +60,7 @@ mkdir -p /tmp/test116.3 && cd /tmp/test116.3 && git init
 
 echo 'Y
 /tmp
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
     ! grep -q /tmp/test116.2/.git "$REGISTER_FILE" ||
@@ -71,10 +71,8 @@ if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
 fi
 
 # Test uninstall to only repo 1
-echo 'Y
-/tmp/test116.1
-n
-' | sh /var/lib/githooks/uninstall.sh || exit 1
+cd /tmp/test116.1 &&
+    ~/.githooks/bin/uninstaller --stdin --single || exit 1
 
 if grep -q /tmp/test116.1 "$REGISTER_FILE" ||
     (! grep -q /tmp/test116.2 "$REGISTER_FILE" &&
@@ -87,10 +85,17 @@ fi
 # Test total uninstall to all repos
 echo 'Y
 /tmp
-' | sh /var/lib/githooks/uninstall.sh || exit 1
+' | "$GITHOOKS_BIN_DIR/uninstaller" --stdin || exit 1
 
 if [ -f "$REGISTER_FILE" ]; then
     echo "! Expected registered list to not exist"
+    exit 1
+fi
+
+if [ -f ~/.githooks/bin/uninstaller ] ||
+    [ -f ~/.githooks/bin/installer ] ||
+    [ -f ~/.githooks/bin/runner ]; then
+    echo "! Expected that all binaries are deleted."
     exit 1
 fi
 
@@ -98,7 +103,7 @@ fi
 echo 'Y
 y
 /tmp
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 # Update Test
 # Set all other hooks to dirty by adding something

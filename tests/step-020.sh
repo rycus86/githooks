@@ -14,7 +14,7 @@ rm -rf /usr/share/git-core/templates || exit 1
 echo 'n
 y
 /tmp/.test-020-templates
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 mkdir -p /tmp/test20 && cd /tmp/test20 || exit 1
 git init || exit 1

@@ -13,7 +13,7 @@ rm -rf /usr/share/git-core/templates || exit 1
 # run the install, and let it search for the templates
 echo 'n
 y
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 mkdir -p /tmp/test7 && cd /tmp/test7 || exit 1
 git init || exit 1

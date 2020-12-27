@@ -11,15 +11,15 @@ mkdir -p /tmp/test074/.githooks/pre-commit &&
 echo 'y
 y
 /tmp
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 echo 'y
 
-' | sh /var/lib/githooks/uninstall.sh || exit 2
+' | "$GITHOOKS_BIN_DIR/uninstaller" --stdin || exit 2
 
 echo 'y
 /not/found
-' | sh /var/lib/githooks/uninstall.sh
+' | "$GITHOOKS_BIN_DIR/uninstaller" --stdin
 
 # shellcheck disable=SC2181
 if [ $? -eq 0 ]; then

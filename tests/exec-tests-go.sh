@@ -19,7 +19,7 @@ RUN git config --global user.email "githook@test.com" && \\
     git config --global user.name "Githook Tests"
 
 # Add sources
-COPY --chown=${OS_USER}:${OS_USER} base-template-wrapper.sh install.sh uninstall.sh cli.sh /var/lib/githooks/
+COPY --chown=${OS_USER}:${OS_USER} base-template-wrapper.sh cli.sh /var/lib/githooks/
 RUN chmod +x /var/lib/githooks/*.sh
 ADD githooks /var/lib/githooks/githooks
 RUN sed -i -E 's/^bin//' /var/lib/githooks/githooks/.gitignore # We use the bin folder

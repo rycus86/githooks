@@ -66,7 +66,7 @@ for STEP in /var/lib/tests/step-*.sh; do
         mkdir -p /usr/share/git-core/templates/hooks
     fi
 
-    UNINSTALL_OUTPUT=$(printf "y\\n/\\n" | sh /var/lib/githooks/uninstall.sh 2>&1)
+    UNINSTALL_OUTPUT=$(printf "y\\n/\\n" | "$GITHOOKS_BIN_DIR/uninstaller" --stdin 2>&1)
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "! Uninstall failed in $STEP, output:"
@@ -80,7 +80,7 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     # Check if no githooks settings are present anymore
     if [ -n "$(git config --global --get-regexp "^githooks.*")" ]; then
-        echo "! Uninstall left setting artefacts behind!" >&2
+        echo "! Uninstall left artefacts behind!" >&2
         echo "  You need to fix this!" >&2
         echo " $(git config --global --get-regexp "^githooks.*")" >&2
         FAILED=$((FAILED + 1))

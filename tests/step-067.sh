@@ -4,7 +4,7 @@
 
 mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
 
-if /var/lib/githooks/githooks/bin/installer --stdin --single; then
+if "$GITHOOKS_BIN_DIR/installer" --stdin --single; then
     echo "! Expected to fail"
     exit 1
 fi

@@ -29,7 +29,7 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
 y
 /tmp/shared/hooks-023-a.git
 /tmp/shared/hooks-023-b.git
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 else
     echo 'n
@@ -37,7 +37,7 @@ n
 y
 /tmp/shared/hooks-023-a.git
 /tmp/shared/hooks-023-b.git
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 fi
 

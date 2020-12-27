@@ -12,7 +12,7 @@ mkdir -p /tmp/start/dir || exit 1
 echo 'n
 y
 /tmp/start
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 if [ "$(git config --global --get githooks.previousSearchDir)" != "/tmp/start" ]; then
     echo "! The search start directory is not recorded"

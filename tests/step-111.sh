@@ -35,7 +35,7 @@ y
 y
 
 n
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 if [ -f "/tmp/test109.1/.git/hooks/pre-commit.disabled.githooks" ]; then
     echo '! Expected hook to be deleted'
@@ -87,7 +87,7 @@ y
 /tmp
 N
 a
-' | /var/lib/githooks/githooks/bin/installer --stdin || exit 1
+' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 if [ ! -f "/tmp/test109.1/.git/hooks/pre-commit.disabled.githooks" ]; then
     echo '! Expected hook to be moved'
