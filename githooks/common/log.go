@@ -77,6 +77,17 @@ type ILogContext interface {
 	IsErrorATerminal() bool
 }
 
+// Interface for log statistics.
+type ILogStats interface {
+	ErrorCount() int
+	WarningCount() int
+
+	ResetStats()
+
+	EnableStats()
+	DisableStats()
+}
+
 // LogContext defines the data for a log context.
 type LogContext struct {
 	debug io.Writer
@@ -91,19 +102,18 @@ type LogContext struct {
 	colorInfo   func(string) string
 	colorError  func(string) string
 	colorPrompt func(string) string
+
+	doTrackStats bool
+	nWarnings    int
+	nErrors      int
 }
 
 // CreateLogContext creates a log context.
-func CreateLogContext(onlyStderr bool) (ILogContext, error) {
+func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 
 	var debug, info, warn, error io.Writer
 
 	if onlyStderr {
-
-		// Its good to output everythin to stderr since git
-		// might read stdin for certain hooks.
-		// Either do redirection (which needs to be bombproof)
-		// or just use stderr.
 		info = os.Stderr
 		warn = info
 		error = info
@@ -140,9 +150,12 @@ func CreateLogContext(onlyStderr bool) (ILogContext, error) {
 		colorPrompt = func(s string) string { return s }
 	}
 
-	return &LogContext{debug, info, warn, error,
+	log := LogContext{
+		debug, info, warn, error,
 		infoIsATerminal, errorIsATerminal, hasColors,
-		colorInfo, colorError, colorPrompt}, nil
+		colorInfo, colorError, colorPrompt, true, 0, 0}
+
+	return &log, nil
 }
 
 // HasColors returns if the log uses colors.
@@ -212,21 +225,33 @@ func (c *LogContext) InfoF(format string, args ...interface{}) {
 // Warn logs a warning message.
 func (c *LogContext) Warn(lines ...string) {
 	fmt.Fprint(c.warn, c.colorError(FormatMessage(warnSuffix, warnIndent, lines...)), "\n")
+	if c.doTrackStats {
+		c.nWarnings++
+	}
 }
 
 // WarnF logs a warning message.
 func (c *LogContext) WarnF(format string, args ...interface{}) {
 	fmt.Fprint(c.warn, c.colorError(FormatMessageF(warnSuffix, warnIndent, format, args...)), "\n")
+	if c.doTrackStats {
+		c.nWarnings++
+	}
 }
 
 // Error logs an error.
 func (c *LogContext) Error(lines ...string) {
 	fmt.Fprint(c.error, c.colorError(FormatMessage(errorSuffix, errorIndent, lines...)), "\n")
+	if c.doTrackStats {
+		c.nErrors++
+	}
 }
 
 // ErrorF logs an error.
 func (c *LogContext) ErrorF(format string, args ...interface{}) {
 	fmt.Fprint(c.error, c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)), "\n")
+	if c.doTrackStats {
+		c.nErrors++
+	}
 }
 
 // GetPromptFormatter formats a prompt.
@@ -269,6 +294,32 @@ func (c *LogContext) PanicF(format string, args ...interface{}) {
 	panic(GithooksFailure{m})
 }
 
+// Warnings gets the number of logged warnings.
+func (c *LogContext) WarningCount() int {
+	return c.nWarnings
+}
+
+// Errors gets the number of logged errors.
+func (c *LogContext) ErrorCount() int {
+	return c.nErrors
+}
+
+// Reset resets the log statistics.
+func (c *LogContext) ResetStats() {
+	c.nErrors = 0
+	c.nWarnings = 0
+}
+
+// DisableStats disables the log statistics.
+func (c *LogContext) DisableStats() {
+	c.doTrackStats = false
+}
+
+// EnableStats enables the log statistics.
+func (c *LogContext) EnableStats() {
+	c.doTrackStats = false
+}
+
 // FormatMessage formats  several lines with a suffix and indent.
 func FormatMessage(suffix string, indent string, lines ...string) string {
 	return suffix + strings.Join(lines, "\n"+indent)
@@ -278,4 +329,30 @@ func FormatMessage(suffix string, indent string, lines ...string) string {
 func FormatMessageF(suffix string, indent string, format string, args ...interface{}) string {
 	s := suffix + strs.Fmt(format, args...)
 	return strings.ReplaceAll(s, "\n", "\n"+indent) // nolint:nlreturn
+}
+
+type proxyWriterInfo struct {
+	log ILogContext
+}
+
+type proxyWriterErr struct {
+	log ILogContext
+}
+
+func (p *proxyWriterInfo) Write(s []byte) (int, error) {
+	return p.log.GetInfoWriter().Write([]byte(p.log.ColorInfo(string(s))))
+}
+
+func (p *proxyWriterErr) Write(s []byte) (int, error) {
+	return p.log.GetErrorWriter().Write([]byte(p.log.ColorError(string(s))))
+}
+
+// ToInfoWriter wrapps the log context info into a `io.Writer`.
+func ToInfoWriter(log ILogContext) io.Writer {
+	return &proxyWriterInfo{log: log}
+}
+
+// ToErrorWriter wrapps the log context error into a `io.Writer`.
+func ToErrorWriter(log ILogContext) io.Writer {
+	return &proxyWriterErr{log: log}
 }

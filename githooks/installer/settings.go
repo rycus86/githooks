@@ -6,10 +6,10 @@ import (
 	strs "rycus86/githooks/strings"
 )
 
-type InstallMap = strs.StringSet
+type InstallSet = strs.StringSet
 
-// InstallSettings are the settings for the installer.
-type InstallSettings struct {
+// Settings are the settings for the installer.
+type Settings struct {
 	Cwd        string // The current working directory.
 	InstallDir string // The install directory.
 	CloneDir   string // The release clone dir inside the install dir.
@@ -20,9 +20,9 @@ type InstallSettings struct {
 	HookTemplateDir string // The chosen hook template directory.
 
 	// Registered Repos loaded from the install dir.
+	// New registered repos will be added here.
 	RegisteredGitDirs hooks.RegisterRepos
 
 	// All repositories Git directories where Githooks run wrappers have been installed.
-	// Bool indicates if it is already registered.
-	InstalledGitDirs InstallMap
+	InstalledGitDirs InstallSet
 }

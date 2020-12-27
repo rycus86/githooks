@@ -33,6 +33,11 @@ func GetRepoSharedFile(repoHooksDir string) string {
 var SharedConfigName string = "githooks.shared"
 var reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
+// GetSharedDir gets the shared directory where all shared clone reside inside the install dir.
+func GetSharedDir(installDir string) string {
+	return path.Join(installDir, "shared")
+}
+
 func getSharedCloneDir(installDir string, entry string) string {
 	// Legacy: As we used `git hash-object --stdin` we need to model the same behavior here
 	// @todo Remove `blob`+ length + \0...
@@ -44,7 +49,7 @@ func getSharedCloneDir(installDir string, entry string) string {
 	}
 	nameAbrev := reEscapeURL.ReplaceAllLiteralString(string(name), "-")
 
-	return path.Join(installDir, "shared", sha1+"-"+nameAbrev)
+	return path.Join(GetSharedDir(installDir), sha1+"-"+nameAbrev)
 }
 
 var reURLScheme *regexp.Regexp = regexp.MustCompile(`(?m)^[^:/?#]+://`)

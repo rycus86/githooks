@@ -4,10 +4,10 @@ package main
 type Arguments struct {
 	Config string
 
-	InternalAutoUpdate bool
-	InternalPostUpdate bool
-	InternalUpdateTo   string
-	InternalBinaries   []string
+	InternalAutoUpdate   bool
+	InternalPostDispatch bool
+	InternalUpdateTo     string
+	InternalBinaries     []string
 
 	DryRun         bool
 	NonInteractive bool

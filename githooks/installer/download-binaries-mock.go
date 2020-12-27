@@ -11,7 +11,7 @@ import (
 )
 
 func downloadBinaries(
-	settings *InstallSettings,
+	settings *Settings,
 	tempDir string,
 	status updates.ReleaseStatus) updates.Binaries {
 

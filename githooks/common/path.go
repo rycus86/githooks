@@ -211,16 +211,18 @@ func CopyFile(src string, dst string) (err error) {
 	return
 }
 
-// GetTempFileName creates a random non-existing filename
+// GetTempPath creates a random non-existing path
 // with a postfix `postfix` in directory `dir` (can be empty to use the working dir).
-func GetTempFileName(dir string, postfix string) (file string) {
+func GetTempPath(dir string, postfix string) (file string) {
 
 	maxLoops := 10
 	i := 0
 
 	file = path.Join(dir, strs.RandomString(8)+postfix) // nolint:gomnd
-	for IsFile(file) && i < maxLoops {
+	exists, err := IsPathExisting(file)
+	for (err != nil || exists) && i < maxLoops {
 		file = path.Join(dir, strs.RandomString(8)+postfix) // nolint:gomnd
+		exists, err = IsPathExisting(file)
 		i++
 	}
 
@@ -242,7 +244,7 @@ func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
 
 	if IsFile(dst) {
 		// Force remove any backup file.
-		backupFile := GetTempFileName(backupDir, "-"+path.Base(dst))
+		backupFile := GetTempPath(backupDir, "-"+path.Base(dst))
 
 		// Move destination to the backup file.
 		if err = os.Rename(dst, backupFile); err != nil {

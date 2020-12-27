@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 )
 
 var runWrapperDetectionRegex = regexp.MustCompile("https://github.com/rycus86/githooks")
@@ -88,7 +89,7 @@ func disableHookIfLFSDetected(
 		case DeleteHook:
 			// Don't delete the hook yet, move it to the temporary directory.
 			// The file could potentially be opened/read.
-			moveFile := cm.GetTempFileName(tempDir, "-"+path.Base(filePath))
+			moveFile := cm.GetTempPath(tempDir, "-"+path.Base(filePath))
 			err = os.Rename(filePath, moveFile)
 			disabled = true
 			deleted = true
@@ -111,14 +112,14 @@ func moveExistingHooks(
 	// Check there is already a Git hook in place and replace it.
 	if cm.IsFile(dest) {
 
-		isTemplate, err := IsRunWrapper(dest)
+		isRunWrapper, err := IsRunWrapper(dest)
 
 		if err != nil {
 			return cm.CombineErrors(err,
 				cm.ErrorF("Could not detect if '%s' is a Githooks run wrapper.", dest))
 		}
 
-		if !isTemplate {
+		if !isRunWrapper {
 
 			// Try to detect a potential LFS statements and
 			// disable the hook (backup or delete).
@@ -130,9 +131,9 @@ func moveExistingHooks(
 
 				if log != nil {
 					if disabled && deleted {
-						log.WarnF("Hook '%s' is now disabled (deleted)", dest)
+						log.WarnF("Previous hook '%s' is now disabled (deleted)", dest)
 					} else if disabled && !deleted {
-						log.WarnF("Hook '%s' is now disabled (backuped)", dest)
+						log.WarnF("Previous hook '%s' is now disabled (backuped)", dest)
 					}
 				}
 			}
@@ -187,7 +188,7 @@ func InstallRunWrappers(
 			// On Unix we could simply remove the file.
 			// But on Windows, an opened file (mostly) cannot be deleted.
 			// it might work, but is ugly.
-			moveDest := cm.GetTempFileName(tempDir, "-"+path.Base(dest))
+			moveDest := cm.GetTempPath(tempDir, "-"+path.Base(dest))
 			err = os.Rename(dest, moveDest)
 			if err != nil {
 				return cm.CombineErrors(err,
@@ -203,4 +204,48 @@ func InstallRunWrappers(
 	}
 
 	return nil
+}
+
+// UninstallRunWrappers deletes run wrappers in `dir`.
+// Existing replaced hooks get renamed.
+func UninstallRunWrappers(dir string, hookNames []string) (err error) {
+
+	for _, hookName := range hookNames {
+
+		dest := path.Join(dir, hookName)
+
+		isRunWrapper, e := IsRunWrapper(dest)
+
+		if e != nil {
+			err = cm.CombineErrors(err,
+				cm.ErrorF("Run wrapper detection for '%s' failed.", dest))
+		} else if isRunWrapper {
+			// Delete the run wrapper
+			e := os.Remove(dest)
+
+			if e == nil {
+				// Move replaced hook back in place.
+				replacedHook := path.Join(path.Dir(dest), GetHookReplacementFileName(dest))
+				if cm.IsFile(replacedHook) {
+					if e := os.Rename(replacedHook, dest); e != nil {
+						err = cm.CombineErrors(err,
+							cm.ErrorF("Could not rename file '%s' to '%s'.",
+								replacedHook, dest))
+					}
+				}
+
+			} else {
+				err = cm.CombineErrors(err,
+					cm.ErrorF("Could not delete file '%s'.",
+						dest))
+			}
+		}
+	}
+
+	return
+}
+
+// Installs LFS Hooks into `gitDir`.
+func InstallLFSHooks(gitDir string) error {
+	return git.CtxC(gitDir).Check("lfs", "install")
 }

@@ -94,7 +94,7 @@ func Map(vs []string, f func(string) string) []string {
 type StringSet map[string]bool
 
 // Add adds `s` to the set.
-func (m StringSet) Add(s string) {
+func (m StringSet) Insert(s string) {
 	m[s] = true
 }
 

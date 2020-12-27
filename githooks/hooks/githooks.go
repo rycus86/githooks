@@ -21,6 +21,38 @@ const GithooksWebpage = "https://github.com/rycus86/githooks"
 // DefaultBugReportingURL is the default url to report errors.
 const DefaultBugReportingURL = "https://github.com/rycus86/githooks/issues"
 
+// ManagedServerHookNames are hook names managed by Githooks for normal repositories.
+var ManagedHookNames = []string{
+	"applypatch-msg",
+	"pre-applypatch",
+	"post-applypatch",
+	"pre-commit",
+	"prepare-commit-msg",
+	"commit-msg",
+	"post-commit",
+	"pre-rebase",
+	"post-checkout",
+	"post-merge",
+	"pre-push",
+	"pre-receive",
+	"update",
+	"post-receive",
+	"post-update",
+	"push-to-checkout",
+	"pre-auto-gc",
+	"post-rewrite",
+	"sendemail-validate"}
+
+// ManagedServerHookNames are hook names managed by Githooks for bare repositories.
+var ManagedServerHookNames = []string{
+	"pre-push",
+	"pre-receive",
+	"update",
+	"post-receive",
+	"post-update",
+	"push-to-checkout",
+	"pre-auto-gc"}
+
 // LFSHookNames are the hook names of all Large File System (LFS) hooks.
 var LFSHookNames = [4]string{
 	"post-checkout",
@@ -183,8 +215,8 @@ func CleanTemporaryDir(installDir string) (string, error) {
 // GetRunnerExecutable gets the installed Githooks runner executable.
 func GetRunnerExecutable(installDir string) (p string) {
 	p = path.Join(GetBinaryDir(installDir), "runner")
-	if runtime.GOOS == "windows" {
-		p += ".exe"
+	if runtime.GOOS == "windows" { //nolint: goconst
+		p += ".exe" //nolint: goconst
 	}
 
 	return
@@ -193,8 +225,18 @@ func GetRunnerExecutable(installDir string) (p string) {
 // GetInstallerExecutable gets the global Githooks installer executable.
 func GetInstallerExecutable(installDir string) (p string) {
 	p = path.Join(GetBinaryDir(installDir), "installer")
-	if runtime.GOOS == "windows" {
-		p += ".exe"
+	if runtime.GOOS == "windows" { //nolint: goconst
+		p += ".exe" //nolint: goconst
+	}
+
+	return
+}
+
+// GetUninstallerExecutable gets the global Githooks installer executable.
+func GetUninstallerExecutable(installDir string) (p string) {
+	p = path.Join(GetBinaryDir(installDir), "uninstaller")
+	if runtime.GOOS == "windows" { //nolint: goconst
+		p += ".exe" //nolint: goconst
 	}
 
 	return
