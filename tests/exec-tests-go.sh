@@ -34,9 +34,7 @@ RUN echo "Make test gitrepo to clone from ..." && \\
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
 
 # Do not use the terminal in tests
-RUN sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-\$GITHOOKS_BIN_DIR/runner}"|' /var/lib/githooks/base-template-wrapper.sh && \\
-    # Change the base template so we can pass in the hook name and accept flags
-    sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh && \\
+RUN sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh && \\
     # Conditionally allow file:// for local shared hooks simulating http:// protocol
     sed -i -E 's|if(.*grep.*file://.*)|if [ "\$(git config --global githooks.testingTreatFileProtocolAsRemote)" != "true" ] \&\& \1|' /var/lib/githooks/cli.sh
 
@@ -44,6 +42,7 @@ RUN sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GI
 RUN sed -i -E 's|sh -s -- (.*) .+INSTALL_SCRIPT"|"\$INSTALL_SCRIPT" \1|g' /var/lib/githooks/cli.sh
 
 # Build binaries for v9.9.0-test.
+#################################
 RUN cd /var/lib/githooks/githooks && \\
     git tag "v9.9.0-test" >/dev/null 2>&1 && \\
      ./clean.sh && \\
@@ -57,6 +56,7 @@ RUN echo "Commit build v9.9.0-test to repo ..." && \\
     git tag -f "v9.9.0-test"
 
 # Build binaries for v9.9.1-test.
+#################################
 RUN cd /var/lib/githooks/githooks && \\
     git commit -a --allow-empty -m "Before build" >/dev/null 2>&1 && \\
     git tag -f "v9.9.1-test" && \\

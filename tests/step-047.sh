@@ -9,8 +9,6 @@ mkdir -p ~/.githooks/release &&
 mkdir -p /tmp/test47 && cd /tmp/test47 || exit 1
 git init || exit 1
 
-cat ~/.githooks/release/base-template-wrapper.sh
-
 mkdir -p .githooks/pre-commit &&
     git config githooks.disable Y &&
     echo 'echo "Accepted hook" > /tmp/test47.out' >.githooks/pre-commit/test &&
