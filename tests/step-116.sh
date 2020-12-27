@@ -7,10 +7,10 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-REGISTER_FILE=~/.githooks/registered
+REGISTER_FILE=~/.githooks/registered.yaml
 
-if [ -f "$REGISTER_FILE" ]; then
-    echo "Expected the file to not exist"
+if grep -q "/" "$REGISTER_FILE"; then
+    echo "Expected the file to not contain any paths"
     exit 1
 fi
 
@@ -22,8 +22,8 @@ mkdir -p /tmp/test116.1 && cd /tmp/test116.1 &&
 
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo "Using core.hooksPath"
-    if [ -f "$REGISTER_FILE" ]; then
-        echo "Expected the file to not exist"
+    if grep -q "/" "$README_FILE"; then
+        echo "Expected the file to contain any paths"
         exit 1
     fi
     # Skip further tests, because it does not apply for core hooks path
@@ -35,8 +35,8 @@ if [ ! -f "$REGISTER_FILE" ]; then
     exit 1
 fi
 
-if [ "$(cat "$REGISTER_FILE")" != "/tmp/test116.1/.git" ]; then
-    echo "Expected correct content:"
+if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE"; then
+    echo "Expected correct content"
     cat "$REGISTER_FILE"
     exit 2
 fi

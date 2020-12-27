@@ -478,16 +478,6 @@ func cleanRegister(installDir string) {
 		log.AssertNoError(err,
 			"Could not delete register file '%s'.", registerFile)
 	}
-
-	// @todo remove as soon as possible
-	registerFile = hooks.GetLegacyRegisterFile(installDir)
-
-	if cm.IsFile(registerFile) {
-		err := os.Remove(registerFile)
-		log.AssertNoError(err,
-			"Could not delete register file '%s'.", registerFile)
-	}
-
 }
 
 func storeSettings(settings *Settings) {

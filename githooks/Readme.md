@@ -36,8 +36,8 @@ Notation: The repository path where we currently execute the runner is denoted b
 
 1. It becomes a YAML file: **[done]**
 
-    - @todo remove legacy load/store of old file `registered`.
-    - if backwards compatible: needs legacy transform in installer.
+    - @todo remove legacy load/store of old file `registered`. **[done]**
+    - if backwards compatible: needs legacy transform in installer. *[not yet done]*
 
 ### Shared Hook Repo Format
 

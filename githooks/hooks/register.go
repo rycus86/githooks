@@ -1,14 +1,11 @@
 package hooks
 
 import (
-	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
-	"strings"
 )
 
 // RegisterRepos is the format of the register file
@@ -51,26 +48,6 @@ func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDi
 		err = cm.CombineErrors(err, cm.LoadYAML(file, r))
 	}
 
-	// Legacy: Load legacy register file
-	// @todo: Remove this as soon as possible
-	file = GetLegacyRegisterFile(installDir)
-	exists, e = cm.IsPathExisting(file)
-	err = cm.CombineErrors(err, e)
-
-	if exists {
-		data, e := ioutil.ReadFile(file)
-		err = cm.CombineErrors(err, e)
-
-		if e == nil {
-			for _, gd := range strs.SplitLines(string(data)) {
-				gd = strings.TrimSpace(gd)
-				if gd != "" {
-					r.Insert(gd)
-				}
-			}
-		}
-	}
-
 	if filterExisting {
 		r.FilterExisting()
 	}
@@ -85,24 +62,6 @@ func (r *RegisterRepos) Load(installDir string, filterExisting bool, filterGitDi
 // Store sets the registered repos to the register file in the
 // install folder.
 func (r *RegisterRepos) Store(installDir string) (err error) {
-
-	// Legacy: Store legacy register file
-	// @todo: Remove this as soon as possible
-	if len(r.GitDirs) != 0 {
-		var f *os.File
-		f, err = os.OpenFile(GetLegacyRegisterFile(installDir), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
-		if err != nil {
-			return
-		}
-
-		defer f.Close()
-		for _, gitdir := range r.GitDirs {
-			if _, err = f.Write([]byte(gitdir + "\n")); err != nil {
-				return
-			}
-		}
-	}
-
 	file := GetRegisterFile(installDir)
 
 	return cm.StoreYAML(file, &r)
@@ -137,8 +96,4 @@ func (r *RegisterRepos) FilterGitDirs() {
 
 func GetRegisterFile(installDir string) string {
 	return path.Join(installDir, "registered.yaml")
-}
-
-func GetLegacyRegisterFile(installDir string) string {
-	return path.Join(installDir, "registered")
 }
