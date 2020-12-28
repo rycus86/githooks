@@ -71,7 +71,7 @@ RUN echo "Commit build v9.9.1-test to repo ..." && \\
 
 ADD tests /var/lib/tests/
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
-        sed -i -E "s|(.*)/installer|\1/installer \${EXTRA_INSTALL_ARGS}|g" /var/lib/tests/step-* ; \\
+        sed -i -E 's|(.*)/installer\"|\1/installer" \${EXTRA_INSTALL_ARGS}|g' /var/lib/tests/step-* ; \\
     fi
 
 # Always don't delete LFS Hooks (for testing, default is unset, but cumbersome for tests)

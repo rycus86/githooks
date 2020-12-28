@@ -11,7 +11,7 @@ mkdir -p /tmp/test106-lfs &&
 
 export PATH=/tmp/test106-lfs:"$PATH" || exit 2
 
-/var/lib/githooks/githooks/bin/installer --stdin || exit 3
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 3
 
 mkdir -p /tmp/test106 &&
     cd /tmp/test106 &&

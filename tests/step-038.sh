@@ -21,7 +21,7 @@ fi
 
 cd /tmp/start/dir && git init || exit 1
 
-/var/lib/githooks/githooks/bin/installer --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 if ! grep -r 'github.com/rycus86/githooks' /tmp/start/dir/.git/hooks; then
     echo "! Hooks were not installed"

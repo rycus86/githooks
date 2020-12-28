@@ -7,11 +7,9 @@ if [ "$(id -u)" != "0" ] || ! echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hoo
     exit 249
 fi
 
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/cli.sh ~/.githooks/release || exit 1
-
 rm -rf /usr/share/git-core/templates/hooks || exit 1
 
-/var/lib/githooks/githooks/bin/installer --stdin --non-interactive || exit 1
+"$GITHOOKS_BIN_DIR/installer" --stdin --non-interactive || exit 1
 
 if [ -n "$(git config init.templateDir)" ]; then
     echo "! Expected to have init.templateDir not set!" >&2

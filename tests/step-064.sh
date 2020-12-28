@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list all help and usage
 
-/var/lib/githooks/githooks/bin/installer --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 mkdir -p /tmp/test064 &&
     cd /tmp/test064 &&

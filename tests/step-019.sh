@@ -15,7 +15,7 @@ mkdir -p ~/.test-019/hooks &&
     git config --global init.templateDir '~/.test-019' ||
     exit 1
 
-/var/lib/githooks/githooks/bin/installer --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 mkdir -p /tmp/test19 && cd /tmp/test19 || exit 1
 git init || exit 1

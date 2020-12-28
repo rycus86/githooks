@@ -1268,7 +1268,7 @@ func runUpdate(
 
 	} else {
 
-		if !args.SkipInstallIntoExisting {
+		if !args.SkipInstallIntoExisting && !args.UseCoreHooksPath {
 
 			if !args.InternalAutoUpdate {
 				installIntoExistingRepos(

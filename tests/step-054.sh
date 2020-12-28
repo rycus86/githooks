@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list current hooks per type
 
-/var/lib/githooks/githooks/bin/installer --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 mkdir -p /tmp/test054/.githooks/pre-commit &&
     mkdir -p /tmp/test054/.githooks/post-commit &&
