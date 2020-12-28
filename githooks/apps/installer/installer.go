@@ -29,7 +29,7 @@ var args = Arguments{}
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "githooks-installer",
+	Use:   "installer",
 	Short: "Githooks installer application",
 	Long: "Githooks installer application\n" +
 		"See further information at https://github.com/rycus86/githooks/blob/master/README.md",
@@ -1334,7 +1334,7 @@ func main() {
 	log, err = cm.CreateLogContext(cm.IsRunInDocker)
 	cm.AssertOrPanic(err == nil, "Could not create log")
 
-	log.InfoF("Installer [version: %s]", build.BuildVersion)
+	log.InfoF("Githooks Installer [version: %s]", build.BuildVersion)
 
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()

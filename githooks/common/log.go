@@ -15,16 +15,11 @@ import (
 const (
 	githooksSuffix = "" // If you like you can make it: "Githooks: "
 	debugSuffix    = "🛠  " + githooksSuffix
-	debugIndent    = "   "
 	infoSuffix     = "🦎 " + githooksSuffix
-	infoIndent     = "   "
 	warnSuffix     = "⛑  " + githooksSuffix
-	warnIndent     = "   "
 	errorSuffix    = "⛔ "
-	errorIndent    = "   "
-
-	promptSuffix = "❓ " + githooksSuffix
-	promptIndent = "   "
+	promptSuffix   = "❓ " + githooksSuffix
+	indent         = "   "
 )
 
 // ILogContext defines the log interface.
@@ -66,7 +61,9 @@ type ILogContext interface {
 	ColorInfo(string) string
 	ColorError(string) string
 	ColorPrompt(string) string
+	GetIndent() string
 
+	GetInfoFormatter() func(format string, args ...interface{}) string
 	GetErrorFormatter() func(format string, args ...interface{}) string
 	GetPromptFormatter() func(format string, args ...interface{}) string
 
@@ -159,6 +156,11 @@ func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 }
 
 // HasColors returns if the log uses colors.
+func (c *LogContext) GetIndent() string {
+	return indent
+}
+
+// HasColors returns if the log uses colors.
 func (c *LogContext) HasColors() bool {
 	return c.isColorSupported
 }
@@ -201,30 +203,30 @@ func (c *LogContext) IsErrorATerminal() bool {
 // Debug logs a debug message.
 func (c *LogContext) Debug(lines ...string) {
 	if DebugLog {
-		fmt.Fprint(c.debug, c.colorInfo(FormatMessage(debugSuffix, debugIndent, lines...)), "\n")
+		fmt.Fprint(c.debug, c.colorInfo(FormatMessage(debugSuffix, indent, lines...)), "\n")
 	}
 }
 
 // DebugF logs a debug message.
 func (c *LogContext) DebugF(format string, args ...interface{}) {
 	if DebugLog {
-		fmt.Fprint(c.debug, c.colorInfo(FormatMessageF(debugSuffix, debugIndent, format, args...)), "\n")
+		fmt.Fprint(c.debug, c.colorInfo(FormatMessageF(debugSuffix, indent, format, args...)), "\n")
 	}
 }
 
 // Info logs a info message.
 func (c *LogContext) Info(lines ...string) {
-	fmt.Fprint(c.info, c.colorInfo(FormatMessage(infoSuffix, infoIndent, lines...)), "\n")
+	fmt.Fprint(c.info, c.colorInfo(FormatMessage(infoSuffix, indent, lines...)), "\n")
 }
 
 // InfoF logs a info message.
 func (c *LogContext) InfoF(format string, args ...interface{}) {
-	fmt.Fprint(c.info, c.colorInfo(FormatMessageF(infoSuffix, infoIndent, format, args...)), "\n")
+	fmt.Fprint(c.info, c.colorInfo(FormatMessageF(infoSuffix, indent, format, args...)), "\n")
 }
 
 // Warn logs a warning message.
 func (c *LogContext) Warn(lines ...string) {
-	fmt.Fprint(c.warn, c.colorError(FormatMessage(warnSuffix, warnIndent, lines...)), "\n")
+	fmt.Fprint(c.warn, c.colorError(FormatMessage(warnSuffix, indent, lines...)), "\n")
 	if c.doTrackStats {
 		c.nWarnings++
 	}
@@ -232,7 +234,7 @@ func (c *LogContext) Warn(lines ...string) {
 
 // WarnF logs a warning message.
 func (c *LogContext) WarnF(format string, args ...interface{}) {
-	fmt.Fprint(c.warn, c.colorError(FormatMessageF(warnSuffix, warnIndent, format, args...)), "\n")
+	fmt.Fprint(c.warn, c.colorError(FormatMessageF(warnSuffix, indent, format, args...)), "\n")
 	if c.doTrackStats {
 		c.nWarnings++
 	}
@@ -240,7 +242,7 @@ func (c *LogContext) WarnF(format string, args ...interface{}) {
 
 // Error logs an error.
 func (c *LogContext) Error(lines ...string) {
-	fmt.Fprint(c.error, c.colorError(FormatMessage(errorSuffix, errorIndent, lines...)), "\n")
+	fmt.Fprint(c.error, c.colorError(FormatMessage(errorSuffix, indent, lines...)), "\n")
 	if c.doTrackStats {
 		c.nErrors++
 	}
@@ -248,7 +250,7 @@ func (c *LogContext) Error(lines ...string) {
 
 // ErrorF logs an error.
 func (c *LogContext) ErrorF(format string, args ...interface{}) {
-	fmt.Fprint(c.error, c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...)), "\n")
+	fmt.Fprint(c.error, c.colorError(FormatMessageF(errorSuffix, indent, format, args...)), "\n")
 	if c.doTrackStats {
 		c.nErrors++
 	}
@@ -257,14 +259,21 @@ func (c *LogContext) ErrorF(format string, args ...interface{}) {
 // GetPromptFormatter formats a prompt.
 func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
 	return func(format string, args ...interface{}) string {
-		return c.colorPrompt(FormatMessageF(promptSuffix, promptIndent, format, args...))
+		return c.colorPrompt(FormatMessageF(promptSuffix, indent, format, args...))
 	}
 }
 
 // GetErrorFormatter formats an error.
 func (c *LogContext) GetErrorFormatter() func(format string, args ...interface{}) string {
 	return func(format string, args ...interface{}) string {
-		return c.colorError(FormatMessageF(errorSuffix, errorIndent, format, args...))
+		return c.colorError(FormatMessageF(errorSuffix, indent, format, args...))
+	}
+}
+
+// GetInfoFormatter formats an info.
+func (c *LogContext) GetInfoFormatter() func(format string, args ...interface{}) string {
+	return func(format string, args ...interface{}) string {
+		return c.colorInfo(FormatMessageF(infoSuffix, indent, format, args...))
 	}
 }
 
@@ -282,14 +291,14 @@ func (c *LogContext) ErrorWithStacktraceF(format string, args ...interface{}) {
 
 // Fatal logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) Panic(lines ...string) {
-	m := FormatMessage(errorSuffix, errorIndent, lines...)
+	m := FormatMessage(errorSuffix, indent, lines...)
 	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})
 }
 
 // FatalF logs an error and calls panic with a GithooksFailure.
 func (c *LogContext) PanicF(format string, args ...interface{}) {
-	m := FormatMessageF(errorSuffix, errorIndent, format, args...)
+	m := FormatMessageF(errorSuffix, indent, format, args...)
 	fmt.Fprint(c.error, c.colorError(m), "\n")
 	panic(GithooksFailure{m})
 }

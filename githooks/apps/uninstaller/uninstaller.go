@@ -28,7 +28,7 @@ var args = Arguments{}
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "githooks-uninstaller",
+	Use:   "uninstaller",
 	Short: "Githooks uninstaller application",
 	Long: "Githooks uninstaller application\n" +
 		"See further information at https://github.com/rycus86/githooks/blob/master/README.md",
@@ -586,7 +586,7 @@ func main() {
 
 	setupLog()
 
-	log.InfoF("Uninstaller [version: %s]", build.BuildVersion)
+	log.InfoF("Githooks Uninstaller [version: %s]", build.BuildVersion)
 
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()

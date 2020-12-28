@@ -38,7 +38,7 @@ func main() {
 
 	createLog()
 
-	log.DebugF("Runner [version: %s]", build.BuildVersion)
+	log.DebugF("Githooks Runner [version: %s]", build.BuildVersion)
 
 	startTime := cm.GetStartTime()
 	exitCode := 0
