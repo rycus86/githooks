@@ -6,7 +6,7 @@
     {
       "label": "go-build",
       "type": "shell",
-      "command": "${workspaceFolder}/githooks/build.sh --build-flags '-tags=debug'",
+      "command": "${workspaceFolder}/githooks/scripts/build.sh --build-flags '-tags=debug'",
       "options": {
         "shell": {
           "executable": "/bin/bash",
@@ -22,7 +22,7 @@
     {
       "label": "[Dev Container] clean-install",
       "type": "shell",
-      "command": "${workspaceFolder}/githooks/clean-install.sh",
+      "command": "${workspaceFolder}/githooks/scripts/clean-install.sh",
       "options": {
         "shell": {
           "executable": "/bin/bash",
@@ -37,7 +37,7 @@
     {
       "label": "[Dev Container] go-build-temp",
       "type": "shell",
-      "command": "${workspaceFolder}/githooks/build.sh",
+      "command": "${workspaceFolder}/githooks/scripts/build.sh",
       "args": [
         "--build-flags",
         "-tags=debug,mock,dev",
@@ -68,7 +68,7 @@
         "--build-flags",
         "-tags debug,mock,dev",
         "--api-version=2",
-        "./installer",
+        "./apps/installer",
         "--",
         "--clone-url=${env:GITHOOKS_REPO}",
         "--clone-branch=feature/go-refactoring"
@@ -107,7 +107,7 @@
         "--build-flags",
         "-tags debug,mock,dev",
         "--api-version=2",
-        "./uninstaller"
+        "./apps/uninstaller"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",
