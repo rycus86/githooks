@@ -142,6 +142,8 @@ func showPromptOptionsTerminal(
 		if nPrompts < maxPrompts {
 			warning := p.errorFmt("Remaining tries %v.", maxPrompts-nPrompts)
 			err = cm.CombineErrors(err, writeOut(warning+"\n"))
+		} else if p.panicIfMaxTries {
+			p.log.PanicF("Could not validate answer in '%v' tries.", maxPrompts)
 		}
 
 	}
