@@ -1,0 +1,90 @@
+# Check Documentation:
+# https://goreleaser.com/customization/
+project_name: githooks
+before:
+  hooks:
+    - go mod download
+    - go generate -mod=vendor ./...
+builds:
+  - id: runner
+    binary: runner
+    main: ./apps/runner
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+  - id: installer
+    binary: installer
+    main: ./apps/installer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+  - id: uninstaller
+    binary: uninstaller
+    main: ./apps/uninstaller
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+  - id: cli
+    binary: cli
+    main: ./apps/cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+archives:
+  - id: githooks
+    builds:
+      - runner
+      - installer
+      - uninstaller
+      - cli
+    name_template: "{{ .ProjectName }}::{{ .Version }}::{{ .Os }}::{{ .Arch }}"
+    format: tar.gz
+    files:
+      - none*
+    replacements:
+      windows: Windows
+      darwin: MacOS
+      linux: Linux
+      amd64: 64bit
+    format_overrides:
+      - goos: windows
+        format: zip
+checksum:
+  name_template: "{{ .ProjectName }}.checksums"
+  algorithm: sha256
+snapshot:
+  name_template: "{{ .Tag }}"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "[doc]"
+      - "[np]"
+signs:
+  - artifacts: checksum
+    cmd: gpg
+    signature: "${artifact}.sig"
+release:
+  github:
+    owner: gabyx
+    name: githooks
