@@ -3,7 +3,7 @@
 TEST_DIR=$(dirname "$0")
 
 cat <<EOF | docker build --force-rm -t githooks:alpine-lfs-go-base -
-FROM golang:1.15.3-alpine
+FROM golang:1.15.6-alpine
 RUN apk add --no-cache git git-lfs bash
 EOF
 

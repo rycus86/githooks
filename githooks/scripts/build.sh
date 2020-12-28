@@ -1,5 +1,6 @@
 #!/bin/sh
 DIR="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
+GO_SRC="$DIR/.."
 
 set -e
 set -u
@@ -33,10 +34,9 @@ parseArgs() {
 
 parseArgs "$@" || die "Parsing args failed."
 
-cd "$DIR"
+cd "$GO_SRC"
 
-export GOPATH="$DIR/.go:${GOPATH:-}"
-export GOBIN="$DIR/bin"
+export GOBIN="$GO_SRC/bin"
 if [ -n "$BIN_DIR" ]; then
     if [ -d "$BIN_DIR" ]; then
         rm -rf "$BIN_DIR" || true
@@ -44,7 +44,7 @@ if [ -n "$BIN_DIR" ]; then
     export GOBIN="$BIN_DIR"
 fi
 
-if [ ! -d "$DIR/vendor" ]; then
+if [ ! -d "$GO_SRC/vendor" ]; then
     echo "go vendor ..."
     go mod vendor
 fi

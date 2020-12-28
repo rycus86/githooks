@@ -45,8 +45,8 @@ RUN sed -i -E 's|sh -s -- (.*) .+INSTALL_SCRIPT"|"\$INSTALL_SCRIPT" \1|g' /var/l
 #################################
 RUN cd /var/lib/githooks/githooks && \\
     git tag "v9.9.0-test" >/dev/null 2>&1 && \\
-     ./clean.sh && \\
-    ./build.sh --build-flags "-tags debug,mock" && \\
+     ./scripts/clean.sh && \\
+    ./scripts/build.sh --build-flags "-tags debug,mock" && \\
     cp ./bin/installer ../install.sh && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.0-test to repo ..." && \\
@@ -60,8 +60,8 @@ RUN echo "Commit build v9.9.0-test to repo ..." && \\
 RUN cd /var/lib/githooks/githooks && \\
     git commit -a --allow-empty -m "Before build" >/dev/null 2>&1 && \\
     git tag -f "v9.9.1-test" && \\
-    ./clean.sh && \\
-    ./build.sh --build-flags "-tags debug,mock" && \\
+    ./scripts/clean.sh && \\
+    ./scripts/build.sh --build-flags "-tags debug,mock" && \\
     cp ./bin/installer ../install.sh && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.1-test to repo ..." && \\
@@ -78,7 +78,8 @@ RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
 RUN git config --global githooks.deleteDetectedLFSHooks "n"
 
 ${ADDITIONAL_INSTALL_STEPS:-}
-RUN git --version
+
+RUN echo "Git version: \$(git --version)"
 
 RUN sh /var/lib/tests/exec-steps-go.sh --sequence $SEQUENCE
 EOF

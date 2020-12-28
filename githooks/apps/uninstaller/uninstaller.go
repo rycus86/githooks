@@ -1,4 +1,4 @@
-//go:generate go run -mod=vendor ../tools/embed-files.go
+//go:generate go run -mod=vendor ../../tools/embed-files.go
 package main
 
 import (
@@ -7,11 +7,11 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"rycus86/githooks/apps/install"
 	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
-	"rycus86/githooks/install"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strings"

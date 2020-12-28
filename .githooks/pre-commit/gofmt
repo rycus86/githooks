@@ -1,13 +1,25 @@
 #!/bin/bash
+DIR=$(cd "$(dirname "$0")" && pwd)
 
 if ! command -v gofmt >/dev/null 2>&1; then
     echo "! Skipping gofmt - not installed"
     exit 0
 fi
 
-if gofmt -l githooks/runner githooks/cli githooks/installer githooks/common; then
-    echo "* gofmt OK"
+SUCCESS=0
+
+for PKG_DIR in githooks/*; do
+    if ! [ -d "$PKG_DIR" ] || echo "$PKG_DIR" | grep -q "vendor"; then
+        continue
+    fi
+
+    if ! gofmt -l "$PKG_DIR"; then
+        SUCCESS=1
+    fi
+done
+
+if [ "$SUCCESS" = "0" ]; then
+    echo "* gofmt is OK."
 else
-    echo "! gofmt problems detected"
-    exit 1
+    exit "$SUCCESS"
 fi

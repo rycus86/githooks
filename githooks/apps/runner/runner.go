@@ -1,4 +1,4 @@
-//go:generate go run -mod=vendor ../tools/generate-version.go
+//go:generate go run -mod=vendor ../../tools/generate-version.go
 
 // Base Git hook template from https://github.com/rycus86/githooks
 //
