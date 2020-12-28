@@ -57,14 +57,14 @@ archives:
       - installer
       - uninstaller
       - cli
-    name_template: "{{ .ProjectName }}::{{ .Version }}::{{ .Os }}::{{ .Arch }}"
+    name_template: "{{ .ProjectName }}-{{ .Version }}.{{ .Os }}.{{ .Arch }}]"
     format: tar.gz
     files:
       - none*
     replacements:
-      windows: Windows
-      darwin: MacOS
-      linux: Linux
+      windows: windows
+      darwin: macos
+      linux: linux
       amd64: 64bit
     format_overrides:
       - goos: windows
