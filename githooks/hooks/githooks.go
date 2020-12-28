@@ -27,6 +27,7 @@ var ManagedHookNames = []string{
 	"pre-applypatch",
 	"post-applypatch",
 	"pre-commit",
+	"pre-merge-commit",
 	"prepare-commit-msg",
 	"commit-msg",
 	"post-commit",
@@ -38,10 +39,12 @@ var ManagedHookNames = []string{
 	"update",
 	"post-receive",
 	"post-update",
+	"reference-transaction",
 	"push-to-checkout",
 	"pre-auto-gc",
 	"post-rewrite",
-	"sendemail-validate"}
+	"sendemail-validate",
+	"post-index-change"}
 
 // ManagedServerHookNames are hook names managed by Githooks for bare repositories.
 var ManagedServerHookNames = []string{
@@ -50,6 +53,7 @@ var ManagedServerHookNames = []string{
 	"update",
 	"post-receive",
 	"post-update",
+	"reference-transaction",
 	"push-to-checkout",
 	"pre-auto-gc"}
 

@@ -10,15 +10,16 @@
 # The list of hooks we can manage with this script
 MANAGED_HOOK_NAMES="
     applypatch-msg pre-applypatch post-applypatch
-    pre-commit prepare-commit-msg commit-msg post-commit
+    pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
     pre-rebase post-checkout post-merge pre-push
-    pre-receive update post-receive post-update
+    pre-receive update post-receive post-update reference-transaction
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
+    post-index-change
 "
 
 MANAGED_SERVER_HOOK_NAMES="
     pre-push pre-receive update post-receive post-update
-    push-to-checkout pre-auto-gc
+    reference-transaction push-to-checkout pre-auto-gc
 "
 
 ############################################################
@@ -197,7 +198,7 @@ legacy_transform_after_update() {
     COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)
 
-    if [ "$COMMIT_COUNT" != "1" ] && [ -z "$INTERNAL_UPDATED_FROM_COMMIT" ]; then
+    if [ "$COMMIT_COUNT" != "1" ] && [ -z "${INTERNAL_UPDATED_FROM_COMMIT+set}" ]; then
         # If the clone dir has been updated (commit count != 1) and
         # we do not have the update commit yet (meaning we are updating from an old version )
         # we set it to the last commit where this feature (INTERNAL_UPDATED_FROM_COMMIT)
@@ -467,7 +468,17 @@ legacy_transform_adjust_local_paths() {
 legacy_transform_update_shared_hooks() {
     # Could be more efficient if we have a "--shared,--local,--global"
     # flag on this command.
-    (cd "$1" && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update)
+    if [ -d "$1" ]; then
+        out=$(cd "$1" 2>&1 && sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update 2>&1)
+        # shellcheck disable=SC2181
+        if [ $? -ne 0 ]; then
+            echo "! Could not execute shared update in" >&2
+            echo "  \`$1\`" >&2
+            echo "  Errors: \`$out\`" >&2
+            return 1
+        fi
+    fi
+    return 0
 }
 
 #####################################################
@@ -655,7 +666,7 @@ check_not_deprecated_single_install() {
         echo "    You appear to have setup this repo as a single install." >&2
         echo "    The hooks in this repository are not supported anymore." >&2
         echo >&2
-        echo "    To install the latest hooks you need to reset this option"
+        echo "    To install the latest hooks you need to reset this option" >&2
         echo "    by running" >&2
         echo "      \`git config --local --unset githooks.single.install\`" >&2
         echo "    in order to use this repository with githooks." >&2
@@ -1885,6 +1896,11 @@ update_release_clone() {
             GITHOOKS_CLONE_UPDATED_FROM_COMMIT="$CURRENT_COMMIT"
             GITHOOKS_CLONE_UPDATED="true"
         fi
+
+        # Ensure we have clone url and branch set (technically not necessary)
+        # its possible to have them not set till now...
+        git config --global githooks.cloneUrl "$GITHOOKS_CLONE_URL"
+        git config --global githooks.cloneBranch "$GITHOOKS_CLONE_BRANCH"
     fi
 
     GITHOOKS_CLONE_CURRENT_COMMIT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-parse HEAD)

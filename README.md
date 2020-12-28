@@ -61,6 +61,7 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `pre-applypatch`
 - `post-applypatch`
 - `pre-commit`
+- `pre-merge-commit`
 - `prepare-commit-msg`
 - `commit-msg`
 - `post-commit`
@@ -72,10 +73,14 @@ The supported hooks are listed below. Refer to the [Git documentation](https://g
 - `update`
 - `post-receive`
 - `post-update`
+- `reference-transaction`
 - `push-to-checkout`
 - `pre-auto-gc`
 - `post-rewrite`
 - `sendemail-validate`
+- `post-index-change`
+
+The `fsmonitor-watchman` hook is currently not supported. If you have a use-case for it and want to use it with this tool, please open an issue.
 
 ## Git Large File Storage support
 

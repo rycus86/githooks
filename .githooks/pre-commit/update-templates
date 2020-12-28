@@ -25,5 +25,16 @@ for HOOK_NAME in $HOOK_NAMES; do
         }
 done
 
+# Delete all files not in `$HOOK_NAME`
+for HOOK_FILE in hooks/*; do
+    NAME=$(basename "$HOOK_FILE")
+    if ! echo "$HOOK_NAMES" | grep -q "$NAME"; then
+        git rm "$HOOK_FILE" >/dev/null 2>&1 || {
+            echo "Failed to delete obsolete hook \`$HOOK_FILE\`"
+            exit 3
+        }
+    fi
+done
+
 echo "* Updated all hooks in 'hooks/*'"
 exit 0
