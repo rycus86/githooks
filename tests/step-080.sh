@@ -9,24 +9,24 @@ fi
 
 mkdir -p /tmp/not/a/git/repo && cd /tmp/not/a/git/repo || exit 1
 
-if git hooks readme add; then
+if "$GITHOOKS_EXE_GIT_HOOKS" readme add; then
     echo "! Expected to fail"
     exit 1
 fi
 
 mkdir -p /tmp/test080 && cd /tmp/test080 && git init || exit 1
 
-git hooks readme update &&
+"$GITHOOKS_EXE_GIT_HOOKS" readme update &&
     [ -f .githooks/README.md ] ||
     exit 1
 
-if git hooks readme add; then
+if "$GITHOOKS_EXE_GIT_HOOKS" readme add; then
     echo "! Expected to fail"
     exit 1
 fi
 
 # Check the Git alias
 rm -f .githooks/README.md &&
-    git hooks readme add &&
+    "$GITHOOKS_EXE_GIT_HOOKS" readme add &&
     [ -f .githooks/README.md ] ||
     exit 1

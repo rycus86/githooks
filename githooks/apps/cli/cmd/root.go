@@ -5,6 +5,7 @@ import (
 	"rycus86/githooks/apps/install"
 	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 
@@ -18,7 +19,8 @@ var settings Settings
 var rootCmd = &cobra.Command{
 	Use:   "git hooks", // Contains a en-space (utf-8: U+2002) to make it work...
 	Short: "Githooks CLI application",
-	Long:  "See further information at https://github.com/rycus86/githooks/blob/master/README.md"}
+	Long:  "See further information at https://github.com/rycus86/githooks/blob/master/README.md",
+	Run:   panicWrongArgs}
 
 func setMainVariables() Settings {
 
@@ -35,6 +37,7 @@ func setMainVariables() Settings {
 
 	return Settings{
 		Cwd:        cwd,
+		GitX:       git.CtxC(cwd),
 		InstallDir: installDir,
 		CloneDir:   hooks.GetReleaseCloneDir(installDir),
 		PromptCtx:  promptCtx}
@@ -48,6 +51,7 @@ func Run(l cm.ILogContext) {
 	firstPrefix := " ▶ "
 	InitTemplates(title, firstPrefix, log.GetIndent())
 
+	SetCommandDefaults(rootCmd)
 	rootCmd.SetOut(cm.ToInfoWriter(log))
 	rootCmd.SetErr(cm.ToErrorWriter(log))
 	rootCmd.Version = build.BuildVersion

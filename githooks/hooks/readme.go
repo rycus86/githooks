@@ -23,6 +23,11 @@ func WriteReadmeFile(filePath string) (err error) {
 	readmeContent, e := getReadmeFileContent()
 	cm.AssertNoErrorPanic(e, "Could not get embedded readme content.")
 
+	err = os.MkdirAll(path.Dir(filePath), cm.DefaultFileModeDirectory)
+	if err != nil {
+		return
+	}
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		return

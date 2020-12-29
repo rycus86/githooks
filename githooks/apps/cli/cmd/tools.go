@@ -40,28 +40,23 @@ Currently the following tools are supported:
 
   The script needs to return one of the short-options on 'stdout'.
   Non-zero exit code triggers the fallback of reading from 'stdin'.`,
-	SilenceUsage: true,
-	RunE:         noSubcommandGiven}
+	Run: panicWrongArgs}
 
 var registerCmd = &cobra.Command{
 	Use:   "register [flags] <toolName> <scriptFolder>",
 	Short: `Register a tool.`,
 	Long: `Install the script folder '<scriptFolder>' in
 the installation directory under 'tools/<toolName>'.`,
-	DisableFlagsInUseLine: true,
-	SilenceUsage:          true,
-	RunE:                  runToolsRegister}
+	Run: runToolsRegister}
 
 var unregisterCmd = &cobra.Command{
 	Use:   "unregister [flags] <toolName>",
 	Short: `Unregister a tool.`,
 	Long: `Uninstall the script folder in the installation
 directory under 'tools/<toolName>'.`,
-	DisableFlagsInUseLine: true,
-	SilenceUsage:          true,
-	RunE:                  runToolsUnregister}
+	Run: runToolsUnregister}
 
-func runToolsRegister(cmd *cobra.Command, args []string) error {
+func runToolsRegister(cmd *cobra.Command, args []string) {
 
 	tool := args[0]
 	dir := args[1]
@@ -76,7 +71,7 @@ func runToolsRegister(cmd *cobra.Command, args []string) error {
 	err = cm.CopyDirectory(dir, targetDir)
 	log.AssertNoErrorPanicF(err, "Could not copy directory '%s' to '%s'.\nRegistration failed.", dir, targetDir)
 
-	return nil
+	log.Info("Installed tool '%s'.", tool)
 }
 
 func unregister(tool string, quiet bool) error {
@@ -100,38 +95,32 @@ func unregister(tool string, quiet bool) error {
 	return nil
 }
 
-func runToolsUnregister(cmd *cobra.Command, args []string) error {
+func runToolsUnregister(cmd *cobra.Command, args []string) {
 
 	tool := args[0]
 	err := unregister(tool, false)
 	log.AssertNoErrorPanicF(err, "Could not unregister tool '%s'.", tool)
-
-	return nil
 }
 
 func validateTool(nArgs int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		err = cobra.ExactArgs(nArgs)(cmd, args)
+		cm.PanicIfF(err != nil, "Command %s", err.Error())
 
-		switch {
-		case err != nil:
-			return ValidationError("Command %s", err.Error())
+		cm.PanicIfF(!strs.Includes([]string{"dialog"}, args[0]),
+			"Tool '%s' is not supported!", args[0])
 
-		case !strs.Includes([]string{"dialog"}, args[0]):
-			return ValidationError("Tool '%s' is not supported!", args[0])
-
-		case len(args) == 2:
+		if len(args) == 2 {
 
 			args[1] = filepath.ToSlash(args[1])
 			runFile := path.Join(args[1], "run")
 
-			switch {
-			case !cm.IsDirectory(args[1]):
-				return ValidationError("Tool directory '%s' does not exist!", args[1])
+			cm.PanicIfF(!cm.IsDirectory(args[1]),
+				"Tool directory '%s' does not exist!", args[1])
 
-			case !cm.IsFile(path.Join(args[1], "run")):
-				return ValidationError("Tool run file '%s' does not exist!", runFile)
-			}
+			cm.PanicIfF(!cm.IsFile(path.Join(args[1], "run")),
+				"Tool run file '%s' does not exist!", runFile)
+
 		}
 
 		return
@@ -143,8 +132,7 @@ func init() { // nolint: gochecknoinits
 	registerCmd.Args = validateTool(2)   //nolint: gomnd
 	unregisterCmd.Args = validateTool(1) //nolint: gomnd
 
-	toolsCmd.AddCommand(registerCmd)
-	toolsCmd.AddCommand(unregisterCmd)
-
-	rootCmd.AddCommand(toolsCmd)
+	toolsCmd.AddCommand(SetCommandDefaults(registerCmd))
+	toolsCmd.AddCommand(SetCommandDefaults(unregisterCmd))
+	rootCmd.AddCommand(SetCommandDefaults(toolsCmd))
 }
