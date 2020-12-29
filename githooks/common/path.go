@@ -1,7 +1,6 @@
 package common
 
 import (
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/otiai10/copy"
 )
 
 const (
@@ -170,45 +170,18 @@ func MakeExecutbale(path string) (err error) {
 	return
 }
 
-// CopyFile copies the contents of the file named src to the file named
-// by dst. The file will be created if it does not already exist. If the
-// destination file exists, all it's contents will be replaced by the contents
-// of the source file.
-func CopyFile(src string, dst string) (err error) {
-	in, err := os.Open(src)
-	if err != nil {
-		return
-	}
-	defer in.Close()
+func CopyFile(src string, dest string) error {
+	return copy.Copy(src, dest,
+		copy.Options{
+			OnSymlink:   func(string) copy.SymlinkAction { return copy.Shallow },
+			OnDirExists: func(string, string) copy.DirExistsAction { return copy.Replace }})
+}
 
-	// Get the stats
-	statIn, err := in.Stat()
-	if err != nil {
-		return
-	}
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return
-	}
-	defer func() {
-		cerr := out.Close()
-		err = CombineErrors(err, cerr)
-	}()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return
-	}
-
-	err = out.Sync()
-
-	// Adapt permissions.
-	err = out.Chmod(statIn.Mode())
-	if err != nil {
-		return
-	}
-
-	return
+func CopyDirectory(src string, dest string) error {
+	return copy.Copy(src, dest,
+		copy.Options{
+			OnSymlink:   func(string) copy.SymlinkAction { return copy.Shallow },
+			OnDirExists: func(string, string) copy.DirExistsAction { return copy.Replace }})
 }
 
 // GetTempPath creates a random non-existing path

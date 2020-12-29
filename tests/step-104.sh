@@ -21,7 +21,7 @@ echo "Written for testing" > /tmp/test104/output
 echo "Y" # Return always Yes
 EOF
 
-if ! git hooks tools register dialog ./tool; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" tools register dialog ./tool; then
     echo "! Failed to register dialog tool"
     exit 4
 fi
@@ -54,7 +54,7 @@ echo "Y" # Return always Yes
 exit 1 # fall back to stdin prompt...
 EOF
 
-if ! git hooks tools register dialog ./tool; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" tools register dialog ./tool; then
     echo "! Failed to register dialog tool"
     exit 9
 fi
@@ -72,7 +72,7 @@ if ! grep -q "Written for testing" /tmp/test104/output-fail; then
     exit 8
 fi
 
-if ! git hooks tools unregister dialog; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" tools unregister dialog; then
     echo "! Failed to unregister tool"
     exit 12
 fi

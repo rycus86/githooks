@@ -33,6 +33,9 @@ RUN echo "Make test gitrepo to clone from ..." && \\
 
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
 
+# @todo replace this variable in tests with "git hooks"
+ENV GITHOOKS_EXE_GIT_HOOKS="/var/lib/githooks/githooks/bin/cli"
+
 # Do not use the terminal in tests
 RUN sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh && \\
     # Conditionally allow file:// for local shared hooks simulating http:// protocol

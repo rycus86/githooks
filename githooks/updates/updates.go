@@ -23,6 +23,7 @@ type ReleaseStatus struct {
 	UpdateCommitSHA   string
 	IsUpdateAvailable bool
 	UpdateVersion     *version.Version
+	UpdateTag         string
 
 	Branch       string
 	RemoteBranch string
@@ -48,43 +49,48 @@ func SetCloneURL(url string, branch string) error {
 
 var unskipTrailerRe = regexp.MustCompile(`Update-NoSkip:\s+true`)
 
-func getNewUpdateCommit(gitx *git.Context, firstSHA string, lastSHA string) (string, *version.Version, error) {
-	commitFound := ""
-	var versionFound *version.Version
+func getNewUpdateCommit(
+	gitx *git.Context,
+	firstSHA string,
+	lastSHA string) (commitF string, tagF string, versionF *version.Version, err error) {
 
 	// Get all commits in (firstSHA, lastSHA]
-	commits, e := gitx.GetCommits(firstSHA, lastSHA)
-	if e != nil {
-		return "", nil, e
+	commits, err := gitx.GetCommits(firstSHA, lastSHA)
+	if err != nil {
+		return
 	}
 
-	for _, c := range commits {
+	for _, commit := range commits {
 
-		ver, tag, err := git.GetVersionAt(gitx, c)
+		version, tag, e := git.GetVersionAt(gitx, commit)
 
-		if err != nil {
-			return "", nil, err
-		} else if ver == nil || strs.IsEmpty(tag) {
+		if e != nil {
+			err = e
+			return //nolint: nlreturn
+		} else if version == nil || strs.IsEmpty(tag) {
 			continue // no version tag on this commit
 		}
 
-		// We have a valid new
-		// version on commit 'c'
-		commitFound = c
-		versionFound = ver
-
 		// Check if it is an unskippable commit:
 		// Get message of the tag (or the commit, if no annotated tag)
-		mess, err := gitx.Get("tag", "-l", "--format=%(contents)", tag)
-		if err != nil {
-			return "", nil, err
-		} else if unskipTrailerRe.MatchString(mess) {
+		mess, e := gitx.Get("tag", "-l", "--format=%(contents)", tag)
+		if e != nil {
+			err = e
+			return //nolint: nlreturn
+		}
+
+		// We have a valid new version on commit 'commit'
+		commitF = commit
+		tagF = tag
+		versionF = version
+
+		if unskipTrailerRe.MatchString(mess) {
 			// We stop at this commit since this update cannot be skipped!
 			break
 		}
 	}
 
-	return commitFound, versionFound, nil
+	return
 }
 
 // RemoteCheckAction is the action type for the remote check.
@@ -302,13 +308,14 @@ func getStatus(
 		return
 	}
 
-	var updateCommit = ""
+	updateCommit := ""
+	updateTag := ""
 	var updateVersion *version.Version
 
 	if localSHA != remoteSHA {
 		// We have a potential update available...
 		// Get the latest update commit in the range (localSHA, remoteSHA]
-		updateCommit, updateVersion, err = getNewUpdateCommit(gitx, localSHA, remoteSHA)
+		updateCommit, updateTag, updateVersion, err = getNewUpdateCommit(gitx, localSHA, remoteSHA)
 		if err != nil {
 			return
 		}
@@ -323,6 +330,7 @@ func getStatus(
 		IsUpdateAvailable: updateVersion != nil,
 		UpdateVersion:     updateVersion,
 		UpdateCommitSHA:   updateCommit,
+		UpdateTag:         updateTag,
 
 		Branch:       branch,
 		RemoteBranch: remoteBranch}

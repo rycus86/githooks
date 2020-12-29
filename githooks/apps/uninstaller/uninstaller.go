@@ -16,7 +16,6 @@ import (
 	strs "rycus86/githooks/strings"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -108,16 +107,8 @@ func setMainVariables(args *Arguments) (Settings, UISettings) {
 		log.AssertNoErrorF(err, "Prompt setup failed -> using fallback.")
 	}
 
-	// Load install dir
-	installDir := hooks.GetInstallDir()
-	if !cm.IsDirectory(installDir) {
-		log.WarnF("Install directory '%s' does not exist.\n"+
-			"Githooks installation is corrupt!\n"+
-			"Using default location '~/.githooks'.", installDir)
-		installDir, err = homedir.Dir()
-		cm.AssertNoErrorPanic(err, "Could not get home directory.")
-		installDir = path.Join(filepath.ToSlash(installDir), hooks.HooksDirName)
-	}
+	installDir := install.LoadInstallDir(log)
+
 	// Safety check.
 	log.PanicIfF(!strings.Contains(installDir, ".githooks"),
 		"Uninstall path at '%s' needs to contain '.githooks'.")

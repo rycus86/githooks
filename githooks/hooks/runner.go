@@ -9,12 +9,6 @@ import (
 	"github.com/google/shlex"
 )
 
-// GetToolRunCmd gets the command string for the tool `toolPath`.
-// It returns the command arguments which is `nil` if its an executable.
-func GetToolRunCmd(toolPath string) ([]string, error) {
-	return GetHookRunCmd(toolPath)
-}
-
 // GetHookRunCmd gets the command string for the hook `hookPath`.
 // It returns the command arguments which is `nil` if its an executable.
 func GetHookRunCmd(hookPath string) ([]string, error) {

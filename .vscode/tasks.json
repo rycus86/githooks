@@ -40,7 +40,7 @@
       "command": "${workspaceFolder}/githooks/scripts/build.sh",
       "args": [
         "--build-flags",
-        "-tags=debug,mock,dev",
+        "-tags=debug",
         "--bin-dir",
         "/tmp/githooks"
       ],
@@ -66,7 +66,7 @@
         "--listen=127.0.0.1:2345",
         "--log",
         "--build-flags",
-        "-tags debug,mock,dev",
+        "-tags debug",
         "--api-version=2",
         "./apps/installer",
         "--",
@@ -105,9 +105,47 @@
         "--listen=127.0.0.1:2345",
         "--log",
         "--build-flags",
-        "-tags debug,mock,dev",
+        "-tags debug",
         "--api-version=2",
         "./apps/uninstaller"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/githooks",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        },
+        "env": {
+          "GOPATH": "${workspaceFolder}/githooks/.go",
+          "GOBIN": "${workspaceFolder}/githooks/bin",
+          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "dependsOn": [
+        "[Dev Container] clean-install",
+        "[Dev Container] go-build-temp"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "[Dev Container] go-delve-cli",
+      "type": "shell",
+      "command": "dlv",
+      "args": [
+        "debug",
+        "--headless",
+        "--listen=127.0.0.1:2345",
+        "--log",
+        "--build-flags",
+        "-tags debug",
+        "--api-version=2",
+        "./apps/cli",
+        "--",
+        "tools"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

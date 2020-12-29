@@ -202,14 +202,7 @@ func setMainVariables(args *Arguments) (Settings, UISettings) {
 		installDir = path.Join(args.InstallPrefix, ".githooks")
 
 	} else {
-		installDir = hooks.GetInstallDir()
-		if !cm.IsDirectory(installDir) {
-			log.WarnF("Install directory '%s' does not exist.\n"+
-				"Setting to default '~/.githooks'.", installDir)
-			installDir, err = homedir.Dir()
-			cm.AssertNoErrorPanic(err, "Could not get home directory.")
-			installDir = path.Join(filepath.ToSlash(installDir), hooks.HooksDirName)
-		}
+		installDir = install.LoadInstallDir(log)
 	}
 
 	// Remove temporary directory if existing

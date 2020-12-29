@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func indentLeft(s string, indent string) string {
-	return indent + strings.ReplaceAll(s, "\n", "\n"+indent)
+func indentLeft(s string, firstPrefix string, indent string) string {
+	return firstPrefix + strings.ReplaceAll(s, "\n", "\n"+indent)
 }
 
 var usageTemplate = `Usage:{{if .Runnable}}
@@ -39,9 +39,9 @@ var helpTemplate = `{{with (or .Long .Short)}}{{. | idnt | trimTrailingWhitespac
 {{end}}{{if or .Runnable .HasSubCommands}}{{ .UsageString | idnt }}{{end}}
 `
 
-func InitTemplates(title string, indent string) {
-	cobra.AddTemplateFunc("idnt", func(s string) string { return indentLeft(s, indent) })
-	helpTemplate = title + "\n" + helpTemplate
+func InitTemplates(title string, prefix string, indent string) {
+	cobra.AddTemplateFunc("idnt", func(s string) string { return indentLeft(s, prefix, indent) })
+	helpTemplate = title + "\n\n" + helpTemplate
 }
 
 func ModifyTemplate(cmd *cobra.Command, indent string) {

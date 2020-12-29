@@ -1,6 +1,14 @@
+//nolint: gomnd
 package cmd
 
 import (
+	"os"
+	"path"
+	"path/filepath"
+	cm "rycus86/githooks/common"
+	"rycus86/githooks/hooks"
+	strs "rycus86/githooks/strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -8,49 +16,135 @@ import (
 var toolsCmd = &cobra.Command{
 	Use:   "tools",
 	Short: "Manages script folders for tools.",
-	Long: `
-Manages script folders for tools.
-
-git hooks tools register <toolName> <scriptFolder>
-
-	Install the script folder '<scriptFolder>' in
-	the installation directory under 'tools/<toolName>'.
-
-git hooks tools unregister <toolName>
-
-	Uninstall the script folder in the installation
-	directory under 'tools/<toolName>'.
-
+	Long: `Manages script folders for tools.
 
 Currently the following tools are supported:
 
-	>> Dialog Tool (<toolName> = \"dialog\")
+>> Dialog Tool (<toolName> = "dialog")
 
-	The interface of the dialog tool is as follows.
+  The interface of the dialog tool is as follows.
 
-	# if 'run' is executable
-	\$ run <title> <text> <options> <long-options>
-	# otherwise, assuming 'run' is a shell script
-	\$ sh run <title> <text> <options> <long-options>
+  - if 'run' is executable
+  	$ run <title> <text> <options> <long-options>
+  - otherwise, assuming 'run' is a shell script
+  	$ sh run <title> <text> <options> <long-options>
 
-	The arguments of the dialog tool are:
-	- '<title>' the title for the GUI dialog
-	- '<text>' the text for the GUI dialog
-	- '<short-options>' the button return values, slash-delimited,
-		e.g. 'Y/n/d'.
-		The default button is the first capital character found.
-	- '<long-options>' the button texts in the GUI,
-		e.g. 'Yes/no/disable'
+  The arguments of the dialog tool are:
+  - '<title>' the title for the GUI dialog
+  - '<text>' the text for the GUI dialog
+  - '<short-options>' the button return values, slash-delimited,
+  	e.g. 'Y/n/d'.
+  	The default button is the first capital character found.
+  - '<long-options>' the button texts in the GUI,
+  	e.g. 'Yes/no/disable'
 
-	The script needs to return one of the short-options on 'stdout'.
-	Non-zero exit code triggers the fallback of reading from 'stdin'.`,
-	Run: runTools,
+  The script needs to return one of the short-options on 'stdout'.
+  Non-zero exit code triggers the fallback of reading from 'stdin'.`,
+	SilenceUsage: true,
+	RunE:         noSubcommandGiven}
+
+var registerCmd = &cobra.Command{
+	Use:   "register [flags] <toolName> <scriptFolder>",
+	Short: `Register a tool.`,
+	Long: `Install the script folder '<scriptFolder>' in
+the installation directory under 'tools/<toolName>'.`,
+	DisableFlagsInUseLine: true,
+	SilenceUsage:          true,
+	RunE:                  runToolsRegister}
+
+var unregisterCmd = &cobra.Command{
+	Use:   "unregister [flags] <toolName>",
+	Short: `Unregister a tool.`,
+	Long: `Uninstall the script folder in the installation
+directory under 'tools/<toolName>'.`,
+	DisableFlagsInUseLine: true,
+	SilenceUsage:          true,
+	RunE:                  runToolsUnregister}
+
+func runToolsRegister(cmd *cobra.Command, args []string) error {
+
+	tool := args[0]
+	dir := args[1]
+
+	log.PanicIfF(unregister(tool, true) != nil, "Could not unregister tool '%s'.", tool)
+
+	targetDir := hooks.GetToolDir(settings.InstallDir, tool)
+	rootDir := path.Dir(targetDir)
+	err := os.MkdirAll(rootDir, cm.DefaultFileModeDirectory)
+	log.AssertNoErrorPanicF(err, "Could not make directory '%s'.\nRegistration failed.", rootDir)
+
+	err = cm.CopyDirectory(dir, targetDir)
+	log.AssertNoErrorPanicF(err, "Could not copy directory '%s' to '%s'.\nRegistration failed.", dir, targetDir)
+
+	return nil
 }
 
-func runTools(cmd *cobra.Command, args []string) {
+func unregister(tool string, quiet bool) error {
 
+	targetDir := hooks.GetToolDir(settings.InstallDir, tool)
+
+	if cm.IsDirectory(targetDir) {
+		if err := os.RemoveAll(targetDir); err != nil {
+			return err
+		}
+
+		if !quiet {
+			log.Info("The tool '%s' is uninstalled.", tool)
+		}
+	}
+
+	if !quiet {
+		log.ErrorF("The tool '%s' is not installed.", tool)
+	}
+
+	return nil
+}
+
+func runToolsUnregister(cmd *cobra.Command, args []string) error {
+
+	tool := args[0]
+	err := unregister(tool, false)
+	log.AssertNoErrorPanicF(err, "Could not unregister tool '%s'.", tool)
+
+	return nil
+}
+
+func validateTool(nArgs int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) (err error) {
+		err = cobra.ExactArgs(nArgs)(cmd, args)
+
+		switch {
+		case err != nil:
+			return ValidationError("Command %s", err.Error())
+
+		case !strs.Includes([]string{"dialog"}, args[0]):
+			return ValidationError("Tool '%s' is not supported!", args[0])
+
+		case len(args) == 2:
+
+			args[1] = filepath.ToSlash(args[1])
+			runFile := path.Join(args[1], "run")
+
+			switch {
+			case !cm.IsDirectory(args[1]):
+				return ValidationError("Tool directory '%s' does not exist!", args[1])
+
+			case !cm.IsFile(path.Join(args[1], "run")):
+				return ValidationError("Tool run file '%s' does not exist!", runFile)
+			}
+		}
+
+		return
+	}
 }
 
 func init() { // nolint: gochecknoinits
+
+	registerCmd.Args = validateTool(2)   //nolint: gomnd
+	unregisterCmd.Args = validateTool(1) //nolint: gomnd
+
+	toolsCmd.AddCommand(registerCmd)
+	toolsCmd.AddCommand(unregisterCmd)
+
 	rootCmd.AddCommand(toolsCmd)
 }

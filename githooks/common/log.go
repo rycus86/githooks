@@ -63,9 +63,9 @@ type ILogContext interface {
 	ColorPrompt(string) string
 	GetIndent() string
 
-	GetInfoFormatter() func(format string, args ...interface{}) string
-	GetErrorFormatter() func(format string, args ...interface{}) string
-	GetPromptFormatter() func(format string, args ...interface{}) string
+	GetInfoFormatter(withColor bool) func(format string, args ...interface{}) string
+	GetErrorFormatter(withColor bool) func(format string, args ...interface{}) string
+	GetPromptFormatter(withColor bool) func(format string, args ...interface{}) string
 
 	GetInfoWriter() io.Writer
 	IsInfoATerminal() bool
@@ -257,23 +257,41 @@ func (c *LogContext) ErrorF(format string, args ...interface{}) {
 }
 
 // GetPromptFormatter formats a prompt.
-func (c *LogContext) GetPromptFormatter() func(format string, args ...interface{}) string {
-	return func(format string, args ...interface{}) string {
-		return c.colorPrompt(FormatMessageF(promptSuffix, indent, format, args...))
+func (c *LogContext) GetPromptFormatter(withColor bool) func(format string, args ...interface{}) string {
+	if withColor {
+		return func(format string, args ...interface{}) string {
+			return c.colorPrompt(FormatMessageF(promptSuffix, indent, format, args...))
+		}
+	} else {
+		return func(format string, args ...interface{}) string {
+			return FormatMessageF(promptSuffix, indent, format, args...)
+		}
 	}
 }
 
 // GetErrorFormatter formats an error.
-func (c *LogContext) GetErrorFormatter() func(format string, args ...interface{}) string {
-	return func(format string, args ...interface{}) string {
-		return c.colorError(FormatMessageF(errorSuffix, indent, format, args...))
+func (c *LogContext) GetErrorFormatter(withColor bool) func(format string, args ...interface{}) string {
+	if withColor {
+		return func(format string, args ...interface{}) string {
+			return c.colorError(FormatMessageF(errorSuffix, indent, format, args...))
+		}
+	} else {
+		return func(format string, args ...interface{}) string {
+			return FormatMessageF(errorSuffix, indent, format, args...)
+		}
 	}
 }
 
 // GetInfoFormatter formats an info.
-func (c *LogContext) GetInfoFormatter() func(format string, args ...interface{}) string {
-	return func(format string, args ...interface{}) string {
-		return c.colorInfo(FormatMessageF(infoSuffix, indent, format, args...))
+func (c *LogContext) GetInfoFormatter(withColor bool) func(format string, args ...interface{}) string {
+	if withColor {
+		return func(format string, args ...interface{}) string {
+			return c.colorInfo(FormatMessageF(infoSuffix, indent, format, args...))
+		}
+	} else {
+		return func(format string, args ...interface{}) string {
+			return FormatMessageF(infoSuffix, indent, format, args...)
+		}
 	}
 }
 

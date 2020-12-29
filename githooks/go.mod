@@ -12,6 +12,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/loov/hrtime v1.0.2
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/otiai10/copy v1.4.1
 	github.com/pbenner/threadpool v0.0.0-20200729220145-19cbae573817
 	github.com/schollz/progressbar/v3 v3.7.2
 	github.com/spf13/cobra v1.1.1

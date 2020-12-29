@@ -96,8 +96,8 @@ func CreateContext(
 	p := Context{
 		log: log,
 
-		errorFmt:      log.GetErrorFormatter(),
-		promptFmt:     log.GetPromptFormatter(),
+		errorFmt:      log.GetErrorFormatter(true),
+		promptFmt:     log.GetPromptFormatter(true),
 		termOut:       output,
 		termIn:        input,
 		termInScanner: bufio.NewScanner(input),

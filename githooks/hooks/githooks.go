@@ -276,20 +276,6 @@ func GetReleaseCloneDir(installDir string) string {
 	return path.Join(installDir, "release")
 }
 
-// GetToolScript gets the tool script associated with the name `tool`.
-func GetToolScript(installDir string, name string) (cm.IExecutable, error) {
-
-	tool := path.Join(installDir, "tools", name, "run")
-	exists, _ := cm.IsPathExisting(tool)
-	if !exists {
-		return nil, nil
-	}
-
-	runCmd, err := GetToolRunCmd(tool)
-
-	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
-}
-
 // GetInstaller returns the installer executable in the install directory.
 func GetInstaller(installDir string) cm.Executable {
 	return cm.Executable{

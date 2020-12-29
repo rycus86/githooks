@@ -2,7 +2,6 @@ package main
 
 import (
 	"rycus86/githooks/hooks"
-	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 )
 
@@ -14,8 +13,6 @@ type Settings struct {
 	InstallDir string // The install directory.
 	CloneDir   string // The release clone dir inside the install dir.
 	TempDir    string // The temporary directory inside the install dir.
-
-	PromptCtx prompt.IContext // The prompt context for UI prompts.
 
 	HookTemplateDir string // The chosen hook template directory.
 
