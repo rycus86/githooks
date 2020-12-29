@@ -12,6 +12,10 @@ import (
 	"strings"
 )
 
+func GetTrustFile(repoPath string) string {
+	return path.Join(repoPath, HooksDirName, "trust-all")
+}
+
 // IsRepoTrusted tells if the repository `repoPath` is trusted.
 // On any error `false` is reported together with the error.
 func IsRepoTrusted(
@@ -20,12 +24,12 @@ func IsRepoTrusted(
 	repoPath string,
 	promptUser bool) (bool, error) {
 
-	trustFile := path.Join(repoPath, HooksDirName, "trust-all")
+	trustFile := GetTrustFile(repoPath)
 	var isTrusted bool = false
 
 	exists, err := cm.IsPathExisting(trustFile)
 	if exists {
-		trustFlag := gitx.GetConfig("githooks.trust.all", git.LocalScope)
+		trustFlag := gitx.GetConfig("githooks.trustAll", git.LocalScope)
 
 		if trustFlag == "" && promptUser {
 			question := "This repository wants you to trust all current and\n" +
@@ -36,12 +40,12 @@ func IsRepoTrusted(
 			answer, err = promptCtx.ShowPromptOptions(question, "(yes, No)", "y/N", "Yes", "No")
 
 			if err == nil && answer == "y" || answer == "Y" {
-				err = gitx.SetConfig("githooks.trust.all", true, git.LocalScope)
+				err = gitx.SetConfig("githooks.trustAll", true, git.LocalScope)
 				if err == nil {
 					isTrusted = true
 				}
 			} else {
-				err = gitx.SetConfig("githooks.trust.all", false, git.LocalScope)
+				err = gitx.SetConfig("githooks.trustAll", false, git.LocalScope)
 			}
 
 		} else if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {

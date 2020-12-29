@@ -223,7 +223,7 @@ func cleanGitConfigInRepo(gitDir string) {
 		"githooks.registered",
 		"githooks.shared",
 		"githooks.sharedHooksUpdateTriggers",
-		"githooks.trust.all"} {
+		"githooks.trustAll"} {
 
 		log.AssertNoErrorF(gitx.UnsetConfig(k, git.LocalScope),
 			"Could not unset Git config '%s' in '%s'.", k, gitDir)

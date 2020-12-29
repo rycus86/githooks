@@ -34,13 +34,13 @@ It overwrite the file if it exists already.`,
 
 func updateReadme(panicIfExists bool) {
 
-	worktree, err := settings.GitX.GetMainWorktree()
+	githooksRoot, err := settings.GitX.GetGithooksRoot()
 	log.AssertNoErrorPanicF(err,
-		"Could not get git main worktree for\n"+
-			"current working directory '%s'.",
+		"Current working directory '%s' is neither inside a worktree\n"+
+			"nor inside a bare repository.",
 		settings.Cwd)
 
-	file := hooks.GetReadmeFile(path.Join(worktree, hooks.HooksDirName))
+	file := hooks.GetReadmeFile(path.Join(githooksRoot, hooks.HooksDirName))
 
 	log.PanicIfF(panicIfExists && cm.IsFile(file),
 		"This repository already seems to have a Githooks README.\n"+

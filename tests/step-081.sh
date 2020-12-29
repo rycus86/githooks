@@ -11,21 +11,21 @@ mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
 git hooks trust &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "Y" ] ||
     exit 1
 
 git hooks trust revoke &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "N" ] ||
     exit 2
 
 git hooks trust delete &&
     [ ! -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "N" ] ||
     exit 3
 
 git hooks trust forget &&
-    [ -z "$(git config --local --get githooks.trust.all)" ] &&
+    [ -z "$(git config --local --get githooks.trustAll)" ] &&
     git hooks trust forget ||
     exit 4
 

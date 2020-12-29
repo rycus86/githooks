@@ -119,6 +119,22 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	return
 }
 
+// GetGithooksRoot returns the top level directory in a non-bare repository or the
+// absolute Git directory in a bare repository.
+// This is the root level for Githooks.
+func (c *Context) GetGithooksRoot() (topLevel string, err error) {
+	if c.IsBareRepo() {
+		topLevel, err = c.GetGitCommonDir()
+	} else {
+		if topLevel, err = c.Get("rev-parse", "--show-toplevel"); err != nil {
+			return
+		}
+		topLevel = filepath.ToSlash(topLevel)
+	}
+
+	return
+}
+
 // FindGitDirs returns Git directories inside `searchDir`.
 // Paths relative to `searchDir` containing `.dotfiles` (hidden files)
 // will never be reported. Optionally the output can be sorted.

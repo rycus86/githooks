@@ -29,7 +29,7 @@ if grep -q "Changed hook" /tmp/test35.out; then
     exit 1
 fi
 
-if ! CFG=$(git config --get githooks.trust.all) || [ "$CFG" != "false" ]; then
+if ! CFG=$(git config --get githooks.trustAll) || [ "$CFG" != "false" ]; then
     echo "! Unexpected config found"
     exit 1
 fi
