@@ -9,31 +9,26 @@ fi
 
 mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
-git hooks trust &&
+"$GITHOOKS_EXE_GIT_HOOKS" trust &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trustAll)" = "Y" ] ||
+    [ "$(git config --local --get githooks.trust.all)" = "true" ] ||
     exit 1
 
-git hooks trust revoke &&
+"$GITHOOKS_EXE_GIT_HOOKS" trust revoke &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trustAll)" = "N" ] ||
+    [ "$(git config --local --get githooks.trust.all)" = "false" ] ||
     exit 2
 
-git hooks trust delete &&
+"$GITHOOKS_EXE_GIT_HOOKS" trust delete &&
     [ ! -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trustAll)" = "N" ] ||
+    [ "$(git config --local --get githooks.trust.all)" = "false" ] ||
     exit 3
 
-git hooks trust forget &&
-    [ -z "$(git config --local --get githooks.trustAll)" ] &&
-    git hooks trust forget ||
+"$GITHOOKS_EXE_GIT_HOOKS" trust forget &&
+    [ -z "$(git config --local --get githooks.trust.all)" ] &&
+    "$GITHOOKS_EXE_GIT_HOOKS" trust forget ||
     exit 4
 
-git hooks trust invalid && exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" trust invalid && exit 5
 
-# Check the Git alias
-git hooks trust &&
-    git hooks trust revoke &&
-    git hooks trust delete &&
-    git hooks trust forget ||
-    exit 6
+exit 0

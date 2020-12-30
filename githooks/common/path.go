@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	strs "rycus86/githooks/strings"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/otiai10/copy"
@@ -166,6 +167,32 @@ func MakeExecutbale(path string) (err error) {
 
 	var executeMask os.FileMode = 0111
 	err = os.Chmod(path, stats.Mode()|executeMask)
+
+	return
+}
+
+// TouchFile touches a file `path`.
+func TouchFile(filePath string, makeDirs bool) (err error) {
+	if IsFile(filePath) {
+
+		currentTime := time.Now().Local()
+		err = os.Chtimes(filePath, currentTime, currentTime)
+
+	} else {
+
+		if makeDirs {
+			if err = os.MkdirAll(path.Dir(filePath), DefaultFileModeDirectory); err != nil {
+				return
+			}
+		}
+
+		var file *os.File
+		if file, err = os.Create(filePath); err != nil {
+			return
+		}
+
+		err = file.Chmod(DefaultFileModeFile)
+	}
 
 	return
 }

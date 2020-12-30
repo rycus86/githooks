@@ -41,10 +41,10 @@ func FindHookTemplateDir(useCoreHooksPath bool) (hooksTemplateDir string, err er
 	// 2. Try setup from git config
 	if useCoreHooksPath {
 		hooksTemplateDir, err = CheckTemplateDir(
-			git.Ctx().GetConfig("core.hooksPath", git.GlobalScope), "")
+			git.Ctx().GetConfig(git.GitCK_CoreHooksPath, git.GlobalScope), "")
 	} else {
 		hooksTemplateDir, err = CheckTemplateDir(
-			git.Ctx().GetConfig("init.templateDir", git.GlobalScope), "hooks")
+			git.Ctx().GetConfig(git.GitCK_InitTemplateDir, git.GlobalScope), "hooks")
 	}
 
 	if err != nil {

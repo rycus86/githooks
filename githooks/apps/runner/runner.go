@@ -140,7 +140,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
 	log.AssertNoError(err, "Could not get trust settings.")
 
-	failOnNonExistingHooks := gitx.GetConfig("githooks.failOnNonExistingSharedHooks", git.Traverse) == "true"
+	failOnNonExistingHooks := gitx.GetConfig(hooks.GitCK_FailOnNonExistingSharedHooks, git.Traverse) == "true"
 
 	s := HookSettings{
 		Args:               os.Args[2:],
@@ -192,7 +192,7 @@ func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
 	// Get the store from the config variable
 	// fallback to Git dir if not existing.
 
-	cacheDir := settings.GitX.GetConfig("githooks.checksumCacheDir", git.Traverse)
+	cacheDir := settings.GitX.GetConfig(hooks.GitCK_ChecksumCacheDir, git.Traverse)
 	loadFallback := cacheDir == ""
 	var err error
 
@@ -256,15 +256,15 @@ func getInstallDir() string {
 
 func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 
-	if !gitx.IsConfigSet("githooks.registered", git.LocalScope) &&
-		!gitx.IsConfigSet("core.hooksPath", git.Traverse) {
+	if !gitx.IsConfigSet(hooks.GitCK_Registered, git.LocalScope) &&
+		!gitx.IsConfigSet(git.GitCK_CoreHooksPath, git.Traverse) {
 
 		log.DebugF("Register repo '%s'", gitDir)
 
 		err := hooks.RegisterRepo(gitDir, installDir, true, false)
 		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
 
-		err = hooks.MarkRegistered(gitx)
+		err = hooks.MarkRepoRegistered(gitx)
 		log.AssertNoErrorF(err, "Could not set register flag in repo '%s'.", gitDir)
 
 	} else {
@@ -307,7 +307,7 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 	}
 
 	log.Info("Record update check time ...")
-	err := settings.GitX.SetConfig("githooks.autoupdate.lastrun",
+	err := settings.GitX.SetConfig(hooks.GitCK_AutoUpdateLastRun,
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 	log.AssertNoError(err, "Could not record update time.")
 
@@ -348,12 +348,12 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 		return false
 	}
 
-	enabled := settings.GitX.GetConfig("githooks.autoupdate.enabled", git.Traverse)
+	enabled := settings.GitX.GetConfig(hooks.GitCK_AutoUpdateEnabled, git.Traverse)
 	if enabled != "true" && enabled != "Y" {
 		return false
 	}
 
-	timeLastUpdate := settings.GitX.GetConfig("githooks.autoupdate.lastrun", git.GlobalScope)
+	timeLastUpdate := settings.GitX.GetConfig(hooks.GitCK_AutoUpdateLastRun, git.GlobalScope)
 	if timeLastUpdate == "" {
 		return true
 	}
@@ -532,7 +532,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 	if settings.HookName != "post-merge" &&
 		!(settings.HookName == "post-checkout" &&
 			settings.Args[0] == git.NullRef) &&
-		!strs.Includes(settings.GitX.GetConfigAll("githooks.sharedHooksUpdateTriggers", git.Traverse),
+		!strs.Includes(settings.GitX.GetConfigAll(hooks.GitCK_SharedUpdateTriggers, git.Traverse),
 			settings.HookName) {
 
 		log.Debug("Shared hooks not updated.")
@@ -630,7 +630,7 @@ func getConfigSharedHooks(
 			"Shared hooks are demanded but failed "+
 				"to parse the %s config:\n'%s'",
 			hooks.GetSharedHookTypeString(sharedType),
-			hooks.SharedConfigName)
+			hooks.GitCK_Shared)
 	}
 
 	for _, sharedHook := range sharedHooks {
@@ -944,7 +944,7 @@ func executeSafetyChecks(uiSettings *UISettings,
 func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
 
 	var nThreads = runtime.NumCPU()
-	nThSetting := settings.GitX.GetConfig("githooks.numThreads", git.Traverse)
+	nThSetting := settings.GitX.GetConfig(hooks.GitCK_NumThreads, git.Traverse)
 	if n, err := strconv.Atoi(nThSetting); err == nil {
 		nThreads = n
 	}

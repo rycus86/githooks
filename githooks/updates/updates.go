@@ -4,6 +4,7 @@ import (
 	"regexp"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 
 	"github.com/google/uuid"
@@ -32,8 +33,8 @@ type ReleaseStatus struct {
 // GetCloneURL get the clone url and clone branch.
 func GetCloneURL() (url string, branch string) {
 	gitx := git.Ctx()
-	url = gitx.GetConfig("githooks.cloneUrl", git.GlobalScope)
-	branch = gitx.GetConfig("githooks.cloneBranch", git.GlobalScope)
+	url = gitx.GetConfig(hooks.GitCK_CloneUrl, git.GlobalScope)
+	branch = gitx.GetConfig(hooks.GitCK_CloneBranch, git.GlobalScope)
 
 	return
 }
@@ -41,8 +42,8 @@ func GetCloneURL() (url string, branch string) {
 // SetCloneURL get the clone url and clone branch.
 func SetCloneURL(url string, branch string) error {
 	gitx := git.Ctx()
-	e1 := gitx.SetConfig("githooks.cloneUrl", url, git.GlobalScope)
-	e2 := gitx.SetConfig("githooks.cloneBranch", branch, git.GlobalScope)
+	e1 := gitx.SetConfig(hooks.GitCK_CloneUrl, url, git.GlobalScope)
+	e2 := gitx.SetConfig(hooks.GitCK_CloneBranch, branch, git.GlobalScope)
 
 	return cm.CombineErrors(e1, e2)
 }

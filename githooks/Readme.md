@@ -130,7 +130,7 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
 
 This is more efficient, since we only have to search for such a file and we know we have trusted this hook. Instead of parsing the file for every hook run. Note: `git commit` runs several hooks, and all need to re-read the same stuff again.
 
-4. Move config `githooks.trustAll` to `githooks.trustAll`. **[done]**
+4. Move config `githooks.trust.all` to `githooks.trust.all`. **[done]**
 
 ### Hook Runner
 

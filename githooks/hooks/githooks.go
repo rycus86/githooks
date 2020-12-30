@@ -95,7 +95,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	}
 
 	// Check global Git config
-	info = git.Ctx().GetConfig("githooks.bugReportInfo", git.GlobalScope)
+	info = git.Ctx().GetConfig(GitCK_BugReportInfo, git.GlobalScope)
 
 	return
 }
@@ -152,7 +152,7 @@ func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
 		}
 	}
 
-	disabled := gitx.GetConfig("githooks.disable", git.Traverse)
+	disabled := gitx.GetConfig(GitCK_Disable, git.Traverse)
 
 	return disabled == "true" ||
 		disabled == "y" || // Legacy
@@ -168,12 +168,12 @@ func IsLFSAvailable() bool {
 
 // GetInstallDir returns the Githooks install directory.
 func GetInstallDir() string {
-	return filepath.ToSlash(git.Ctx().GetConfig("githooks.installDir", git.GlobalScope))
+	return filepath.ToSlash(git.Ctx().GetConfig(GitCK_InstallDir, git.GlobalScope))
 }
 
 // SetInstallDir sets the global Githooks install directory.
 func SetInstallDir(path string) error {
-	return git.Ctx().SetConfig("githooks.installDir", path, git.GlobalScope)
+	return git.Ctx().SetConfig(GitCK_InstallDir, path, git.GlobalScope)
 }
 
 // GetBinaryDir returns the Githooks binary directory inside the install directory.
@@ -257,7 +257,7 @@ func SetRunnerExecutableAlias(path string) error {
 		return cm.ErrorF("Runner executable '%s' does not exist.", path)
 	}
 
-	return git.Ctx().SetConfig("githooks.runner", path, git.GlobalScope)
+	return git.Ctx().SetConfig(GitCK_Runner, path, git.GlobalScope)
 }
 
 // SetCLIExecutableAlias sets the global Githooks runner executable.
@@ -266,7 +266,7 @@ func SetCLIExecutableAlias(path string) error {
 		return cm.ErrorF("CLI executable '%s' does not exist.", path)
 	}
 
-	return git.Ctx().SetConfig("alias.hooks", strs.Fmt("!\"%s\"", path), git.GlobalScope)
+	return git.Ctx().SetConfig(GitCK_AliasHooks, strs.Fmt("!\"%s\"", path), git.GlobalScope)
 }
 
 // GetReleaseCloneDir get the release clone directory inside the install dir.

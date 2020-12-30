@@ -396,7 +396,7 @@ func findGitHookTemplates(
 	nonInteractive bool,
 	promptCtx prompt.IContext) (string, string) {
 
-	installUsesCoreHooksPath := git.Ctx().GetConfig("githooks.useCoreHooksPath", git.GlobalScope)
+	installUsesCoreHooksPath := git.Ctx().GetConfig(hooks.GitCK_UseCoreHooksPath, git.GlobalScope)
 	haveInstall := strs.IsNotEmpty(installUsesCoreHooksPath)
 
 	hookTemplateDir, err := install.FindHookTemplateDir(useCoreHooksPath || installUsesCoreHooksPath == "true")
@@ -618,19 +618,19 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 		log.InfoF("%s 'core.hooksPath' to '%s'.", prefix, directory)
 
 		if !dryRun {
-			err := gitx.SetConfig("githooks.useCoreHooksPath", true, git.GlobalScope)
+			err := gitx.SetConfig(hooks.GitCK_UseCoreHooksPath, true, git.GlobalScope)
 			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 
-			err = gitx.SetConfig("githooks.pathForUseCoreHooksPath", directory, git.GlobalScope)
+			err = gitx.SetConfig(hooks.GitCK_PathForUseCoreHooksPath, directory, git.GlobalScope)
 			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 
-			err = gitx.SetConfig("core.hooksPath", directory, git.GlobalScope)
+			err = gitx.SetConfig(git.GitCK_CoreHooksPath, directory, git.GlobalScope)
 			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 		}
 
 		// Warnings:
 		// Check if hooks might not run...
-		tD := gitx.GetConfig("init.templateDir", git.GlobalScope)
+		tD := gitx.GetConfig(git.GitCK_InitTemplateDir, git.GlobalScope)
 		msg := ""
 		if strs.IsNotEmpty(tD) && cm.IsDirectory(path.Join(tD, "hooks")) {
 			d := path.Join(tD, "hooks")
@@ -670,7 +670,7 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 	} else {
 
 		if !dryRun {
-			err := gitx.SetConfig("githooks.useCoreHooksPath", false, git.GlobalScope)
+			err := gitx.SetConfig(hooks.GitCK_UseCoreHooksPath, false, git.GlobalScope)
 			log.AssertNoErrorPanic(err, "Could not set Git config value.")
 		}
 
@@ -678,14 +678,14 @@ func setGithooksDirectory(useCoreHooksPath bool, directory string, dryRun bool) 
 			log.InfoF("%s 'init.templateDir' to '%s'.", prefix, directory)
 
 			if !dryRun {
-				err := gitx.SetConfig("init.templateDir", directory, git.GlobalScope)
+				err := gitx.SetConfig(git.GitCK_InitTemplateDir, directory, git.GlobalScope)
 				log.AssertNoErrorPanic(err, "Could not set Git config value.")
 			}
 		}
 
 		// Warnings:
 		// Check if hooks might not run..
-		hP := gitx.GetConfig("core.hooksPath", git.GlobalScope)
+		hP := gitx.GetConfig(git.GitCK_CoreHooksPath, git.GlobalScope)
 		log.WarnIfF(strs.IsNotEmpty(hP),
 			"The 'core.hooksPath' setting is currently set to\n"+
 				"'%s'\n"+
@@ -732,7 +732,7 @@ func setupHookTemplates(
 	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookTemplateDir)
 
 	if onlyServerHooks {
-		err := git.Ctx().SetConfig("githooks.maintainOnlyServerHooks", true, git.GlobalScope)
+		err := git.Ctx().SetConfig(hooks.GitCK_MaintainOnlyServerHooks, true, git.GlobalScope)
 		log.AssertNoErrorPanic(err, "Could not set Git config 'githooks.maintainOnlyServerHooks'.")
 	}
 }
@@ -791,7 +791,7 @@ func installBinaries(
 
 func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.IContext) {
 	gitx := git.Ctx()
-	currentSetting := gitx.GetConfig("githooks.autoupdate.enabled", git.GlobalScope)
+	currentSetting := gitx.GetConfig(hooks.GitCK_AutoUpdateEnabled, git.GlobalScope)
 	promptMsg := ""
 
 	switch {
@@ -827,7 +827,7 @@ func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.ICo
 		} else {
 
 			if err := gitx.SetConfig(
-				"githooks.autoupdate.enabled", true, git.GlobalScope); err == nil {
+				hooks.GitCK_AutoUpdateEnabled, true, git.GlobalScope); err == nil {
 
 				log.Info("Automatic update checks are now enabled.")
 			} else {
@@ -1075,7 +1075,7 @@ func installIntoRegisteredRepos(
 func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *UISettings) {
 
 	gitx := git.Ctx()
-	sharedRepos := gitx.GetConfigAll("githooks.shared", git.GlobalScope)
+	sharedRepos := gitx.GetConfigAll(hooks.GitCK_Shared, git.GlobalScope)
 
 	var question string
 	if len(sharedRepos) != 0 {
@@ -1113,7 +1113,7 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 	}
 
 	// Unset all shared configs.
-	err = gitx.UnsetConfig("githooks.shared", git.GlobalScope)
+	err = gitx.UnsetConfig(hooks.GitCK_Shared, git.GlobalScope)
 	log.AssertNoError(err,
 		"Could not unset Git config 'githooks.shared'.",
 		"Failed to setup shared hook repositories.")
@@ -1123,7 +1123,7 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 
 	// Add all entries.
 	for _, entry := range entries {
-		err := gitx.AddConfig("githooks.shared", entry, git.GlobalScope)
+		err := gitx.AddConfig(hooks.GitCK_Shared, entry, git.GlobalScope)
 		log.AssertNoError(err,
 			"Could not add Git config 'githooks.shared'.",
 			"Failed to setup shared hook repositories.")
@@ -1162,7 +1162,7 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 
 func storeSettings(settings *Settings, uiSettings *UISettings) {
 	// Store cached UI values back.
-	err := git.Ctx().SetConfig("githooks.deleteDetectedLFSHooks", uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
+	err := git.Ctx().SetConfig(hooks.GitCK_DeleteDetectedLFSHooks, uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
 	log.AssertNoError(err, "Could not store config 'githooks.deleteDetectedLFSHooks'.")
 
 	err = settings.RegisteredGitDirs.Store(settings.InstallDir)
@@ -1173,7 +1173,7 @@ func storeSettings(settings *Settings, uiSettings *UISettings) {
 	if err != nil {
 		for _, gitDir := range settings.InstalledGitDirs.ToList() {
 			// For each installedGitDir entry, mark the repository as registered.
-			err := hooks.MarkRegistered(git.CtxC(gitDir))
+			err := hooks.MarkRepoRegistered(git.CtxC(gitDir))
 			log.AssertNoErrorF(err, "Could not mark Git directory '%s' as registered.", gitDir)
 		}
 	}

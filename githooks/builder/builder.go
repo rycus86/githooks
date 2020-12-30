@@ -7,6 +7,7 @@ import (
 	"runtime"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"strings"
 
@@ -58,7 +59,7 @@ func findGoExec() (cm.CmdContext, error) {
 	var err error
 
 	// Check from config.
-	goExec := git.Ctx().GetConfig("githooks.goExecutable", git.GlobalScope)
+	goExec := git.Ctx().GetConfig(hooks.GitCK_GoExecutable, git.GlobalScope)
 	if strs.IsNotEmpty(goExec) && cm.IsFile(goExec) {
 		gox = cm.CmdContext{BaseCmd: goExec}
 

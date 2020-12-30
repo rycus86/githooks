@@ -30,10 +30,10 @@ func RegisterRepo(absGitDir string, installDir string, filterExisting bool, filt
 	return repos.Store(installDir)
 }
 
-// MarkRegistered sets the register flag inside the repo
+// MarkRepoRegistered sets the register flag inside the repo
 // to denote the repository as registered.
-func MarkRegistered(gitx *git.Context) error {
-	return gitx.SetConfig("githooks.registered", true, git.LocalScope)
+func MarkRepoRegistered(gitx *git.Context) error {
+	return gitx.SetConfig(GitCK_Registered, true, git.LocalScope)
 }
 
 // Load gets the registered repos loaded from the register file in the

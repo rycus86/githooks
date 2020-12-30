@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"os"
-	"path"
 	cm "rycus86/githooks/common"
+	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
+	strs "rycus86/githooks/strings"
 
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,7 @@ and the 'delete' argument also deletes the trusted marker.
 The 'forget' option unsets the trust setting, asking for accepting
 it again next time, if the repository is marked as trusted.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		panicIfAnyArgs(cmd, args)
 		runTrust(TrustAdd)
 	}}
 
@@ -65,10 +67,49 @@ func runTrust(opt TrustOption) {
 			"nor inside a bare repository.",
 		settings.Cwd)
 
-	if opt == TrustAdd {
-		file := hooks.GetTrustFile(githooksRoot)
-		err := os.MkdirAll(path.Dir(githooksRoot), cm.DefaultFileModeDirectory)
-		log.AssertNoErrorPanicF(err, "Could not create directory for '%s'.", file)
+	file := hooks.GetTrustFile(githooksRoot)
+
+	switch opt {
+	case TrustAdd:
+		err = cm.TouchFile(file, true)
+		log.AssertNoErrorPanicF(err, "Could not touch trust marker '%s'.", file)
+		log.Info("The trust marker is added to the repository.")
+
+		err = settings.GitX.SetConfig(hooks.GitCK_TrustAll, true, git.LocalScope)
+		log.AssertNoErrorPanicF(err, "Could not set Git config '%s'.", hooks.GitCK_TrustAll)
+		log.Info("The current repository is now trusted.")
+
+		if !settings.GitX.IsBareRepo() {
+			log.Info("Do not forget to commit and push it!")
+		}
+	case TrustForget:
+		trust := settings.GitX.GetConfig(hooks.GitCK_TrustAll, git.LocalScope)
+		if strs.IsEmpty(trust) {
+			log.Info("The current repository does not have trust settings.")
+		} else {
+			err = settings.GitX.UnsetConfig(hooks.GitCK_TrustAll, git.LocalScope)
+			log.AssertNoErrorPanicF(err, "Could not unset Git config '%s'.", hooks.GitCK_TrustAll)
+		}
+
+		log.Info("The current repository is no longer trusted.")
+
+	case TrustRevoke:
+		fallthrough
+	case TrustDelete:
+		err = settings.GitX.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
+		log.AssertNoErrorPanicF(err, "Could not set Git config '%s'.", hooks.GitCK_TrustAll)
+		log.Info("The current repository is no longer trusted.")
+	}
+
+	if opt == TrustDelete {
+		err := os.RemoveAll(file)
+		log.AssertNoErrorPanicF(err, "Could not remove trust marker '%s'.", file)
+
+		log.Info("The trust marker is removed from the repository.")
+
+		if !settings.GitX.IsBareRepo() {
+			log.Info("Do not forget to commit and push it!")
+		}
 	}
 }
 

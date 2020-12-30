@@ -105,7 +105,7 @@ func runToolsUnregister(cmd *cobra.Command, args []string) {
 func validateTool(nArgs int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		err = cobra.ExactArgs(nArgs)(cmd, args)
-		cm.PanicIfF(err != nil, "Command %s", err.Error())
+		cm.AssertNoErrorPanic(err, "Wrong arguments:")
 
 		cm.PanicIfF(!strs.Includes([]string{"dialog"}, args[0]),
 			"Tool '%s' is not supported!", args[0])

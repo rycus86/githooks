@@ -30,7 +30,6 @@ func GetRepoSharedFile(repoHooksDir string) string {
 
 // SharedConfigName defines the config name used to define local/global
 // shared hooks in the local/global Git configuration.
-var SharedConfigName string = "githooks.shared"
 var reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
 // GetSharedDir gets the shared directory where all shared clone reside inside the install dir.
@@ -145,7 +144,7 @@ func LoadRepoSharedHooks(installDir string, repoHooksDir string) (hooks []Shared
 // the local/global Git configuration.
 // No checks are made to the filesystem if paths are existing in `SharedHook`.
 func LoadConfigSharedHooks(installDir string, ctx *git.Context, scope git.ConfigScope) (hooks []SharedHook, err error) {
-	data := ctx.GetConfigAllU(SharedConfigName, scope)
+	data := ctx.GetConfigAllU(GitCK_Shared, scope)
 	if data != "" {
 		hooks, err = parseData(installDir, data)
 	}

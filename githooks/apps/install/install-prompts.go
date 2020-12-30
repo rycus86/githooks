@@ -3,6 +3,7 @@ package install
 import (
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
+	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strings"
@@ -41,7 +42,7 @@ func PromptExistingRepos(
 	homeDir, err := homedir.Dir()
 	cm.AssertNoErrorPanic(err, "Could not get home directory.")
 
-	searchDir := gitx.GetConfig("githooks.previousSearchDir", git.GlobalScope)
+	searchDir := gitx.GetConfig(hooks.GitCK_PreviousSearchDir, git.GlobalScope)
 	hasSearchDir := strs.IsNotEmpty(searchDir)
 
 	if nonInteractive {
@@ -87,7 +88,7 @@ func PromptExistingRepos(
 		return
 	}
 
-	err = gitx.SetConfig("githooks.previousSearchDir", searchDir, git.GlobalScope)
+	err = gitx.SetConfig(hooks.GitCK_PreviousSearchDir, searchDir, git.GlobalScope)
 	log.AssertNoError(err, "Could not set git config 'githooks.previousSearchDir'")
 
 	log.InfoF("Searching for Git directories in '%s'...", searchDir)

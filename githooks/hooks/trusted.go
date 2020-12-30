@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const GitConfigTrustAll = "githooks.trust.all"
+
 func GetTrustFile(repoPath string) string {
 	return path.Join(repoPath, HooksDirName, "trust-all")
 }
@@ -29,9 +31,9 @@ func IsRepoTrusted(
 
 	exists, err := cm.IsPathExisting(trustFile)
 	if exists {
-		trustFlag := gitx.GetConfig("githooks.trustAll", git.LocalScope)
+		trustFlag := gitx.GetConfig(GitConfigTrustAll, git.LocalScope)
 
-		if trustFlag == "" && promptUser {
+		if strs.IsEmpty(trustFlag) && promptUser {
 			question := "This repository wants you to trust all current and\n" +
 				"future hooks without prompting.\n" +
 				"Do you want to allow running every current and future hooks?"
@@ -40,12 +42,12 @@ func IsRepoTrusted(
 			answer, err = promptCtx.ShowPromptOptions(question, "(yes, No)", "y/N", "Yes", "No")
 
 			if err == nil && answer == "y" || answer == "Y" {
-				err = gitx.SetConfig("githooks.trustAll", true, git.LocalScope)
+				err = gitx.SetConfig(GitConfigTrustAll, true, git.LocalScope)
 				if err == nil {
 					isTrusted = true
 				}
 			} else {
-				err = gitx.SetConfig("githooks.trustAll", false, git.LocalScope)
+				err = gitx.SetConfig(GitConfigTrustAll, false, git.LocalScope)
 			}
 
 		} else if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {

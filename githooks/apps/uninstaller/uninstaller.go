@@ -219,11 +219,7 @@ func cleanArtefactsInRepo(gitDir string) {
 func cleanGitConfigInRepo(gitDir string) {
 	gitx := git.CtxC(gitDir)
 
-	for _, k := range []string{
-		"githooks.registered",
-		"githooks.shared",
-		"githooks.sharedHooksUpdateTriggers",
-		"githooks.trustAll"} {
+	for _, k := range hooks.GetLocalGitConfigKeys() {
 
 		log.AssertNoErrorF(gitx.UnsetConfig(k, git.LocalScope),
 			"Could not unset Git config '%s' in '%s'.", k, gitDir)
@@ -354,7 +350,7 @@ func uninstallFromRegisteredRepos(
 }
 
 func cleanTemplateDir() {
-	installUsesCoreHooksPath := git.Ctx().GetConfig("githooks.useCoreHooksPath", git.GlobalScope)
+	installUsesCoreHooksPath := git.Ctx().GetConfig(hooks.GitCK_UseCoreHooksPath, git.GlobalScope)
 
 	hookTemplateDir, err := install.FindHookTemplateDir(installUsesCoreHooksPath == "true")
 	log.AssertNoErrorF(err, "Error while determining default hook template directory.")
@@ -424,36 +420,16 @@ func cleanGitConfig() {
 	gitx := git.Ctx()
 
 	// Remove core.hooksPath if we are using it.
-	pathForUseCoreHooksPath := gitx.GetConfig("githooks.pathForUseCoreHooksPath", git.GlobalScope)
-	coreHooksPath := gitx.GetConfig("core.hooksPath", git.GlobalScope)
+	pathForUseCoreHooksPath := gitx.GetConfig(hooks.GitCK_PathForUseCoreHooksPath, git.GlobalScope)
+	coreHooksPath := gitx.GetConfig(git.GitCK_CoreHooksPath, git.GlobalScope)
 
 	if coreHooksPath == pathForUseCoreHooksPath {
-		err := gitx.UnsetConfig("core.hooksPath", git.GlobalScope)
+		err := gitx.UnsetConfig(git.GitCK_CoreHooksPath, git.GlobalScope)
 		log.AssertNoError(err, "Could not unset global Git config 'core.hooksPath'.")
 	}
 
 	// Remove all global configs
-	for _, k := range []string{
-		"githooks.autoupdate.enabled",
-		"githooks.autoupdate.lastrun",
-		"githooks.bugReportInfo",
-		"githooks.checksumCacheDir",
-		"githooks.cloneBranch",
-		"githooks.cloneUrl",
-		"githooks.deleteDetectedLFSHooks",
-		"githooks.disable",
-		"githooks.failOnNonExistingSharedHooks",
-		"githooks.goExecutable",
-		"githooks.installDir",
-		"githooks.maintainOnlyServerHooks",
-		"githooks.numThreads",
-		"githooks.pathForUseCoreHooksPath",
-		"githooks.previousSearchDir",
-		"githooks.runner",
-		"githooks.shared",
-		"githooks.sharedHooksUpdateTriggers",
-		"githooks.useCoreHooksPath",
-		"alias.hooks"} {
+	for _, k := range hooks.GetGlobalGitConfigKeys() {
 
 		log.AssertNoErrorF(gitx.UnsetConfig(k, git.GlobalScope),
 			"Could not unset global Git config '%s'.", k)
