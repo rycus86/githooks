@@ -39,8 +39,7 @@ Currently the following tools are supported:
   	e.g. 'Yes/no/disable'
 
   The script needs to return one of the short-options on 'stdout'.
-  Non-zero exit code triggers the fallback of reading from 'stdin'.`,
-	Run: panicWrongArgs}
+  Non-zero exit code triggers the fallback of reading from 'stdin'.`}
 
 var registerCmd = &cobra.Command{
 	Use:   "register [flags] <toolName> <scriptFolder>",
@@ -66,10 +65,10 @@ func runToolsRegister(cmd *cobra.Command, args []string) {
 	targetDir := hooks.GetToolDir(settings.InstallDir, tool)
 	rootDir := path.Dir(targetDir)
 	err := os.MkdirAll(rootDir, cm.DefaultFileModeDirectory)
-	log.AssertNoErrorPanicF(err, "Could not make directory '%s'.\nRegistration failed.", rootDir)
+	log.AssertNoErrorPanicF(err, "Could not registration tool '%s'.", tool)
 
 	err = cm.CopyDirectory(dir, targetDir)
-	log.AssertNoErrorPanicF(err, "Could not copy directory '%s' to '%s'.\nRegistration failed.", dir, targetDir)
+	log.AssertNoErrorPanicF(err, "Could not registration tool '%s'.", tool)
 
 	log.Info("Installed tool '%s'.", tool)
 }
@@ -102,10 +101,9 @@ func runToolsUnregister(cmd *cobra.Command, args []string) {
 	log.AssertNoErrorPanicF(err, "Could not unregister tool '%s'.", tool)
 }
 
-func validateTool(nArgs int) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) (err error) {
-		err = cobra.ExactArgs(nArgs)(cmd, args)
-		cm.AssertNoErrorPanic(err, "Wrong arguments:")
+func validateTool(nArgs int) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		panicIfNotExactArgs(nArgs)(cmd, args)
 
 		cm.PanicIfF(!strs.Includes([]string{"dialog"}, args[0]),
 			"Tool '%s' is not supported!", args[0])
@@ -122,17 +120,15 @@ func validateTool(nArgs int) cobra.PositionalArgs {
 				"Tool run file '%s' does not exist!", runFile)
 
 		}
-
-		return
 	}
 }
 
 func init() { // nolint: gochecknoinits
 
-	registerCmd.Args = validateTool(2)   //nolint: gomnd
-	unregisterCmd.Args = validateTool(1) //nolint: gomnd
+	registerCmd.PreRun = validateTool(2)   //nolint: gomnd
+	unregisterCmd.PreRun = validateTool(1) //nolint: gomnd
 
-	toolsCmd.AddCommand(SetCommandDefaults(registerCmd))
-	toolsCmd.AddCommand(SetCommandDefaults(unregisterCmd))
-	rootCmd.AddCommand(SetCommandDefaults(toolsCmd))
+	toolsCmd.AddCommand(setCommandDefaults(registerCmd))
+	toolsCmd.AddCommand(setCommandDefaults(unregisterCmd))
+	rootCmd.AddCommand(setCommandDefaults(toolsCmd))
 }

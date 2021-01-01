@@ -17,30 +17,6 @@ type Hook struct {
 // be executed in parallel.
 type HookPrioList [][]Hook
 
-type sharedHookEnum struct {
-	Repo   int
-	Local  int
-	Global int
-}
-
-// SharedHookEnum enumerates all types of shared hooks.
-var SharedHookEnum = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} // nolint:gomnd
-
-// GetSharedHookTypeString translates the shared type enum to a string.
-func GetSharedHookTypeString(sharedType int) string {
-	switch sharedType {
-	case SharedHookEnum.Repo:
-		return "repo"
-	case SharedHookEnum.Local:
-		return "local"
-	case SharedHookEnum.Global:
-		return "global"
-	default:
-		cm.DebugAssertF(false, "Wrong type '%s'", sharedType)
-		return "wrong-value" // nolint:nlreturn
-	}
-}
-
 // Hooks is a collection of all executable hooks.
 type Hooks struct {
 	LocalHooks        HookPrioList

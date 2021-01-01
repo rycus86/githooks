@@ -23,30 +23,29 @@ mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
 mkdir -p /tmp/test083 && cd /tmp/test083 && git init || exit 1
 
 testShared() {
-    git hooks shared add --shared file:///tmp/shared/first-shared.git &&
-        git hooks shared list | grep "first-shared" | grep "pending" &&
-        git hooks shared pull &&
-        git hooks shared list | grep "first-shared" | grep "active" &&
-        git hooks shared add --shared file:///tmp/shared/second-shared.git &&
-        git hooks shared add file:///tmp/shared/third-shared.git &&
-        git hooks shared list --shared | grep "second-shared" | grep "pending" &&
-        git hooks shared list --all | grep "third-shared" | grep "pending" &&
-        (cd ~/.githooks/shared/*shared-first-shared-git* &&
-            git remote rm origin &&
-            git remote add origin /some/other/url.git) &&
-        git hooks shared list | grep "first-shared" | grep "invalid" &&
-        git hooks shared remove --shared file:///tmp/shared/first-shared.git &&
-        ! git hooks shared list | grep "first-shared" &&
-        git hooks shared remove --shared file:///tmp/shared/second-shared.git &&
-        git hooks shared remove file:///tmp/shared/third-shared.git &&
-        [ ! -f "$(pwd)/.githooks/.shared" ] ||
-        exit "$1"
+    "$GITHOOKS_EXE_GIT_HOOKS" shared add --shared file:///tmp/shared/first-shared.git || exit 1
+    "$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "first-shared" | grep "pending" || exit 2
+    "$GITHOOKS_EXE_GIT_HOOKS" shared pull || exit 3
+    "$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "first-shared" | grep "active" || exit 4
+    "$GITHOOKS_EXE_GIT_HOOKS" shared add --shared file:///tmp/shared/second-shared.git || exit 5
+    "$GITHOOKS_EXE_GIT_HOOKS" shared add file:///tmp/shared/third-shared.git || exit 6
+    "$GITHOOKS_EXE_GIT_HOOKS" shared list --shared | grep "second-shared" | grep "pending" || exit 7
+    "$GITHOOKS_EXE_GIT_HOOKS" shared list --all | grep "third-shared" | grep "pending" || exit 8
+    (cd ~/.githooks/shared/*shared-first-shared-git* &&
+        git remote rm origin &&
+        git remote add origin /some/other/url.git) || exit 9
+    "$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "first-shared" | grep "invalid" || exit 10
+    "$GITHOOKS_EXE_GIT_HOOKS" shared remove --shared file:///tmp/shared/first-shared.git || exit 11
+    ! "$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "first-shared" || exit 12
+    "$GITHOOKS_EXE_GIT_HOOKS" shared remove --shared file:///tmp/shared/second-shared.git || exit 13
+    "$GITHOOKS_EXE_GIT_HOOKS" shared remove file:///tmp/shared/third-shared.git || exit 14
+    ! grep -q "/" "$(pwd)/.githooks/.shared.yaml" || exit 15
 }
 
-testShared 2
+testShared
 
-git hooks shared clear --all &&
-    git hooks shared purge ||
-    exit 8
+"$GITHOOKS_EXE_GIT_HOOKS" shared clear --all &&
+    "$GITHOOKS_EXE_GIT_HOOKS" shared purge ||
+    exit 16
 
-testShared 9
+testShared

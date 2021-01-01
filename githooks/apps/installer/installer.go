@@ -856,8 +856,8 @@ func setupReadme(
 		return
 	}
 
-	hookDir := path.Join(mainWorktree, hooks.HooksDirName)
-	readme := hooks.GetReadmeFile(hookDir)
+	readme := hooks.GetReadmeFile(mainWorktree)
+	hookDir := path.Dir(readme)
 
 	if !cm.IsFile(readme) {
 
@@ -877,7 +877,7 @@ func setupReadme(
 					"Looks like you don't have a '%s' folder in repository\n"+
 						"'%s' yet.\n"+
 						"Would you like to create one with a 'README'\n"+
-						"containing a brief overview of Githooks?", hooks.HooksDirName, mainWorktree)
+						"containing a brief overview of Githooks?", hookDir, mainWorktree)
 			} else {
 				msg = strs.Fmt(
 					"Looks like you don't have a 'README.md' in repository\n"+
@@ -1086,7 +1086,7 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 			"duplicating common hooks across repositories you work on\n" +
 			"See information on what are these in the project's documentation:\n" +
 			strs.Fmt("'%s#shared-hook-repositories'\n", hooks.GithooksWebpage) +
-			"Note: you can also have a .githooks/.shared file listing the\n" +
+			strs.Fmt("Note: you can also have a '%s' file listing the\n", hooks.GetRepoSharedFileRel()) +
 			"      repositories where you keep the shared hook files.\n" +
 			"Would you like to set up shared hook repos now?"
 	}
@@ -1114,9 +1114,9 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 
 	// Unset all shared configs.
 	err = gitx.UnsetConfig(hooks.GitCK_Shared, git.GlobalScope)
-	log.AssertNoError(err,
-		"Could not unset Git config 'githooks.shared'.",
-		"Failed to setup shared hook repositories.")
+	log.AssertNoErrorF(err,
+		"Could not unset Git config '%s'.\n"+
+			"Failed to setup shared hook repositories.", hooks.GitCK_Shared)
 	if err != nil {
 		return
 	}
@@ -1125,21 +1125,21 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 	for _, entry := range entries {
 		err := gitx.AddConfig(hooks.GitCK_Shared, entry, git.GlobalScope)
 		log.AssertNoError(err,
-			"Could not add Git config 'githooks.shared'.",
-			"Failed to setup shared hook repositories.")
+			"Could not add Git config '%s'.\n"+
+				"Failed to setup shared hook repositories.", hooks.GitCK_Shared)
 		if err != nil {
 			return
 		}
 	}
 
 	if len(entries) == 0 {
-		log.Info(
-			"Shared hook repositories are now unset.",
-			"If you want to set them up again in the future",
-			"run this script again, or change the 'githooks.shared'",
-			"Git config variable manually.",
-			"Note: Shared hook repos listed in the .githooks/.shared",
-			"file will still be executed")
+		log.InfoF(
+			"Shared hook repositories are now unset.\n"+
+				"If you want to set them up again in the future\n"+
+				"run this script again, or change the '%s'\n"+
+				"Git config variable manually.\n"+
+				"Note: Shared hook repos listed in the '%s'\n",
+			"file will still be executed", hooks.GitCK_Shared, hooks.GetRepoSharedFileRel())
 	} else {
 		// @todo This functionality should be shared
 		// with cli/runner and here
@@ -1150,13 +1150,13 @@ func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *
 			"shared", "update", "--global")
 		log.AssertNoError(err, "Could not update shared hook repositories.")
 
-		log.Info(
-			"Shared hook repositories have been set up.",
-			"You can change them any time by running this script",
-			"again, or manually by changing the 'githooks.shared'",
-			"Git config variable.",
-			"Note: you can also list the shared hook repos per",
-			"project within the .githooks/.shared file")
+		log.InfoF(
+			"Shared hook repositories have been set up.\n"+
+				"You can change them any time by running this script\n"+
+				"again, or manually by changing the 'githooks.shared'\n"+
+				"Git config variable.\n"+
+				"Note: you can also list the shared hook repos per\n"+
+				"project within the '%s' file", hooks.GetRepoSharedFileRel())
 	}
 }
 

@@ -3,7 +3,6 @@ package hooks
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -83,7 +82,7 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 
 	// Check in the repo if possible
 	if !strs.IsEmpty(repoPath) {
-		file := path.Join(repoPath, HooksDirName, ".bug-report")
+		file := path.Join(GetGithooksDir(repoPath), ".bug-report")
 		exists, err = cm.IsPathExisting(file)
 
 		if exists {
@@ -98,6 +97,11 @@ func GetBugReportingInfo(repoPath string) (info string, err error) {
 	info = git.Ctx().GetConfig(GitCK_BugReportInfo, git.GlobalScope)
 
 	return
+}
+
+// GetGithooksDir gets the hooks directory for Githooks inside a repository (bare, non-bare).
+func GetGithooksDir(repoDir string) string {
+	return path.Join(repoDir, HooksDirName)
 }
 
 // HandleCLIErrors generally handles errors for the Githooks executables. Argument `cwd` can be empty.
@@ -136,34 +140,6 @@ func HandleCLIErrors(err interface{}, cwd string, log cm.ILogContext) bool {
 	}
 
 	return true
-}
-
-// IsGithooksDisabled checks if Githooks is disabled in
-// any config starting from the working dir given by the git context or
-// optional also by the env. variable `GITHOOKS_DISABLE`.
-func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
-
-	if checkEnv {
-		env := os.Getenv("GITHOOKS_DISABLE")
-		if env != "" &&
-			env != "0" &&
-			env != "false" && env != "off" {
-			return true
-		}
-	}
-
-	disabled := gitx.GetConfig(GitCK_Disable, git.Traverse)
-
-	return disabled == "true" ||
-		disabled == "y" || // Legacy
-		disabled == "Y" // Legacy
-}
-
-// IsLFSAvailable tells if git-lfs is available in the path.
-func IsLFSAvailable() bool {
-	_, err := exec.LookPath("git-lfs")
-
-	return err == nil
 }
 
 // GetInstallDir returns the Githooks install directory.
@@ -280,4 +256,35 @@ func GetReleaseCloneDir(installDir string) string {
 func GetInstaller(installDir string) cm.Executable {
 	return cm.Executable{
 		Path: path.Join(GetReleaseCloneDir(installDir), "install.sh")}
+}
+
+// Gets the LFS-Required file inside the repository.
+func GetLFSRequiredFile(repoDir string) string {
+	return path.Join(GetGithooksDir(repoDir), ".lfs-required")
+}
+
+// Gets the LFS-Required file relative to the repository.
+func GetLFSRequiredFileRel() string {
+	return path.Join(HooksDirName, ".lfs-required")
+}
+
+// IsGithooksDisabled checks if Githooks is disabled in
+// any config starting from the working dir given by the git context or
+// optional also by the env. variable `GITHOOKS_DISABLE`.
+func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
+
+	if checkEnv {
+		env := os.Getenv("GITHOOKS_DISABLE")
+		if env != "" &&
+			env != "0" &&
+			env != "false" && env != "off" {
+			return true
+		}
+	}
+
+	disabled := gitx.GetConfig(GitCK_Disable, git.Traverse)
+
+	return disabled == "true" ||
+		disabled == "y" || // Legacy
+		disabled == "Y" // Legacy
 }

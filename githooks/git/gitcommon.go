@@ -2,6 +2,7 @@ package git
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
@@ -119,10 +120,10 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	return
 }
 
-// GetGithooksRoot returns the top level directory in a non-bare repository or the
+// GetRepoRoot returns the top level directory in a non-bare repository or the
 // absolute Git directory in a bare repository.
 // This is the root level for Githooks.
-func (c *Context) GetGithooksRoot() (topLevel string, err error) {
+func (c *Context) GetRepoRoot() (topLevel string, err error) {
 	if c.IsBareRepo() {
 		topLevel, err = c.GetGitCommonDir()
 	} else {
@@ -399,4 +400,11 @@ func GetCommitSHA(gitx *Context, ref string) (string, error) {
 	}
 
 	return gitx.Get("rev-parse", ref)
+}
+
+// IsLFSAvailable tells if git-lfs is available in the path.
+func IsLFSAvailable() bool {
+	_, err := exec.LookPath("git-lfs")
+
+	return err == nil
 }

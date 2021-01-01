@@ -31,7 +31,7 @@ git init || exit 1
 
 mkdir -p .githooks &&
     git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
-    echo 'file:///tmp/shared/hooks-016-b.git' >.githooks/.shared &&
+    echo 'urls: - file:///tmp/shared/hooks-016-b.git' >.githooks/.shared.yaml &&
     ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused ||
     exit 1
 

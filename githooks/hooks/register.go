@@ -68,13 +68,17 @@ func (r *RegisterRepos) Store(installDir string) (err error) {
 }
 
 // Insert adds a repository Git directory uniquely.
-func (r *RegisterRepos) Insert(gitDir string) {
-	r.GitDirs = strs.AppendUnique(r.GitDirs, gitDir)
+func (r *RegisterRepos) Insert(gitDir string) (inserted bool) {
+	r.GitDirs, inserted = strs.AppendUnique(r.GitDirs, gitDir)
+
+	return
 }
 
 // Remove removes a repository Git directory.
-func (r *RegisterRepos) Remove(gitDir string) {
-	r.GitDirs = strs.Remove(r.GitDirs, gitDir)
+func (r *RegisterRepos) Remove(gitDir string) (removed bool) {
+	r.GitDirs, removed = strs.Remove(r.GitDirs, gitDir)
+
+	return
 }
 
 // FilterExisting filter by existing directories.

@@ -14,8 +14,8 @@ import (
 
 const GitConfigTrustAll = "githooks.trust.all"
 
-func GetTrustFile(repoPath string) string {
-	return path.Join(repoPath, HooksDirName, "trust-all")
+func GetTrustFile(repoDir string) string {
+	return path.Join(GetGithooksDir(repoDir), "trust-all")
 }
 
 // IsRepoTrusted tells if the repository `repoPath` is trusted.

@@ -96,11 +96,11 @@ func (c *Context) getConfigWithArgs(key string, scope ConfigScope, args ...strin
 		out, err = c.Get(append(append([]string{"config"}, args...), key)...)
 	}
 
-	if err == nil {
-		return out
+	if err != nil {
+		return ""
 	}
 
-	return ""
+	return out
 }
 
 // GetConfigAll gets a all Git configuration values for key `key`.
@@ -122,7 +122,7 @@ func (c *Context) SetConfig(key string, value interface{}, scope ConfigScope) er
 	return c.Check("config", string(scope), key, strs.Fmt("%v", value))
 }
 
-// SetConfig adds a Git configuration values with key `key`.
+// AddConfig adds a Git configuration values with key `key`.
 func (c *Context) AddConfig(key string, value interface{}, scope ConfigScope) error {
 	cm.DebugAssert(scope != Traverse, "Wrong input.")
 

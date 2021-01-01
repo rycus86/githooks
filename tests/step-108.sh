@@ -3,7 +3,6 @@
 #   Custom install prefix test
 
 TEST_PREFIX_DIR="/tmp/githooks"
-mkdir -p ~/.githooks/release && cp /var/lib/githooks/cli.sh ~/.githooks/release || exit 1
 
 "$GITHOOKS_BIN_DIR/installer" --stdin --prefix "$TEST_PREFIX_DIR" || exit 1
 
@@ -20,7 +19,7 @@ fi
 # Set a wrong install
 git config --global githooks.installDir "$TEST_PREFIX_DIR/.githooks-notexisting"
 
-if ! ~/.githooks/release/cli.sh help 2>&1 | grep -q "Githooks installation is corrupt"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" help 2>&1 | grep -q "Githooks installation is corrupt"; then
     echo "! Expected the installation to be corrupt"
     exit 4
 fi

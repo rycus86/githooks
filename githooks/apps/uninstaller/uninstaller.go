@@ -124,7 +124,7 @@ func setMainVariables(args *Arguments) (Settings, UISettings) {
 			CloneDir:           hooks.GetReleaseCloneDir(installDir),
 			TempDir:            tempDir,
 			UninstalledGitDirs: make(UninstallSet, 10),
-			LFSAvailable:       hooks.IsLFSAvailable()},
+			LFSAvailable:       git.IsLFSAvailable()},
 		UISettings{PromptCtx: promptCtx}
 }
 

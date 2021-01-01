@@ -19,8 +19,7 @@ var settings Settings
 var rootCmd = &cobra.Command{
 	Use:   "git hooks", // Contains a en-space (utf-8: U+2002) to make it work...
 	Short: "Githooks CLI application",
-	Long:  "See further information at https://github.com/rycus86/githooks/blob/master/README.md",
-	Run:   panicWrongArgs}
+	Long:  "See further information at https://github.com/rycus86/githooks/blob/master/README.md"}
 
 func setMainVariables() Settings {
 
@@ -51,7 +50,7 @@ func Run(l cm.ILogContext) {
 	firstPrefix := " ▶ "
 	InitTemplates(title, firstPrefix, log.GetIndent())
 
-	SetCommandDefaults(rootCmd)
+	setCommandDefaults(rootCmd)
 	rootCmd.SetOut(cm.ToInfoWriter(log))
 	rootCmd.SetErr(cm.ToErrorWriter(log))
 	rootCmd.Version = build.BuildVersion
@@ -60,9 +59,11 @@ func Run(l cm.ILogContext) {
 
 	settings = setMainVariables()
 
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
+	err := rootCmd.Execute()
+	if err != nil {
+		_ = rootCmd.Help()
 	}
+	log.AssertNoErrorPanic(err, "Command failed.")
 }
 
 // Run adds all child commands to the root command and sets flags appropriately.

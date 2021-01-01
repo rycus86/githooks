@@ -20,9 +20,9 @@ mkdir -p /tmp/shared/hooks-103.git/pre-commit &&
 # Install shared hook url into a repo.
 mkdir -p /tmp/test103 && cd /tmp/test103 || exit 1
 git init || exit 1
-mkdir -p .githooks && echo 'file:///tmp/shared/hooks-103.git' >.githooks/.shared || exit 1
-git add .githooks/.shared
-git hooks shared update
+mkdir -p .githooks && echo 'urls: - file:///tmp/shared/hooks-103.git' >.githooks/.shared.yaml || exit 1
+git add .githooks/.shared.yaml
+"$GITHOOKS_EXE_GIT_HOOKS" shared update
 
 # shellcheck disable=SC2012
 RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)
@@ -34,7 +34,7 @@ fi
 git commit -m "Test" || exit 1
 
 # Remove all shared hooks and make it fail
-git hooks shared purge || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared purge || exit 1
 
 if [ -d ~/.githooks/shared ]; then
     echo "! Expected shared hooks to be purged."
@@ -95,7 +95,7 @@ if [ "$RESULT" = "0" ]; then
 fi
 
 # Remove all shared hooks
-git hooks shared purge || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared purge || exit 1
 
 echo "Commiting"
 # Make a commit
@@ -110,7 +110,7 @@ if [ $? -eq 0 ] || ! echo "$OUTPUT" | grep -q "Failed to execute shared hook"; t
     exit 1
 fi
 
-git hooks shared pull || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared pull || exit 1
 
 # Change url and try to make it fail
 (cd ~/.githooks/shared/*shared-hooks-103* &&

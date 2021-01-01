@@ -1,28 +1,42 @@
 package strs
 
 // AppendUnique appends the string to the array
-// if its not existing.
-func AppendUnique(slice []string, s string) []string {
+// if its not existing. The bool indicates if an append occurred.
+func AppendUnique(slice []string, s string) ([]string, bool) {
 	for _, el := range slice {
 		if el == s {
-			return slice
+			return slice, false
 		}
 	}
 
-	return append(slice, s)
+	return append(slice, s), true
+}
+
+// MakeUnique makes the slice containing only unique items.
+func MakeUnique(slice []string) []string {
+	s := make(StringSet, len(slice))
+	for _, el := range slice {
+		s.Insert(el)
+	}
+
+	return s.ToList()
 }
 
 // Remove removes all occurrences from the slice.
-func Remove(slice []string, s string) []string {
+// The bool indicates if a remove occurred.
+func Remove(slice []string, s string) ([]string, bool) {
 	newitems := make([]string, 0, len(slice))
+	removed := false
 
 	for _, el := range slice {
 		if el != s {
 			newitems = append(newitems, el)
+		} else {
+			removed = true
 		}
 	}
 
-	return newitems
+	return newitems, removed
 }
 
 // Index returns the first index of the target string `t`, or

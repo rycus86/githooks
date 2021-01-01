@@ -9,8 +9,8 @@ import (
 
 // GetReadmeFile gets the Githooks readme
 // file inside a repository hooks directory.
-func GetReadmeFile(repoHookDir string) string {
-	return path.Join(repoHookDir, "README.md")
+func GetReadmeFile(repoDir string) string {
+	return path.Join(GetGithooksDir(repoDir), "README.md")
 }
 
 // GetRunWrapperContent gets the bytes of the readme file template.

@@ -35,11 +35,11 @@ git commit -a -m "Hooks" || exit 1
 
 echo "Setup shared hook in server repo"
 cd /tmp/test110/server || exit 1
-git hooks shared add file:///tmp/test110/hooks || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared add file:///tmp/test110/hooks || exit 1
 echo "Setup shared hook in server repo: set trusted"
 git hooks config accept trusted || exit 1
 echo "Setup shared hook in server repo: update shared"
-git hooks shared update || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared update || exit 1
 
 echo "Test hook from push"
 cd /tmp/test110/local || exit 1
@@ -63,7 +63,7 @@ git commit -a -m "Make hook succeed"
 
 echo "Update hooks"
 cd /tmp/test110/server || exit 1
-git hooks shared update || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" shared update || exit 1
 
 echo "Push hook to succeed"
 cd /tmp/test110/local || exit 1

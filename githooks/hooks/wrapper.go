@@ -240,9 +240,7 @@ func UninstallRunWrappers(dir string, hookNames []string) (err error) {
 				}
 
 			} else {
-				err = cm.CombineErrors(err,
-					cm.ErrorF("Could not delete file '%s'.",
-						dest))
+				err = cm.CombineErrors(err, cm.ErrorF("Could not delete file '%s'.", dest))
 			}
 		}
 	}

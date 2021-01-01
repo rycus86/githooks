@@ -143,7 +143,7 @@ Supported entries for shared hooks are:
   - `/local/path/to/bare-repo.git` (gets cloned internally)
 
   Note that relative paths are relative to the path of the repository executing the hook.
-  These entries are forbidden for **shared hooks** configured by `.githooks/.shared` per repository
+  These entries are forbidden for **shared hooks** configured by `.githooks/.shared.yaml` per repository
   because it makes little sense and is a security risk.
 
 Shared hooks repositories specified by *URLs* and *local paths to bare repository* will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. Any other local path will be used **directly and will not be updated or modified**.

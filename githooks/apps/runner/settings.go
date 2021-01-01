@@ -11,7 +11,7 @@ type HookSettings struct {
 	Args               []string       // Rest arguments.
 	ExecX              cm.ExecContext // Execution context for executables (working dir is this repository).
 	GitX               *git.Context   // Git context to execute commands (working dir is this repository).
-	RepositoryPath     string         // Repository path.
+	RepositoryDir      string         // Repository directory (bare, non-bare).
 	RepositoryHooksDir string         // Directory with hooks for this repository.
 	GitDir             string         // Git directory.
 	InstallDir         string         // Install directory.
@@ -34,5 +34,5 @@ func (s HookSettings) toString() string {
 			"- Hook Path: '%s'\n"+
 			"- Hook Name: '%s'\n"+
 			"- Trusted: '%v'",
-		s.Args, s.RepositoryPath, s.RepositoryHooksDir, s.GitDir, s.InstallDir, s.HookPath, s.HookName, s.IsRepoTrusted)
+		s.Args, s.RepositoryDir, s.RepositoryHooksDir, s.GitDir, s.InstallDir, s.HookPath, s.HookName, s.IsRepoTrusted)
 }

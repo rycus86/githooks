@@ -1,14 +1,4 @@
 //go:generate go run -mod=vendor ../../tools/generate-version.go
-
-// Base Git hook template from https://github.com/rycus86/githooks
-//
-// It allows you to have a .githooks (see `hooks.HooksDirName`)
-// folder per-project that contains
-// its hooks to execute on various Git triggers.
-//
-// Legacy version number. Not used anymore, but old installs read it.
-// Version: 9912.310000-000000
-
 package main
 
 import (
@@ -146,7 +136,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		Args:               os.Args[2:],
 		ExecX:              execx,
 		GitX:               gitx,
-		RepositoryPath:     repoPath,
+		RepositoryDir:      repoPath,
 		RepositoryHooksDir: path.Join(repoPath, hooks.HooksDirName),
 		GitDir:             gitDir,
 		InstallDir:         installDir,
@@ -169,7 +159,7 @@ func getIgnorePatterns(settings *HookSettings) (patt hooks.RepoIgnorePatterns) {
 	var err error
 
 	patt.Worktree, err = hooks.GetHookIgnorePatternsWorktree(
-		settings.RepositoryPath,
+		settings.RepositoryHooksDir,
 		settings.HookName)
 	log.AssertNoError(err, "Could not get hook ignore patterns.")
 	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree)
@@ -360,7 +350,7 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
 	log.AssertNoErrorF(err, "Could not parse update time")
 
-	return time.Since(time.Unix(t, 0)).Hours() > 24.0
+	return time.Since(time.Unix(t, 0)).Hours() > 24.0 //nolint: gomnd
 }
 
 func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool {
@@ -423,11 +413,8 @@ func executeLFSHooks(settings *HookSettings) {
 		return
 	}
 
-	lfsIsAvailable := hooks.IsLFSAvailable()
-
-	lfsIsRequired, err := cm.IsPathExisting(path.Join(
-		settings.RepositoryPath, hooks.HooksDirName, ".lfs-required"))
-	log.AssertNoErrorF(err, "Could not check path.")
+	lfsIsAvailable := git.IsLFSAvailable()
+	lfsIsRequired := cm.IsFile(hooks.GetLFSRequiredFile(settings.RepositoryDir))
 
 	if lfsIsAvailable {
 		log.Debug("Excuting LFS Hook")
@@ -445,8 +432,8 @@ func executeLFSHooks(settings *HookSettings) {
 		log.PanicIf(lfsIsRequired,
 			"This repository requires Git LFS, but 'git-lfs' was",
 			"not found on your PATH. If you no longer want to use",
-			strs.Fmt("Git LFS, remove the '%s/.lfs-required' file.",
-				hooks.HooksDirName),
+			strs.Fmt("Git LFS, remove the '%s' file.",
+				hooks.GetLFSRequiredFileRel()),
 		)
 	}
 }
@@ -514,7 +501,7 @@ func collectHooks(
 		ignores,
 		checksums,
 		&allAddedShared,
-		hooks.SharedHookEnum.Local)
+		hooks.SharedHookEnumV.Local)
 
 	h.GlobalSharedHooks = getConfigSharedHooks(
 		settings,
@@ -522,12 +509,12 @@ func collectHooks(
 		ignores,
 		checksums,
 		&allAddedShared,
-		hooks.SharedHookEnum.Global)
+		hooks.SharedHookEnumV.Global)
 
 	return
 }
 
-func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType int) {
+func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType hooks.SharedHookEnum) {
 
 	if settings.HookName != "post-merge" &&
 		!(settings.HookName == "post-checkout" &&
@@ -541,39 +528,7 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 	}
 
 	log.Debug("Updating all shared hooks.")
-
-	for _, hook := range sharedHooks {
-
-		if !hook.IsCloned {
-			continue
-
-		} else if !hooks.AllowLocalURLInRepoSharedHooks() &&
-			sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal {
-
-			log.WarnF("Shared hooks in '%[1]s/.shared' contain a local path\n"+
-				"'%[2]s'\n"+
-				"which is forbidden. Update will be skipped.\n\n"+
-				"You can only have local paths for shared hooks defined\n"+
-				"in the local or global Git configuration.\n\n"+
-				"This can be achieved by running\n"+
-				"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
-				"and deleting it from the '.shared' file manually by\n"+
-				"  $ git hooks shared remove --shared '%[2]s'\n",
-				hooks.HooksDirName, hook.OriginalURL)
-
-			continue
-		}
-
-		log.InfoF("Updating shared hooks from: '%s'", hook.OriginalURL)
-
-		depth := -1
-		if hook.IsLocal {
-			depth = 1
-		}
-
-		_, err := git.PullOrClone(hook.RootDir, hook.URL, hook.Branch, depth, nil)
-		log.AssertNoErrorF(err, "Updating hooks '%s' failed.", hook.OriginalURL)
-	}
+	_ = hooks.UpdateSharedHooks(log, sharedHooks, sharedType)
 }
 
 func getRepoSharedHooks(
@@ -583,21 +538,21 @@ func getRepoSharedHooks(
 	checksums *hooks.ChecksumStore,
 	allAddedHooks *[]string) (hs hooks.HookPrioList) {
 
-	sharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryHooksDir)
+	sharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryDir)
 
 	if err != nil {
 		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks, err,
 			"Repository shared hooks are demanded but failed "+
 				"to parse the file:\n'%s'",
-			hooks.GetRepoSharedFile(settings.RepositoryHooksDir))
+			hooks.GetRepoSharedFile(settings.RepositoryDir))
 	}
 
-	updateSharedHooks(settings, sharedHooks, hooks.SharedHookEnum.Repo)
+	updateSharedHooks(settings, sharedHooks, hooks.SharedHookEnumV.Repo)
 
 	for _, sharedHook := range sharedHooks {
-		if checkSharedHook(settings, sharedHook, allAddedHooks, hooks.SharedHookEnum.Repo) {
+		if checkSharedHook(settings, sharedHook, allAddedHooks, hooks.SharedHookEnumV.Repo) {
 			hs = getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)
-			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
+			*allAddedHooks = append(*allAddedHooks, sharedHook.RepositoryDir)
 		}
 	}
 
@@ -610,15 +565,15 @@ func getConfigSharedHooks(
 	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore,
 	allAddedHooks *[]string,
-	sharedType int) (hs hooks.HookPrioList) {
+	sharedType hooks.SharedHookEnum) (hs hooks.HookPrioList) {
 
 	var sharedHooks []hooks.SharedHook
 	var err error
 
 	switch sharedType {
-	case hooks.SharedHookEnum.Local:
+	case hooks.SharedHookEnumV.Local:
 		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
-	case hooks.SharedHookEnum.Global:
+	case hooks.SharedHookEnumV.Global:
 		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
 	default:
 		cm.DebugAssertF(false, "Wrong shared type '%v'", sharedType)
@@ -636,7 +591,7 @@ func getConfigSharedHooks(
 	for _, sharedHook := range sharedHooks {
 		if checkSharedHook(settings, sharedHook, allAddedHooks, sharedType) {
 			hs = append(hs, getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)...)
-			*allAddedHooks = append(*allAddedHooks, sharedHook.RootDir)
+			*allAddedHooks = append(*allAddedHooks, sharedHook.RepositoryDir)
 		}
 	}
 
@@ -647,9 +602,9 @@ func checkSharedHook(
 	settings *HookSettings,
 	hook hooks.SharedHook,
 	allAddedHooks *[]string,
-	sharedType int) bool {
+	sharedType hooks.SharedHookEnum) bool {
 
-	if strs.Includes(*allAddedHooks, hook.RootDir) {
+	if strs.Includes(*allAddedHooks, hook.RepositoryDir) {
 		log.WarnF(
 			"Shared hooks entry:\n'%s'\n"+
 				"is already listed and will be skipped.", hook.OriginalURL)
@@ -660,8 +615,8 @@ func checkSharedHook(
 	// Check that no local paths are in repository configured
 	// shared hooks
 	log.PanicIfF(!hooks.AllowLocalURLInRepoSharedHooks() &&
-		sharedType == hooks.SharedHookEnum.Repo && hook.IsLocal,
-		"Shared hooks in '%[1]s/.shared' contain a local path\n"+
+		sharedType == hooks.SharedHookEnumV.Repo && hook.IsLocal,
+		"Shared hooks in '%[1]s' contain a local path\n"+
 			"'%[2]s'\n"+
 			"which is forbidden.\n"+
 			"\n"+
@@ -672,10 +627,10 @@ func checkSharedHook(
 			"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
 			"and deleting it from the '.shared' file by\n"+
 			"  $ git hooks shared remove --shared '%[2]s'",
-		hooks.HooksDirName, hook.OriginalURL)
+		hooks.GetRepoSharedFileRel(), hook.OriginalURL)
 
 	// Check if existing otherwise skip or fail...
-	exists, err := cm.IsPathExisting(hook.RootDir)
+	exists, err := cm.IsPathExisting(hook.RepositoryDir)
 
 	if !exists {
 
@@ -702,7 +657,7 @@ func checkSharedHook(
 	// is the same as the specified
 	// Note: GIT_DIR might be set (?bug?) (actually the case for post-checkout hook)
 	if hook.IsCloned {
-		url := git.CtxCSanitized(hook.RootDir).GetConfig(
+		url := git.CtxCSanitized(hook.RepositoryDir).GetConfig(
 			"remote.origin.url", git.LocalScope)
 
 		if url != hook.URL {
@@ -849,12 +804,12 @@ func getHooksInShared(settings *HookSettings,
 	// Legacy
 	// @todo Remove this, dont support /.githooks because it will enable
 	// using hooks in hook repos!
-	dir := path.Join(hook.RootDir, ".githooks")
+	dir := hooks.GetGithooksDir(hook.RepositoryDir)
 	if cm.IsDirectory(dir) {
 		return getHooksIn(settings, uiSettings, dir, true, ignores, checksums)
 	}
 
-	return getHooksIn(settings, uiSettings, hook.RootDir, true, ignores, checksums)
+	return getHooksIn(settings, uiSettings, hook.RepositoryDir, true, ignores, checksums)
 
 }
 

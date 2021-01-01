@@ -34,7 +34,6 @@ and the 'delete' argument also deletes the trusted marker.
 The 'forget' option unsets the trust setting, asking for accepting
 it again next time, if the repository is marked as trusted.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		panicIfAnyArgs(cmd, args)
 		runTrust(TrustAdd)
 	}}
 
@@ -61,22 +60,17 @@ var trustDeleteCmd = &cobra.Command{
 
 func runTrust(opt TrustOption) {
 
-	githooksRoot, err := settings.GitX.GetGithooksRoot()
-	log.AssertNoErrorPanicF(err,
-		"Current working directory '%s' is neither inside a worktree\n"+
-			"nor inside a bare repository.",
-		settings.Cwd)
-
-	file := hooks.GetTrustFile(githooksRoot)
+	repoRoot := assertRepoRoot(&settings)
+	file := hooks.GetTrustFile(repoRoot)
 
 	switch opt {
 	case TrustAdd:
-		err = cm.TouchFile(file, true)
+		err := cm.TouchFile(file, true)
 		log.AssertNoErrorPanicF(err, "Could not touch trust marker '%s'.", file)
 		log.Info("The trust marker is added to the repository.")
 
 		err = settings.GitX.SetConfig(hooks.GitCK_TrustAll, true, git.LocalScope)
-		log.AssertNoErrorPanicF(err, "Could not set Git config '%s'.", hooks.GitCK_TrustAll)
+		log.AssertNoErrorPanicF(err, "Could set trust settings.", hooks.GitCK_TrustAll)
 		log.Info("The current repository is now trusted.")
 
 		if !settings.GitX.IsBareRepo() {
@@ -87,8 +81,8 @@ func runTrust(opt TrustOption) {
 		if strs.IsEmpty(trust) {
 			log.Info("The current repository does not have trust settings.")
 		} else {
-			err = settings.GitX.UnsetConfig(hooks.GitCK_TrustAll, git.LocalScope)
-			log.AssertNoErrorPanicF(err, "Could not unset Git config '%s'.", hooks.GitCK_TrustAll)
+			err := settings.GitX.UnsetConfig(hooks.GitCK_TrustAll, git.LocalScope)
+			log.AssertNoErrorPanicF(err, "Could not unset trust settings.", hooks.GitCK_TrustAll)
 		}
 
 		log.Info("The current repository is no longer trusted.")
@@ -96,8 +90,8 @@ func runTrust(opt TrustOption) {
 	case TrustRevoke:
 		fallthrough
 	case TrustDelete:
-		err = settings.GitX.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
-		log.AssertNoErrorPanicF(err, "Could not set Git config '%s'.", hooks.GitCK_TrustAll)
+		err := settings.GitX.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
+		log.AssertNoErrorPanicF(err, "Could not set trust settings.", hooks.GitCK_TrustAll)
 		log.Info("The current repository is no longer trusted.")
 	}
 
@@ -114,9 +108,9 @@ func runTrust(opt TrustOption) {
 }
 
 func init() { // nolint: gochecknoinits
-	trustCmd.AddCommand(SetCommandDefaults(trustRevokeCmd))
-	trustCmd.AddCommand(SetCommandDefaults(trustForgetCmd))
-	trustCmd.AddCommand(SetCommandDefaults(trustDeleteCmd))
+	trustCmd.AddCommand(setCommandDefaults(trustRevokeCmd))
+	trustCmd.AddCommand(setCommandDefaults(trustForgetCmd))
+	trustCmd.AddCommand(setCommandDefaults(trustDeleteCmd))
 
-	rootCmd.AddCommand(trustCmd)
+	rootCmd.AddCommand(setCommandDefaults(trustCmd))
 }

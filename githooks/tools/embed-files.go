@@ -22,7 +22,7 @@ func main() {
 	srcRoot := path.Join(root, "githooks")
 
 	template := path.Join(root, "base-template-wrapper.sh")
-	readme := hooks.GetReadmeFile(path.Join(root, hooks.HooksDirName))
+	readme := hooks.GetReadmeFile(root)
 
 	c := bindata.Config{
 		Input: []bindata.InputConfig{
