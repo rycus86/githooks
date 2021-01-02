@@ -1,15 +1,25 @@
 package hooks
 
 import (
+	"os"
+	"path"
 	cm "rycus86/githooks/common"
+	strs "rycus86/githooks/strings"
+	"strings"
 
 	thx "github.com/pbenner/threadpool"
 )
 
 // Hook contains the data to an executbale hook.
 type Hook struct {
-	cm.Executable
+	cm.Executable // The executable of the hook.
+
 	NamespacePath string // The namespaced path of the hook `<namespace>/<relPath>`.
+
+	Active  bool // If the hook is not ignored by any ignore patterns. Has priority 1.
+	Trusted bool // If the hook is trusted by means of the chechsum store. Has priority 2.
+
+	SHA1 string // SHA1 hash of the hook. (if determined)
 }
 
 // HookPrioList is a list of lists of executable hooks.
@@ -30,6 +40,71 @@ type HookResult struct {
 	Hook   *Hook
 	Output []byte
 	Error  error
+}
+
+type IngoreCallback = func(namespacePath string) (ignored bool)
+type TrustCallback = func(hookPath string) (trusted bool, sha1 string)
+
+func GetAllHooksIn(
+	dirOrFile string,
+	hookNamespace string,
+	isIgnored IngoreCallback,
+	isTrusted TrustCallback) (allHooks []Hook, err error) {
+
+	appendHook := func(hookPath string) error {
+		// Namespace the path to check ignores
+		namespacedPath := path.Join(hookNamespace, path.Base(hookPath))
+		ignored := isIgnored(namespacedPath)
+
+		trusted := false
+		sha := ""
+		var runCmd []string
+
+		if !ignored {
+			trusted, sha = isTrusted(hookPath)
+
+			if runCmd, err = GetHookRunCmd(hookPath); err != nil {
+				return cm.CombineErrors(err,
+					cm.ErrorF("Could not detect runner for hook\n'%s'", hookPath))
+			}
+		}
+
+		allHooks = append(allHooks,
+			Hook{
+				Executable:    cm.Executable{Path: hookPath, RunCmd: runCmd},
+				NamespacePath: namespacedPath,
+				Active:        !ignored,
+				Trusted:       trusted,
+				SHA1:          sha})
+
+		return nil
+	}
+
+	// Collect all hooks in e.g. `path/pre-commit/*`
+	if cm.IsDirectory(dirOrFile) {
+
+		err = cm.WalkFiles(dirOrFile,
+			func(hookPath string, _ os.FileInfo) error {
+
+				// Ignore `.dotfile` files
+				if strings.HasPrefix(path.Base(hookPath), ".") {
+					return nil
+				}
+
+				return appendHook(hookPath)
+			})
+
+		if err != nil {
+			err = cm.CombineErrors(cm.ErrorF("Errors while walking '%s'", dirOrFile), err)
+
+			return
+		}
+
+	} else if cm.IsFile(dirOrFile) { // Check hook in `path/pre-commit`
+		err = appendHook(dirOrFile)
+	}
+
+	return
 }
 
 // ExecuteHooksParallel executes hooks in parallel over a thread pool.
@@ -114,4 +189,13 @@ func AllHooksSuccessful(results []HookResult) bool {
 	}
 
 	return true
+}
+
+// AssertSHA1 ensures that the hook has its SHA1 computed.
+func (h *Hook) AssertSHA1() (err error) {
+	if strs.IsEmpty(h.SHA1) {
+		h.SHA1, err = cm.GetSHA1HashFile(h.Path)
+	}
+
+	return
 }

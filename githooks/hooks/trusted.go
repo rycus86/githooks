@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
-	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"strings"
 )
@@ -22,40 +21,20 @@ func GetTrustFile(repoDir string) string {
 // On any error `false` is reported together with the error.
 func IsRepoTrusted(
 	gitx *git.Context,
-	promptCtx prompt.IContext,
-	repoPath string,
-	promptUser bool) (bool, error) {
+	repoPath string) (isTrusted bool, hasTrustFile bool) {
 
 	trustFile := GetTrustFile(repoPath)
-	var isTrusted bool = false
 
-	exists, err := cm.IsPathExisting(trustFile)
-	if exists {
+	if cm.IsFile(trustFile) {
+		hasTrustFile = true
+
 		trustFlag := gitx.GetConfig(GitConfigTrustAll, git.LocalScope)
-
-		if strs.IsEmpty(trustFlag) && promptUser {
-			question := "This repository wants you to trust all current and\n" +
-				"future hooks without prompting.\n" +
-				"Do you want to allow running every current and future hooks?"
-
-			var answer string
-			answer, err = promptCtx.ShowPromptOptions(question, "(yes, No)", "y/N", "Yes", "No")
-
-			if err == nil && answer == "y" || answer == "Y" {
-				err = gitx.SetConfig(GitConfigTrustAll, true, git.LocalScope)
-				if err == nil {
-					isTrusted = true
-				}
-			} else {
-				err = gitx.SetConfig(GitConfigTrustAll, false, git.LocalScope)
-			}
-
-		} else if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {
+		if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {
 			isTrusted = true
 		}
 	}
 
-	return isTrusted, err
+	return
 }
 
 const (
@@ -190,7 +169,7 @@ func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 
 	sha1, err := git.GetSHA1HashFile(filePath)
 	if err != nil {
-		return false, sha1,
+		return false, "",
 			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", filePath), err)
 	}
 

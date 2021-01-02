@@ -17,12 +17,8 @@ func GetHookRunCmd(hookPath string) ([]string, error) {
 	}
 
 	runnerFile := hookPath + ".runner"
-	exists, err := cm.IsPathExisting(runnerFile)
-	if err != nil {
-		return nil, cm.ErrorF("Could not check path for runner file '%s'", runnerFile)
-	}
 
-	if exists {
+	if cm.IsFile(runnerFile) {
 		content, e := ioutil.ReadFile(runnerFile)
 		if e != nil {
 			return nil, cm.ErrorF("Could not read runner file '%s'", runnerFile)

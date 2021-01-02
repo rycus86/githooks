@@ -332,6 +332,7 @@ func FetchOrClone(
 }
 
 // GetSHA1HashFile gets the `git hash-object` SHA1 of a `path`.
+// @todo replace with normal SHA, not with Gits File SHA.
 func GetSHA1HashFile(path string) (string, error) {
 	return Ctx().Get("hash-object", path)
 }

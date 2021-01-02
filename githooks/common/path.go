@@ -56,10 +56,13 @@ type FileFilter = func(path string, info os.FileInfo) bool
 
 // GetFiles returns the filtered files in directory `root` (non-recursive).
 func GetFiles(root string, filter FileFilter) (files []string, err error) {
-	f := func(path string, info os.FileInfo) {
+
+	f := func(path string, info os.FileInfo) error {
 		if filter != nil && filter(path, info) {
 			files = append(files, path)
 		}
+
+		return nil
 	}
 
 	err = WalkFiles(root, f)
@@ -74,7 +77,7 @@ func GetAllFiles(root string) (files []string, err error) {
 }
 
 // FileFunc is the filter for `GetFiles`.
-type FileFunc = func(path string, info os.FileInfo)
+type FileFunc = func(path string, info os.FileInfo) error
 
 // WalkFiles walks all files in directory `root` (non-recursive) and calls `filter`.
 func WalkFiles(root string, filter FileFunc) (err error) {
@@ -101,9 +104,7 @@ func WalkFiles(root string, filter FileFunc) (err error) {
 				return filepath.SkipDir
 			}
 
-			filter(filepath.ToSlash(path), info)
-
-			return nil
+			return filter(filepath.ToSlash(path), info)
 		})
 
 	err = CombineErrors(err, e)

@@ -67,7 +67,7 @@ func main() {
 
 	if hooks.IsGithooksDisabled(settings.GitX, true) {
 		executeLFSHooks(&settings)
-		executeOldHooks(&settings, &uiSettings, &ignores, &checksums)
+		executeOldHook(&settings, &uiSettings, &ignores, &checksums)
 
 		return
 	}
@@ -75,7 +75,7 @@ func main() {
 	exportStagedFiles(&settings)
 	updateGithooks(&settings, &uiSettings)
 	executeLFSHooks(&settings)
-	executeOldHooks(&settings, &uiSettings, &ignores, &checksums)
+	executeOldHook(&settings, &uiSettings, &ignores, &checksums)
 
 	hooks := collectHooks(&settings, &uiSettings, &ignores, &checksums)
 
@@ -133,7 +133,10 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool, true, false)
 	log.AssertNoErrorF(err, "Prompt setup failed -> using fallback.")
 
-	isTrusted, err := hooks.IsRepoTrusted(gitx, promptCtx, repoPath, true)
+	isTrusted, hasTrustFile := hooks.IsRepoTrusted(gitx, repoPath)
+	if !isTrusted && hasTrustFile {
+		isTrusted = showTrustRepoPrompt(gitx, promptCtx)
+	}
 	log.AssertNoError(err, "Could not get trust settings.")
 
 	failOnNonExistingHooks := gitx.GetConfig(hooks.GitCK_FailOnNonExistingSharedHooks, git.Traverse) == "true"
@@ -211,6 +214,27 @@ func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
 		log.Debug(
 			"Repository already registered or using 'core.hooksPath'.")
 	}
+}
+
+func showTrustRepoPrompt(gitx *git.Context, promptCtx prompt.IContext) (isTrusted bool) {
+	question := "This repository wants you to trust all current and\n" +
+		"future hooks without prompting.\n" +
+		"Do you want to allow running every current and future hooks?"
+
+	var answer string
+	answer, err := promptCtx.ShowPromptOptions(question, "(yes, No)", "y/N", "Yes", "No")
+	log.AssertNoErrorF(err, "Could not show prompt.")
+
+	if err == nil && answer == "y" || answer == "Y" {
+		err := gitx.SetConfig(hooks.GitCK_TrustAll, true, git.LocalScope)
+		log.AssertNoErrorF(err, "Could not store trust setting '%s'.", hooks.GitCK_TrustAll)
+		isTrusted = true
+	} else {
+		err := gitx.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
+		log.AssertNoErrorF(err, "Could not store trust setting '%s'.", hooks.GitCK_TrustAll)
+	}
+
+	return
 }
 
 func exportStagedFiles(settings *HookSettings) {
@@ -388,40 +412,53 @@ func executeLFSHooks(settings *HookSettings) {
 	}
 }
 
-func executeOldHooks(settings *HookSettings,
+func executeOldHook(settings *HookSettings,
 	uiSettings *UISettings,
 	ingores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) {
 
 	// e.g. 'hooks/pre-commit.replaced.githook's
-	hook := hooks.Hook{}
 	hookName := hooks.GetHookReplacementFileName(settings.HookName)
-	hook.Path = path.Join(settings.HookDir, hookName) // Make it relative to git directory
+	hookPath := path.Join(settings.HookDir, hookName)
+	hookNamespace := "" // @todo Introduce namespacing here! revert path.Dir()... use: "hooks"
 
-	exists, err := cm.IsPathExisting(hook.Path)
-	log.AssertNoErrorF(err, "Could not check path '%s'", hook.Path)
-	if !exists {
-		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hook.Path)
+	// Old hook can only be ignored by user ignores...
+	isIgnored := func(namespacePath string) bool {
+		ignored, byUser := ingores.IsIgnored(namespacePath)
+
+		return ignored && byUser
+	}
+
+	isTrusted := func(hookPath string) (bool, string) {
+		if settings.IsRepoTrusted {
+			return true, ""
+		}
+
+		trusted, sha, e := checksums.IsTrusted(hookPath)
+		log.AssertNoErrorPanicF(e, "Could not check trust status '%s'.", hookPath)
+
+		return trusted, sha
+	}
+
+	hooks, err := hooks.GetAllHooksIn(hookPath, hookNamespace, isIgnored, isTrusted)
+	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hookPath)
+
+	if len(hooks) == 0 {
+		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hookPath)
 
 		return
 	}
 
-	hook.NamespacePath = path.Join("hooks", hookName)
-	hook.RunCmd, err = hooks.GetHookRunCmd(hook.Path)
-	log.AssertNoErrorPanicF(err, "Could not detect runner for hook\n'%s'", hook.Path)
-
-	// @todo Introduce namespacing here!
-	ignored, byUser := ingores.IsIgnored(hookName)
-	if ignored && byUser {
-		// Old hook can only be ignored by user patterns!
-		log.DebugF("Old local hook '%s' is ignored by user -> Skip.", hook.Path)
-
-		return
+	hook := hooks[0]
+	if hook.Active && !hook.Trusted {
+		// Active hook, but not trusted:
+		// Show trust prompt to let user trust it or disable.
+		showTrustPrompt(uiSettings, checksums, &hook)
 	}
 
-	if !settings.IsRepoTrusted &&
-		!executeSafetyChecks(uiSettings, checksums, hook.Path, hook.NamespacePath) {
-		log.DebugF("Hook '%s' skipped", hook.Path)
+	if !hook.Active || !hook.Trusted {
+		log.DebugF("Hook '%s' is skipped [active: '%v', trusted: '%v']",
+			hook.Path, hook.Active, hook.Trusted)
 
 		return
 	}
@@ -631,115 +668,73 @@ func checkSharedHook(
 	return true
 }
 
-func createHook(uiSettings *UISettings,
-	isRepoTrusted bool,
-	hookPath string,
-	hookNamespacePath string,
-	checksums *hooks.ChecksumStore) (hooks.Hook, bool) {
-
-	// Check if trusted
-	if !isRepoTrusted &&
-		!executeSafetyChecks(uiSettings, checksums, hookPath, hookNamespacePath) {
-		log.DebugF("Hook '%s' skipped", hookPath)
-
-		return hooks.Hook{}, false
-	}
-
-	runCmd, err := hooks.GetHookRunCmd(hookPath)
-	log.AssertNoErrorPanicF(err, "Could not detect runner for hook\n'%s'", hookPath)
-
-	return hooks.Hook{
-		Executable: cm.Executable{
-			Path:   hookPath,
-			RunCmd: runCmd},
-		NamespacePath: hookNamespacePath}, true
-}
-
 func getHooksIn(settings *HookSettings,
 	uiSettings *UISettings,
 	hooksDir string,
-	parseIgnores bool,
-	externalIgnores *hooks.RepoIgnorePatterns,
+	addInternalIgnores bool,
+	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) (batches hooks.HookPrioList) {
 
 	log.DebugF("Getting hooks in '%s'", hooksDir)
 
-	var ignores hooks.HookIgnorePatterns
+	isTrusted := func(hookPath string) (bool, string) {
+		if settings.IsRepoTrusted {
+			return true, ""
+		}
 
-	if parseIgnores {
+		trusted, sha, e := checksums.IsTrusted(hookPath)
+		log.AssertNoErrorPanicF(e, "Could not check trust status '%s'.", hookPath)
+
+		return trusted, sha
+	}
+
+	var internalIgnores hooks.HookIgnorePatterns
+
+	if addInternalIgnores {
 		var e error
-		ignores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, []string{settings.HookName})
-		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'", hooksDir)
+		internalIgnores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, []string{settings.HookName})
+		log.AssertNoErrorPanicF(e, "Could not get worktree ignores in '%s'.", hooksDir)
+	}
+
+	isIgnored := func(namespacePath string) bool {
+		ignored, _ := ignores.IsIgnored(namespacePath)
+
+		return ignored || internalIgnores.IsIgnored(namespacePath)
 	}
 
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
-	log.AssertNoErrorF(err, "Could not read namespace file in '%s'", hooksDir)
+	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
 
 	dirOrFile := path.Join(hooksDir, settings.HookName)
+	hookNamespace = path.Join(hookNamespace, settings.HookName)
 
-	// Collect all hooks in e.g. `path/pre-commit/*`
-	if cm.IsDirectory(dirOrFile) {
+	allHooks, err := hooks.GetAllHooksIn(
+		dirOrFile,
+		hookNamespace,
+		isIgnored,
+		isTrusted)
 
-		var allHooks []strs.Pair // Path and Namespaced path of the hook
+	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", dirOrFile)
 
-		// Get all files and skip ingored hooks.
-		// Use a namespace to check ignores.
-		err := cm.WalkFiles(dirOrFile,
-			func(hookPath string, _ os.FileInfo) {
-				// Ignore `.xxx` files
-				if strings.HasPrefix(path.Base(hookPath), ".") {
-					return
-				}
+	// @todo Make a priority list for executing all batches in parallel
+	// First good solution: all sequential
+	for _, hook := range allHooks {
 
-				// Namespace the path to check ignores
-				namespacedPath := path.Join(hookNamespace, settings.HookName, path.Base(hookPath))
-				ignored, _ := externalIgnores.IsIgnored(namespacedPath)
-				ignored = ignored || ignores.IsIgnored(namespacedPath)
-
-				if ignored {
-					log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-					return // nolint:nlreturn
-				}
-
-				allHooks = append(allHooks,
-					strs.Pair{
-						First:  hookPath,
-						Second: namespacedPath})
-
-			})
-
-		log.AssertNoErrorF(err, "Errors while walking '%s'", dirOrFile)
-
-		// @todo make a priority list for executing all batches in parallel
-		// First good solution: all sequential
-		for _, h := range allHooks {
-
-			hook, use := createHook(uiSettings, settings.IsRepoTrusted, h.First, h.Second, checksums)
-			if !use {
-				continue
-			}
-
-			batch := []hooks.Hook{hook}
-			batches = append(batches, batch)
+		if hook.Active && !hook.Trusted {
+			// Active hook, but not trusted:
+			// Show trust prompt to let user trust it or disable.
+			showTrustPrompt(uiSettings, checksums, &hook)
 		}
 
-	} else if cm.IsFile(dirOrFile) { // Check hook in `path/pre-commit`
+		if !hook.Active || !hook.Trusted {
+			log.DebugF("Hook '%s' is skipped [active: '%v', trusted: '%v']",
+				hook.Path, hook.Active, hook.Trusted)
 
-		// Namespace the path to check ignores
-		namespacedPath := path.Join(hookNamespace, path.Base(dirOrFile))
-		ignored, _ := externalIgnores.IsIgnored(namespacedPath)
-		ignored = ignored || ignores.IsIgnored(namespacedPath)
-
-		if ignored {
-			log.DebugF("Hook '%s' is ignored. -> Skip.", namespacedPath)
-			return // nolint:nlreturn
+			continue
 		}
 
-		hook, use := createHook(uiSettings, settings.IsRepoTrusted, dirOrFile, namespacedPath, checksums)
-		if use {
-			batch := []hooks.Hook{hook}
-			batches = append(batches, batch)
-		}
+		batch := []hooks.Hook{hook}
+		batches = append(batches, batch)
 	}
 
 	return
@@ -779,23 +774,18 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 	}
 }
 
-func executeSafetyChecks(uiSettings *UISettings,
+func showTrustPrompt(
+	uiSettings *UISettings,
 	checksums *hooks.ChecksumStore,
-	hookPath string,
-	hookNamespacePath string) (runHook bool) {
+	hook *hooks.Hook) {
 
-	trusted, sha1, err := checksums.IsTrusted(hookPath)
-	if !log.AssertNoErrorF(err,
-		"Could not check trust status '%s'.", hookPath) {
+	if hook.Trusted {
 		return
-	}
-
-	if trusted {
-		runHook = true
 	} else {
-		mess := strs.Fmt("New or changed hook found:\n'%s'", hookPath)
+		mess := strs.Fmt("New or changed hook found:\n'%s'", hook.Path)
 
 		acceptHook := uiSettings.AcceptAllChanges
+		disableHook := false
 
 		if !acceptHook {
 
@@ -813,37 +803,43 @@ func executeSafetyChecks(uiSettings *UISettings,
 				fallthrough // nolint:nlreturn
 			case "y":
 				acceptHook = true
-				runHook = true
 			case "d":
-				log.InfoF("-> Adding hook\n'%s'\nto disabled list.", hookPath)
-
-				uiSettings.AppendDisabledHook(
-					hooks.ChecksumResult{
-						SHA1:          sha1,
-						Path:          hookPath,
-						NamespacePath: hookNamespacePath})
+				disableHook = true
 			default:
 				// Don't run hook ...
 			}
 		} else {
 			log.Info("-> Already accepted.")
-			acceptHook = true
-			runHook = true
+		}
+
+		if acceptHook || disableHook {
+			err := hook.AssertSHA1()
+			log.AssertNoError(err, "Could not compute SHA1 hash of '%s'.", hook.Path)
 		}
 
 		if acceptHook {
+			hook.Trusted = true
 
 			uiSettings.AppendTrustedHook(
 				hooks.ChecksumResult{
-					SHA1:          sha1,
-					Path:          hookPath,
-					NamespacePath: hookNamespacePath})
+					SHA1:          hook.SHA1,
+					Path:          hook.Path,
+					NamespacePath: hook.NamespacePath})
 
-			checksums.AddChecksum(sha1, hookPath)
+			checksums.AddChecksum(hook.SHA1, hook.Path)
+
+		} else if disableHook {
+			log.InfoF("-> Adding hook\n'%s'\nto disabled list.", hook.Path)
+
+			hook.Active = false
+
+			uiSettings.AppendDisabledHook(
+				hooks.ChecksumResult{
+					SHA1:          hook.SHA1,
+					Path:          hook.Path,
+					NamespacePath: hook.NamespacePath})
 		}
 	}
-
-	return
 }
 
 func executeHooks(settings *HookSettings, hs *hooks.Hooks) {
