@@ -31,7 +31,7 @@ It overwrite the file if it exists already.`,
 
 func updateReadme(panicIfExists bool) {
 
-	repoDir := assertRepoRoot(&settings)
+	repoDir, _ := assertRepoRoot(&settings)
 
 	file := hooks.GetReadmeFile(repoDir)
 

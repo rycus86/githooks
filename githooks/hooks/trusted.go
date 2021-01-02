@@ -228,3 +228,40 @@ func (t *ChecksumStore) Summary() string {
 func GetChecksumDirectoryGitDir(gitDir string) string {
 	return path.Join(gitDir, ".githooks.checksums")
 }
+
+// GetChecksumStorage loads the checksum store from the Git config
+// 'GitCK_ChecksumCacheDir' and if not possible from the
+// current Git directory.
+func GetChecksumStorage(gitx *git.Context, gitDir string) (store ChecksumStore, err error) {
+
+	// Get the store from the config variable and fallback to Git dir if not existing.
+	cacheDir := gitx.GetConfig(GitCK_ChecksumCacheDir, git.Traverse)
+	loadFallback := strs.IsEmpty(cacheDir)
+
+	if !loadFallback {
+		e := store.AddChecksums(cacheDir, true)
+		if e != nil {
+			loadFallback = true
+			err = cm.CombineErrors(err, cm.ErrorF("Could not add checksums from '%s'.", cacheDir), e)
+		}
+	}
+
+	if loadFallback {
+		cacheDir = GetChecksumDirectoryGitDir(gitDir)
+		e := store.AddChecksums(cacheDir, true)
+		if e != nil {
+			err = cm.CombineErrors(err, cm.ErrorF("Could not add checksums from '%s'.", cacheDir), e)
+		}
+	}
+
+	if ReadWriteLegacyTrustFile {
+		// Legacy: Load the the old file, if existing
+		localChecksums := path.Join(gitDir, ".githooks.checksum")
+		e := store.AddChecksums(localChecksums, false)
+		if e != nil {
+			err = cm.CombineErrors(err, cm.ErrorF("Could not add checksums from '%s'.", localChecksums), e)
+		}
+	}
+
+	return
+}

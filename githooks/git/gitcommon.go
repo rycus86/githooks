@@ -123,9 +123,10 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 // GetRepoRoot returns the top level directory in a non-bare repository or the
 // absolute Git directory in a bare repository.
 // This is the root level for Githooks.
-func (c *Context) GetRepoRoot() (topLevel string, err error) {
+func (c *Context) GetRepoRoot() (topLevel string, gitDir string, err error) {
+	gitDir, err = c.GetGitCommonDir()
 	if c.IsBareRepo() {
-		topLevel, err = c.GetGitCommonDir()
+		topLevel = gitDir
 	} else {
 		if topLevel, err = c.Get("rev-parse", "--show-toplevel"); err != nil {
 			return

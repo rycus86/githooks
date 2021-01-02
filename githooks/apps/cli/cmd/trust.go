@@ -60,7 +60,7 @@ var trustDeleteCmd = &cobra.Command{
 
 func runTrust(opt TrustOption) {
 
-	repoRoot := assertRepoRoot(&settings)
+	repoRoot, _ := assertRepoRoot(&settings)
 	file := hooks.GetTrustFile(repoRoot)
 
 	switch opt {

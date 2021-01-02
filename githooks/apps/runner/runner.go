@@ -54,8 +54,14 @@ func main() {
 	settings, uiSettings := setMainVariables(cwd)
 	assertRegistered(settings.GitX, settings.InstallDir, settings.GitDir)
 
-	checksums := getChecksumStorage(&settings)
-	ignores := getIgnorePatterns(&settings)
+	checksums, err := hooks.GetChecksumStorage(settings.GitX, settings.GitDir)
+	log.AssertNoErrorF(err, "Errors while loading checksum store.")
+	log.DebugF("%s", checksums.Summary())
+
+	ignores, err := hooks.GetIgnorePatterns(settings.RepositoryHooksDir, settings.GitDir, []string{settings.HookName})
+	log.AssertNoErrorF(err, "Errors while loading ignore patterns.")
+	log.DebugF("Worktree ignore patterns: '%q'.", ignores.Worktree)
+	log.DebugF("User ignore patterns: '%q'.", ignores.User)
 
 	defer storePendingData(&settings, &uiSettings, &ignores, &checksums)
 
@@ -152,62 +158,6 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	log.DebugF(s.toString())
 
 	return s, UISettings{AcceptAllChanges: false, PromptCtx: promptCtx}
-}
-
-func getIgnorePatterns(settings *HookSettings) (patt hooks.RepoIgnorePatterns) {
-
-	var err error
-
-	patt.Worktree, err = hooks.GetHookIgnorePatternsWorktree(
-		settings.RepositoryHooksDir,
-		settings.HookName)
-	log.AssertNoError(err, "Could not get hook ignore patterns.")
-	log.DebugF("Worktree ignore patterns: '%q'.", patt.Worktree)
-
-	patt.User, err = hooks.GetHookIgnorePatternsGitDir(settings.GitDir)
-	log.AssertNoError(err, "Could not get user ignore patterns.")
-	log.DebugF("User ignore patterns: '%q'.", patt.User)
-
-	// Legacy
-	// @todo Remove
-	legacyDisabledHooks, err := hooks.GetHookIgnorePatternsLegacy(settings.GitDir)
-	log.AssertNoError(err, "Could not get legacy ignore patterns.")
-	patt.User.Add(legacyDisabledHooks)
-
-	return
-}
-
-func getChecksumStorage(settings *HookSettings) (store hooks.ChecksumStore) {
-
-	// Get the store from the config variable
-	// fallback to Git dir if not existing.
-
-	cacheDir := settings.GitX.GetConfig(hooks.GitCK_ChecksumCacheDir, git.Traverse)
-	loadFallback := cacheDir == ""
-	var err error
-
-	if !loadFallback {
-		err = store.AddChecksums(cacheDir, true)
-		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", cacheDir)
-		loadFallback = err != nil
-	}
-
-	if loadFallback {
-		cacheDir = hooks.GetChecksumDirectoryGitDir(settings.GitDir)
-		err = store.AddChecksums(cacheDir, true)
-		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", cacheDir)
-	}
-
-	if hooks.ReadWriteLegacyTrustFile {
-		// Legacy: Load the the old file, if existing
-		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
-		err = store.AddChecksums(localChecksums, false)
-		log.AssertNoErrorF(err, "Could not add checksums from '%s'.", localChecksums)
-	}
-
-	log.DebugF("%s", store.Summary())
-
-	return store
 }
 
 func getInstallDir() string {
@@ -718,7 +668,7 @@ func getHooksIn(settings *HookSettings,
 
 	if parseIgnores {
 		var e error
-		ignores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, settings.HookName)
+		ignores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, []string{settings.HookName})
 		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'", hooksDir)
 	}
 

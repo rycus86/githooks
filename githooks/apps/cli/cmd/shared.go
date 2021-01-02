@@ -138,7 +138,7 @@ func runSharedAdd(remove bool, url string) {
 
 	switch {
 	case sharedOpts.Shared:
-		repoDir := assertRepoRoot(&settings)
+		repoDir, _ := assertRepoRoot(&settings)
 		modified, err := hooks.ModifyRepoSharedHooks(repoDir, url, remove)
 		log.AssertNoErrorPanicF(err, "Could not %s shared hooks list '%s'.", t1, hooks.GetRepoSharedFileRel())
 		if modified {
@@ -173,7 +173,7 @@ func runSharedClear() {
 	sharedOptsSetAll(&sharedOpts)
 
 	if sharedOpts.Shared {
-		repoDir := assertRepoRoot(&settings)
+		repoDir, _ := assertRepoRoot(&settings)
 		err := hooks.ClearRepoSharedHooks(repoDir)
 		log.AssertNoErrorPanicF(err, "Could not clear shared hook list %s'.", hooks.GetRepoSharedFileRel())
 		log.InfoF("Cleared shared hook list '%s'.", hooks.GetRepoSharedFileRel())
@@ -236,7 +236,7 @@ func runSharedList() {
 	}
 
 	if sharedOpts.Shared {
-		repoDir := assertRepoRoot(&settings)
+		repoDir, _ := assertRepoRoot(&settings)
 		shared, err := hooks.LoadRepoSharedHooks(settings.InstallDir, repoDir)
 		log.AssertNoErrorPanicF(err, "Could not load shared hook list '%s'.", hooks.GetRepoSharedFileRel())
 
@@ -267,7 +267,7 @@ func runSharedList() {
 }
 
 func runSharedUpdate() {
-	repoDir, err := settings.GitX.GetRepoRoot()
+	repoDir, _, err := settings.GitX.GetRepoRoot()
 
 	var sharedHooks []hooks.SharedHook
 	updated := 0

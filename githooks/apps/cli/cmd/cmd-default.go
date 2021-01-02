@@ -19,13 +19,13 @@ func setCommandDefaults(cmd *cobra.Command) *cobra.Command {
 	return cmd
 }
 
-func assertRepoRoot(settings *Settings) string {
-	repoRoot, err := settings.GitX.GetRepoRoot()
+func assertRepoRoot(settings *Settings) (string, string) {
+	repoRoot, gitDir, err := settings.GitX.GetRepoRoot()
 
 	log.AssertNoErrorPanicF(err,
 		"Current working directory '%s' is neither inside a worktree\n"+
 			"nor inside a bare repository.",
 		settings.Cwd)
 
-	return repoRoot
+	return repoRoot, gitDir
 }
