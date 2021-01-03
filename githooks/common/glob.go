@@ -23,6 +23,7 @@ type globs []string
 // It's useful when your globs might have double-stars, but you're not sure.
 // On Windows `\\` or '/' will work as a path separator in pattern.
 // Adpated for syntax escaping and only "/" paths.
+// Package 'doublestar/v3' is awefully slow.
 func Glob(pattern string, ignoreErrors bool) (l []string, err error) {
 	if !strings.Contains(pattern, "**") {
 		// passthru to core package if no double-star

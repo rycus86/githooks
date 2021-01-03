@@ -19,6 +19,16 @@ FAILED_TEST_LIST=""
 
 COMMIT_BEFORE=$(cd /var/lib/githooks && git rev-parse HEAD)
 
+cleanDirs() {
+    if [ -w /usr/share/git-core ]; then
+        mkdir -p /usr/share/git-core/templates/hooks
+        rm -rf /usr/share/git-core/templates/hooks/*
+    fi
+
+    rm -rf ~/test* >/dev/null 2>&1
+    rm -rf /tmp/* >/dev/null 2>&1
+}
+
 for STEP in /var/lib/tests/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
@@ -30,14 +40,7 @@ for STEP in /var/lib/tests/step-*.sh; do
     echo "> Executing $STEP_NAME"
     echo "  :: $STEP_DESC"
 
-    if [ -w /usr/share/git-core ]; then
-        mkdir -p /usr/share/git-core/templates/hooks
-        rm -rf /usr/share/git-core/templates/hooks/*
-    fi
-
-    rm -rf ~/test*
-    rm -rf ~/.githooks
-    rm -rf /tmp/*
+    cleanDirs
 
     git -C /var/lib/githooks reset --hard "$COMMIT_BEFORE" >/dev/null 2>&1 &&
         git -C /var/lib/githooks clean -df >/dev/null 2>&1
@@ -62,9 +65,7 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     fi
 
-    if [ -w /usr/share/git-core ]; then
-        mkdir -p /usr/share/git-core/templates/hooks
-    fi
+    cleanDirs
 
     UNINSTALL_OUTPUT=$(printf "y\\n/\\n" | "$GITHOOKS_BIN_DIR/uninstaller" --stdin 2>&1)
     # shellcheck disable=SC2181
@@ -79,10 +80,12 @@ for STEP in /var/lib/tests/step-*.sh; do
     git config --global --unset githooks.testingTreatFileProtocolAsRemote
 
     # Check if no githooks settings are present anymore
-    if [ -n "$(git config --global --get-regexp "^githooks.*")" ]; then
+    if [ -n "$(git config --global --get-regexp "^githooks.*")" ] ||
+        [ -n "$(git config --global alias.hooks)" ]; then
         echo "! Uninstall left artefacts behind!" >&2
         echo "  You need to fix this!" >&2
-        echo " $(git config --global --get-regexp "^githooks.*")" >&2
+        git config --global --get-regexp "^githooks.*" >&2
+        git config --global --get-regexp "alias.*" >&2
         FAILED=$((FAILED + 1))
         break # Fail es early as possible
     fi
