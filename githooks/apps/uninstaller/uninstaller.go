@@ -513,8 +513,8 @@ func runUninstallSteps(
 		thankYou()
 	} else {
 		log.ErrorF("Tried my best at uninstalling, but\n"+
-			"- %v errors\n"+
-			"- %v warnings\n"+
+			" • %v errors\n"+
+			" • %v warnings\n"+
 			"occurred!", logStats.ErrorCount(), logStats.WarningCount())
 	}
 }

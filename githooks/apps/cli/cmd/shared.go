@@ -219,13 +219,13 @@ func runSharedList() {
 			}
 		}
 
-		return strs.Fmt(" - '%s' (%s)", s.OriginalURL, state)
+		return strs.Fmt(" • '%s' (%s)", s.OriginalURL, state)
 	}
 
 	format := func(sharedHooks []hooks.SharedHook) string {
 		var lst []string
 		if len(sharedHooks) == 0 {
-			lst = append(lst, " - None")
+			lst = append(lst, " • None")
 		} else {
 			for _, s := range sharedHooks {
 				lst = append(lst, formatLine(&s))

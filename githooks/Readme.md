@@ -51,6 +51,9 @@ But are ignored when pulled in by other hook execution: **[done]**
     layout: "2.0" # Layout of the shared hook repo.
     version: "1.9.1" # The version number of the hooks.
     ```
+### Shared File Specs
+
+1. The `.githooks/.shared` is turned into `./.githooks/.shared.yaml` **[done]** (still to depercate old)
 
 ### Ignore Patterns
 

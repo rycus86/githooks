@@ -262,7 +262,7 @@ func buildFromSource(
 	binaries := updates.Binaries{BinDir: binPath}
 	strs.Map(bins, func(s string) string {
 		if cm.IsExecutable(s) {
-			if strings.Contains(s, "installer") {
+			if strings.HasPrefix(path.Base(s), "installer") {
 				binaries.Installer = s
 			} else {
 				binaries.Others = append(binaries.Others, s)
@@ -277,13 +277,13 @@ func buildFromSource(
 		"Successfully built %v binaries:\n - %s",
 		len(binaries.All),
 		strings.Join(
-			strs.Map(binaries.All, path.Base),
+			strs.Map(binaries.All, func(s string) string { return strs.Fmt("'%s'", path.Base(s)) }),
 			"\n - "))
 
-	log.PanicIf(
+	log.PanicIfF(
 		len(binaries.All) == 0 ||
 			strs.IsEmpty(binaries.Installer),
-		"No binaries found in '%s'", binPath)
+		"No binaries or installer found in '%s'", binPath)
 
 	return binaries
 }
@@ -752,7 +752,7 @@ func installBinaries(
 	err := os.MkdirAll(binDir, cm.DefaultFileModeDirectory)
 	log.AssertNoErrorPanicF(err, "Could not create binary dir '%s'.", binDir)
 
-	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" - '%s'", path.Base(s)) })
+	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" • '%s'", path.Base(s)) })
 	if dryRun {
 		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
 		return // nolint:nlreturn

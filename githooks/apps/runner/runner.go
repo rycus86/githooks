@@ -60,7 +60,7 @@ func main() {
 
 	ignores, err := hooks.GetIgnorePatterns(settings.RepositoryHooksDir, settings.GitDir, []string{settings.HookName})
 	log.AssertNoErrorF(err, "Errors while loading ignore patterns.")
-	log.DebugF("Worktree ignore patterns: '%q'.", ignores.Worktree)
+	log.DebugF("HooksDir ignore patterns: '%q'.", ignores.HooksDir)
 	log.DebugF("User ignore patterns: '%q'.", ignores.User)
 
 	defer storePendingData(&settings, &uiSettings, &ignores, &checksums)
@@ -420,7 +420,7 @@ func executeOldHook(settings *HookSettings,
 	// e.g. 'hooks/pre-commit.replaced.githook's
 	hookName := hooks.GetHookReplacementFileName(settings.HookName)
 	hookPath := path.Join(settings.HookDir, hookName)
-	hookNamespace := "" // @todo Introduce namespacing here! revert path.Dir()... use: "hooks"
+	hookNamespace := "" // @todo Introduce namespacing here! use: "hooks"
 
 	// Old hook can only be ignored by user ignores...
 	isIgnored := func(namespacePath string) bool {
@@ -692,7 +692,7 @@ func getHooksIn(settings *HookSettings,
 
 	if addInternalIgnores {
 		var e error
-		internalIgnores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, []string{settings.HookName})
+		internalIgnores, e = hooks.GetHookIgnorePatternsHookDir(hooksDir, []string{settings.HookName})
 		log.AssertNoErrorPanicF(e, "Could not get worktree ignores in '%s'.", hooksDir)
 	}
 

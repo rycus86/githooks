@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"io"
 	"path"
+	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	strs "rycus86/githooks/strings"
 	"strings"
 
+	"github.com/pkg/math"
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +21,8 @@ var listCmd = &cobra.Command{
 		"This command needs to be run at the root of a repository.\n\n" +
 		"If 'type' is given, then it only lists the hooks for that trigger event.\n" +
 		"The supported hooks are:\n\n" +
-		strings.Join(strs.Map(hooks.ManagedHookNames, func(s string) string { return " - " + s }), "\n") +
-		"\n\n",
+		strings.Join(strs.Map(hooks.ManagedHookNames, func(s string) string { return " • " + s }), "\n") +
+		"\nThe value 'ns-path' is the namespaced path which is used for the ignore patterns.",
 	PreRun: panicIfNotRangeArgs(0, 100),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
@@ -43,7 +46,7 @@ func runList(hookNames []string, warnNotFound bool) {
 	// Load ignore patterns
 	ignores, err := hooks.GetIgnorePatterns(repoHooksDir, gitDir, hookNames)
 	log.AssertNoErrorF(err, "Errors while loading ignore patterns.")
-	log.DebugF("Worktree ignore patterns: '%q'.", ignores.Worktree)
+	log.DebugF("HooksDir ignore patterns: '%q'.", ignores.HooksDir)
 	log.DebugF("User ignore patterns: '%q'.", ignores.User)
 
 	// Load all shared hooks
@@ -55,82 +58,213 @@ func runList(hookNames []string, warnNotFound bool) {
 	log.AssertNoErrorF(err, "Could not load global shared hooks.")
 
 	isTrusted, _ := hooks.IsRepoTrusted(settings.GitX, repoDir)
+	isDisabled := hooks.IsGithooksDisabled(settings.GitX, true)
+
+	state := ListHooksState{
+		checksums:          &checksums,
+		ignores:            &ignores,
+		isRepoTrusted:      isTrusted,
+		isGithooksDisabled: isDisabled,
+		sharedIgnores:      make(IgnoresPerHookDir, 10),
+		paddingMax:         60} //nolint: gomnd
 
 	for _, hookName := range hookNames {
 
-		list := listHooks(
+		list, count := listHooksForName(
 			hookName,
 			gitDir,
 			repoHooksDir,
 			repoSharedHooks,
 			localSharedHooks,
 			globalSharedHooks,
-			&checksums,
-			&ignores,
-			isTrusted)
+			&state)
 
-		log.Info("Hook event: '%s':\n%s", hookName, list)
+		if count != 0 {
+			log.InfoF("Hook Event: '%s':%s\n", hookName, list)
+		}
 	}
 
 }
 
-func listHooks(
+type IgnoresPerHookDir = map[string]*hooks.HookIgnorePatterns
+
+type ListHooksState struct {
+	checksums *hooks.ChecksumStore
+	ignores   *hooks.RepoIgnorePatterns
+
+	isRepoTrusted      bool
+	isGithooksDisabled bool
+
+	sharedIgnores IgnoresPerHookDir
+	paddingMax    int
+}
+
+func listHooksForName(
 	hookName string,
 	gitDir string,
 	repoHooksDir string,
 	repoSharedHooks []hooks.SharedHook,
 	localSharedHooks []hooks.SharedHook,
 	globalSharedHooks []hooks.SharedHook,
-	checksums *hooks.ChecksumStore,
-	ignores *hooks.RepoIgnorePatterns,
-	isTrustedRepo bool) string {
+	state *ListHooksState) (string, int) {
 
-	return ""
+	var sb strings.Builder
+
+	printHooks := func(hooks []hooks.Hook, title string, category string) {
+		if len(hooks) == 0 {
+			return
+		}
+
+		padding := findPaddingListHooks(hooks, state.paddingMax)
+		_, err := strs.FmtW(&sb, "\n  ▶ %s", title)
+		cm.AssertNoErrorPanicF(err, "Could not write hook state.")
+
+		for _, hook := range hooks {
+			sb.WriteString("\n")
+			formatHookState(&sb, hook, category, state.isGithooksDisabled, padding, "    ")
+		}
+	}
+
+	listShared := func(sharedHooks []hooks.SharedHook, title string, category string) {
+		for _, sharedHook := range sharedHooks {
+			shHooks := getAllHooksIn(hookName, sharedHook.RepositoryDir, state, true, false)
+			// @todo remove this as soon as possible
+			shHooks = append(shHooks,
+				getAllHooksIn(hookName, hooks.GetGithooksDir(sharedHook.RepositoryDir), state, true, false)...)
+
+			printHooks(shHooks, title, category)
+		}
+	}
+
+	// List replaced hooks (normally only one)
+	replacedHooks := getAllHooksIn(hookName, path.Join(gitDir, "hooks"), state, false, true)
+	printHooks(replacedHooks, "Replaced Hooks:", "replaced")
+
+	// List repository hooks
+	repoHooks := getAllHooksIn(hookName, repoHooksDir, state, false, false)
+	printHooks(repoHooks, "Repository Hooks:", "repo")
+
+	// List all shared hooks
+	listShared(repoSharedHooks, "Repository Shared Hooks:", "shared:repo")
+	listShared(localSharedHooks, "Local Shared Hooks:", "shared:local")
+	listShared(globalSharedHooks, "Global Shared Hooks:", "shared:global")
+
+	return sb.String(),
+		len(replacedHooks) +
+			len(repoHooks) +
+			len(repoSharedHooks) + len(localSharedHooks) + len(globalSharedHooks)
 }
 
-//nolint: deadcode, unused
+func findPaddingListHooks(hooks []hooks.Hook, maxPadding int) int {
+	const addChars = 3
+	max := 0
+	for _, hook := range hooks {
+		max = math.MaxInt(len(path.Base(hook.Path))+addChars, max)
+	}
+
+	return math.MinInt(max, maxPadding)
+}
+
 func getAllHooksIn(
 	hookName string,
 	hooksDir string,
-	checksums *hooks.ChecksumStore,
-	ignores *hooks.RepoIgnorePatterns,
-	isTrustedRepo bool,
-	addInternalIgnores bool) []hooks.Hook {
+	state *ListHooksState,
+	addInternalIgnores bool,
+	isReplacedHook bool) []hooks.Hook {
 
 	isTrusted := func(hookPath string) (bool, string) {
-		if isTrustedRepo {
+		if state.isRepoTrusted {
 			return true, ""
 		}
 
-		trusted, sha, e := checksums.IsTrusted(hookPath)
-		log.AssertNoErrorPanicF(e, "Could not check trust status '%s'.", hookPath)
+		trusted, sha, e := state.checksums.IsTrusted(hookPath)
+		log.AssertNoErrorF(e, "Could not check trust status '%s'.", hookPath)
 
 		return trusted, sha
 	}
 
-	var internalIgnores hooks.HookIgnorePatterns
-
-	if addInternalIgnores {
+	// Cache repository ignores
+	hookDirIgnores := state.sharedIgnores[hooksDir]
+	if hookDirIgnores == nil && addInternalIgnores {
 		var e error
-		internalIgnores, e = hooks.GetHookIgnorePatternsWorktree(hooksDir, []string{hookName})
-		log.AssertNoErrorPanicF(e, "Could not get worktree ignores in '%s'.", hooksDir)
+		igns, e := hooks.GetHookIgnorePatternsHookDir(hooksDir, []string{hookName})
+		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'.", hooksDir)
+		state.sharedIgnores[hooksDir] = &igns
+		hookDirIgnores = &igns
 	}
 
 	isIgnored := func(namespacePath string) bool {
-		ignored, _ := ignores.IsIgnored(namespacePath)
+		ignored, byUser := state.ignores.IsIgnored(namespacePath)
 
-		return ignored || internalIgnores.IsIgnored(namespacePath)
+		if isReplacedHook {
+			return ignored && byUser // Replaced hooks can only be ignored by the user.
+		} else if hookDirIgnores != nil {
+			return ignored || hookDirIgnores.IsIgnored(namespacePath)
+		}
+
+		return ignored
 	}
 
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
 	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
-	dirOrFile := path.Join(hooksDir, hookName)
-	hookNamespace = path.Join(hookNamespace, hookName)
+
+	var dirOrFile string
+	if isReplacedHook {
+		dirOrFile = path.Join(hooksDir, hooks.GetHookReplacementFileName(hookName))
+		hookNamespace = "" // @todo Introduce namespacing here! use: "hooks"
+	} else {
+		dirOrFile = path.Join(hooksDir, hookName)
+		hookNamespace = path.Join(hookNamespace, hookName)
+	}
 
 	allHooks, err := hooks.GetAllHooksIn(dirOrFile, hookNamespace, isIgnored, isTrusted)
 	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", dirOrFile)
 
 	return allHooks
+}
+
+func formatHookState(
+	w io.Writer,
+	hook hooks.Hook,
+	categeory string,
+	isGithooksDisabled bool,
+	padding int,
+	indent string) {
+
+	hooksFmt := strs.Fmt("%s• %%-%vs : ", indent, padding)
+	const stateFmt = " state: ['%s', '%s']"
+	const disabledStateFmt = " state: ['disabled']"
+	const categeoryFmt = ", type: '%s'"
+	const namespaceFmt = ", ns-path: '%s'"
+
+	hookPath := strs.Fmt("'%s'", path.Base(hook.Path))
+
+	if isGithooksDisabled {
+		_, err := strs.FmtW(w,
+			hooksFmt+disabledStateFmt+categeoryFmt+namespaceFmt,
+			hookPath, categeory, hook.NamespacePath)
+
+		cm.AssertNoErrorPanicF(err, "Could not write hook state.")
+
+		return
+	}
+
+	active := "active" // nolint: goconst
+	trusted := "trusted"
+
+	if !hook.Active {
+		active = "ignored"
+	}
+
+	if !hook.Trusted {
+		trusted = "untrusted"
+	}
+
+	_, err := strs.FmtW(w,
+		hooksFmt+stateFmt+categeoryFmt+namespaceFmt,
+		hookPath, active, trusted, categeory, hook.NamespacePath)
+
+	cm.AssertNoErrorPanicF(err, "Could not write hook state.")
 }
 
 func init() { // nolint: gochecknoinits

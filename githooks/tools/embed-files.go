@@ -6,7 +6,6 @@ import (
 	"path"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
-	"rycus86/githooks/hooks"
 
 	"github.com/go-bindata/go-bindata"
 )
@@ -22,7 +21,7 @@ func main() {
 	srcRoot := path.Join(root, "githooks")
 
 	template := path.Join(root, "base-template-wrapper.sh")
-	readme := hooks.GetReadmeFile(root)
+	readme := path.Join(root, ".githooks", "README.md")
 
 	c := bindata.Config{
 		Input: []bindata.InputConfig{

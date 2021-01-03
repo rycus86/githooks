@@ -8,7 +8,7 @@ import (
 	strs "rycus86/githooks/strings"
 	"strings"
 
-	glob "github.com/bmatcuk/doublestar/v2"
+	glob "github.com/bmatcuk/doublestar/v3"
 )
 
 // HookIgnorePatterns is the format of the ignore patterns.
@@ -21,7 +21,7 @@ type HookIgnorePatterns struct {
 
 // RepoIgnorePatterns is the list of possible ignore patterns in a repository.
 type RepoIgnorePatterns struct {
-	Worktree HookIgnorePatterns // Ignores set by `.ignore` file in the repository.
+	HooksDir HookIgnorePatterns // Ignores set by `.ignore` file in the hooks directory of the repository.
 	User     HookIgnorePatterns // Ignores set by the `.ignore` file in the Git directory of the repository.
 }
 
@@ -73,7 +73,7 @@ func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
 // IsIgnored returns `true` if the hooksPath is ignored by either the worktree patterns or the user patterns
 // and otherwise `false`. The second value is `true` if it was ignored by the user patterns.
 func (h *RepoIgnorePatterns) IsIgnored(namespacePath string) (bool, bool) {
-	if h.Worktree.IsIgnored(namespacePath) {
+	if h.HooksDir.IsIgnored(namespacePath) {
 		return true, false
 	} else if h.User.IsIgnored(namespacePath) {
 		return true, true
@@ -82,8 +82,8 @@ func (h *RepoIgnorePatterns) IsIgnored(namespacePath string) (bool, bool) {
 	return false, false
 }
 
-// GetHookIgnorePatternsWorktree gets all ignored hooks in the current worktree.
-func GetHookIgnorePatternsWorktree(repoHooksDir string, hookNames []string) (patterns HookIgnorePatterns, err error) {
+// GetHookIgnorePatternsHookDir gets all ignored hooks in the current worktree.
+func GetHookIgnorePatternsHookDir(repoHooksDir string, hookNames []string) (patterns HookIgnorePatterns, err error) {
 
 	file := path.Join(repoHooksDir, ".ignore.yaml")
 	if cm.IsFile(file) {
@@ -98,14 +98,14 @@ func GetHookIgnorePatternsWorktree(repoHooksDir string, hookNames []string) (pat
 			err = cm.CombineErrors(err, e)
 			patterns.Add(ps)
 		}
+	}
 
-		if ReadLegacyIgnoreFiles {
-			// Legacy load hooks from old ignore files
-			// @todo Remove and only use the .yaml implementation.
-			ps, e := loadIgnorePatternsLegacy(repoHooksDir, hookName)
-			err = cm.CombineErrors(err, e)
-			patterns.Add(ps)
-		}
+	if ReadLegacyIgnoreFiles {
+		// Legacy load hooks from old ignore files
+		// @todo Remove and only use the .yaml implementation.
+		ps, e := loadIgnorePatternsLegacy(repoHooksDir, hookNames)
+		err = cm.CombineErrors(err, e)
+		patterns.Add(ps)
 	}
 
 	return
@@ -190,22 +190,20 @@ func storeIgnorePatterns(patterns HookIgnorePatterns, file string) (err error) {
 	return cm.StoreYAML(file, &patterns)
 }
 
-func loadIgnorePatternsLegacy(repoHooksDir string, hookName string) (patterns HookIgnorePatterns, err error) {
+func loadIgnorePatternsLegacy(repoHooksDir string, hookNames []string) (patterns HookIgnorePatterns, err error) {
 
 	file := path.Join(repoHooksDir, ".ignore")
-	exists1, err := cm.IsPathExisting(file)
-	if exists1 {
+	if cm.IsFile(file) {
 		patterns, err = loadIgnorePatternsLegacyFile(file)
 	}
 
-	file = path.Join(repoHooksDir, hookName, ".ignore")
-	exists2, e := cm.IsPathExisting(file)
-	err = cm.CombineErrors(err, e)
-
-	if exists2 {
-		patterns2, e := loadIgnorePatternsLegacyFile(file)
-		err = cm.CombineErrors(err, e)
-		patterns.Add(patterns2)
+	for _, hookName := range hookNames {
+		file = path.Join(repoHooksDir, hookName, ".ignore")
+		if cm.IsFile(file) {
+			p, e := loadIgnorePatternsLegacyFile(file)
+			err = cm.CombineErrors(err, e)
+			patterns.Add(p)
+		}
 	}
 
 	return
@@ -242,7 +240,7 @@ func loadIgnorePatternsLegacyFile(file string) (p HookIgnorePatterns, err error)
 func GetIgnorePatterns(repoHooksDir string, gitDir string, hookNames []string) (patt RepoIgnorePatterns, err error) {
 	var e error
 
-	patt.Worktree, e = GetHookIgnorePatternsWorktree(repoHooksDir, hookNames)
+	patt.HooksDir, e = GetHookIgnorePatternsHookDir(repoHooksDir, hookNames)
 	if e != nil {
 		err = cm.CombineErrors(cm.Error("Could not get worktree ignore patterns."), e)
 	}
@@ -253,7 +251,7 @@ func GetIgnorePatterns(repoHooksDir string, gitDir string, hookNames []string) (
 	}
 
 	// Legacy
-	// @todo Remove
+	// @todo Remove as soon as possible
 	legacyDisabledHooks, e := getHookIgnorePatternsLegacy(gitDir)
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get legacy ignore patterns."), e)

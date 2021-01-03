@@ -14,9 +14,9 @@ import (
 
 const (
 	githooksSuffix = "" // If you like you can make it: "Githooks: "
-	debugSuffix    = "🛠  " + githooksSuffix
+	debugSuffix    = "🛠 " + githooksSuffix
 	infoSuffix     = "🦎 " + githooksSuffix
-	warnSuffix     = "⛑  " + githooksSuffix
+	warnSuffix     = "⛑ " + githooksSuffix
 	errorSuffix    = "⛔ "
 	promptSuffix   = "❓ " + githooksSuffix
 	indent         = "   "
@@ -108,7 +108,7 @@ type LogContext struct {
 // CreateLogContext creates a log context.
 func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 
-	var debug, info, warn, error io.Writer
+	var debug, info, warn, error *os.File
 
 	if onlyStderr {
 		info = os.Stderr
@@ -124,12 +124,8 @@ func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 		debug = info
 	}
 
-	if info == nil || warn == nil || error == nil {
-		return nil, Error("Failed to initialized info, warn, error logs")
-	}
-
-	infoIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
-	errorIsATerminal := term.IsTerminal(int(os.Stderr.Fd()))
+	infoIsATerminal := term.IsTerminal(int(info.Fd()))
+	errorIsATerminal := term.IsTerminal(int(error.Fd()))
 	hasColors := (infoIsATerminal && errorIsATerminal) && color.IsSupportColor()
 
 	var colorInfo func(string) string
@@ -143,8 +139,8 @@ func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 
 	} else {
 		colorInfo = func(s string) string { return s }
-		colorError = func(s string) string { return s }
-		colorPrompt = func(s string) string { return s }
+		colorError = colorInfo
+		colorPrompt = colorInfo
 	}
 
 	log := LogContext{

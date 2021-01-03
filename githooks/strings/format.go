@@ -2,6 +2,7 @@ package strs
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -28,4 +29,9 @@ func SplitLinesN(s string, n int) []string {
 // Fmt returns a formatted string.
 func Fmt(format string, a ...interface{}) string {
 	return fmt.Sprintf(format, a...)
+}
+
+// Fmt returns a formatted string.
+func FmtW(w io.Writer, format string, a ...interface{}) (int, error) {
+	return fmt.Fprintf(w, format, a...)
 }

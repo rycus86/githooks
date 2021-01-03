@@ -143,7 +143,7 @@ func PromptRegisteredRepos(
 				strings.Join(
 					strs.Map(dirs,
 						func(s string) string {
-							return strs.Fmt("- '%s'", s)
+							return strs.Fmt(" • '%s'", s)
 						}), "\n")+
 				"\n"+registeredPrompt[idx],
 			"(Yes, no)", "Y/n", "Yes", "No")
