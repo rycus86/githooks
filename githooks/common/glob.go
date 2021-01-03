@@ -1,7 +1,6 @@
 package common
 
 // From: https://github.com/yargevad/filepathx/edit/master/filepathx.go @907099cb
-// Adpated for syntax escaping and only "/" paths.
 
 // Package filepathx adds double-star globbing support to the Glob
 // function from the core path/filepath package.
@@ -22,6 +21,8 @@ type globs []string
 
 // Glob adds double-star support to the core path/filepath Glob function.
 // It's useful when your globs might have double-stars, but you're not sure.
+// On Windows `\\` or '/' will work as a path separator in pattern.
+// Adpated for syntax escaping and only "/" paths.
 func Glob(pattern string, ignoreErrors bool) (l []string, err error) {
 	if !strings.Contains(pattern, "**") {
 		// passthru to core package if no double-star
