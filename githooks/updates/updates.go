@@ -196,6 +196,13 @@ func FetchUpdates(
 	gitx := git.CtxCSanitized(cloneDir)
 	resetRemoteTo := ""
 
+	// If branch was empty, determine it now.
+	if strs.IsEmpty(branch) {
+		if branch, err = gitx.GetCurrentBranch(); err != nil {
+			return
+		}
+	}
+
 	if isNewClone {
 		// Set the url/branch back...
 		if err = SetCloneURL(url, branch); err != nil {

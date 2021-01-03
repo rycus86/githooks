@@ -26,7 +26,7 @@ echo "test" >testing.txt &&
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 
-git worktree add -b example-a ../test099-A master || exit 2
+git worktree add -b example-a ../test099-A HEAD || exit 2
 cd ../test099-A || exit 2
 
 if ! git hooks list | grep "example" | grep -q "pending"; then

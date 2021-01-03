@@ -39,7 +39,7 @@ if ! grep -q 'p:/tmp/test *098' /tmp/test098.out; then
     exit 1
 fi
 
-git worktree add -b example-a /tmp/test098-A master || exit 2
+git worktree add -b example-a /tmp/test098-A HEAD || exit 2
 
 cd /tmp/test098-A &&
     echo "test: A" >testing.txt &&
@@ -54,7 +54,7 @@ if ! grep -q 'p:/tmp/test *098-A' /tmp/test098.out; then
     exit 3
 fi
 
-git worktree add -b example-b /tmp/test098-B master || exit 2
+git worktree add -b example-b /tmp/test098-B HEAD || exit 2
 
 cd /tmp/test098-B &&
     echo "test: B" >testing.txt &&

@@ -16,7 +16,9 @@ cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
 RUN git config --global user.email "githook@test.com" && \\
-    git config --global user.name "Githook Tests"
+    git config --global user.name "Githook Tests" && \\
+    # @todo Change this to main as soon as possible. And check if all tests rund through... cli.sh still using master...
+    git config --global init.defaultBranch master
 
 # Add sources
 COPY --chown=${OS_USER}:${OS_USER} base-template-wrapper.sh cli.sh /var/lib/githooks/

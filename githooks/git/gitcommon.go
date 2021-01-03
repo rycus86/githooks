@@ -137,6 +137,11 @@ func (c *Context) GetRepoRoot() (topLevel string, gitDir string, err error) {
 	return
 }
 
+// GetCurrentBranch gets the current branch in repository.
+func (c *Context) GetCurrentBranch() (string, error) {
+	return c.Get("branch", "--show-current")
+}
+
 // FindGitDirs returns Git directories inside `searchDir`.
 // Paths relative to `searchDir` containing `.dotfiles` (hidden files)
 // will never be reported. Optionally the output can be sorted.
@@ -204,7 +209,7 @@ func Clone(repoPath string, url string, branch string, depth int) error {
 	out, e := CtxSanitized().GetCombined(args...)
 
 	if e != nil {
-		return cm.ErrorF("Cloning of '%s'\ninto '%s' failed:\n%s", url, repoPath, out)
+		return cm.ErrorF("Cloning of '%s' [branch: '%s']\ninto '%s' failed:\n%s", url, branch, repoPath, out)
 	}
 
 	return nil

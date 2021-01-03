@@ -6,6 +6,6 @@ package updates
 var DefaultURL = "/var/lib/githooks"
 
 // DefaultBranch is the default branch for release clones.
-var DefaultBranch = "master"
+var DefaultBranch = ""
 
 var defaultRemote = "origin"
