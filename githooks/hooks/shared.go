@@ -115,7 +115,7 @@ func GetRepoSharedFileRel() string {
 	return path.Join(HooksDirName, ".shared.yaml")
 }
 
-func getSharedCloneDir(installDir string, url string) string {
+func GetSharedCloneDir(installDir string, url string) string {
 	// Legacy: As we used `git hash-object --stdin` we need to model the same behavior here
 	// @todo Remove `blob`+ length + \0...
 	sha1 := cm.GetSHA1HashString("blob ", strs.Fmt("%v", len([]byte(url))), "\u0000", url)
@@ -178,7 +178,7 @@ func parseSharedUrl(installDir string, url string) (SharedHook, error) {
 		}
 
 		// Define the shared clone folder
-		h.RepositoryDir = getSharedCloneDir(installDir, url)
+		h.RepositoryDir = GetSharedCloneDir(installDir, url)
 	}
 
 	return h, nil

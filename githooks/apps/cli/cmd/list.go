@@ -132,7 +132,7 @@ func listHooksForName(
 			shHooks = append(shHooks,
 				getAllHooksIn(hookName, hooks.GetGithooksDir(sharedHook.RepositoryDir), state, true, false)...)
 
-			printHooks(shHooks, title, category)
+			printHooks(shHooks, strs.Fmt(title, sharedHook.OriginalURL), category)
 		}
 	}
 
@@ -145,9 +145,9 @@ func listHooksForName(
 	printHooks(repoHooks, "Repository Hooks:", "repo")
 
 	// List all shared hooks
-	listShared(repoSharedHooks, "Repository Shared Hooks:", "shared:repo")
-	listShared(localSharedHooks, "Local Shared Hooks:", "shared:local")
-	listShared(globalSharedHooks, "Global Shared Hooks:", "shared:global")
+	listShared(repoSharedHooks, "Repository Shared Hooks: url: '%s'", "shared:repo")
+	listShared(localSharedHooks, "Local Shared Hooks: url: '%s'", "shared:local")
+	listShared(globalSharedHooks, "Global Shared Hooks: url: '%s'", "shared:global")
 
 	return sb.String(),
 		len(replacedHooks) +

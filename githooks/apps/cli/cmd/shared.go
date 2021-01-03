@@ -94,6 +94,16 @@ running 'git pull' on existing ones or 'git clone' on new ones.`,
 		runSharedUpdate()
 	}}
 
+var sharedLocationCmd = &cobra.Command{
+	Use:    "location [URL]...",
+	Short:  `Get the clone location of a shared repository URL.`,
+	Long:   `Returns the clone location of a shared repository URL.`,
+	Hidden: true,
+	PreRun: panicIfNotRangeArgs(0, 999),
+	Run: func(cmd *cobra.Command, args []string) {
+		runSharedLocation(args)
+	}}
+
 type SharedOpts struct {
 	Shared bool
 	Local  bool
@@ -311,6 +321,14 @@ func runSharedUpdate() {
 	log.InfoF("Update '%v' shared repositories.", updated)
 }
 
+func runSharedLocation(urls []string) {
+	for _, url := range urls {
+		location := hooks.GetSharedCloneDir(settings.InstallDir, url)
+		_, err := log.GetInfoWriter().Write([]byte(location + "\n"))
+		log.AssertNoErrorF(err, "Could not write output.")
+	}
+}
+
 func init() { // nolint: gochecknoinits
 
 	sharedCmd.AddCommand(addSharedOpts(setCommandDefaults(sharedAddCmd), false))
@@ -319,6 +337,7 @@ func init() { // nolint: gochecknoinits
 	sharedCmd.AddCommand(setCommandDefaults(sharedPurgeCmd))
 	sharedCmd.AddCommand(addSharedOpts(setCommandDefaults(sharedListCmd), true))
 	sharedCmd.AddCommand(setCommandDefaults(sharedUpdateCmd))
+	sharedCmd.AddCommand(setCommandDefaults(sharedLocationCmd))
 
 	rootCmd.AddCommand(setCommandDefaults(sharedCmd))
 }
