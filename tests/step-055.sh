@@ -4,76 +4,100 @@
 
 "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
-mkdir -p ~/.githooks/shared/repo1/.githooks/pre-commit &&
-    cd ~/.githooks/shared/repo1 &&
+url1="ssh://git@github.com/test/repo1.git"
+location1=$("$GITHOOKS_EXE_GIT_HOOKS" shared location "$url1") || exit 1
+
+url2="https://github.com/test/repo2.git"
+location2=$("$GITHOOKS_EXE_GIT_HOOKS" shared location "$url2") || exit 1
+
+url3="ftp://github.com/test/repo3.git"
+location3=$("$GITHOOKS_EXE_GIT_HOOKS" shared location "$url3") || exit 1
+
+mkdir -p "$location1"/pre-commit &&
+    cd "$location1" &&
     git init &&
-    git remote add origin ssh://git@github.com/test/repo1.git &&
-    echo 'echo "Hello"' >~/.githooks/shared/repo1/.githooks/pre-commit/global-pre1 &&
-    echo 'echo "Hello"' >~/.githooks/shared/repo1/.githooks/commit-msg &&
-    mkdir -p ~/.githooks/shared/repo2/pre-push &&
-    cd ~/.githooks/shared/repo2 &&
+    git remote add origin "$url1" &&
+    echo 'echo "Hello"' >pre-commit/shared-pre1 &&
+    echo 'echo "Hello"' >commit-msg
+
+mkdir -p "$location2"/pre-push &&
+    cd "$location2" &&
     git init &&
-    git remote add origin https://github.com/test/repo2.git &&
-    echo 'echo "Hello"' >~/.githooks/shared/repo2/post-commit &&
-    echo 'echo "Hello"' >~/.githooks/shared/repo2/pre-push/global-pre2 ||
+    git remote add origin "$url2" &&
+    echo 'echo "Hello"' >post-commit &&
+    echo 'echo "Hello"' >pre-push/shared-pre2 ||
     exit 1
 
-git config --global githooks.shared 'ssh://git@github.com/test/repo1.git' || exit 1
+mkdir -p "$location3"/post-update &&
+    cd "$location3" &&
+    git init &&
+    git remote add origin "$url3" &&
+    echo 'echo "Hello"' >post-rewrite &&
+    echo 'echo "Hello"' >post-update/shared-pre3 ||
+    exit 1
+
+git config --global githooks.shared "$url1" || exit 1
 
 mkdir -p /tmp/test055/.githooks/pre-commit &&
     mkdir -p /tmp/test055/.githooks/post-commit &&
     echo 'echo "Hello"' >/tmp/test055/.githooks/pre-commit/local-pre &&
     echo 'echo "Hello"' >/tmp/test055/.githooks/post-commit/local-post &&
     echo 'echo "Hello"' >/tmp/test055/.githooks/post-merge &&
-    echo 'https://github.com/test/repo2.git' >/tmp/test055/.githooks/.shared &&
+    echo "urls: - $url2" >/tmp/test055/.githooks/.shared.yaml &&
     cd /tmp/test055 &&
     git init &&
     mkdir -p .git/hooks &&
     echo 'echo "Hello"' >.git/hooks/pre-commit.replaced.githook &&
-    chmod +x .git/hooks/pre-commit.replaced.githook ||
+    chmod +x .git/hooks/pre-commit.replaced.githook &&
+    git config --local githooks.shared "$url3" ||
     exit 1
 
-if ! git hooks list pre-commit | grep -q "previous / file"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep -q "'replaced'"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! git hooks list pre-commit | grep -q "shared:global"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep "shared-pre1" | grep -q "'shared:global'"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! git hooks list pre-commit | grep -q "local-pre"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep "local-pre" | grep "'repo'"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! git hooks list commit-msg | grep -q "shared:global"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list commit-msg | grep "'shared:global'" | grep -q "commit-msg"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
-if ! git hooks list post-commit | grep -q "shared:local"; then
-    echo "! Unexpected cli list output (5)"
-    exit 1
-fi
-
-if ! git hooks list post-commit | grep -q "local-post"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-commit | grep "local-post" | grep -q "'repo'"; then
     echo "! Unexpected cli list output (6)"
     exit 1
 fi
 
-if ! git hooks list post-merge | grep -q "file /"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-commit | grep "'shared:repo'" | grep -q "post-commit"; then
+    echo "! Unexpected cli list output (5)"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-merge | grep "'repo'" | grep -q "post-merge"; then
     echo "! Unexpected cli list output (7)"
     exit 1
 fi
 
-if ! git hooks list pre-push | grep -q "shared:local"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-push | grep "shared-pre2" | grep -q "'shared:repo'"; then
     echo "! Unexpected cli list output (8)"
     exit 1
 fi
 
-if ! git hooks list || ! git hooks list pre-commit || ! git hooks list post-commit; then
-    echo "! The Git alias integration failed"
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-update | grep "shared-pre3" | grep -q "'shared:local'"; then
+    echo "! Unexpected cli list output (9)"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-rewrite | grep "'shared:local'" | grep -q "'post-rewrite'"; then
+    echo "! Unexpected cli list output (10)"
     exit 1
 fi

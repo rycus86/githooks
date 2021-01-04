@@ -10,19 +10,14 @@ mkdir -p /tmp/test053/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! git hooks list | grep "\\- example" | grep "pending"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'untrusted'" | grep "'active'"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
 
-git commit -m ''
+git commit -m 'Test'
 
-if ! git hooks list | grep "\\- example" | grep "active"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'trusted'" | grep "'active'"; then
     echo "! Unexpected cli list output"
-    exit 1
-fi
-
-if ! git hooks list; then
-    echo "! The Git alias integration failed"
     exit 1
 fi

@@ -419,7 +419,6 @@ func executeOldHook(settings *HookSettings,
 
 	// e.g. 'hooks/pre-commit.replaced.githook's
 	hookName := hooks.GetHookReplacementFileName(settings.HookName)
-	hookPath := path.Join(settings.HookDir, hookName)
 	hookNamespace := "" // @todo Introduce namespacing here! use: "hooks"
 
 	// Old hook can only be ignored by user ignores...
@@ -440,11 +439,11 @@ func executeOldHook(settings *HookSettings,
 		return trusted, sha
 	}
 
-	hooks, err := hooks.GetAllHooksIn(hookPath, hookNamespace, isIgnored, isTrusted)
-	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hookPath)
+	hooks, err := hooks.GetAllHooksIn(settings.HookDir, hookName, hookNamespace, isIgnored, isTrusted)
+	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", settings.HookDir)
 
 	if len(hooks) == 0 {
-		log.DebugF("Old hook:\n'%s'\ndoes not exist. -> Skip!", hookPath)
+		log.DebugF("Old hook '%s' does not exist. -> Skip!", hookName)
 
 		return
 	}
@@ -705,16 +704,14 @@ func getHooksIn(settings *HookSettings,
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
 	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
 
-	dirOrFile := path.Join(hooksDir, settings.HookName)
-	hookNamespace = path.Join(hookNamespace, settings.HookName)
-
 	allHooks, err := hooks.GetAllHooksIn(
-		dirOrFile,
+		hooksDir,
+		settings.HookName,
 		hookNamespace,
 		isIgnored,
 		isTrusted)
 
-	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", dirOrFile)
+	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hooksDir)
 
 	// @todo Make a priority list for executing all batches in parallel
 	// First good solution: all sequential

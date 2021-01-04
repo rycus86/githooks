@@ -46,12 +46,13 @@ type IngoreCallback = func(namespacePath string) (ignored bool)
 type TrustCallback = func(hookPath string) (trusted bool, sha1 string)
 
 func GetAllHooksIn(
-	dirOrFile string,
+	hooksDir string,
+	hookName string,
 	hookNamespace string,
 	isIgnored IngoreCallback,
 	isTrusted TrustCallback) (allHooks []Hook, err error) {
 
-	appendHook := func(hookPath string) error {
+	appendHook := func(hookPath string, hookNamespace string) error {
 		// Namespace the path to check ignores
 		namespacedPath := path.Join(hookNamespace, path.Base(hookPath))
 		ignored := isIgnored(namespacedPath)
@@ -80,6 +81,8 @@ func GetAllHooksIn(
 		return nil
 	}
 
+	dirOrFile := path.Join(hooksDir, hookName)
+
 	// Collect all hooks in e.g. `path/pre-commit/*`
 	if cm.IsDirectory(dirOrFile) {
 
@@ -91,7 +94,7 @@ func GetAllHooksIn(
 					return nil
 				}
 
-				return appendHook(hookPath)
+				return appendHook(hookPath, path.Join(hookNamespace, hookName))
 			})
 
 		if err != nil {
@@ -101,7 +104,7 @@ func GetAllHooksIn(
 		}
 
 	} else if cm.IsFile(dirOrFile) { // Check hook in `path/pre-commit`
-		err = appendHook(dirOrFile)
+		err = appendHook(dirOrFile, hookNamespace)
 	}
 
 	return

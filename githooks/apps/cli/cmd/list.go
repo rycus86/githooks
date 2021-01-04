@@ -68,6 +68,7 @@ func runList(hookNames []string, warnNotFound bool) {
 		sharedIgnores:      make(IgnoresPerHookDir, 10),
 		paddingMax:         60} //nolint: gomnd
 
+	total := 0
 	for _, hookName := range hookNames {
 
 		list, count := listHooksForName(
@@ -80,10 +81,13 @@ func runList(hookNames []string, warnNotFound bool) {
 			&state)
 
 		if count != 0 {
-			log.InfoF("Hook Event: '%s':%s\n", hookName, list)
+			log.InfoF("Hook: '%s' [%v] :%s\n", hookName, count, list)
 		}
+
+		total += count
 	}
 
+	log.InfoF("Total listed hooks: '%v'.", total)
 }
 
 type IgnoresPerHookDir = map[string]*hooks.HookIgnorePatterns
@@ -116,43 +120,44 @@ func listHooksForName(
 		}
 
 		padding := findPaddingListHooks(hooks, state.paddingMax)
-		_, err := strs.FmtW(&sb, "\n  ▶ %s", title)
+		_, err := strs.FmtW(&sb, "\n %s", title)
 		cm.AssertNoErrorPanicF(err, "Could not write hook state.")
 
 		for _, hook := range hooks {
 			sb.WriteString("\n")
-			formatHookState(&sb, hook, category, state.isGithooksDisabled, padding, "    ")
+			formatHookState(&sb, hook, category, state.isGithooksDisabled, padding, "  ")
 		}
 	}
 
-	listShared := func(sharedHooks []hooks.SharedHook, title string, category string) {
+	listShared := func(sharedHooks []hooks.SharedHook, title string, category string) (count int) {
 		for _, sharedHook := range sharedHooks {
-			shHooks := getAllHooksIn(hookName, sharedHook.RepositoryDir, state, true, false)
+			shHooks := getAllHooksIn(sharedHook.RepositoryDir, hookName, state, true, false)
 			// @todo remove this as soon as possible
 			shHooks = append(shHooks,
-				getAllHooksIn(hookName, hooks.GetGithooksDir(sharedHook.RepositoryDir), state, true, false)...)
+				getAllHooksIn(hooks.GetGithooksDir(sharedHook.RepositoryDir), hookName, state, true, false)...)
 
 			printHooks(shHooks, strs.Fmt(title, sharedHook.OriginalURL), category)
+			count += len(shHooks)
 		}
+
+		return count
 	}
 
 	// List replaced hooks (normally only one)
-	replacedHooks := getAllHooksIn(hookName, path.Join(gitDir, "hooks"), state, false, true)
-	printHooks(replacedHooks, "Replaced Hooks:", "replaced")
+	replacedHooks := getAllHooksIn(path.Join(gitDir, "hooks"), hookName, state, false, true)
+	printHooks(replacedHooks, "Replaced:", "replaced")
 
 	// List repository hooks
-	repoHooks := getAllHooksIn(hookName, repoHooksDir, state, false, false)
-	printHooks(repoHooks, "Repository Hooks:", "repo")
+	repoHooks := getAllHooksIn(repoHooksDir, hookName, state, false, false)
+	printHooks(repoHooks, "Repository:", "repo")
 
 	// List all shared hooks
-	listShared(repoSharedHooks, "Repository Shared Hooks: url: '%s'", "shared:repo")
-	listShared(localSharedHooks, "Local Shared Hooks: url: '%s'", "shared:local")
-	listShared(globalSharedHooks, "Global Shared Hooks: url: '%s'", "shared:global")
+	sharedCount :=
+		listShared(repoSharedHooks, "Shared: '%s'", "shared:repo") +
+			listShared(localSharedHooks, "Shared: '%s'", "shared:local") +
+			listShared(globalSharedHooks, "Shared: '%s'", "shared:global")
 
-	return sb.String(),
-		len(replacedHooks) +
-			len(repoHooks) +
-			len(repoSharedHooks) + len(localSharedHooks) + len(globalSharedHooks)
+	return sb.String(), len(replacedHooks) + len(repoHooks) + sharedCount
 }
 
 func findPaddingListHooks(hooks []hooks.Hook, maxPadding int) int {
@@ -166,8 +171,8 @@ func findPaddingListHooks(hooks []hooks.Hook, maxPadding int) int {
 }
 
 func getAllHooksIn(
-	hookName string,
 	hooksDir string,
+	hookName string,
 	state *ListHooksState,
 	addInternalIgnores bool,
 	isReplacedHook bool) []hooks.Hook {
@@ -208,17 +213,13 @@ func getAllHooksIn(
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
 	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
 
-	var dirOrFile string
 	if isReplacedHook {
-		dirOrFile = path.Join(hooksDir, hooks.GetHookReplacementFileName(hookName))
+		hookName = hooks.GetHookReplacementFileName(hookName)
 		hookNamespace = "" // @todo Introduce namespacing here! use: "hooks"
-	} else {
-		dirOrFile = path.Join(hooksDir, hookName)
-		hookNamespace = path.Join(hookNamespace, hookName)
 	}
 
-	allHooks, err := hooks.GetAllHooksIn(dirOrFile, hookNamespace, isIgnored, isTrusted)
-	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", dirOrFile)
+	allHooks, err := hooks.GetAllHooksIn(hooksDir, hookName, hookNamespace, isIgnored, isTrusted)
+	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hooksDir)
 
 	return allHooks
 }
