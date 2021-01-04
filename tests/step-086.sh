@@ -23,10 +23,4 @@ git hooks config enable update || exit 7
 git hooks config list --global | grep 'githooks.autoupdate.enabled' || exit 8
 git hooks config list | grep 'githooks.autoupdate.enabled' || exit 9
 
-# Check the Git alias
 ! git hooks config set unknown || exit 10
-
-git hooks config enable update &&
-    git hooks config list --global | grep 'githooks.autoupdate.enabled' || exit 12
-git hooks config list | grep 'githooks.autoupdate.enabled' ||
-    exit 13

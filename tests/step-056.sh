@@ -45,8 +45,3 @@ if ! git hooks list | grep "second" | grep -q "disabled"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
-
-if ! git hooks disable || ! git hooks list; then
-    echo "! The Git alias integration failed"
-    exit 1
-fi

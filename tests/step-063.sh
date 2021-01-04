@@ -25,8 +25,3 @@ if [ "$CURRENT" = "$AFTER" ]; then
     echo "! Release clone was not updated, but it should have!"
     exit 1
 fi
-
-if ! git hooks update; then
-    echo "! The Git alias integration failed"
-    exit 1
-fi

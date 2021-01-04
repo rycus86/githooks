@@ -16,12 +16,3 @@ git hooks disable --all &&
 git hooks disable --reset &&
     [ "$(git config --get githooks.disable)" != "true" ] ||
     exit 1
-
-# Check the Git alias
-git hooks disable -a &&
-    [ "$(git config --get githooks.disable)" = "true" ] ||
-    exit 1
-
-git hooks disable -r &&
-    [ "$(git config --get githooks.disable)" != "true" ] ||
-    exit 1

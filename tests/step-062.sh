@@ -18,8 +18,3 @@ if git hooks update unknown; then
     echo "! Expected to fail on unknown operation"
     exit 1
 fi
-
-if ! git hooks update force; then
-    echo "! The Git alias integration failed"
-    exit 1
-fi

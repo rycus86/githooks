@@ -24,9 +24,3 @@ if "$GITHOOKS_EXE_GIT_HOOKS" readme add; then
     echo "! Expected to fail"
     exit 1
 fi
-
-# Check the Git alias
-rm -f .githooks/README.md &&
-    "$GITHOOKS_EXE_GIT_HOOKS" readme add &&
-    [ -f .githooks/README.md ] ||
-    exit 1

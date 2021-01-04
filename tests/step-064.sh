@@ -16,9 +16,4 @@ for SUBCOMMAND in $(echo "$OUTPUT" | grep '^  ' | awk '{ print $1 }'); do
         echo "! Failed to print help for $SUBCOMMAND"
         exit 1
     fi
-
-    if ! git hooks "$SUBCOMMAND" help; then
-        echo "! The Git alias integration failed"
-        exit 1
-    fi
 done

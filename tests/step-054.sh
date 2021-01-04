@@ -26,9 +26,3 @@ if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-commit | grep -v "pre-example"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
-
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit ||
-    ! "$GITHOOKS_EXE_GIT_HOOKS" list post-commit; then
-    echo "! The Git alias integration failed"
-    exit 1
-fi

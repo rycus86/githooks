@@ -16,14 +16,3 @@ git config --global --unset githooks.autoupdate.enabled &&
     git hooks update disable &&
     [ "$(git config --get githooks.autoupdate.enabled)" = "false" ] ||
     exit 1
-
-# Check the Git alias
-git config --global --unset githooks.autoupdate.enabled &&
-    git hooks update enable &&
-    [ "$(git config --get githooks.autoupdate.enabled)" = "true" ] ||
-    exit 1
-
-git config --global --unset githooks.autoupdate.enabled &&
-    git hooks update disable &&
-    [ "$(git config --get githooks.autoupdate.enabled)" = "false" ] ||
-    exit 1

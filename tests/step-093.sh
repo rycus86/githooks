@@ -21,11 +21,3 @@ git hooks config deny trusted &&
     git hooks config print trusted | grep 'does NOT trust hooks' || exit 7
 git hooks config reset trusted &&
     git hooks config print trusted | grep 'does NOT have' || exit 8
-
-# Check the Git alias
-git hooks config accept trusted &&
-    git hooks config print trusted | grep 'trusts all hooks' || exit 10
-git hooks config deny trusted &&
-    git hooks config print trusted | grep 'does NOT trust hooks' || exit 11
-git hooks config reset trusted &&
-    git hooks config print trusted | grep 'does NOT have' || exit 12

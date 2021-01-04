@@ -14,9 +14,3 @@ git hooks config set search-dir /prev/search/dir &&
     git hooks config print search-dir | grep '/prev/search/dir' || exit 4
 git hooks config reset search-dir &&
     git hooks config print search-dir | grep 'No previous search directory is set' || exit 5
-
-# Check the Git alias
-git hooks config set search-dir /prev/search/dir &&
-    git hooks config print search-dir | grep '/prev/search/dir' || exit 10
-git hooks config reset search-dir &&
-    git hooks config print search-dir | grep 'No previous search directory is set' || exit 11

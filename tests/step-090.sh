@@ -19,9 +19,3 @@ git hooks config set disable &&
     git hooks config print disable | grep -v 'NOT' || exit 6
 git hooks config reset disable &&
     git hooks config print disable | grep 'NOT' || exit 7
-
-# Check the Git alias
-git hooks config set disable &&
-    git hooks config print disable | grep -v 'NOT' || exit 10
-git hooks config reset disable &&
-    git hooks config print disable | grep 'NOT' || exit 11

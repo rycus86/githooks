@@ -33,8 +33,3 @@ if ! git hooks list | grep "example" | grep -q "pending"; then
     echo "! Unexpected cli list output"
     exit 3
 fi
-
-if ! git hooks list; then
-    echo "! The Git alias integration failed"
-    exit 4
-fi
