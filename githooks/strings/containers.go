@@ -2,14 +2,19 @@ package strs
 
 // AppendUnique appends the string to the array
 // if its not existing. The bool indicates if an append occurred.
-func AppendUnique(slice []string, s string) ([]string, bool) {
-	for _, el := range slice {
-		if el == s {
-			return slice, false
+func AppendUnique(slice []string, elems ...string) (sl []string, appended int) {
+	sl = slice
+
+	for _, s := range elems {
+		if Includes(sl, s) {
+			continue
 		}
+
+		appended += 1
+		sl = append(sl, s)
 	}
 
-	return append(slice, s), true
+	return
 }
 
 // MakeUnique makes the slice containing only unique items.
@@ -23,16 +28,15 @@ func MakeUnique(slice []string) []string {
 }
 
 // Remove removes all occurrences from the slice.
-// The bool indicates if a remove occurred.
-func Remove(slice []string, s string) ([]string, bool) {
-	newitems := make([]string, 0, len(slice))
-	removed := false
+// The int indicates if a remove occurred.
+func Remove(slice []string, s string) (newitems []string, removed int) {
+	newitems = make([]string, 0, len(slice))
 
 	for _, el := range slice {
 		if el != s {
 			newitems = append(newitems, el)
 		} else {
-			removed = true
+			removed++
 		}
 	}
 

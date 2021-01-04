@@ -69,13 +69,15 @@ func (r *RegisterRepos) Store(installDir string) (err error) {
 
 // Insert adds a repository Git directory uniquely.
 func (r *RegisterRepos) Insert(gitDir string) (inserted bool) {
-	r.GitDirs, inserted = strs.AppendUnique(r.GitDirs, gitDir)
+	c := 0
+	r.GitDirs, c = strs.AppendUnique(r.GitDirs, gitDir)
+	inserted = c != 0
 
 	return
 }
 
 // Remove removes a repository Git directory.
-func (r *RegisterRepos) Remove(gitDir string) (removed bool) {
+func (r *RegisterRepos) Remove(gitDir string) (removed int) {
 	r.GitDirs, removed = strs.Remove(r.GitDirs, gitDir)
 
 	return

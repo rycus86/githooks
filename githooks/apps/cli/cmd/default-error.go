@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"math"
+
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +30,9 @@ func panicIfNotExactArgs(nArgs int) func(cmd *cobra.Command, args []string) {
 
 func panicIfNotRangeArgs(nMinArgs int, nMaxArgs int) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		if nMaxArgs < 0 {
+			nMaxArgs = math.MaxInt32
+		}
 		err := cobra.RangeArgs(nMinArgs, nMaxArgs)(cmd, args)
 		if err != nil {
 			_ = cmd.Help()

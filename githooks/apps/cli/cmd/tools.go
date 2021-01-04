@@ -25,18 +25,18 @@ Currently the following tools are supported:
   The interface of the dialog tool is as follows.
 
   - if 'run' is executable
-  	$ run <title> <text> <options> <long-options>
+      $ run <title> <text> <options> <long-options>
   - otherwise, assuming 'run' is a shell script
-  	$ sh run <title> <text> <options> <long-options>
+      $ sh run <title> <text> <options> <long-options>
 
   The arguments of the dialog tool are:
   - '<title>' the title for the GUI dialog
   - '<text>' the text for the GUI dialog
   - '<short-options>' the button return values, slash-delimited,
-  	e.g. 'Y/n/d'.
-  	The default button is the first capital character found.
+      e.g. 'Y/n/d'.
+      The default button is the first capital character found.
   - '<long-options>' the button texts in the GUI,
-  	e.g. 'Yes/no/disable'
+      e.g. 'Yes/no/disable'
 
   The script needs to return one of the short-options on 'stdout'.
   Non-zero exit code triggers the fallback of reading from 'stdin'.`}

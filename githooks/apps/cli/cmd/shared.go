@@ -99,7 +99,7 @@ var sharedLocationCmd = &cobra.Command{
 	Short:  `Get the clone location of a shared repository URL.`,
 	Long:   `Returns the clone location of a shared repository URL.`,
 	Hidden: true,
-	PreRun: panicIfNotRangeArgs(0, 999),
+	PreRun: panicIfNotRangeArgs(0, -1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runSharedLocation(args)
 	}}

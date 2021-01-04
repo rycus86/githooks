@@ -419,7 +419,7 @@ func executeOldHook(settings *HookSettings,
 
 	// e.g. 'hooks/pre-commit.replaced.githook's
 	hookName := hooks.GetHookReplacementFileName(settings.HookName)
-	hookNamespace := "" // @todo Introduce namespacing here! use: "hooks"
+	hookNamespace := hooks.ReplacedHookNamespace
 
 	// Old hook can only be ignored by user ignores...
 	isIgnored := func(namespacePath string) bool {
@@ -475,7 +475,7 @@ func collectHooks(
 	checksums *hooks.ChecksumStore) (h hooks.Hooks) {
 
 	// Local hooks in repository
-	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, true, ignores, checksums)
+	h.LocalHooks = getHooksIn(settings, uiSettings, settings.RepositoryHooksDir, true, "", ignores, checksums)
 
 	// All shared hooks
 	var allAddedShared = make([]string, 0)
@@ -672,6 +672,7 @@ func getHooksIn(settings *HookSettings,
 	uiSettings *UISettings,
 	hooksDir string,
 	addInternalIgnores bool,
+	defaultHookNamespace string,
 	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) (batches hooks.HookPrioList) {
 
@@ -692,7 +693,7 @@ func getHooksIn(settings *HookSettings,
 
 	if addInternalIgnores {
 		var e error
-		internalIgnores, e = hooks.GetHookIgnorePatternsHookDir(hooksDir, []string{settings.HookName})
+		internalIgnores, e = hooks.GetHookIgnorePatternsHooksDir(hooksDir, []string{settings.HookName})
 		log.AssertNoErrorPanicF(e, "Could not get worktree ignores in '%s'.", hooksDir)
 	}
 
@@ -702,8 +703,12 @@ func getHooksIn(settings *HookSettings,
 		return ignored || internalIgnores.IsIgnored(namespacePath)
 	}
 
+	// Determine namespace
 	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
 	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
+	if strs.IsEmpty(hookNamespace) {
+		hookNamespace = defaultHookNamespace
+	}
 
 	allHooks, err := hooks.GetAllHooksIn(
 		hooksDir,
@@ -744,16 +749,17 @@ func getHooksInShared(settings *HookSettings,
 	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) hooks.HookPrioList {
 
+	defaultHookNamespace := cm.GetSHA1HashString(hook.OriginalURL)
+
 	// Legacy
 	// @todo Remove this, dont support /.githooks because it will enable
 	// using hooks in hook repos!
 	dir := hooks.GetGithooksDir(hook.RepositoryDir)
 	if cm.IsDirectory(dir) {
-		return getHooksIn(settings, uiSettings, dir, true, ignores, checksums)
+		return getHooksIn(settings, uiSettings, dir, true, defaultHookNamespace, ignores, checksums)
 	}
 
-	return getHooksIn(settings, uiSettings, hook.RepositoryDir, true, ignores, checksums)
-
+	return getHooksIn(settings, uiSettings, hook.RepositoryDir, true, defaultHookNamespace, ignores, checksums)
 }
 
 func logBatches(title string, hooks hooks.HookPrioList) {

@@ -13,7 +13,7 @@ Manages various Githooks configuration.
 
 git hooks config list [--local|--global]
 
-	Lists the Githooks related settings of the Githooks configuration.
+    Lists the Githooks related settings of the Githooks configuration.
     Can be either global or local configuration, or both by default.
 
 git hooks config [set|reset|print] disable
@@ -86,17 +86,17 @@ git hooks config [reset|print] update-time
 
 git hooks config [enable|disable|print] fail-on-non-existing-shared-hooks [--local|--global]
 
-	Enable or disable failing hooks with an error when any
-	shared hooks configured in '.shared' are missing,
-	which usually means 'git hooks update' has not been called yet.
+    Enable or disable failing hooks with an error when any
+    shared hooks configured in '.shared' are missing,
+    which usually means 'git hooks update' has not been called yet.
 
 git hooks config [yes|no|reset|print] delete-detected-lfs-hooks
 
-	By default, detected LFS hooks during install are disabled and backed up.
-	The 'yes' option remembers to always delete these hooks.
-	The 'no' option remembers the default behavior.
-	The decision is reset with 'reset' to the default behavior.
-	The 'print' option outputs the current behavior.`,
+    By default, detected LFS hooks during install are disabled and backed up.
+    The 'yes' option remembers to always delete these hooks.
+    The 'no' option remembers the default behavior.
+    The decision is reset with 'reset' to the default behavior.
+    The 'print' option outputs the current behavior.`,
 	Run: runConfig,
 }
 

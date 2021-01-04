@@ -68,7 +68,7 @@ But are ignored when pulled in by other hook execution: **[done]**
 
         - `<repo>/.git/.githooks.ignore.yaml`
 
-    2. **Worktree Ignores**
+    2. **Repository Ignores**
 
         - `<repo>/.githooks/.ignore.yaml` [
         - `<repo>/.githooks/<hookName>/.ignore.yaml`

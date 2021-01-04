@@ -147,7 +147,12 @@
         "--api-version=2",
         "./apps/cli",
         "--",
-        "list"
+        "ignore",
+        "add-pattern",
+        "--repository",
+        "--hook-name",
+        "post-rewrite",
+        "post-rewrite"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

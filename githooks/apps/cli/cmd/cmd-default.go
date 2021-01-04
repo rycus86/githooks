@@ -1,6 +1,12 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"rycus86/githooks/hooks"
+	strs "rycus86/githooks/strings"
+	"strings"
+
+	"github.com/spf13/cobra"
+)
 
 // setCommandDefaults sets defaults for the command 'cmd'.
 func setCommandDefaults(cmd *cobra.Command) *cobra.Command {
@@ -28,4 +34,12 @@ func assertRepoRoot(settings *Settings) (string, string) {
 		settings.Cwd)
 
 	return repoRoot, gitDir
+}
+
+func getFormattedHookList(indent string) string {
+	return strings.Join(strs.Map(hooks.ManagedHookNames,
+		func(s string) string {
+			return strs.Fmt("%s%s '%s'", indent, ListItemLiteral, s)
+		}),
+		"\n")
 }

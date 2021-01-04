@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+const (
+	ReplacedHookNamespace = "hooks"
+)
+
 func getNamespaceFile(hooksDir string) string {
 	return path.Join(hooksDir, ".namespace")
 }

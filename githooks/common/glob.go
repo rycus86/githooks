@@ -14,7 +14,19 @@ import (
 	"path/filepath"
 	strs "rycus86/githooks/strings"
 	"strings"
+
+	glob "github.com/bmatcuk/doublestar/v3"
 )
+
+// GlobMatch matches a pattern against a path.
+func GlobMatch(pattern string, path string) (bool, error) {
+	if !strings.Contains(pattern, "**") {
+		// passthru to core package if no double-star
+		return filepath.Match(pattern, path)
+	} else {
+		return glob.Match(pattern, path)
+	}
+}
 
 // Globs represents one filepath glob, with its elements joined by "**".
 type globs []string

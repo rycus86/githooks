@@ -21,9 +21,9 @@ var listCmd = &cobra.Command{
 		"This command needs to be run at the root of a repository.\n\n" +
 		"If 'type' is given, then it only lists the hooks for that trigger event.\n" +
 		"The supported hooks are:\n\n" +
-		strings.Join(strs.Map(hooks.ManagedHookNames, func(s string) string { return " • " + s }), "\n") +
+		getFormattedHookList(" ") +
 		"\nThe value 'ns-path' is the namespaced path which is used for the ignore patterns.",
-	PreRun: panicIfNotRangeArgs(0, 100),
+	PreRun: panicIfNotRangeArgs(0, -1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
 			args = strs.MakeUnique(args)
@@ -68,7 +68,7 @@ func runList(hookNames []string, warnNotFound bool) {
 		ignores:            &ignores,
 		isRepoTrusted:      isTrusted,
 		isGithooksDisabled: isDisabled,
-		sharedIgnores:      make(ignoresPerHookDir, 10),
+		sharedIgnores:      make(ignoresPerHooksDir, 10),
 		paddingMax:         60} //nolint: gomnd
 
 	total := 0
@@ -93,7 +93,7 @@ func runList(hookNames []string, warnNotFound bool) {
 	log.InfoF("Total listed hooks: '%v'.", total)
 }
 
-type ignoresPerHookDir = map[string]*hooks.HookIgnorePatterns
+type ignoresPerHooksDir = map[string]*hooks.HookIgnorePatterns
 
 type listHookState struct {
 	checksums *hooks.ChecksumStore
@@ -102,7 +102,7 @@ type listHookState struct {
 	isRepoTrusted      bool
 	isGithooksDisabled bool
 
-	sharedIgnores ignoresPerHookDir
+	sharedIgnores ignoresPerHooksDir
 	paddingMax    int
 }
 
@@ -254,7 +254,7 @@ func getAllHooksIn(
 	hookDirIgnores := state.sharedIgnores[hooksDir]
 	if hookDirIgnores == nil && addInternalIgnores {
 		var e error
-		igns, e := hooks.GetHookIgnorePatternsHookDir(hooksDir, []string{hookName})
+		igns, e := hooks.GetHookIgnorePatternsHooksDir(hooksDir, []string{hookName})
 		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'.", hooksDir)
 		state.sharedIgnores[hooksDir] = &igns
 		hookDirIgnores = &igns
@@ -277,7 +277,7 @@ func getAllHooksIn(
 
 	if isReplacedHook {
 		hookName = hooks.GetHookReplacementFileName(hookName)
-		hookNamespace = "" // @todo Introduce namespacing here! use: "hooks"
+		hookNamespace = hooks.ReplacedHookNamespace
 	}
 
 	allHooks, err := hooks.GetAllHooksIn(hooksDir, hookName, hookNamespace, isIgnored, isTrusted)

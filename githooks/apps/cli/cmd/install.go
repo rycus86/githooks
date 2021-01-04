@@ -13,8 +13,8 @@ Installs the Githooks run wrappers into the current repository.
 
 git hooks install [--global]
 
-	If the '--global' flag is given, it executes the installation
-	globally, including the hook templates for future repositories.`,
+    If the '--global' flag is given, it executes the installation
+    globally, including the hook templates for future repositories.`,
 	Run: runInstall,
 }
 
@@ -31,8 +31,8 @@ Uninstalls the Githooks hooks from the current repository.
 
 git hooks uninstall [--global]
 
-	If the '--global' flag is given, it executes the uninstallation
-	globally, including the hook templates and all local repositories.`,
+    If the '--global' flag is given, it executes the uninstallation
+    globally, including the hook templates and all local repositories.`,
 	Run: runUninstall,
 }
 

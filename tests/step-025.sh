@@ -22,6 +22,6 @@ if [ $? -ne 1 ]; then
     exit 1
 fi
 
-printf 'patterns:\n   - "*.replaced.githook"' >.git/.githooks.ignore.yaml &&
+printf 'patterns:\n   - "**/*.replaced.githook"' >.git/.githooks.ignore.yaml &&
     ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

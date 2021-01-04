@@ -36,10 +36,11 @@ var SharedHookEnumV = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} // nolint:go
 
 // sharedHookConfig is the format of the shared repositories config file.
 type sharedHookConfig struct {
-	// Version for the shared file.
-	Version int `yaml:"version"`
 	// Urls for shared repositories.
 	Urls []string `yaml:"urls"`
+
+	// The version of the file.
+	Version int `yaml:"version"`
 }
 
 const sharedHookConfigVersion int = 0
@@ -62,6 +63,11 @@ func loadRepoSharedHooks(file string) (sharedHookConfig, error) {
 }
 
 func saveRepoSharedHooks(file string, config *sharedHookConfig) error {
+	// We always store the new version.
+	config.Version = sharedHookConfigVersion
+
+	config.Urls = strs.MakeUnique(config.Urls)
+
 	err := os.MkdirAll(path.Dir(file), cm.DefaultFileModeDirectory)
 	if err != nil {
 		return err
@@ -205,13 +211,15 @@ func parseData(installDir string, config *sharedHookConfig) (hooks []SharedHook,
 
 // AddUrl adds an url to the config.
 func (c *sharedHookConfig) AddUrl(url string) (added bool) {
-	c.Urls, added = strs.AppendUnique(c.Urls, url)
+	a := 0
+	c.Urls, a = strs.AppendUnique(c.Urls, url)
+	added = a != 0
 
 	return
 }
 
 // RemoveUrl removes an url from the config.
-func (c *sharedHookConfig) RemoveUrl(url string) (removed bool) {
+func (c *sharedHookConfig) RemoveUrl(url string) (removed int) {
 	c.Urls, removed = strs.Remove(c.Urls, url)
 
 	return
@@ -305,7 +313,7 @@ func ModifyRepoSharedHooks(repoDir string, url string, remove bool) (modified bo
 	}
 
 	if remove {
-		modified = config.RemoveUrl(url)
+		modified = config.RemoveUrl(url) != 0
 	} else {
 		modified = config.AddUrl(url)
 	}
@@ -321,7 +329,7 @@ func ModifyLocalSharedHooks(gitx *git.Context, url string, remove bool) (modifie
 	config := loadConfigSharedHooks(gitx, git.LocalScope)
 
 	if remove {
-		modified = config.RemoveUrl(url)
+		modified = config.RemoveUrl(url) != 0
 	} else {
 		modified = config.AddUrl(url)
 	}
@@ -336,7 +344,7 @@ func ModifyGlobalSharedHooks(gitx *git.Context, url string, remove bool) (modifi
 	config := loadConfigSharedHooks(gitx, git.GlobalScope)
 
 	if remove {
-		modified = config.RemoveUrl(url)
+		modified = config.RemoveUrl(url) != 0
 	} else {
 		modified = config.AddUrl(url)
 	}
