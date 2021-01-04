@@ -36,8 +36,6 @@ mkdir -p "$location3"/post-update &&
     echo 'echo "Hello"' >post-update/shared-pre3 ||
     exit 1
 
-git config --global githooks.shared "$url1" || exit 1
-
 mkdir -p /tmp/test055/.githooks/pre-commit &&
     mkdir -p /tmp/test055/.githooks/post-commit &&
     echo 'echo "Hello"' >/tmp/test055/.githooks/pre-commit/local-pre &&
@@ -51,6 +49,8 @@ mkdir -p /tmp/test055/.githooks/pre-commit &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
     git config --local githooks.shared "$url3" ||
     exit 1
+
+git config --global githooks.shared "$url1" || exit 1
 
 if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep -q "'replaced'"; then
     echo "! Unexpected cli list output (1)"

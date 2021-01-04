@@ -351,7 +351,7 @@ func ModifyGlobalSharedHooks(gitx *git.Context, url string, remove bool) (modifi
 func UpdateSharedHooks(
 	log cm.ILogContext,
 	sharedHooks []SharedHook,
-	sharedType SharedHookEnum) (err error) {
+	sharedType SharedHookEnum) (updateCount int, err error) {
 
 	for _, hook := range sharedHooks {
 
@@ -369,9 +369,9 @@ func UpdateSharedHooks(
 					"in the local or global Git configuration.\n\n"+
 					"This can be achieved by running\n"+
 					"  $ git hooks shared add [--local|--global] '%[2]s'\n"+
-					"and deleting it from the '.shared' file manually by\n"+
+					"and deleting it from the '%[3]s' file manually by\n"+
 					"  $ git hooks shared remove --shared '%[2]s'\n",
-					GetRepoSharedFileRel(), hook.OriginalURL)
+					GetRepoSharedFileRel(), hook.OriginalURL, GetRepoSharedFileRel())
 			}
 
 			continue
@@ -392,6 +392,8 @@ func UpdateSharedHooks(
 		if log != nil && e != nil {
 			log.ErrorF("Updating hooks '%s' failed.", hook.OriginalURL)
 		}
+
+		updateCount += 1
 	}
 
 	return

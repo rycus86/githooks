@@ -50,22 +50,25 @@ func runList(hookNames []string, warnNotFound bool) {
 	log.DebugF("User ignore patterns: '%q'.", ignores.User)
 
 	// Load all shared hooks
-	repoSharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, repoDir)
+	shared := sharedHooks{}
+	shared.repository, err = hooks.LoadRepoSharedHooks(settings.InstallDir, repoDir)
 	log.AssertNoErrorF(err, "Could not load repository shared hooks.")
-	localSharedHooks, err := hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
+	shared.local, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
 	log.AssertNoErrorF(err, "Could not load local shared hooks.")
-	globalSharedHooks, err := hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
+	shared.global, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
 	log.AssertNoErrorF(err, "Could not load global shared hooks.")
+
+	pendingShared := filterPendingSharedHooks(&shared)
 
 	isTrusted, _ := hooks.IsRepoTrusted(settings.GitX, repoDir)
 	isDisabled := hooks.IsGithooksDisabled(settings.GitX, true)
 
-	state := ListHooksState{
+	state := listHookState{
 		checksums:          &checksums,
 		ignores:            &ignores,
 		isRepoTrusted:      isTrusted,
 		isGithooksDisabled: isDisabled,
-		sharedIgnores:      make(IgnoresPerHookDir, 10),
+		sharedIgnores:      make(ignoresPerHookDir, 10),
 		paddingMax:         60} //nolint: gomnd
 
 	total := 0
@@ -75,42 +78,100 @@ func runList(hookNames []string, warnNotFound bool) {
 			hookName,
 			gitDir,
 			repoHooksDir,
-			repoSharedHooks,
-			localSharedHooks,
-			globalSharedHooks,
+			&shared,
 			&state)
 
 		if count != 0 {
-			log.InfoF("Hook: '%s' [%v] :%s\n", hookName, count, list)
+			log.InfoF("Hook: '%s' [%v] :%s", hookName, count, list)
 		}
 
 		total += count
 	}
 
+	printPendingShared(&pendingShared)
+
 	log.InfoF("Total listed hooks: '%v'.", total)
 }
 
-type IgnoresPerHookDir = map[string]*hooks.HookIgnorePatterns
+type ignoresPerHookDir = map[string]*hooks.HookIgnorePatterns
 
-type ListHooksState struct {
+type listHookState struct {
 	checksums *hooks.ChecksumStore
 	ignores   *hooks.RepoIgnorePatterns
 
 	isRepoTrusted      bool
 	isGithooksDisabled bool
 
-	sharedIgnores IgnoresPerHookDir
+	sharedIgnores ignoresPerHookDir
 	paddingMax    int
+}
+
+const (
+	sharedRepoCategory   = "shared:repo"
+	sharedLocalCategory  = "shared:local"
+	sharedGlobalCategory = "shared:global"
+)
+
+type sharedHooks struct {
+	repository []hooks.SharedHook
+	local      []hooks.SharedHook
+	global     []hooks.SharedHook
+}
+
+func filterPendingSharedHooks(shared *sharedHooks) (pending sharedHooks) {
+
+	// Filter out pending shared hooks.
+	filter := func(shHooks []hooks.SharedHook) (res []hooks.SharedHook, pending []hooks.SharedHook) {
+		res = make([]hooks.SharedHook, 0, len(shHooks))
+		for _, sh := range shHooks {
+			if cm.IsDirectory(sh.RepositoryDir) {
+				res = append(res, sh)
+			} else {
+				pending = append(pending, sh)
+			}
+		}
+
+		return
+	}
+
+	shared.repository, pending.repository = filter(shared.repository)
+	shared.local, pending.local = filter(shared.local)
+	shared.global, pending.global = filter(shared.global)
+
+	return
+}
+
+func printPendingShared(shared *sharedHooks) {
+
+	count := len(shared.repository) + len(shared.local) + len(shared.global)
+	if count == 0 {
+		return
+	}
+
+	var sb strings.Builder
+
+	listPending := func(shHooks []hooks.SharedHook, indent string, category string) {
+		for _, sh := range shHooks {
+			_, err := strs.FmtW(&sb,
+				"\n%s%s '%s' state: ['pending'], type: '%s'", indent, ListItemLiteral, sh.OriginalURL, category)
+			cm.AssertNoErrorPanic(err, "Could not write pending hooks.")
+		}
+	}
+
+	indent := " "
+	listPending(shared.repository, indent, sharedRepoCategory)
+	listPending(shared.local, indent, sharedLocalCategory)
+	listPending(shared.global, indent, sharedGlobalCategory)
+
+	log.InfoF("Pending shared hooks [%v] :%s", count, sb.String())
 }
 
 func listHooksForName(
 	hookName string,
 	gitDir string,
 	repoHooksDir string,
-	repoSharedHooks []hooks.SharedHook,
-	localSharedHooks []hooks.SharedHook,
-	globalSharedHooks []hooks.SharedHook,
-	state *ListHooksState) (string, int) {
+	shared *sharedHooks,
+	state *listHookState) (string, int) {
 
 	var sb strings.Builder
 
@@ -130,14 +191,15 @@ func listHooksForName(
 	}
 
 	listShared := func(sharedHooks []hooks.SharedHook, title string, category string) (count int) {
-		for _, sharedHook := range sharedHooks {
-			shHooks := getAllHooksIn(sharedHook.RepositoryDir, hookName, state, true, false)
-			// @todo remove this as soon as possible
-			shHooks = append(shHooks,
-				getAllHooksIn(hooks.GetGithooksDir(sharedHook.RepositoryDir), hookName, state, true, false)...)
 
-			printHooks(shHooks, strs.Fmt(title, sharedHook.OriginalURL), category)
-			count += len(shHooks)
+		for _, shHook := range sharedHooks {
+			allHooks := getAllHooksIn(shHook.RepositoryDir, hookName, state, true, false)
+			// @todo remove this as soon as possible
+			allHooks = append(allHooks,
+				getAllHooksIn(hooks.GetGithooksDir(shHook.RepositoryDir), hookName, state, true, false)...)
+
+			printHooks(allHooks, strs.Fmt(title, shHook.OriginalURL), category)
+			count += len(allHooks)
 		}
 
 		return count
@@ -153,9 +215,9 @@ func listHooksForName(
 
 	// List all shared hooks
 	sharedCount :=
-		listShared(repoSharedHooks, "Shared: '%s'", "shared:repo") +
-			listShared(localSharedHooks, "Shared: '%s'", "shared:local") +
-			listShared(globalSharedHooks, "Shared: '%s'", "shared:global")
+		listShared(shared.repository, "Shared: '%s'", sharedRepoCategory) +
+			listShared(shared.local, "Shared: '%s'", sharedLocalCategory) +
+			listShared(shared.global, "Shared: '%s'", sharedGlobalCategory)
 
 	return sb.String(), len(replacedHooks) + len(repoHooks) + sharedCount
 }
@@ -173,7 +235,7 @@ func findPaddingListHooks(hooks []hooks.Hook, maxPadding int) int {
 func getAllHooksIn(
 	hooksDir string,
 	hookName string,
-	state *ListHooksState,
+	state *listHookState,
 	addInternalIgnores bool,
 	isReplacedHook bool) []hooks.Hook {
 
@@ -232,7 +294,7 @@ func formatHookState(
 	padding int,
 	indent string) {
 
-	hooksFmt := strs.Fmt("%s• %%-%vs : ", indent, padding)
+	hooksFmt := strs.Fmt("%s%s %%-%vs : ", indent, ListItemLiteral, padding)
 	const stateFmt = " state: ['%s', '%s']"
 	const disabledStateFmt = " state: ['disabled']"
 	const categeoryFmt = ", type: '%s'"

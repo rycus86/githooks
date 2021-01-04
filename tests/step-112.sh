@@ -23,11 +23,11 @@ mkdir -p /tmp/test112.repo &&
     exit 3
 
 "$GITHOOKS_EXE_GIT_HOOKS" shared add --shared file:///tmp/test112.shared/shared-repo.git || exit 41
-"$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "shared-repo" | grep "pending" || exit 42
-"$GITHOOKS_EXE_GIT_HOOKS" shared pull || exit 43
+"$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "shared-repo" | grep "'pending'" || exit 42
+"$GITHOOKS_EXE_GIT_HOOKS" shared update || exit 43
 
-if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
-    git hooks list
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' | grep 'shared:repo' | grep "'active'" | grep "'untrusted'"; then
+    "$GITHOOKS_EXE_GIT_HOOKS" list
     exit 5
 fi
 

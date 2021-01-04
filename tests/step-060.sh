@@ -10,20 +10,15 @@ mkdir -p /tmp/test060/.githooks/pre-commit &&
     touch /tmp/test060/.githooks/trust-all &&
     cd /tmp/test060 &&
     git init &&
-    git config --local githooks.trust.all Y ||
+    git config --local githooks.trust.all true ||
     exit 1
 
-if ! git hooks list | grep "first" | grep -q "trusted"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'trusted'"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! git hooks list | grep "second" | grep -q "trusted"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'trusted'"; then
     echo "! Unexpected cli list output (2)"
-    exit 1
-fi
-
-if ! git hooks list; then
-    echo "! The Git alias integration failed"
     exit 1
 fi

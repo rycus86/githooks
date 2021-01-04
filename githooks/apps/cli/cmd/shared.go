@@ -229,13 +229,13 @@ func runSharedList() {
 			}
 		}
 
-		return strs.Fmt(" • '%s' (%s)", s.OriginalURL, state)
+		return strs.Fmt(" %s '%s' : state: '%s'", ListItemLiteral, s.OriginalURL, state)
 	}
 
 	format := func(sharedHooks []hooks.SharedHook) string {
 		var lst []string
 		if len(sharedHooks) == 0 {
-			lst = append(lst, " • None")
+			lst = append(lst, strs.Fmt(" %s None", ListItemLiteral))
 		} else {
 			for _, s := range sharedHooks {
 				lst = append(lst, formatLine(&s))
@@ -281,6 +281,7 @@ func runSharedUpdate() {
 
 	var sharedHooks []hooks.SharedHook
 	updated := 0
+	count := 0
 
 	if err == nil {
 
@@ -288,20 +289,18 @@ func runSharedUpdate() {
 
 		log.AssertNoErrorF(e, "Could not load shared hooks in '%s'.", hooks.GetRepoSharedFileRel())
 		if e == nil {
-			err = cm.CombineErrors(err, hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Repo))
-		} else {
-			err = cm.CombineErrors(err, e)
+			count, e = hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Repo)
+			updated += count
 		}
-		updated += len(sharedHooks)
+		err = cm.CombineErrors(err, e)
 
 		sharedHooks, e = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
 		log.AssertNoErrorF(e, "Could not load local shared hooks.")
 		if e == nil {
-			err = cm.CombineErrors(err, hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Local))
-		} else {
-			err = cm.CombineErrors(err, e)
+			count, e = hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Local)
+			updated += count
 		}
-		updated += len(sharedHooks)
+		err = cm.CombineErrors(err, e)
 
 	} else {
 		log.WarnF("Not inside a bare or non-bare repository.\n" +
@@ -311,11 +310,10 @@ func runSharedUpdate() {
 	sharedHooks, e := hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
 	log.AssertNoErrorF(e, "Could not load global shared hooks.")
 	if e == nil {
-		err = cm.CombineErrors(err, hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Global))
-	} else {
-		err = cm.CombineErrors(err, e)
+		count, e = hooks.UpdateSharedHooks(log, sharedHooks, hooks.SharedHookEnumV.Global)
+		updated += count
 	}
-	updated += len(sharedHooks)
+	err = cm.CombineErrors(err, e)
 
 	log.AssertNoErrorPanicF(err, "There have been errors while updating shared hooks")
 	log.InfoF("Update '%v' shared repositories.", updated)

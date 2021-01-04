@@ -11,7 +11,7 @@ mkdir -p /tmp/test099/.git/hooks &&
 
 if ! git worktree list >/dev/null 2>/dev/null; then
     echo "Git worktree support is missing"
-    exit 249
+    exit 1
 fi
 
 # shellcheck disable=SC2016
@@ -29,7 +29,7 @@ ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 git worktree add -b example-a ../test099-A HEAD || exit 2
 cd ../test099-A || exit 2
 
-if ! git hooks list | grep "example" | grep -q "pending"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'active'" | grep -q "'untrusted'"; then
     echo "! Unexpected cli list output"
     exit 3
 fi

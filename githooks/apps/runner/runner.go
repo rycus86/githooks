@@ -514,7 +514,8 @@ func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, s
 	}
 
 	log.Debug("Updating all shared hooks.")
-	_ = hooks.UpdateSharedHooks(log, sharedHooks, sharedType)
+	_, err := hooks.UpdateSharedHooks(log, sharedHooks, sharedType)
+	log.AssertNoError(err, "Errors while updating shared hooks repositories.")
 }
 
 func getRepoSharedHooks(

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test:
-#   Disable, enable and accept a shared hook (no .githooks directory)
+#   Disable, enable and accept a shared hook (no 'githooks' directory)
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
@@ -26,8 +26,8 @@ mkdir -p /tmp/test115.repo &&
     "$GITHOOKS_EXE_GIT_HOOKS" shared list | grep "shared-repo" | grep "pending" &&
     "$GITHOOKS_EXE_GIT_HOOKS" shared pull || exit 4
 
-if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
-    git hooks list
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' | grep 'shared:repo' | grep "'active'" | grep "'untrusted'"; then
+    "$GITHOOKS_EXE_GIT_HOOKS" list
     exit 5
 fi
 
