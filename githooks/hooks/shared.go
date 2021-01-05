@@ -11,7 +11,7 @@ import (
 )
 
 // SharedHook is the data for a shared hook.
-type SharedHook struct {
+type SharedRepo struct {
 	OriginalURL string // Original URL.
 
 	IsCloned bool   // If the repo needs to be cloned.
@@ -23,16 +23,49 @@ type SharedHook struct {
 	RepositoryDir string // The shared hook repository directory.
 }
 
-// SharedHookEnum is the enum type of the shared hook type.
-type SharedHookEnum = int
-type sharedHookEnum struct {
-	Repo   SharedHookEnum
-	Local  SharedHookEnum
-	Global SharedHookEnum
+// SharedHookType is the enum type of the shared hook type.
+type SharedHookType int
+type sharedHookType struct {
+	Repo   SharedHookType
+	Local  SharedHookType
+	Global SharedHookType
+	count  int
 }
 
-// SharedHookEnum enumerates all types of shared hooks.
-var SharedHookEnumV = &sharedHookEnum{Repo: 0, Local: 1, Global: 2} // nolint:gomnd
+// SharedHookType enumerates all types of shared hooks.
+var SharedHookTypeV = &sharedHookType{Repo: 0, Local: 1, Global: 2, count: 3} // nolint:gomnd
+
+// SharedRepos a collection of all shared repos.
+// Indexable by `SharedHookTypeV`.
+type SharedRepos [][]SharedRepo
+
+// NewSharedRepos returns a collection of all shared repos.
+// Indexable by `SharedHookTypeV`.
+func NewSharedRepos(capacity int) (res SharedRepos) {
+	res = make(SharedRepos, SharedHookTypeV.count)
+	for idx := range res {
+		res[idx] = make([]SharedRepo, 0, capacity)
+	}
+
+	return res
+}
+
+// GetCount gets the count of all shared repos.
+func (s *SharedRepos) GetCount() (count int) {
+	for _, slice := range *s {
+		count += len(slice)
+	}
+
+	return
+}
+
+// GetSharedRepoTagNames gets the tag names corresponding to `SharedHookTypeV`.
+func GetSharedRepoTagNames() []string {
+	return []string{
+		TagNameSharedRepo,
+		TagNameSharedLocal,
+		TagNameSharedGLobal}
+}
 
 // sharedHookConfig is the format of the shared repositories config file.
 type sharedHookConfig struct {
@@ -147,9 +180,9 @@ func isSharedUrlALocalURL(url string) bool {
 	return reFileURLScheme.MatchString(url)
 }
 
-func parseSharedUrl(installDir string, url string) (SharedHook, error) {
+func parseSharedUrl(installDir string, url string) (SharedRepo, error) {
 
-	h := SharedHook{IsCloned: true, IsLocal: false, OriginalURL: url}
+	h := SharedRepo{IsCloned: true, IsLocal: false, OriginalURL: url}
 	doSplit := true
 
 	if isSharedUrlALocalPath(url) {
@@ -190,7 +223,7 @@ func parseSharedUrl(installDir string, url string) (SharedHook, error) {
 	return h, nil
 }
 
-func parseData(installDir string, config *sharedHookConfig) (hooks []SharedHook, err error) {
+func parseData(installDir string, config *sharedHookConfig) (hooks []SharedRepo, err error) {
 
 	for _, url := range config.Urls {
 
@@ -259,7 +292,7 @@ func saveConfigSharedHooks(gitx *git.Context, scope git.ConfigScope, config *sha
 func LoadConfigSharedHooks(
 	installDir string,
 	gitx *git.Context,
-	scope git.ConfigScope) (hooks []SharedHook, err error) {
+	scope git.ConfigScope) (hooks []SharedRepo, err error) {
 
 	config := loadConfigSharedHooks(gitx, scope)
 
@@ -268,7 +301,7 @@ func LoadConfigSharedHooks(
 
 // LoadRepoSharedHooks gets all shared hooks that reside inside `hooks.GetRepoSharedFileRel()`
 // No checks are made to the filesystem if paths are existing in `SharedHook`.
-func LoadRepoSharedHooks(installDir string, repoDir string) (hooks []SharedHook, err error) {
+func LoadRepoSharedHooks(installDir string, repoDir string) (hooks []SharedRepo, err error) {
 	file := GetRepoSharedFile(repoDir)
 
 	if !cm.IsFile(file) {
@@ -358,8 +391,8 @@ func ModifyGlobalSharedHooks(gitx *git.Context, url string, remove bool) (modifi
 // It clones or pulls latest changes in the shared clones. The `log` can be nil.
 func UpdateSharedHooks(
 	log cm.ILogContext,
-	sharedHooks []SharedHook,
-	sharedType SharedHookEnum) (updateCount int, err error) {
+	sharedHooks []SharedRepo,
+	sharedType SharedHookType) (updateCount int, err error) {
 
 	for _, hook := range sharedHooks {
 
@@ -367,7 +400,7 @@ func UpdateSharedHooks(
 			continue
 
 		} else if !AllowLocalURLInRepoSharedHooks() &&
-			sharedType == SharedHookEnumV.Repo && hook.IsLocal {
+			sharedType == SharedHookTypeV.Repo && hook.IsLocal {
 
 			if log != nil {
 				log.WarnF("Shared hooks in '%[1]s' contain a local path\n"+
@@ -440,13 +473,13 @@ func ClearGlobalSharedHooks() error {
 }
 
 // GetSharedHookTypeString translates the shared type enum to a string.
-func GetSharedHookTypeString(sharedType SharedHookEnum) string {
+func GetSharedHookTypeString(sharedType SharedHookType) string {
 	switch sharedType {
-	case SharedHookEnumV.Repo:
+	case SharedHookTypeV.Repo:
 		return "repo"
-	case SharedHookEnumV.Local:
+	case SharedHookTypeV.Local:
 		return "local"
-	case SharedHookEnumV.Global:
+	case SharedHookTypeV.Global:
 		return "global"
 	default:
 		cm.DebugAssertF(false, "Wrong type '%s'", sharedType)
@@ -457,7 +490,7 @@ func GetSharedHookTypeString(sharedType SharedHookEnum) string {
 
 // IsCloneValid checks if the cloned shared hook repository is valid,
 // contains the same remote URL as the requested.
-func (s *SharedHook) IsCloneValid() bool {
+func (s *SharedRepo) IsCloneValid() bool {
 	if s.IsCloned {
 		return git.CtxC(s.RepositoryDir).GetConfig("remote.origin.url", git.LocalScope) == s.URL
 	} else {

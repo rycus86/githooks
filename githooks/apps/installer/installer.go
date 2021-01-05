@@ -772,7 +772,7 @@ func installBinaries(
 		dest := path.Join(binDir, path.Base(src))
 		_ = os.Remove(dest)
 		err := cm.CombineErrors(cm.CopyFile(src, dest))
-		err = cm.CombineErrors(err, cm.MakeExecutbale(dest))
+		err = cm.CombineErrors(err, cm.MakeExecutable(dest))
 		log.AssertNoErrorPanicF(err, "Could not copy legacy executable '%s'.", dest)
 	}
 
@@ -1072,7 +1072,7 @@ func installIntoRegisteredRepos(
 
 }
 
-func setupSharedHookRepositories(cliExectuable string, dryRun bool, uiSettings *UISettings) {
+func setupSharedRepositories(cliExectuable string, dryRun bool, uiSettings *UISettings) {
 
 	gitx := git.Ctx()
 	sharedRepos := gitx.GetConfigAll(hooks.GitCK_Shared, git.GlobalScope)
@@ -1283,7 +1283,7 @@ func runUpdate(
 		}
 
 		if !args.InternalAutoUpdate && !args.NonInteractive {
-			setupSharedHookRepositories(
+			setupSharedRepositories(
 				hooks.GetCLIExecutable(settings.InstallDir),
 				args.DryRun,
 				uiSettings)

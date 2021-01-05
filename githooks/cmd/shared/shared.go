@@ -119,7 +119,7 @@ func runSharedPurge(ctx *ccm.CmdContext) {
 func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 	sharedOptsSetAll(opts)
 
-	formatLine := func(s *hooks.SharedHook) string {
+	formatLine := func(s *hooks.SharedRepo) string {
 		state := "invalid"
 
 		if !s.IsCloned {
@@ -137,7 +137,7 @@ func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 		return strs.Fmt(" %s '%s' : state: '%s'", ccm.ListItemLiteral, s.OriginalURL, state)
 	}
 
-	format := func(sharedHooks []hooks.SharedHook) string {
+	format := func(sharedHooks []hooks.SharedRepo) string {
 		var lst []string
 		if len(sharedHooks) == 0 {
 			lst = append(lst, strs.Fmt(" %s None", ccm.ListItemLiteral))
@@ -184,7 +184,7 @@ func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 func runSharedUpdate(ctx *ccm.CmdContext) {
 	repoDir, _, err := ctx.GitX.GetRepoRoot()
 
-	var sharedHooks []hooks.SharedHook
+	var sharedHooks []hooks.SharedRepo
 	updated := 0
 	count := 0
 
@@ -194,7 +194,7 @@ func runSharedUpdate(ctx *ccm.CmdContext) {
 
 		ctx.Log.AssertNoErrorF(e, "Could not load shared hooks in '%s'.", hooks.GetRepoSharedFileRel())
 		if e == nil {
-			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookEnumV.Repo)
+			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Repo)
 			updated += count
 		}
 		err = cm.CombineErrors(err, e)
@@ -202,7 +202,7 @@ func runSharedUpdate(ctx *ccm.CmdContext) {
 		sharedHooks, e = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.LocalScope)
 		ctx.Log.AssertNoErrorF(e, "Could not load local shared hooks.")
 		if e == nil {
-			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookEnumV.Local)
+			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Local)
 			updated += count
 		}
 		err = cm.CombineErrors(err, e)
@@ -215,7 +215,7 @@ func runSharedUpdate(ctx *ccm.CmdContext) {
 	sharedHooks, e := hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.GlobalScope)
 	ctx.Log.AssertNoErrorF(e, "Could not load global shared hooks.")
 	if e == nil {
-		count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookEnumV.Global)
+		count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Global)
 		updated += count
 	}
 	err = cm.CombineErrors(err, e)

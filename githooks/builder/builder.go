@@ -92,7 +92,7 @@ func Build(repoPath string, buildTags []string) (string, error) {
 	goPath := path.Join(repoPath, relPathGoSrc, ".go")
 	goBinPath := path.Join(repoPath, relPathGoSrc, "bin")
 
-	// Find the go executbale
+	// Find the go executable
 	gox, err := findGoExec()
 	if err != nil {
 		return goBinPath,

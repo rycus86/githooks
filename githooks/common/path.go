@@ -160,8 +160,8 @@ func ReplaceTilde(p string) (string, error) {
 	return p, nil
 }
 
-// MakeExecutbale makes a file executbale.
-func MakeExecutbale(path string) (err error) {
+// MakeExecutable makes a file executable.
+func MakeExecutable(path string) (err error) {
 	stats, err := os.Stat(path)
 	if err != nil {
 		return

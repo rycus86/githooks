@@ -49,7 +49,7 @@ func WriteRunWrapper(filePath string) (err error) {
 
 	// Make executable
 	_ = file.Close()
-	err = cm.MakeExecutbale(filePath)
+	err = cm.MakeExecutable(filePath)
 
 	return
 }

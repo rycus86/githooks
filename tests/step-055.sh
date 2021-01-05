@@ -101,3 +101,8 @@ if ! "$GITHOOKS_EXE_GIT_HOOKS" list post-rewrite | grep "'shared:local'" | grep 
     echo "! Unexpected cli list output (10)"
     exit 1
 fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep -q "Total.*hooks: '10'"; then
+    echo "! Unexpected cli list output (11)"
+    exit 1
+fi

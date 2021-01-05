@@ -10,16 +10,23 @@ import (
 	thx "github.com/pbenner/threadpool"
 )
 
-// Hook contains the data to an executbale hook.
+// Hook contains the data to an executable hook.
 type Hook struct {
-	cm.Executable // The executable of the hook.
+	// The executable of the hook.
+	cm.Executable
 
-	NamespacePath string // The namespaced path of the hook `<namespace>/<relPath>`.
+	// The namespaced path of the hook `<namespace>/<relPath>`.
+	NamespacePath string
 
-	Active  bool // If the hook is not ignored by any ignore patterns. Has priority 1.
-	Trusted bool // If the hook is trusted by means of the chechsum store. Has priority 2.
+	// If the hook is not ignored by any ignore patterns.
+	// Has priority 1 for execution determination.
+	Active bool
+	// If the hook is trusted by means of the chechsum store.
+	// Has priority 2 for execution determination.
+	Trusted bool
 
-	SHA1 string // SHA1 hash of the hook. (if determined)
+	// SHA1 hash of the hook. (if determined)
+	SHA1 string
 }
 
 // HookPrioList is a list of lists of executable hooks.
@@ -40,6 +47,58 @@ type HookResult struct {
 	Hook   *Hook
 	Output []byte
 	Error  error
+}
+
+type TaggedHooksIndex int
+type taggedHooksIndex struct {
+	Replaced     TaggedHooksIndex
+	Repo         TaggedHooksIndex
+	SharedRepo   TaggedHooksIndex
+	SharedLocal  TaggedHooksIndex
+	SharedGlobal TaggedHooksIndex
+	count        int
+}
+
+//nolint: gomnd
+var TaggedHookIndices = taggedHooksIndex{
+	Replaced:     0,
+	Repo:         1,
+	SharedRepo:   2,
+	SharedLocal:  3,
+	SharedGlobal: 4,
+	count:        5}
+
+// HookMap represents a map for all hooks sorted by tags.
+// A list of hooks for each index `TaggedHookIndices`.
+type TaggedHooks [][]Hook
+
+// NewTaggedHooks returns a slice of hooks for each index `TaggedHookIndices`.
+func NewTaggedHooks(capacity int) (res TaggedHooks) {
+	res = make(TaggedHooks, TaggedHookIndices.count)
+	for idx := range res {
+		res[idx] = make([]Hook, 0, capacity)
+	}
+
+	return res
+}
+
+const (
+	TagNameReplaced     = "replaced"      // Hook tag for replaced hooks.
+	TagNameRepository   = "repo"          // Hook tag for repository hooks.
+	TagNameSharedRepo   = "shared:repo"   // Hook tag for shared hooks inside the repository.
+	TagNameSharedLocal  = "shared:local"  // Hook tag for shared hooks in the local Git config.
+	TagNameSharedGLobal = "shared:global" // Hook tag for shared hooks in the global Git config.
+)
+
+// GetHookTagNameMappings gets the mapping of a hook tag to a name.
+// Indexable by `HookTagV`.
+func GetHookTagNameMappings() []string {
+	return []string{
+		TagNameReplaced,
+		TagNameRepository,
+		TagNameSharedRepo,
+		TagNameSharedLocal,
+		TagNameSharedGLobal}
 }
 
 type IngoreCallback = func(namespacePath string) (ignored bool)

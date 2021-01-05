@@ -31,15 +31,18 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 	ctx.Log.DebugF("User ignore patterns: '%+v'.", ignores.User)
 
 	// Load all shared hooks
-	shared := sharedHooks{}
-	shared.repository, err = hooks.LoadRepoSharedHooks(ctx.InstallDir, repoDir)
+	shared := hooks.NewSharedRepos(8) //nolint: gomnd
+
+	shared[hooks.SharedHookTypeV.Repo], err = hooks.LoadRepoSharedHooks(ctx.InstallDir, repoDir)
 	ctx.Log.AssertNoErrorF(err, "Could not load repository shared hooks.")
-	shared.local, err = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.LocalScope)
+
+	shared[hooks.SharedHookTypeV.Local], err = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.LocalScope)
 	ctx.Log.AssertNoErrorF(err, "Could not load local shared hooks.")
-	shared.global, err = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.GlobalScope)
+
+	shared[hooks.SharedHookTypeV.Global], err = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.GlobalScope)
 	ctx.Log.AssertNoErrorF(err, "Could not load global shared hooks.")
 
-	pendingShared := filterPendingSharedHooks(&shared)
+	pendingShared := filterPendingSharedRepos(shared)
 
 	isTrusted, _ := hooks.IsRepoTrusted(ctx.GitX, repoDir)
 	isDisabled := hooks.IsGithooksDisabled(ctx.GitX, true)
@@ -60,7 +63,7 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 			hookName,
 			gitDir,
 			repoHooksDir,
-			&shared,
+			shared,
 			&state)
 
 		if count != 0 {
@@ -70,7 +73,7 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 		total += count
 	}
 
-	printPendingShared(ctx, &pendingShared)
+	printPendingShared(ctx, pendingShared)
 
 	ctx.Log.InfoF("Total listed hooks: '%v'.", total)
 }
@@ -88,52 +91,44 @@ type listHookState struct {
 	paddingMax    int
 }
 
-const (
-	sharedRepoCategory   = "shared:repo"
-	sharedLocalCategory  = "shared:local"
-	sharedGlobalCategory = "shared:global"
-)
+func filterPendingSharedRepos(shared hooks.SharedRepos) (pending hooks.SharedRepos) {
 
-type sharedHooks struct {
-	repository []hooks.SharedHook
-	local      []hooks.SharedHook
-	global     []hooks.SharedHook
-}
-
-func filterPendingSharedHooks(shared *sharedHooks) (pending sharedHooks) {
+	pending = hooks.NewSharedRepos(0)
 
 	// Filter out pending shared hooks.
-	filter := func(shHooks []hooks.SharedHook) (res []hooks.SharedHook, pending []hooks.SharedHook) {
-		res = make([]hooks.SharedHook, 0, len(shHooks))
-		for _, sh := range shHooks {
+	filter := func(shRepos []hooks.SharedRepo) (res []hooks.SharedRepo, pending []hooks.SharedRepo) {
+		res = make([]hooks.SharedRepo, 0, len(shRepos))
+		for idx := range shRepos {
+			sh := &shRepos[idx]
+
 			if cm.IsDirectory(sh.RepositoryDir) {
-				res = append(res, sh)
+				res = append(res, *sh)
 			} else {
-				pending = append(pending, sh)
+				pending = append(pending, *sh)
 			}
 		}
 
 		return
 	}
 
-	shared.repository, pending.repository = filter(shared.repository)
-	shared.local, pending.local = filter(shared.local)
-	shared.global, pending.global = filter(shared.global)
+	for idx := range shared {
+		shared[idx], pending[idx] = filter(shared[idx])
+	}
 
 	return
 }
 
-func printPendingShared(ctx *ccm.CmdContext, shared *sharedHooks) {
+func printPendingShared(ctx *ccm.CmdContext, shared hooks.SharedRepos) {
 
-	count := len(shared.repository) + len(shared.local) + len(shared.global)
+	count := shared.GetCount()
 	if count == 0 {
 		return
 	}
 
 	var sb strings.Builder
 
-	listPending := func(shHooks []hooks.SharedHook, indent string, category string) {
-		for _, sh := range shHooks {
+	listPending := func(shRepos []hooks.SharedRepo, indent string, category string) {
+		for _, sh := range shRepos {
 			_, err := strs.FmtW(&sb,
 				"\n%s%s '%s' state: ['pending'], type: '%s'", indent, ccm.ListItemLiteral, sh.OriginalURL, category)
 			cm.AssertNoErrorPanic(err, "Could not write pending hooks.")
@@ -141,9 +136,9 @@ func printPendingShared(ctx *ccm.CmdContext, shared *sharedHooks) {
 	}
 
 	indent := " "
-	listPending(shared.repository, indent, sharedRepoCategory)
-	listPending(shared.local, indent, sharedLocalCategory)
-	listPending(shared.global, indent, sharedGlobalCategory)
+	listPending(shared[hooks.SharedHookTypeV.Repo], indent, hooks.TagNameSharedRepo)
+	listPending(shared[hooks.SharedHookTypeV.Local], indent, hooks.TagNameSharedLocal)
+	listPending(shared[hooks.SharedHookTypeV.Global], indent, hooks.TagNameSharedRepo)
 
 	ctx.Log.InfoF("Pending shared hooks [%v] :%s", count, sb.String())
 }
@@ -153,7 +148,7 @@ func listHooksForName(
 	hookName string,
 	gitDir string,
 	repoHooksDir string,
-	shared *sharedHooks,
+	shared hooks.SharedRepos,
 	state *listHookState) (string, int) {
 
 	var sb strings.Builder
@@ -167,25 +162,10 @@ func listHooksForName(
 		_, err := strs.FmtW(&sb, "\n %s", title)
 		cm.AssertNoErrorPanicF(err, "Could not write hook state.")
 
-		for _, hook := range hooks {
+		for i := range hooks {
 			sb.WriteString("\n")
-			formatHookState(&sb, hook, category, state.isGithooksDisabled, padding, "  ")
+			formatHookState(&sb, &hooks[i], category, state.isGithooksDisabled, padding, "  ")
 		}
-	}
-
-	listShared := func(sharedHooks []hooks.SharedHook, title string, category string) (count int) {
-
-		for _, shHook := range sharedHooks {
-			allHooks := getAllHooksIn(log, shHook.RepositoryDir, hookName, state, true, false)
-			// @todo remove this as soon as possible
-			allHooks = append(allHooks,
-				getAllHooksIn(log, hooks.GetGithooksDir(shHook.RepositoryDir), hookName, state, true, false)...)
-
-			printHooks(allHooks, strs.Fmt(title, shHook.OriginalURL), category)
-			count += len(allHooks)
-		}
-
-		return count
 	}
 
 	// List replaced hooks (normally only one)
@@ -197,10 +177,21 @@ func listHooksForName(
 	printHooks(repoHooks, "Repository:", "repo")
 
 	// List all shared hooks
-	sharedCount :=
-		listShared(shared.repository, "Shared: '%s'", sharedRepoCategory) +
-			listShared(shared.local, "Shared: '%s'", sharedLocalCategory) +
-			listShared(shared.global, "Shared: '%s'", sharedGlobalCategory)
+	sharedCount := 0
+	all := make([]SharedHooks, 0, shared.GetCount())
+	for idx, sharedRepos := range shared {
+		coll, count := getAllHooksInShared(log, hookName, state, sharedRepos, hooks.SharedHookType(idx))
+		sharedCount += count
+		all = append(all, coll...)
+	}
+
+	tagNames := hooks.GetSharedRepoTagNames()
+	for i := range all {
+		printHooks(
+			all[i].Hooks,
+			strs.Fmt("Shared '%s':", all[i].Repo.OriginalURL),
+			tagNames[all[i].Category])
+	}
 
 	return sb.String(), len(replacedHooks) + len(repoHooks) + sharedCount
 }
@@ -208,11 +199,47 @@ func listHooksForName(
 func findPaddingListHooks(hooks []hooks.Hook, maxPadding int) int {
 	const addChars = 3
 	max := 0
-	for _, hook := range hooks {
-		max = math.MaxInt(len(path.Base(hook.Path))+addChars, max)
+	for i := range hooks {
+		max = math.MaxInt(len(path.Base(hooks[i].Path))+addChars, max)
 	}
 
 	return math.MinInt(max, maxPadding)
+}
+
+type SharedHooks struct {
+	Repo     *hooks.SharedRepo
+	Category hooks.SharedHookType
+	Hooks    []hooks.Hook
+}
+
+func getAllHooksInShared(
+	log cm.ILogContext,
+	hookName string,
+	state *listHookState,
+	sharedRepos []hooks.SharedRepo,
+	category hooks.SharedHookType) (coll []SharedHooks, count int) {
+
+	coll = make([]SharedHooks, 0, len(sharedRepos))
+
+	for i := range sharedRepos {
+		shRepo := &sharedRepos[i]
+
+		allHooks := getAllHooksIn(log, shRepo.RepositoryDir, hookName, state, true, false)
+		// @todo remove this as soon as possible
+		allHooks = append(allHooks,
+			getAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, state, true, false)...)
+
+		if len(allHooks) != 0 {
+			count += len(allHooks)
+			coll = append(coll,
+				SharedHooks{
+					Hooks:    allHooks,
+					Repo:     shRepo,
+					Category: category})
+		}
+	}
+
+	return
 }
 
 func getAllHooksIn(
@@ -272,7 +299,7 @@ func getAllHooksIn(
 
 func formatHookState(
 	w io.Writer,
-	hook hooks.Hook,
+	hook *hooks.Hook,
 	categeory string,
 	isGithooksDisabled bool,
 	padding int,
