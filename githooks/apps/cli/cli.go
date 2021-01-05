@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"rycus86/githooks/apps/cli/cmd"
+	"rycus86/githooks/cmd"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/hooks"
 )

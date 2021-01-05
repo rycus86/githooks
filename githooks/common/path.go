@@ -55,10 +55,11 @@ func ContainsDotFile(p string) bool {
 type FileFilter = func(path string, info os.FileInfo) bool
 
 // GetFiles returns the filtered files in directory `root` (non-recursive).
+// The nil Filter returns all files.
 func GetFiles(root string, filter FileFilter) (files []string, err error) {
 
 	f := func(path string, info os.FileInfo) error {
-		if filter != nil && filter(path, info) {
+		if filter == nil || filter(path, info) {
 			files = append(files, path)
 		}
 
