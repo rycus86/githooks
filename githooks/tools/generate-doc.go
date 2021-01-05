@@ -66,7 +66,7 @@ func main() {
 	root, err := git.Ctx().Get("rev-parse", "--show-toplevel")
 	cm.AssertNoErrorPanic(err, "Could not root dir.")
 
-	docRoot := path.Join(root, "githooks", "docs")
+	docRoot := path.Join(root, "docs")
 
 	log, err := cm.CreateLogContext(false)
 	cm.AssertNoErrorPanic(err, "Could not create log")

@@ -1,39 +1,14 @@
 #!/bin/sh
+DIR=$(cd "$(dirname "$0")" && pwd)
+. "$DIR/.export-staged"
 
-IGNORE="
-pull
-"
+assertStaged
 
-CLI_OPTIONS=$(grep -A 10000 'choose_command()' cli.sh | grep -oE '"[a-z-]+")' | grep -oE '[a-z-]+')
-for CLI_OPTION in $CLI_OPTIONS; do
-    if echo "$IGNORE" | grep -q "^${CLI_OPTION}\$"; then
-        continue
-    fi
-
-    if ! sh cli.sh help | grep '^  ' | grep -q " $CLI_OPTION "; then
-        echo "! Help option is missing for \`git hooks $CLI_OPTION\`"
-        MISSING=1
+for FILE in $STAGED_FILES; do
+    if echo "$FILE" | grep -qE '^.*/cmd/\.*.go$'; then
+        echo "! You need to regenerate the CLI docs!"
+        exit 1
     fi
 done
 
-for HELP_OPTION in $(sh cli.sh help | grep '^  ' | awk '{ print $1 }'); do
-    if echo "$IGNORE" | grep -q "^${HELP_OPTION}\$"; then
-        continue
-    fi
-
-    if ! grep -q "## git hooks $HELP_OPTION" docs/command-line-tool.md; then
-        echo "! Documentation is missing for \`git hooks $HELP_OPTION\`"
-        MISSING=1
-    fi
-
-    if ! grep -q "\\- \\[${HELP_OPTION}\\](#git-hooks-${HELP_OPTION})" docs/command-line-tool.md; then
-        echo "! TOC item is missing for \`git hooks $HELP_OPTION\`"
-        MISSING=1
-    fi
-done
-
-if [ -z "$MISSING" ]; then
-    echo "* Command line tool docs is up-to-date"
-else
-    exit 1
-fi
+echo "* CLI doc up to date"
