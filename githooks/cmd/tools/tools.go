@@ -82,7 +82,7 @@ func validateTool(log cm.ILogContext, nArgs int) func(cmd *cobra.Command, args [
 
 func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 
-	var toolsCmd = &cobra.Command{
+	toolsCmd := &cobra.Command{
 		Use:   "tools",
 		Short: "Manages script folders for tools.",
 		Long: strs.Fmt(`Manages script folders for tools.
@@ -109,7 +109,7 @@ If 'run' is executable, then the following is executed`+"\n\n"+
 The script needs to return one of the short-options on 'stdout'.
 Non-zero exit code triggers the fallback of reading from 'stdin'.`, ccm.ListItemLiteral)}
 
-	var registerCmd = &cobra.Command{
+	registerCmd := &cobra.Command{
 		Use:   "register [flags] <toolName> <scriptFolder>",
 		Short: `Register a tool.`,
 		Long: `Install the script folder '<scriptFolder>' in
@@ -118,7 +118,7 @@ the installation directory under 'tools/<toolName>'.`,
 			runToolsRegister(ctx, args)
 		}}
 
-	var unregisterCmd = &cobra.Command{
+	unregisterCmd := &cobra.Command{
 		Use:   "unregister [flags] <toolName>",
 		Short: `Unregister a tool.`,
 		Long: `Uninstall the script folder in the installation

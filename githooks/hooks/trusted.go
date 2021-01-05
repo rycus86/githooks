@@ -147,21 +147,59 @@ func (t *ChecksumStore) AddChecksum(sha1 string, filePath string) bool {
 	return false
 }
 
-// SyncChecksum adds a SHA1 checksum of a path to the first search directory.
-func (t *ChecksumStore) SyncChecksum(checksum ChecksumResult) error {
-	cm.DebugAssertF(len(checksum.SHA1) == 40, "Wrong SHA1 hash '%s'", checksum.SHA1) // nolint:gomnd
-
+// SyncChecksumAdd adds SHA1 checksums of a path to the first search directory.
+func (t *ChecksumStore) SyncChecksumAdd(checksums ...ChecksumResult) error {
 	if len(t.checksumDirs) == 0 {
 		return cm.Error("No checksum directory.")
 	}
 
-	dir := path.Join(t.checksumDirs[0], checksum.SHA1[0:2])
-	err := os.MkdirAll(dir, cm.DefaultFileModeDirectory)
-	if err != nil {
-		return err
+	for i := range checksums {
+		checksum := &checksums[i]
+
+		cm.DebugAssertF(len(checksum.SHA1) == 40, "Wrong SHA1 hash '%s'", checksum.SHA1) // nolint:gomnd
+
+		dir := path.Join(t.checksumDirs[0], checksum.SHA1[0:2])
+		err := os.MkdirAll(dir, cm.DefaultFileModeDirectory)
+		if err != nil {
+			return err
+		}
+
+		err = cm.StoreYAML(path.Join(dir, checksum.SHA1[2:]), checksumFile{checksum.Path})
+		if err != nil {
+			return err
+		}
 	}
 
-	return cm.StoreYAML(path.Join(dir, checksum.SHA1[2:]), checksumFile{checksum.Path})
+	return nil
+}
+
+// SyncChecksumRemove removes SHA1 checksums
+// of a path from the first search directory.
+func (t *ChecksumStore) SyncChecksumRemove(sha1s ...string) (removed int, err error) {
+
+	if len(t.checksumDirs) == 0 {
+		err = cm.Error("No checksum directory.")
+
+		return
+	}
+
+	for _, sha1 := range sha1s {
+
+		cm.DebugAssertF(len(sha1) == 40, "Wrong SHA1 hash '%s'", sha1) // nolint:gomnd
+
+		dir := path.Join(t.checksumDirs[0], sha1[0:2])
+		file := path.Join(dir, sha1[2:])
+
+		if cm.IsFile(file) {
+			if err = os.Remove(file); err != nil {
+				return
+			}
+
+			removed += 1
+		}
+	}
+
+	return
 }
 
 // IsTrusted checks if a path has been trusted.

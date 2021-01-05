@@ -4,7 +4,6 @@ import (
 	"os"
 	inst "rycus86/githooks/apps/install"
 	"rycus86/githooks/build"
-	"rycus86/githooks/cmd/accept"
 	ccm "rycus86/githooks/cmd/common"
 	"rycus86/githooks/cmd/config"
 	"rycus86/githooks/cmd/disable"
@@ -47,7 +46,6 @@ func NewSettings(log cm.ILogContext) ccm.CmdContext {
 }
 
 func addSubCommands(cmd *cobra.Command, ctx *ccm.CmdContext) {
-	cmd.AddCommand(accept.NewCmd(ctx))
 	cmd.AddCommand(config.NewCmd(ctx))
 	cmd.AddCommand(disable.NewCmd(ctx))
 	cmd.AddCommand(ignore.NewCmd(ctx))

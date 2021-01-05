@@ -18,7 +18,6 @@ git hooks
 
 ### SEE ALSO
 
-* [git hooks accept](git_hooks_accept.md)	 - Accepts a new hook or changes to an existing hook.
 * [git hooks config](git_hooks_config.md)	 - Manages various Githooks configuration.
 * [git hooks disable](git_hooks_disable.md)	 - Disables Githooks in the current repository.
 * [git hooks ignore](git_hooks_ignore.md)	 - Ignores or activates hook in the current repository.

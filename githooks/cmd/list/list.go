@@ -18,6 +18,42 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 	repoDir, gitDir := ccm.AssertRepoRoot(ctx)
 
 	repoHooksDir := hooks.GetGithooksDir(repoDir)
+	state, shared := PrepareListHookState(ctx, repoDir, repoHooksDir, gitDir, hookNames)
+
+	total := 0
+	for _, hookName := range hookNames {
+
+		list, count := listHooksForName(
+			ctx.Log,
+			hookName,
+			gitDir,
+			repoHooksDir,
+			shared,
+			state)
+
+		if count != 0 {
+			ctx.Log.InfoF("Hook: '%s' [%v] :%s", hookName, count, list)
+		}
+
+		total += count
+	}
+
+	pendingShared := filterPendingSharedRepos(shared)
+	printPendingShared(ctx, pendingShared)
+
+	ctx.Log.InfoF("Total listed hooks: '%v'.", total)
+}
+
+type ignoresPerHooksDir = map[string]*hooks.HookIgnorePatterns
+
+// PrepareListHookState prepares all
+// state needed to list all hooks in the current repository.
+func PrepareListHookState(
+	ctx *ccm.CmdContext,
+	repoDir string,
+	repoHooksDir string,
+	gitDir string,
+	hookNames []string) (*ListHookState, hooks.SharedRepos) {
 
 	// Load checksum store
 	checksums, err := hooks.GetChecksumStorage(ctx.GitX, gitDir)
@@ -42,53 +78,26 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 	shared[hooks.SharedHookTypeV.Global], err = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.GlobalScope)
 	ctx.Log.AssertNoErrorF(err, "Could not load global shared hooks.")
 
-	pendingShared := filterPendingSharedRepos(shared)
-
 	isTrusted, _ := hooks.IsRepoTrusted(ctx.GitX, repoDir)
 	isDisabled := hooks.IsGithooksDisabled(ctx.GitX, true)
 
-	state := listHookState{
-		checksums:          &checksums,
-		ignores:            &ignores,
-		isRepoTrusted:      isTrusted,
-		isGithooksDisabled: isDisabled,
-		sharedIgnores:      make(ignoresPerHooksDir, 10),
-		paddingMax:         60} //nolint: gomnd
-
-	total := 0
-	for _, hookName := range hookNames {
-
-		list, count := listHooksForName(
-			ctx.Log,
-			hookName,
-			gitDir,
-			repoHooksDir,
-			shared,
-			&state)
-
-		if count != 0 {
-			ctx.Log.InfoF("Hook: '%s' [%v] :%s", hookName, count, list)
-		}
-
-		total += count
-	}
-
-	printPendingShared(ctx, pendingShared)
-
-	ctx.Log.InfoF("Total listed hooks: '%v'.", total)
+	return &ListHookState{
+			Checksums:          &checksums,
+			Ignores:            &ignores,
+			isRepoTrusted:      isTrusted,
+			isGithooksDisabled: isDisabled,
+			sharedIgnores:      make(ignoresPerHooksDir, 10)},
+		shared
 }
 
-type ignoresPerHooksDir = map[string]*hooks.HookIgnorePatterns
-
-type listHookState struct {
-	checksums *hooks.ChecksumStore
-	ignores   *hooks.RepoIgnorePatterns
+type ListHookState struct {
+	Checksums *hooks.ChecksumStore
+	Ignores   *hooks.RepoIgnorePatterns
 
 	isRepoTrusted      bool
 	isGithooksDisabled bool
 
 	sharedIgnores ignoresPerHooksDir
-	paddingMax    int
 }
 
 func filterPendingSharedRepos(shared hooks.SharedRepos) (pending hooks.SharedRepos) {
@@ -136,9 +145,11 @@ func printPendingShared(ctx *ccm.CmdContext, shared hooks.SharedRepos) {
 	}
 
 	indent := " "
-	listPending(shared[hooks.SharedHookTypeV.Repo], indent, hooks.TagNameSharedRepo)
-	listPending(shared[hooks.SharedHookTypeV.Local], indent, hooks.TagNameSharedLocal)
-	listPending(shared[hooks.SharedHookTypeV.Global], indent, hooks.TagNameSharedRepo)
+	tagNames := hooks.GetSharedRepoTagNames()
+	for i := range shared {
+		idx := hooks.SharedHookType(i)
+		listPending(shared[idx], indent, tagNames[idx])
+	}
 
 	ctx.Log.InfoF("Pending shared hooks [%v] :%s", count, sb.String())
 }
@@ -149,16 +160,35 @@ func listHooksForName(
 	gitDir string,
 	repoHooksDir string,
 	shared hooks.SharedRepos,
-	state *listHookState) (string, int) {
+	state *ListHookState) (string, int) {
+
+	// List replaced hooks (normally only one)
+	replacedHooks := GetAllHooksIn(
+		log, path.Join(gitDir, "hooks"), hookName,
+		hooks.NamespaceReplacedHook, state, false, true)
+
+	// List repository hooks
+	repoHooks := GetAllHooksIn(
+		log, repoHooksDir, hookName,
+		hooks.NamespaceRepositoryHook, state, false, false)
+
+	// List all shared hooks
+	sharedCount := 0
+	all := make([]SharedHooks, 0, shared.GetCount())
+	for idx, sharedRepos := range shared {
+		coll, count := GetAllHooksInShared(log, hookName, state, sharedRepos, hooks.SharedHookType(idx))
+		sharedCount += count
+		all = append(all, coll...)
+	}
 
 	var sb strings.Builder
-
+	paddingMax := 60
 	printHooks := func(hooks []hooks.Hook, title string, category string) {
 		if len(hooks) == 0 {
 			return
 		}
 
-		padding := findPaddingListHooks(hooks, state.paddingMax)
+		padding := findPaddingListHooks(hooks, paddingMax)
 		_, err := strs.FmtW(&sb, "\n %s", title)
 		cm.AssertNoErrorPanicF(err, "Could not write hook state.")
 
@@ -168,24 +198,8 @@ func listHooksForName(
 		}
 	}
 
-	// List replaced hooks (normally only one)
-	replacedHooks := getAllHooksIn(
-		log, path.Join(gitDir, "hooks"), hookName,
-		hooks.NamespaceReplacedHook, state, false, true)
 	printHooks(replacedHooks, "Replaced:", "replaced")
-
-	// List repository hooks
-	repoHooks := getAllHooksIn(log, repoHooksDir, hookName, hooks.NamespaceRepositoryHook, state, false, false)
 	printHooks(repoHooks, "Repository:", "repo")
-
-	// List all shared hooks
-	sharedCount := 0
-	all := make([]SharedHooks, 0, shared.GetCount())
-	for idx, sharedRepos := range shared {
-		coll, count := getAllHooksInShared(log, hookName, state, sharedRepos, hooks.SharedHookType(idx))
-		sharedCount += count
-		all = append(all, coll...)
-	}
 
 	tagNames := hooks.GetSharedRepoTagNames()
 	for i := range all {
@@ -214,10 +228,10 @@ type SharedHooks struct {
 	Hooks    []hooks.Hook
 }
 
-func getAllHooksInShared(
+func GetAllHooksInShared(
 	log cm.ILogContext,
 	hookName string,
-	state *listHookState,
+	state *ListHookState,
 	sharedRepos []hooks.SharedRepo,
 	category hooks.SharedHookType) (coll []SharedHooks, count int) {
 
@@ -228,10 +242,10 @@ func getAllHooksInShared(
 
 		hookNamespace := hooks.GetDefaultHooksNamespaceShared(shRepo)
 
-		allHooks := getAllHooksIn(log, shRepo.RepositoryDir, hookName, hookNamespace, state, true, false)
+		allHooks := GetAllHooksIn(log, shRepo.RepositoryDir, hookName, hookNamespace, state, true, false)
 		// @todo remove this as soon as possible
 		allHooks = append(allHooks,
-			getAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, hookNamespace, state, true, false)...)
+			GetAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, hookNamespace, state, true, false)...)
 
 		if len(allHooks) != 0 {
 			count += len(allHooks)
@@ -246,12 +260,12 @@ func getAllHooksInShared(
 	return
 }
 
-func getAllHooksIn(
+func GetAllHooksIn(
 	log cm.ILogContext,
 	hooksDir string,
 	hookName string,
 	hookNamespace string,
-	state *listHookState,
+	state *ListHookState,
 	addInternalIgnores bool,
 	isReplacedHook bool) []hooks.Hook {
 
@@ -260,7 +274,7 @@ func getAllHooksIn(
 			return true, ""
 		}
 
-		trusted, sha, e := state.checksums.IsTrusted(hookPath)
+		trusted, sha, e := state.Checksums.IsTrusted(hookPath)
 		log.AssertNoErrorF(e, "Could not check trust status '%s'.", hookPath)
 
 		return trusted, sha
@@ -277,7 +291,7 @@ func getAllHooksIn(
 	}
 
 	isIgnored := func(namespacePath string) bool {
-		ignored, byUser := state.ignores.IsIgnored(namespacePath)
+		ignored, byUser := state.Ignores.IsIgnored(namespacePath)
 
 		if isReplacedHook {
 			return ignored && byUser // Replaced hooks can only be ignored by the user.

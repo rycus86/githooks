@@ -932,13 +932,8 @@ func storePendingData(
 
 	// Store all checksums if there are any new ones.
 	if len(uiSettings.TrustedHooks) != 0 {
-		for i := range uiSettings.TrustedHooks {
-
-			err := checksums.SyncChecksum(uiSettings.TrustedHooks[i])
-
-			log.AssertNoErrorF(err, "Could not store checksum for hook '%s'",
-				uiSettings.TrustedHooks[i].Path)
-		}
+		err := checksums.SyncChecksumAdd(uiSettings.TrustedHooks...)
+		log.AssertNoErrorF(err, "Could not store checksum for hook")
 	}
 
 	if hooks.ReadWriteLegacyTrustFile {

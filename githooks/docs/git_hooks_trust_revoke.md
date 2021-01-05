@@ -1,6 +1,6 @@
 ## git hooks trust revoke
 
-Revoke trust settings.
+Revoke repository trust settings.
 
 ```
 git hooks trust revoke

@@ -261,7 +261,7 @@ file is modified in the local repository.`, hooks.GetRepoSharedFileRel())
 			runSharedAdd(ctx, &opts, false, args[0])
 		}}
 
-	var sharedRemoveCmd = &cobra.Command{
+	sharedRemoveCmd := &cobra.Command{
 		Use:   "remove [flags] <git-url>",
 		Short: `Remove shared repositories.`,
 		Long: "Remove an item, given as '<git-url>' from the shared repositories list." + "\n" +
@@ -274,7 +274,7 @@ file is modified in the local repository.`, hooks.GetRepoSharedFileRel())
 			runSharedAdd(ctx, &opts, true, args[0])
 		}}
 
-	var sharedClearCmd = &cobra.Command{
+	sharedClearCmd := &cobra.Command{
 		Use:   "clear [flags]",
 		Short: `Clear shared repositories.`,
 		Long: "Clears every item in the shared repositories list." + "\n" +
@@ -289,7 +289,7 @@ file is modified in the local repository.`, hooks.GetRepoSharedFileRel())
 			runSharedClear(ctx, &opts)
 		}}
 
-	var sharedPurgeCmd = &cobra.Command{
+	sharedPurgeCmd := &cobra.Command{
 		Use:   "purge",
 		Short: `Purge shared repositories.`,
 		Long:  `Deletes all cloned shared hook repositories locally.`,
@@ -297,7 +297,7 @@ file is modified in the local repository.`, hooks.GetRepoSharedFileRel())
 			runSharedPurge(ctx)
 		}}
 
-	var sharedListCmd = &cobra.Command{
+	sharedListCmd := &cobra.Command{
 		Use:   "list [flags]",
 		Short: `List shared repositories.`,
 		Long:  `List the shared, local, global or all (default) shared hooks repositories.`,
@@ -310,7 +310,7 @@ file is modified in the local repository.`, hooks.GetRepoSharedFileRel())
 			runSharedList(ctx, &opts)
 		}}
 
-	var sharedUpdateCmd = &cobra.Command{
+	sharedUpdateCmd := &cobra.Command{
 		Use:   "update",
 		Short: `Update shared repositories.`,
 		Long: `Update all the shared repositories, either by
@@ -320,7 +320,7 @@ running 'git pull' on existing ones or 'git clone' on new ones.`,
 			runSharedUpdate(ctx)
 		}}
 
-	var sharedLocationCmd = &cobra.Command{
+	sharedLocationCmd := &cobra.Command{
 		Use:    "location [URL]...",
 		Short:  `Get the clone location of a shared repository URL.`,
 		Long:   `Returns the clone location of a shared repository URL.`,

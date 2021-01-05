@@ -1,6 +1,6 @@
 ## git hooks trust delete
 
-Delete trust settings.
+Delete repository trust settings.
 
 ```
 git hooks trust delete

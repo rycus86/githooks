@@ -167,28 +167,10 @@ in the subfolder '<hook-name>'. (only together with '--repository' flag.)`)
 	return c
 }
 
-func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
-
-	var ignoreActionOpts = ignoreActionOptions{}
-	var ignoreShowOpts = ignoreShowOptions{}
-
-	ignoreCmd := &cobra.Command{
-		Use:   "ignore",
-		Short: "Ignores or activates hook in the current repository.",
-		Long: `Ignores (or activates) an activated (or ignored)
-hook in the current repository.`,
-		Run: ccm.PanicWrongArgs(ctx.Log)}
-
-	const seeHookListHelpText = `To see the namespace paths of all hooks in the active repository,
+const SeeHookListHelpText = `To see the namespace paths of all hooks in the active repository,
 see '<ns-path>' in the output of 'git hooks list'.`
 
-	const userIgnoreListHelpText = `By default the modifications affect only the user ignore list.
-To see the path of the user ignore list,
-see the output of 'git hooks ignore show --user'.
-To use the repository's ignore list use '--repository'
-with optional '--hook-name'.`
-
-	const namespaceHelpText = `The namespaced path of a hook file consists of
+const NamespaceHelpText = `The namespaced path of a hook file consists of
 '<namespacePath>' ≔ '<namespace>/<relPath>', where '<relPath>' is the
 relative path of the hook with respect to a base directory
 '<hooksDir>'.
@@ -216,28 +198,46 @@ For previous replace hooks in '<repo>/.git/hooks/<hookName>.replaced.githook':
 - '<hooksDir>'  ≔ '<repo>/.git/hooks'
 - '<namespace>' ≔ 'hooks'`
 
-	var ignoreAddPatternCmd = &cobra.Command{
+func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
+
+	var ignoreActionOpts = ignoreActionOptions{}
+	var ignoreShowOpts = ignoreShowOptions{}
+
+	const userIgnoreListHelpText = `By default the modifications affect only the user ignore list.
+To see the path of the user ignore list,
+see the output of 'git hooks ignore show --user'.
+To use the repository's ignore list use '--repository'
+with optional '--hook-name'.`
+
+	ignoreCmd := &cobra.Command{
+		Use:   "ignore",
+		Short: "Ignores or activates hook in the current repository.",
+		Long: `Ignores (or activates) an activated (or ignored)
+hook in the current repository.`,
+		Run: ccm.PanicWrongArgs(ctx.Log)}
+
+	ignoreAddPatternCmd := &cobra.Command{
 		Use:   "add-pattern [flags] [<pattern>]...",
 		Short: "Adds a pattern to the ignore list.",
 		Long: `Adds a pattern to the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
-			seeHookListHelpText + "\n\n" +
+			SeeHookListHelpText + "\n\n" +
 			`The glob pattern '<pattern>' will match the namespaced path
 '<namespacePath>' of a hook.
 The glob pattern syntax supports the 'globstar' (double star) syntax
 in addition to the syntax in 'https://golang.org/pkg/path/filepath/#Match'.` + "\n\n" +
-			namespaceHelpText,
+			NamespaceHelpText,
 		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
 		Run: func(c *cobra.Command, args []string) {
 			runIgnoreAddPattern(ctx, &ignoreActionOpts, false, args)
 		}}
 
-	var ignoreRemovePatternCmd = &cobra.Command{
+	ignoreRemovePatternCmd := &cobra.Command{
 		Use:   "remove-pattern [flags] [<pattern>]...",
 		Short: "Removes a pattern from the ignore list.",
 		Long: `Remove a pattern from the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
-			seeHookListHelpText + "\n\n" +
+			SeeHookListHelpText + "\n\n" +
 			`The glob pattern '<pattern>' needs to exactly match the entry in the user ignore list.
 
 See 'git hooks ignore add-pattern --help' for more information
@@ -247,25 +247,25 @@ about the pattern syntax and namespace paths.`,
 			runIgnoreAddPattern(ctx, &ignoreActionOpts, true, args)
 		}}
 
-	var ignoreAddPathCmd = &cobra.Command{
+	ignoreAddPathCmd := &cobra.Command{
 		Use:   "add-path [flags] [<ns-path>]...",
 		Short: "Adds a namespaced path to the ignore list.",
 		Long: `Adds a namespaced path to the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
-			seeHookListHelpText + "\n\n" +
+			SeeHookListHelpText + "\n\n" +
 			`The '<ns-path>' is the namespaced path '<namespacePath>' of a hook.` + "\n\n" +
-			namespaceHelpText,
+			NamespaceHelpText,
 		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
 		Run: func(c *cobra.Command, args []string) {
 			runIgnoreAddPath(ctx, &ignoreActionOpts, false, args)
 		}}
 
-	var ignoreRemovePathCmd = &cobra.Command{
+	ignoreRemovePathCmd := &cobra.Command{
 		Use:   "remove-path [flags] [<ns-path>]...",
 		Short: "Removes a namespaced path from the ignore list.",
 		Long: `Removes a namespaced path from the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
-			seeHookListHelpText + "\n\n" +
+			SeeHookListHelpText + "\n\n" +
 			`The '<ns-path>' is the namespaced path '<namespacePath>' of a hook.
 
 See 'git hooks ignore add-path --help' for more information
@@ -275,7 +275,7 @@ on namespace paths.`,
 			runIgnoreAddPath(ctx, &ignoreActionOpts, true, args)
 		}}
 
-	var ignoreShowCmd = &cobra.Command{
+	ignoreShowCmd := &cobra.Command{
 		Use:    "show [flags]...",
 		Short:  "Shows the paths of the ignore files.",
 		Long:   `Shows the paths of the ignore files.`,

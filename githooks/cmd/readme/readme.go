@@ -50,14 +50,14 @@ func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 		Long: `Adds or updates the Githooks README in the '.githooks' folder.
 This command needs to be run inside a repository.`}
 
-	var addReadmeCmd = &cobra.Command{
+	addReadmeCmd := &cobra.Command{
 		Use:   "add [flags]",
 		Short: `Add a Githooks README in the current repository.`,
 		Long: `Adds a Githooks README in the '.githooks' folder.
 It does not overwrite any files.`,
 		Run: func(cmd *cobra.Command, args []string) { runAddReadme(ctx) }}
 
-	var updateReadmeCmd = &cobra.Command{
+	updateReadmeCmd := &cobra.Command{
 		Use:   "update [flags]",
 		Short: `Update Githooks README in the current repository.`,
 		Long: `Updates a Githooks README in the '.githooks' folder.

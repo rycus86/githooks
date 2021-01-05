@@ -1,6 +1,6 @@
 ## git hooks trust forget
 
-Forget trust settings.
+Forget repository trust settings.
 
 ```
 git hooks trust forget

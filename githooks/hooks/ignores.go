@@ -21,6 +21,12 @@ type HookIgnorePatterns struct {
 	Version int `yaml:"version"`
 }
 
+// IHookPatternMatch is an interface to match namespace paths against.
+type IHookPatternMatch interface {
+	GetPatterns() []string
+	GetNamespacePaths() []string
+}
+
 var hookIngoreFileVersion = 0
 
 // RepoIgnorePatterns is the list of possible ignore patterns in a repository.
@@ -37,6 +43,16 @@ func CombineIgnorePatterns(patterns ...HookIgnorePatterns) HookIgnorePatterns {
 	}
 
 	return p
+}
+
+// GetPatterns gets the patterns.
+func (h *HookIgnorePatterns) GetPatterns() []string {
+	return h.Patterns
+}
+
+// GetNamespacePaths gets the namespace paths.
+func (h *HookIgnorePatterns) GetNamespacePaths() []string {
+	return h.NamespacePaths
 }
 
 // AddPatterns adds pattern to the patterns.
@@ -105,21 +121,28 @@ func (h *HookIgnorePatterns) Reseve(nPatterns int) {
 
 // IsIgnored returns true if `NamespacePathspacePath` is ignored and otherwise `false`.
 func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
+	return MatchHookPatterns(h, namespacePath)
+}
 
-	for _, p := range h.Patterns {
+// Match matches a namespace path against patterns and namespace paths.
+// It returns true if a match is found.
+func MatchHookPatterns(h IHookPatternMatch, namespacePath string) bool {
+	for _, p := range h.GetPatterns() {
 		// Note: Only forward slashes need to be used here in `hookPath`
 		cm.DebugAssert(!strings.Contains(namespacePath, `\`),
 			"Only forward slashes")
 
 		matched, err := cm.GlobMatch(p, namespacePath)
 
-		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
+		cm.DebugAssertNoErrorF(err,
+			"List contains malformed pattern '%s'", p)
+
 		if err == nil && matched {
 			return true
 		}
 	}
 
-	return strs.Includes(h.NamespacePaths, namespacePath)
+	return strs.Includes(h.GetNamespacePaths(), namespacePath)
 }
 
 // IsEmpty checks if there are any patterns stored.

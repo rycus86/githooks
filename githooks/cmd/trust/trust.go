@@ -74,8 +74,7 @@ func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 	trustCmd := &cobra.Command{
 		Use:   "trust",
 		Short: "Manages settings related to trusted repositories.",
-		Long: `
-Sets up, or reverts the trusted setting for the local repository.
+		Long: `Sets up, or reverts the trusted setting for the local repository.
 
 When called without arguments, it marks the local repository as trusted.
 
@@ -88,30 +87,32 @@ it again next time, if the repository is marked as trusted.`,
 			runTrust(ctx, TrustAdd)
 		}}
 
-	var trustRevokeCmd = &cobra.Command{
+	trustRevokeCmd := &cobra.Command{
 		Use:   "revoke",
-		Short: `Revoke trust settings.`,
+		Short: `Revoke repository trust settings.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runTrust(ctx, TrustRevoke)
 		}}
 
-	var trustForgetCmd = &cobra.Command{
+	trustForgetCmd := &cobra.Command{
 		Use:   "forget",
-		Short: `Forget trust settings.`,
+		Short: `Forget repository trust settings.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runTrust(ctx, TrustForget)
 		}}
 
-	var trustDeleteCmd = &cobra.Command{
+	trustDeleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: `Delete trust settings.`,
+		Short: `Delete repository trust settings.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runTrust(ctx, TrustDelete)
 		}}
 
-	trustCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, trustRevokeCmd))
-	trustCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, trustForgetCmd))
-	trustCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, trustDeleteCmd))
+	trustCmd.AddCommand(
+		ccm.SetCommandDefaults(ctx.Log, trustRevokeCmd),
+		ccm.SetCommandDefaults(ctx.Log, trustForgetCmd),
+		ccm.SetCommandDefaults(ctx.Log, trustDeleteCmd),
+		ccm.SetCommandDefaults(ctx.Log, NewTrustHooksCmd(ctx)))
 
 	return ccm.SetCommandDefaults(ctx.Log, trustCmd)
 }
