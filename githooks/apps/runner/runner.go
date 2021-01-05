@@ -487,7 +487,7 @@ func collectHooks(
 		ignores,
 		checksums,
 		&allAddedShared,
-		hooks.SharedHookEnumV.Local)
+		hooks.SharedHookTypeV.Local)
 
 	h.GlobalSharedHooks = getConfigSharedHooks(
 		settings,
@@ -495,12 +495,12 @@ func collectHooks(
 		ignores,
 		checksums,
 		&allAddedShared,
-		hooks.SharedHookEnumV.Global)
+		hooks.SharedHookTypeV.Global)
 
 	return
 }
 
-func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedHook, sharedType hooks.SharedHookEnum) {
+func updateSharedHooks(settings *HookSettings, sharedHooks []hooks.SharedRepo, sharedType hooks.SharedHookType) {
 
 	if settings.HookName != "post-merge" &&
 		!(settings.HookName == "post-checkout" &&
@@ -525,7 +525,7 @@ func getRepoSharedHooks(
 	checksums *hooks.ChecksumStore,
 	allAddedHooks *[]string) (hs hooks.HookPrioList) {
 
-	sharedHooks, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryDir)
+	shared, err := hooks.LoadRepoSharedHooks(settings.InstallDir, settings.RepositoryDir)
 
 	if err != nil {
 		log.ErrorOrPanicF(settings.FailOnNonExistingSharedHooks, err,
@@ -534,12 +534,14 @@ func getRepoSharedHooks(
 			hooks.GetRepoSharedFile(settings.RepositoryDir))
 	}
 
-	updateSharedHooks(settings, sharedHooks, hooks.SharedHookEnumV.Repo)
+	updateSharedHooks(settings, shared, hooks.SharedHookTypeV.Repo)
 
-	for _, sharedHook := range sharedHooks {
-		if checkSharedHook(settings, sharedHook, allAddedHooks, hooks.SharedHookEnumV.Repo) {
-			hs = getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)
-			*allAddedHooks = append(*allAddedHooks, sharedHook.RepositoryDir)
+	for i := range shared {
+		shRepo := &shared[i]
+
+		if checkSharedHook(settings, shRepo, allAddedHooks, hooks.SharedHookTypeV.Repo) {
+			hs = getHooksInShared(settings, uiSettings, shRepo, ignores, checksums)
+			*allAddedHooks = append(*allAddedHooks, shRepo.RepositoryDir)
 		}
 	}
 
@@ -552,16 +554,16 @@ func getConfigSharedHooks(
 	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore,
 	allAddedHooks *[]string,
-	sharedType hooks.SharedHookEnum) (hs hooks.HookPrioList) {
+	sharedType hooks.SharedHookType) (hs hooks.HookPrioList) {
 
-	var sharedHooks []hooks.SharedHook
+	var shared []hooks.SharedRepo
 	var err error
 
 	switch sharedType {
-	case hooks.SharedHookEnumV.Local:
-		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
-	case hooks.SharedHookEnumV.Global:
-		sharedHooks, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
+	case hooks.SharedHookTypeV.Local:
+		shared, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.LocalScope)
+	case hooks.SharedHookTypeV.Global:
+		shared, err = hooks.LoadConfigSharedHooks(settings.InstallDir, settings.GitX, git.GlobalScope)
 	default:
 		cm.DebugAssertF(false, "Wrong shared type '%v'", sharedType)
 	}
@@ -575,10 +577,12 @@ func getConfigSharedHooks(
 			hooks.GitCK_Shared)
 	}
 
-	for _, sharedHook := range sharedHooks {
-		if checkSharedHook(settings, sharedHook, allAddedHooks, sharedType) {
-			hs = append(hs, getHooksInShared(settings, uiSettings, sharedHook, ignores, checksums)...)
-			*allAddedHooks = append(*allAddedHooks, sharedHook.RepositoryDir)
+	for i := range shared {
+		shRepo := &shared[i]
+
+		if checkSharedHook(settings, shRepo, allAddedHooks, sharedType) {
+			hs = append(hs, getHooksInShared(settings, uiSettings, shRepo, ignores, checksums)...)
+			*allAddedHooks = append(*allAddedHooks, shRepo.RepositoryDir)
 		}
 	}
 
@@ -587,9 +591,9 @@ func getConfigSharedHooks(
 
 func checkSharedHook(
 	settings *HookSettings,
-	hook hooks.SharedHook,
+	hook *hooks.SharedRepo,
 	allAddedHooks *[]string,
-	sharedType hooks.SharedHookEnum) bool {
+	sharedType hooks.SharedHookType) bool {
 
 	if strs.Includes(*allAddedHooks, hook.RepositoryDir) {
 		log.WarnF(
@@ -602,7 +606,7 @@ func checkSharedHook(
 	// Check that no local paths are in repository configured
 	// shared hooks
 	log.PanicIfF(!hooks.AllowLocalURLInRepoSharedHooks() &&
-		sharedType == hooks.SharedHookEnumV.Repo && hook.IsLocal,
+		sharedType == hooks.SharedHookTypeV.Repo && hook.IsLocal,
 		"Shared hooks in '%[1]s' contain a local path\n"+
 			"'%[2]s'\n"+
 			"which is forbidden.\n"+
@@ -721,12 +725,15 @@ func getHooksIn(settings *HookSettings,
 
 	// @todo Make a priority list for executing all batches in parallel
 	// First good solution: all sequential
-	for _, hook := range allHooks {
+	batches = make(hooks.HookPrioList, 0, len(allHooks))
+	for i := range allHooks {
+
+		hook := &allHooks[i]
 
 		if hook.Active && !hook.Trusted {
 			// Active hook, but not trusted:
 			// Show trust prompt to let user trust it or disable.
-			showTrustPrompt(uiSettings, checksums, &hook)
+			showTrustPrompt(uiSettings, checksums, hook)
 		}
 
 		if !hook.Active || !hook.Trusted {
@@ -736,7 +743,7 @@ func getHooksIn(settings *HookSettings,
 			continue
 		}
 
-		batch := []hooks.Hook{hook}
+		batch := []hooks.Hook{*hook}
 		batches = append(batches, batch)
 	}
 
@@ -745,7 +752,7 @@ func getHooksIn(settings *HookSettings,
 
 func getHooksInShared(settings *HookSettings,
 	uiSettings *UISettings,
-	hook hooks.SharedHook,
+	hook *hooks.SharedRepo,
 	ignores *hooks.RepoIgnorePatterns,
 	checksums *hooks.ChecksumStore) hooks.HookPrioList {
 
@@ -770,8 +777,8 @@ func logBatches(title string, hooks hooks.HookPrioList) {
 	} else {
 		for bIdx, batch := range hooks {
 			l += strs.Fmt(" Batch: %v\n", bIdx)
-			for _, h := range batch {
-				l += strs.Fmt("  - '%s' [runner: '%q']\n", h.Path, h.RunCmd)
+			for i := range batch {
+				l += strs.Fmt("  - '%s' [runner: '%q']\n", batch[i].Path, batch[i].RunCmd)
 			}
 		}
 		log.DebugF("%s :\n%s", title, l)
@@ -939,12 +946,14 @@ func storePendingData(
 		log.AssertNoErrorPanicF(err, "Could not open file '%s'", localChecksums)
 		defer f.Close()
 
-		for _, d := range uiSettings.DisabledHooks {
+		for i := range uiSettings.DisabledHooks {
+			d := &uiSettings.DisabledHooks[i]
 			_, err := f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
 			cm.AssertNoErrorPanic(err)
 		}
 
-		for _, d := range uiSettings.TrustedHooks {
+		for i := range uiSettings.TrustedHooks {
+			d := &uiSettings.TrustedHooks[i]
 			_, err := f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
 			cm.AssertNoErrorPanic(err)
 		}
