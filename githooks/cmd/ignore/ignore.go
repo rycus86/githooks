@@ -208,8 +208,8 @@ For shared repository hooks in '<sharedRepo>' with url '<url>':
 
 - '<hooksDir>'  ≔ '<sharedRepo>'
 - '<namespace>' ≔ The first white-space trimmed line in the
-                    file '<hooksDir>/.namespace' or the SHA1 hash of
-                    '<url>'.
+                    file '<hooksDir>/.namespace' or the first 10 digits
+					of the SHA1 hash of '<url>'.
 
 For previous replace hooks in '<repo>/.git/hooks/<hookName>.replaced.githook':
 

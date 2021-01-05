@@ -169,11 +169,13 @@ func listHooksForName(
 	}
 
 	// List replaced hooks (normally only one)
-	replacedHooks := getAllHooksIn(log, path.Join(gitDir, "hooks"), hookName, state, false, true)
+	replacedHooks := getAllHooksIn(
+		log, path.Join(gitDir, "hooks"), hookName,
+		hooks.NamespaceReplacedHook, state, false, true)
 	printHooks(replacedHooks, "Replaced:", "replaced")
 
 	// List repository hooks
-	repoHooks := getAllHooksIn(log, repoHooksDir, hookName, state, false, false)
+	repoHooks := getAllHooksIn(log, repoHooksDir, hookName, hooks.NamespaceRepositoryHook, state, false, false)
 	printHooks(repoHooks, "Repository:", "repo")
 
 	// List all shared hooks
@@ -224,10 +226,12 @@ func getAllHooksInShared(
 	for i := range sharedRepos {
 		shRepo := &sharedRepos[i]
 
-		allHooks := getAllHooksIn(log, shRepo.RepositoryDir, hookName, state, true, false)
+		hookNamespace := hooks.GetDefaultHooksNamespaceShared(shRepo)
+
+		allHooks := getAllHooksIn(log, shRepo.RepositoryDir, hookName, hookNamespace, state, true, false)
 		// @todo remove this as soon as possible
 		allHooks = append(allHooks,
-			getAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, state, true, false)...)
+			getAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, hookNamespace, state, true, false)...)
 
 		if len(allHooks) != 0 {
 			count += len(allHooks)
@@ -246,6 +250,7 @@ func getAllHooksIn(
 	log cm.ILogContext,
 	hooksDir string,
 	hookName string,
+	hookNamespace string,
 	state *listHookState,
 	addInternalIgnores bool,
 	isReplacedHook bool) []hooks.Hook {
@@ -283,12 +288,18 @@ func getAllHooksIn(
 		return ignored
 	}
 
-	hookNamespace, err := hooks.GetHooksNamespace(hooksDir)
-	log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
-
+	// Overwrite namespace/name.
 	if isReplacedHook {
 		hookName = hooks.GetHookReplacementFileName(hookName)
-		hookNamespace = hooks.ReplacedHookNamespace
+		cm.DebugAssert(strs.IsNotEmpty(hookNamespace), "Wrong namespace")
+
+	} else {
+		ns, err := hooks.GetHooksNamespace(hooksDir)
+		log.AssertNoErrorPanicF(err, "Could not get hook namespace in '%s'", hooksDir)
+
+		if strs.IsNotEmpty(ns) {
+			hookNamespace = ns
+		}
 	}
 
 	allHooks, err := hooks.GetAllHooksIn(hooksDir, hookName, hookNamespace, isIgnored, isTrusted)

@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	ReplacedHookNamespace = "hooks"
+	NamespaceRepositoryHook = ""
+	NamespaceReplacedHook   = "hooks"
 )
 
 func getNamespaceFile(hooksDir string) string {
@@ -26,4 +27,10 @@ func GetHooksNamespace(hookDir string) (s string, err error) {
 	}
 
 	return
+}
+
+// GetDefaultHooksNamespaceShared returns the default hooks namespace for
+// a shared url.
+func GetDefaultHooksNamespaceShared(sharedRepo *SharedRepo) string {
+	return cm.GetSHA1HashString(sharedRepo.OriginalURL)[0:10]
 }
