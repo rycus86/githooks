@@ -44,7 +44,7 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 	ctx.Log.InfoF("Total listed hooks: '%v'.", total)
 }
 
-type ignoresPerHooksDir = map[string]*hooks.HookIgnorePatterns
+type ignoresPerHooksDir = map[string]*hooks.HookPatterns
 
 // PrepareListHookState prepares all
 // state needed to list all hooks in the current repository.
@@ -284,7 +284,7 @@ func GetAllHooksIn(
 	hookDirIgnores := state.sharedIgnores[hooksDir]
 	if hookDirIgnores == nil && addInternalIgnores {
 		var e error
-		igns, e := hooks.GetHookIgnorePatternsHooksDir(hooksDir, []string{hookName})
+		igns, e := hooks.GetHookPatternsHooksDir(hooksDir, []string{hookName})
 		log.AssertNoErrorF(e, "Could not get worktree ignores in '%s'.", hooksDir)
 		state.sharedIgnores[hooksDir] = &igns
 		hookDirIgnores = &igns
@@ -296,7 +296,7 @@ func GetAllHooksIn(
 		if isReplacedHook {
 			return ignored && byUser // Replaced hooks can only be ignored by the user.
 		} else if hookDirIgnores != nil {
-			return ignored || hookDirIgnores.IsIgnored(namespacePath)
+			return ignored || hookDirIgnores.Matches(namespacePath)
 		}
 
 		return ignored

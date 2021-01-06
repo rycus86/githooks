@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// HookIgnorePatterns is the format of the ignore patterns.
+// hookIgnoreFile is the format of the ignore patterns file.
 // A path is ignored if matched by `Patterns` or `NamespacePaths`.
-type HookIgnorePatterns struct {
+type hookIgnoreFile struct {
 	// Git ignores patterns matching hook namespace paths.
 	Patterns []string `yaml:"patterns"`
 	// Specific hook namespace paths (uses full match).
@@ -21,23 +21,24 @@ type HookIgnorePatterns struct {
 	Version int `yaml:"version"`
 }
 
-// IHookPatternMatch is an interface to match namespace paths against.
-type IHookPatternMatch interface {
-	GetPatterns() []string
-	GetNamespacePaths() []string
-}
-
+// hookIngoreFileVersion is the ignore file version.
 var hookIngoreFileVersion = 0
+
+// HookPatterns for matching the namespace path of hooks.
+type HookPatterns struct {
+	Patterns       []string
+	NamespacePaths []string
+}
 
 // RepoIgnorePatterns is the list of possible ignore patterns in a repository.
 type RepoIgnorePatterns struct {
-	HooksDir HookIgnorePatterns // Ignores set by `.ignore` file in the hooks directory of the repository.
-	User     HookIgnorePatterns // Ignores set by the `.ignore` file in the Git directory of the repository.
+	HooksDir HookPatterns // Ignores set by `.ignore` file in the hooks directory of the repository.
+	User     HookPatterns // Ignores set by the `.ignore` file in the Git directory of the repository.
 }
 
 // CombineIgnorePatterns combines two ignore patterns.
-func CombineIgnorePatterns(patterns ...HookIgnorePatterns) HookIgnorePatterns {
-	var p HookIgnorePatterns
+func CombineIgnorePatterns(patterns ...*HookPatterns) HookPatterns {
+	var p HookPatterns
 	for _, pat := range patterns {
 		p.Add(pat)
 	}
@@ -45,42 +46,37 @@ func CombineIgnorePatterns(patterns ...HookIgnorePatterns) HookIgnorePatterns {
 	return p
 }
 
-// GetPatterns gets the patterns.
-func (h *HookIgnorePatterns) GetPatterns() []string {
-	return h.Patterns
-}
-
-// GetNamespacePaths gets the namespace paths.
-func (h *HookIgnorePatterns) GetNamespacePaths() []string {
-	return h.NamespacePaths
+// GetCount gets the count of all patterns.
+func (h *HookPatterns) GetCount() int {
+	return len(h.Patterns) + len(h.NamespacePaths)
 }
 
 // AddPatterns adds pattern to the patterns.
-func (h *HookIgnorePatterns) AddPatterns(pattern ...string) {
+func (h *HookPatterns) AddPatterns(pattern ...string) {
 	h.Patterns = append(h.Patterns, pattern...)
 }
 
 // AddNamespacePathsUnique adds a namespace path to the patterns.
-func (h *HookIgnorePatterns) AddPatternsUnique(pattern ...string) (added int) {
+func (h *HookPatterns) AddPatternsUnique(pattern ...string) (added int) {
 	h.Patterns, added = strs.AppendUnique(h.Patterns, pattern...)
 
 	return
 }
 
 // AddNamespacePaths adds a namespace path to the patterns.
-func (h *HookIgnorePatterns) AddNamespacePaths(namespacePath ...string) {
+func (h *HookPatterns) AddNamespacePaths(namespacePath ...string) {
 	h.NamespacePaths = append(h.NamespacePaths, namespacePath...)
 }
 
 // AddNamespacePathsUnique adds a namespace path to the patterns.
-func (h *HookIgnorePatterns) AddNamespacePathsUnique(namespacePath ...string) (added int) {
+func (h *HookPatterns) AddNamespacePathsUnique(namespacePath ...string) (added int) {
 	h.NamespacePaths, added = strs.AppendUnique(h.NamespacePaths, namespacePath...)
 
 	return
 }
 
 // RemovePatterns removes patterns from the list.
-func (h *HookIgnorePatterns) RemovePatterns(pattern ...string) (removed int) {
+func (h *HookPatterns) RemovePatterns(pattern ...string) (removed int) {
 	c := 0
 
 	for _, p := range pattern {
@@ -92,7 +88,7 @@ func (h *HookIgnorePatterns) RemovePatterns(pattern ...string) (removed int) {
 }
 
 // RemoveNamespacePaths adds a namespace path to the patterns.
-func (h *HookIgnorePatterns) RemoveNamespacePaths(namespacePath ...string) (removed int) {
+func (h *HookPatterns) RemoveNamespacePaths(namespacePath ...string) (removed int) {
 	c := 0
 	for _, p := range namespacePath {
 		h.NamespacePaths, c = strs.Remove(h.NamespacePaths, p)
@@ -102,14 +98,30 @@ func (h *HookIgnorePatterns) RemoveNamespacePaths(namespacePath ...string) (remo
 	return
 }
 
-// Add adds pattern from other patterns to itself.
-func (h *HookIgnorePatterns) Add(p HookIgnorePatterns) {
-	h.Patterns = append(h.Patterns, p.Patterns...)
-	h.NamespacePaths = append(h.NamespacePaths, p.NamespacePaths...)
+// Add adds pattern from patterns `p` to itself.
+func (h *HookPatterns) Add(p *HookPatterns) {
+	h.AddPatterns(p.Patterns...)
+	h.AddNamespacePaths(p.NamespacePaths...)
+}
+
+// AddUnique adds pattern uniquely from patterns `p` to itself.
+func (h *HookPatterns) AddUnique(p *HookPatterns) (added int) {
+	added = h.AddPatternsUnique(p.Patterns...)
+	added += h.AddNamespacePathsUnique(p.NamespacePaths...)
+
+	return
+}
+
+// Remove removes pattern from patterns `p` to itself.
+func (h *HookPatterns) Remove(p *HookPatterns) (removed int) {
+	removed = h.RemovePatterns(p.Patterns...)
+	removed += h.RemoveNamespacePaths(p.NamespacePaths...)
+
+	return
 }
 
 // Reserve reserves 'nPatterns'.
-func (h *HookIgnorePatterns) Reseve(nPatterns int) {
+func (h *HookPatterns) Reseve(nPatterns int) {
 	if h.Patterns == nil {
 		h.Patterns = make([]string, 0, nPatterns)
 	}
@@ -119,15 +131,9 @@ func (h *HookIgnorePatterns) Reseve(nPatterns int) {
 	}
 }
 
-// IsIgnored returns true if `NamespacePathspacePath` is ignored and otherwise `false`.
-func (h *HookIgnorePatterns) IsIgnored(namespacePath string) bool {
-	return MatchHookPatterns(h, namespacePath)
-}
-
-// Match matches a namespace path against patterns and namespace paths.
-// It returns true if a match is found.
-func MatchHookPatterns(h IHookPatternMatch, namespacePath string) bool {
-	for _, p := range h.GetPatterns() {
+// Match returns true if `namespacePath` matches any of the patterns and otherwise `false`.
+func (h *HookPatterns) Matches(namespacePath string) bool {
+	for _, p := range h.Patterns {
 		// Note: Only forward slashes need to be used here in `hookPath`
 		cm.DebugAssert(!strings.Contains(namespacePath, `\`),
 			"Only forward slashes")
@@ -142,20 +148,20 @@ func MatchHookPatterns(h IHookPatternMatch, namespacePath string) bool {
 		}
 	}
 
-	return strs.Includes(h.GetNamespacePaths(), namespacePath)
+	return strs.Includes(h.NamespacePaths, namespacePath)
 }
 
 // IsEmpty checks if there are any patterns stored.
-func (h *HookIgnorePatterns) IsEmpty() bool {
+func (h *HookPatterns) IsEmpty() bool {
 	return len(h.Patterns)+len(h.NamespacePaths) == 0
 }
 
 // IsIgnored returns `true` if the hooksPath is ignored by either the worktree patterns or the user patterns
 // and otherwise `false`. The second value is `true` if it was ignored by the user patterns.
 func (h *RepoIgnorePatterns) IsIgnored(namespacePath string) (bool, bool) {
-	if h.HooksDir.IsIgnored(namespacePath) {
+	if h.HooksDir.Matches(namespacePath) {
 		return true, false
-	} else if h.User.IsIgnored(namespacePath) {
+	} else if h.User.Matches(namespacePath) {
 		return true, true
 	}
 
@@ -180,8 +186,8 @@ func GetHookIgnoreFilesHooksDir(repoHooksDir string, hookNames []string) (files 
 	return
 }
 
-// GetHookIgnorePatternsHooksDir gets all ignored hooks in the hook directory.
-func GetHookIgnorePatternsHooksDir(repoHooksDir string, hookNames []string) (patterns HookIgnorePatterns, err error) {
+// GetHookPatternsHooksDir gets all ignored hooks in the hook directory.
+func GetHookPatternsHooksDir(repoHooksDir string, hookNames []string) (patterns HookPatterns, err error) {
 	files := GetHookIgnoreFilesHooksDir(repoHooksDir, hookNames)
 	patterns.Reseve(2 * len(files)) // nolint: gomnd
 
@@ -189,7 +195,7 @@ func GetHookIgnorePatternsHooksDir(repoHooksDir string, hookNames []string) (pat
 		if cm.IsFile(file) {
 			ps, e := LoadIgnorePatterns(file)
 			err = cm.CombineErrors(err, e)
-			patterns.Add(ps)
+			patterns.Add(&ps)
 		}
 	}
 
@@ -198,7 +204,7 @@ func GetHookIgnorePatternsHooksDir(repoHooksDir string, hookNames []string) (pat
 		// @todo Remove and only use the .yaml implementation.
 		ps, e := loadIgnorePatternsLegacy(repoHooksDir, hookNames)
 		err = cm.CombineErrors(err, e)
-		patterns.Add(ps)
+		patterns.Add(&ps)
 	}
 
 	return
@@ -210,29 +216,29 @@ func GetHookIgnoreFileGitDir(gitDir string) string {
 	return path.Join(gitDir, ".githooks.ignore.yaml")
 }
 
-// getHookIgnorePatternsGitDir gets all ignored hooks in the current Git directory.
-func getHookIgnorePatternsGitDir(gitDir string) (HookIgnorePatterns, error) {
+// getHookPatternsGitDir gets all ignored hooks in the current Git directory.
+func getHookPatternsGitDir(gitDir string) (HookPatterns, error) {
 	file := GetHookIgnoreFileGitDir(gitDir)
 	exists, err := cm.IsPathExisting(file)
 	if exists {
 		return LoadIgnorePatterns(file)
 	}
 
-	return HookIgnorePatterns{}, err
+	return HookPatterns{}, err
 }
 
-// StoreHookIgnorePatternsGitDir stores all ignored hooks in the current Git directory.
-func StoreHookIgnorePatternsGitDir(patterns HookIgnorePatterns, gitDir string) error {
+// StoreHookPatternsGitDir stores all ignored hooks in the current Git directory.
+func StoreHookPatternsGitDir(patterns HookPatterns, gitDir string) error {
 	return StoreIgnorePatterns(patterns,
 		path.Join(gitDir, ".githooks.ignore.yaml"))
 }
 
-// getHookIgnorePatternsLegacy loads file `.githooks.checksum` and parses "disabled>" entries
+// getHookPatternsLegacy loads file `.githooks.checksum` and parses "disabled>" entries
 // @todo This needs to be deleted once the test work.
-func getHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
+func getHookPatternsLegacy(gitDir string) (HookPatterns, error) {
 
 	file := path.Join(gitDir, ".githooks.checksum")
-	var p HookIgnorePatterns
+	var p HookPatterns
 
 	if cm.IsFile(file) {
 		data, err := ioutil.ReadFile(file)
@@ -255,16 +261,21 @@ func getHookIgnorePatternsLegacy(gitDir string) (HookIgnorePatterns, error) {
 }
 
 // loadIgnorePatterns loads patterns.
-func LoadIgnorePatterns(file string) (patterns HookIgnorePatterns, err error) {
-	err = cm.LoadYAML(file, &patterns)
+func LoadIgnorePatterns(file string) (patterns HookPatterns, err error) {
+	var data hookIgnoreFile
+
+	err = cm.LoadYAML(file, &data)
 	if err != nil {
 		return
 	}
 
+	patterns.Patterns = data.Patterns
+	patterns.NamespacePaths = data.NamespacePaths
+
 	// Filter all malformed patterns and report
 	// errors.
 	patternIsValid := func(p string) (valid bool) {
-		if valid = IsIgnorePatternValid(p); !valid {
+		if valid = IsHookPatternValid(p); !valid {
 			err = cm.CombineErrors(err, cm.ErrorF("Pattern '%s' is malformed.", p))
 		}
 
@@ -276,9 +287,9 @@ func LoadIgnorePatterns(file string) (patterns HookIgnorePatterns, err error) {
 	return
 }
 
-// IsIgnorePatternValid validates a ignore `pattern`.
+// IsHookPatternValid validates a ignore `pattern`.
 // This test supports `globstar` syntax.
-func IsIgnorePatternValid(pattern string) bool {
+func IsHookPatternValid(pattern string) bool {
 	if pattern == "" {
 		return false
 	}
@@ -288,17 +299,17 @@ func IsIgnorePatternValid(pattern string) bool {
 }
 
 // StoreIgnorePatterns stores patterns.
-func StoreIgnorePatterns(patterns HookIgnorePatterns, file string) (err error) {
-	// We always write the new version.
-	patterns.Version = hookIngoreFileVersion
+func StoreIgnorePatterns(patterns HookPatterns, file string) (err error) {
 
-	patterns.Patterns = strs.MakeUnique(patterns.Patterns)
-	patterns.NamespacePaths = strs.MakeUnique(patterns.NamespacePaths)
+	data := hookIgnoreFile{
+		Version:        hookIngoreFileVersion,
+		Patterns:       strs.MakeUnique(patterns.Patterns),
+		NamespacePaths: strs.MakeUnique(patterns.NamespacePaths)}
 
-	return cm.StoreYAML(file, &patterns)
+	return cm.StoreYAML(file, &data)
 }
 
-func loadIgnorePatternsLegacy(repoHooksDir string, hookNames []string) (patterns HookIgnorePatterns, err error) {
+func loadIgnorePatternsLegacy(repoHooksDir string, hookNames []string) (patterns HookPatterns, err error) {
 
 	file := path.Join(repoHooksDir, ".ignore")
 	if cm.IsFile(file) {
@@ -310,14 +321,14 @@ func loadIgnorePatternsLegacy(repoHooksDir string, hookNames []string) (patterns
 		if cm.IsFile(file) {
 			p, e := loadIgnorePatternsLegacyFile(file)
 			err = cm.CombineErrors(err, e)
-			patterns.Add(p)
+			patterns.Add(&p)
 		}
 	}
 
 	return
 }
 
-func loadIgnorePatternsLegacyFile(file string) (p HookIgnorePatterns, err error) {
+func loadIgnorePatternsLegacyFile(file string) (p HookPatterns, err error) {
 
 	exists, e := cm.IsPathExisting(file)
 	err = cm.CombineErrors(err, e)
@@ -348,23 +359,23 @@ func loadIgnorePatternsLegacyFile(file string) (p HookIgnorePatterns, err error)
 func GetIgnorePatterns(repoHooksDir string, gitDir string, hookNames []string) (patt RepoIgnorePatterns, err error) {
 	var e error
 
-	patt.HooksDir, e = GetHookIgnorePatternsHooksDir(repoHooksDir, hookNames)
+	patt.HooksDir, e = GetHookPatternsHooksDir(repoHooksDir, hookNames)
 	if e != nil {
 		err = cm.CombineErrors(cm.Error("Could not get worktree ignore patterns."), e)
 	}
 
-	patt.User, e = getHookIgnorePatternsGitDir(gitDir)
+	patt.User, e = getHookPatternsGitDir(gitDir)
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get user ignore patterns."), e)
 	}
 
 	// Legacy
 	// @todo Remove as soon as possible
-	legacyDisabledHooks, e := getHookIgnorePatternsLegacy(gitDir)
+	legacyDisabledHooks, e := getHookPatternsLegacy(gitDir)
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get legacy ignore patterns."), e)
 	}
-	patt.User.Add(legacyDisabledHooks)
+	patt.User.Add(&legacyDisabledHooks)
 
 	return
 }

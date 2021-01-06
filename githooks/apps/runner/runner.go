@@ -696,18 +696,18 @@ func getHooksIn(
 		return trusted, sha
 	}
 
-	var internalIgnores hooks.HookIgnorePatterns
+	var internalIgnores hooks.HookPatterns
 
 	if addInternalIgnores {
 		var e error
-		internalIgnores, e = hooks.GetHookIgnorePatternsHooksDir(hooksDir, []string{settings.HookName})
+		internalIgnores, e = hooks.GetHookPatternsHooksDir(hooksDir, []string{settings.HookName})
 		log.AssertNoErrorPanicF(e, "Could not get worktree ignores in '%s'.", hooksDir)
 	}
 
 	isIgnored := func(namespacePath string) bool {
 		ignored, _ := ignores.IsIgnored(namespacePath)
 
-		return ignored || internalIgnores.IsIgnored(namespacePath)
+		return ignored || internalIgnores.Matches(namespacePath)
 	}
 
 	// Determine namespace
@@ -926,7 +926,7 @@ func storePendingData(
 		}
 
 		// ... and store them
-		err := hooks.StoreHookIgnorePatternsGitDir(ignores.User, settings.GitDir)
+		err := hooks.StoreHookPatternsGitDir(ignores.User, settings.GitDir)
 		log.AssertNoErrorF(err, "Could not store disabled hooks.")
 	}
 

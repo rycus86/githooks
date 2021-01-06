@@ -11,22 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// HookPatterns for matching namespace paths.
-type HookPatterns struct {
-	Patterns       []string
-	NamespacePaths []string
-}
-
-// GetPatterns gets the patterns.
-func (h *HookPatterns) GetPatterns() []string {
-	return h.Patterns
-}
-
-// GetNamespacePaths gets the namespace paths.
-func (h *HookPatterns) GetNamespacePaths() []string {
-	return h.NamespacePaths
-}
-
 func getAllHooks(
 	log cm.ILogContext,
 	hookNames []string,
@@ -95,7 +79,7 @@ func apply(log cm.ILogContext, hook *hooks.Hook, checksums *hooks.ChecksumStore,
 	}
 }
 
-func runTrustPatterns(ctx *ccm.CmdContext, reset bool, all bool, patterns *HookPatterns) {
+func runTrustPatterns(ctx *ccm.CmdContext, reset bool, all bool, patterns *hooks.HookPatterns) {
 	repoDir, gitDir := ccm.AssertRepoRoot(ctx)
 
 	repoHooksDir := hooks.GetGithooksDir(repoDir)
@@ -106,16 +90,11 @@ func runTrustPatterns(ctx *ccm.CmdContext, reset bool, all bool, patterns *HookP
 	allHooks := getAllHooks(ctx.Log, hookNames, gitDir, repoHooksDir, shared, state)
 
 	countMatches := 0
-	matches := all
 
 	for i := range allHooks {
 		hook := &allHooks[i]
 
-		if !all {
-			matches = hooks.MatchHookPatterns(patterns, hook.NamespacePath)
-		}
-
-		if matches {
+		if all || patterns.Matches(hook.NamespacePath) {
 			countMatches += 1
 			apply(ctx.Log, hook, state.Checksums, reset)
 		}
@@ -126,7 +105,7 @@ func NewTrustHooksCmd(ctx *ccm.CmdContext) *cobra.Command {
 
 	reset := false
 	all := false
-	patterns := HookPatterns{}
+	patterns := hooks.HookPatterns{}
 
 	trustHooks := &cobra.Command{
 		Use:   "hooks [flags]",

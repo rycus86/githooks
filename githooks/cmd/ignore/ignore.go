@@ -27,7 +27,7 @@ func ignoreLoadIgnoreFile(
 	ctx *ccm.CmdContext,
 	ignAct *ignoreActionOptions,
 	repoRoot string,
-	gitDir string) (file string, patterns hooks.HookIgnorePatterns) {
+	gitDir string) (file string, patterns hooks.HookPatterns) {
 
 	if ignAct.UseRepository {
 
@@ -52,7 +52,9 @@ func ignoreLoadIgnoreFile(
 	return
 }
 
-func runIgnoreAddPattern(ctx *ccm.CmdContext, ignAct *ignoreActionOptions, remove bool, patterns []string) {
+func runIgnoreAddPattern(
+	ctx *ccm.CmdContext, ignAct *ignoreActionOptions,
+	remove bool, patterns *hooks.HookPatterns) {
 
 	repoRoot, gitDir := ccm.AssertRepoRoot(ctx)
 	file, ps := ignoreLoadIgnoreFile(ctx, ignAct, repoRoot, gitDir)
@@ -66,48 +68,21 @@ func runIgnoreAddPattern(ctx *ccm.CmdContext, ignAct *ignoreActionOptions, remov
 			return
 		}
 
-		removed := ps.RemovePatterns(patterns...)
-		text = strs.Fmt("Removed '%v/%v' pattern(s) from", removed, len(patterns))
+		removed := ps.Remove(patterns)
+		text = strs.Fmt("Removed '%v' of '%v' given entries from",
+			removed, patterns.GetCount())
 
 	} else {
-		for _, p := range patterns {
-			if valid := hooks.IsIgnorePatternValid(p); !valid {
+
+		for _, p := range patterns.Patterns {
+			if valid := hooks.IsHookPatternValid(p); !valid {
 				ctx.Log.PanicF("Pattern '%s' is not valid.", p)
 			}
 		}
 
-		added := ps.AddPatternsUnique(patterns...)
-		text = strs.Fmt("Added '%v' pattern(s) to", added)
-	}
-
-	err := os.MkdirAll(path.Dir(file), cm.DefaultFileModeDirectory)
-	ctx.Log.AssertNoErrorPanicF(err, "Could not make directories for '%s'.", file)
-
-	err = hooks.StoreIgnorePatterns(ps, file)
-	ctx.Log.AssertNoErrorPanicF(err, "Could not store ignore file '%s'.", file)
-
-	ctx.Log.InfoF("%s file '%s'.", text, file)
-}
-
-func runIgnoreAddPath(ctx *ccm.CmdContext, ignAct *ignoreActionOptions, remove bool, namespacePaths []string) {
-	repoRoot, gitDir := ccm.AssertRepoRoot(ctx)
-	file, ps := ignoreLoadIgnoreFile(ctx, ignAct, repoRoot, gitDir)
-
-	var text string
-
-	if remove {
-		if ps.IsEmpty() {
-			ctx.Log.WarnF("Ignore file '%s' is empty or does not exist.\nNothing to remove!", file)
-
-			return
-		}
-
-		removed := ps.RemoveNamespacePaths(namespacePaths...)
-		text = strs.Fmt("Removed '%v/%v' namespace path(s) from", removed, len(namespacePaths))
-
-	} else {
-		added := ps.AddNamespacePathsUnique(namespacePaths...)
-		text = strs.Fmt("Added '%v'  namespace path(s) to", added)
+		added := ps.AddUnique(patterns)
+		text = strs.Fmt("Added '%v' of given '%v' entries to",
+			added, patterns.GetCount())
 	}
 
 	err := os.MkdirAll(path.Dir(file), cm.DefaultFileModeDirectory)
@@ -162,7 +137,8 @@ func addIgnoreOpts(c *cobra.Command, actOpts *ignoreActionOptions) *cobra.Comman
 	c.Flags().StringVar(&actOpts.HookName,
 		"hook-name", "",
 		`The action affects the repository's ignore list
-in the subfolder '<hook-name>'. (only together with '--repository' flag.)`)
+in the subfolder '<hook-name>'.
+(only together with '--repository' flag.)`)
 
 	return c
 }
@@ -198,6 +174,14 @@ For previous replace hooks in '<repo>/.git/hooks/<hookName>.replaced.githook':
 - '<hooksDir>'  ≔ '<repo>/.git/hooks'
 - '<namespace>' ≔ 'hooks'`
 
+func addFlags(cmd *cobra.Command, patterns *hooks.HookPatterns) {
+	cmd.Flags().StringSliceVar(&patterns.Patterns, "patterns", nil,
+		"Specified glob patterns matching hook namespace paths.")
+
+	cmd.Flags().StringSliceVar(&patterns.NamespacePaths, "paths", nil,
+		"Specified namespace paths matching hook namespace paths.")
+}
+
 func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 
 	var ignoreActionOpts = ignoreActionOptions{}
@@ -216,63 +200,55 @@ with optional '--hook-name'.`
 hook in the current repository.`,
 		Run: ccm.PanicWrongArgs(ctx.Log)}
 
+	patterns := hooks.HookPatterns{}
+
 	ignoreAddPatternCmd := &cobra.Command{
-		Use:   "add-pattern [flags] [<pattern>]...",
+		Use:   "add [flags]",
 		Short: "Adds a pattern to the ignore list.",
 		Long: `Adds a pattern to the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
 			SeeHookListHelpText + "\n\n" +
-			`The glob pattern '<pattern>' will match the namespaced path
-'<namespacePath>' of a hook.
+			`The glob patterns to add given by '--patterns <pattern>...' will match
+the namespaced path '<namespacePath>' of a hook.
+The namespace paths to add given by '--paths <ns-path>...' will match the full
+namespace path '<namespacePath>' of a hook.
+
 The glob pattern syntax supports the 'globstar' (double star) syntax
 in addition to the syntax in 'https://golang.org/pkg/path/filepath/#Match'.` + "\n\n" +
 			NamespaceHelpText,
-		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
+
+		PreRun: func(cmd *cobra.Command, args []string) {
+			ccm.PanicIfAnyArgs(ctx.Log)(cmd, args)
+			count := len(patterns.NamespacePaths) + len(patterns.Patterns)
+			ctx.Log.PanicIfF(count == 0,
+				"You need to provide at least one pattern or namespace path.")
+		},
+
 		Run: func(c *cobra.Command, args []string) {
-			runIgnoreAddPattern(ctx, &ignoreActionOpts, false, args)
+			runIgnoreAddPattern(ctx, &ignoreActionOpts, false, &patterns)
 		}}
 
 	ignoreRemovePatternCmd := &cobra.Command{
-		Use:   "remove-pattern [flags] [<pattern>]...",
-		Short: "Removes a pattern from the ignore list.",
-		Long: `Remove a pattern from the ignore list.` + "\n\n" +
+		Use:   "remove [flags]",
+		Short: "Removes pattern or namespace paths from the ignore list.",
+		Long: `Remove patterns or namespace paths from the ignore list.` + "\n\n" +
 			userIgnoreListHelpText + "\n\n" +
 			SeeHookListHelpText + "\n\n" +
-			`The glob pattern '<pattern>' needs to exactly match the entry in the user ignore list.
+			`The glob patterns given by '--patterns <pattern>...' or the namespace paths
+given by '--paths <ns-path>...' need to exactly match the entry in the user ignore list to
+be successfully removed.
 
 See 'git hooks ignore add-pattern --help' for more information
 about the pattern syntax and namespace paths.`,
-		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
-		Run: func(c *cobra.Command, args []string) {
-			runIgnoreAddPattern(ctx, &ignoreActionOpts, true, args)
-		}}
 
-	ignoreAddPathCmd := &cobra.Command{
-		Use:   "add-path [flags] [<ns-path>]...",
-		Short: "Adds a namespaced path to the ignore list.",
-		Long: `Adds a namespaced path to the ignore list.` + "\n\n" +
-			userIgnoreListHelpText + "\n\n" +
-			SeeHookListHelpText + "\n\n" +
-			`The '<ns-path>' is the namespaced path '<namespacePath>' of a hook.` + "\n\n" +
-			NamespaceHelpText,
-		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			ccm.PanicIfAnyArgs(ctx.Log)(cmd, args)
+			count := len(patterns.NamespacePaths) + len(patterns.Patterns)
+			ctx.Log.PanicIfF(count == 0,
+				"You need to provide at least one pattern or namespace path.")
+		},
 		Run: func(c *cobra.Command, args []string) {
-			runIgnoreAddPath(ctx, &ignoreActionOpts, false, args)
-		}}
-
-	ignoreRemovePathCmd := &cobra.Command{
-		Use:   "remove-path [flags] [<ns-path>]...",
-		Short: "Removes a namespaced path from the ignore list.",
-		Long: `Removes a namespaced path from the ignore list.` + "\n\n" +
-			userIgnoreListHelpText + "\n\n" +
-			SeeHookListHelpText + "\n\n" +
-			`The '<ns-path>' is the namespaced path '<namespacePath>' of a hook.
-
-See 'git hooks ignore add-path --help' for more information
-on namespace paths.`,
-		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
-		Run: func(c *cobra.Command, args []string) {
-			runIgnoreAddPath(ctx, &ignoreActionOpts, true, args)
+			runIgnoreAddPattern(ctx, &ignoreActionOpts, true, &patterns)
 		}}
 
 	ignoreShowCmd := &cobra.Command{
@@ -298,15 +274,13 @@ on namespace paths.`,
 	ignoreShowCmd.Flags().BoolVar(&ignoreShowOpts.OnlyExisting,
 		"only-existing", false, "Show only existing ignore files.")
 
+	addFlags(ignoreAddPatternCmd, &patterns)
 	addIgnoreOpts(ignoreAddPatternCmd, &ignoreActionOpts)
-	addIgnoreOpts(ignoreRemovePatternCmd, &ignoreActionOpts)
-	addIgnoreOpts(ignoreAddPathCmd, &ignoreActionOpts)
-	addIgnoreOpts(ignoreRemovePathCmd, &ignoreActionOpts)
-
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreAddPatternCmd))
+
+	addFlags(ignoreRemovePatternCmd, &patterns)
+	addIgnoreOpts(ignoreRemovePatternCmd, &ignoreActionOpts)
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreRemovePatternCmd))
-	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreAddPathCmd))
-	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreRemovePathCmd))
 
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreShowCmd))
 
