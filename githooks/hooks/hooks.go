@@ -109,7 +109,8 @@ func GetAllHooksIn(
 	hookName string,
 	hookNamespace string,
 	isIgnored IngoreCallback,
-	isTrusted TrustCallback) (allHooks []Hook, err error) {
+	isTrusted TrustCallback,
+	lazyIfIgnored bool) (allHooks []Hook, err error) {
 
 	appendHook := func(hookPath string, hookNamespace string) error {
 		// Namespace the path to check ignores
@@ -120,7 +121,7 @@ func GetAllHooksIn(
 		sha := ""
 		var runCmd []string
 
-		if !ignored {
+		if !ignored || !lazyIfIgnored {
 			trusted, sha = isTrusted(hookPath)
 
 			if runCmd, err = GetHookRunCmd(hookPath); err != nil {

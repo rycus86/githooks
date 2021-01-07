@@ -18,13 +18,19 @@ func AppendUnique(slice []string, elems ...string) (sl []string, appended int) {
 }
 
 // MakeUnique makes the slice containing only unique items.
+// This function does pertain the order!
 func MakeUnique(slice []string) []string {
-	s := make(StringSet, len(slice))
+
+	keys := make(StringSet, len(slice))
+	s := make([]string, 0, len(slice))
+
 	for _, el := range slice {
-		s.Insert(el)
+		if !keys.Exists(el) {
+			s = append(s, el)
+		}
 	}
 
-	return s.ToList()
+	return s
 }
 
 // Remove removes all occurrences from the slice.

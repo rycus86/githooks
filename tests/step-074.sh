@@ -13,24 +13,24 @@ mkdir -p /tmp/test074/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! git hooks list pre-commit | grep 'pending / new'; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep 'testing' | grep "'active'" | grep -q "'untrusted'"; then
     echo "! Unexpected list result (1)"
     exit 1
 fi
 
-if ! git hooks accept pre-commit testing; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" trust hooks --path "pre-commit/testing"; then
     echo "! Failed to accept the hook"
     exit 1
 fi
 
-if ! git hooks list pre-commit | grep 'active'; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep 'testing' | grep "'active'" | grep -q "'trusted'"; then
     echo "! Unexpected list result (2)"
     exit 1
 fi
 
 echo 'echo "Changed"' >/tmp/test074/.githooks/pre-commit/testing || exit 1
 
-if ! git hooks list pre-commit | grep 'pending / changed'; then
-    echo "! Unexpected list result (3)"
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit | grep 'testing' | grep "'active'" | grep -q "'untrusted'"; then
+    echo "! Unexpected list result (2)"
     exit 1
 fi

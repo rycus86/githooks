@@ -51,12 +51,12 @@ func getAllHooks(
 
 func apply(log cm.ILogContext, hook *hooks.Hook, checksums *hooks.ChecksumStore, reset bool) {
 
-	sha1, err := cm.GetSHA1HashFile(hook.Path)
+	err := hook.AssertSHA1()
 	log.AssertNoErrorPanicF(err, "Could not compute SHA1 hash for hook '%s'.", hook.Path)
 
 	if reset {
 
-		removed, err := checksums.SyncChecksumRemove(sha1)
+		removed, err := checksums.SyncChecksumRemove(hook.SHA1)
 		log.AssertNoErrorPanicF(err, "Could not sync checksum for hook '%s'.", hook.Path)
 
 		if removed != 0 {
@@ -69,7 +69,7 @@ func apply(log cm.ILogContext, hook *hooks.Hook, checksums *hooks.ChecksumStore,
 
 		err = checksums.SyncChecksumAdd(
 			hooks.ChecksumResult{
-				SHA1:          sha1,
+				SHA1:          hook.SHA1,
 				Path:          hook.Path,
 				NamespacePath: hook.NamespacePath})
 
@@ -99,6 +99,10 @@ func runTrustPatterns(ctx *ccm.CmdContext, reset bool, all bool, patterns *hooks
 			apply(ctx.Log, hook, state.Checksums, reset)
 		}
 	}
+
+	ctx.Log.PanicIfF(countMatches == 0,
+		"Given pattern or paths did not match any hooks.")
+
 }
 
 func NewTrustHooksCmd(ctx *ccm.CmdContext) *cobra.Command {
@@ -113,7 +117,8 @@ func NewTrustHooksCmd(ctx *ccm.CmdContext) *cobra.Command {
 		Long: `Trust all hooks which match the glob patterns or namespace paths given
 by '--patterns' or '--paths'.` + "\n\n" +
 			ignore.SeeHookListHelpText + "\n\n" +
-			ignore.NamespaceHelpText,
+			ignore.NamespaceHelpText + "\n\n" +
+			ignore.PatternsHelpText,
 
 		PreRun: func(cmd *cobra.Command, args []string) {
 			ccm.PanicIfAnyArgs(ctx.Log)(cmd, args)
@@ -131,11 +136,11 @@ by '--patterns' or '--paths'.` + "\n\n" +
 		},
 	}
 
-	trustHooks.Flags().StringSliceVar(&patterns.Patterns, "patterns", nil,
-		"Specified glob patterns matching hook namespace paths.")
+	trustHooks.Flags().StringArrayVar(&patterns.Patterns, "pattern", nil,
+		"Specified glob pattern matching hook namespace paths.")
 
-	trustHooks.Flags().StringSliceVar(&patterns.NamespacePaths, "paths", nil,
-		"Specified namespace paths matching hook namespace paths.")
+	trustHooks.Flags().StringArrayVar(&patterns.NamespacePaths, "path", nil,
+		"Specified path fully matching a hook namespace path.")
 
 	trustHooks.Flags().BoolVar(&all, "all", false,
 		`If the action applies to all found hooks.

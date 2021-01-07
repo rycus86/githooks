@@ -9,17 +9,16 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-if git hooks enable not-found; then
-    echo "! Unexpected enable result"
+# @todo maybe add a test for "git hooks ignore".
+# Not sure yet if it makes sense. Its more work...
+# Checking if any added pattern has an effect.
+
+if "$GITHOOKS_EXE_GIT_HOOKS" trust hooks --path not-found; then
+    echo "! Unexpected accept result"
     exit 1
 fi
 
-if git hooks disable not-found; then
-    echo "! Unexpected disable result"
-    exit 1
-fi
-
-if git hooks accept not-found; then
+if "$GITHOOKS_EXE_GIT_HOOKS" trust hooks --pattern not-found; then
     echo "! Unexpected accept result"
     exit 1
 fi

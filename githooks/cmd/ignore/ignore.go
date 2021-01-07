@@ -15,6 +15,7 @@ import (
 type ignoreActionOptions struct {
 	UseRepository bool   // Use repositories ignore file.
 	HookName      string // Use the subfolder 'HookName''s ignore file.
+	All           bool   // If an `--all` flags was given.
 }
 
 type ignoreShowOptions struct {
@@ -62,15 +63,21 @@ func runIgnoreAddPattern(
 	var text string
 
 	if remove {
-		if ps.IsEmpty() {
+
+		switch {
+		case ps.IsEmpty():
 			ctx.Log.WarnF("Ignore file '%s' is empty or does not exist.\nNothing to remove!", file)
 
 			return
-		}
+		case ignAct.All:
+			removed := ps.RemoveAll()
+			text = strs.Fmt("Removed '%v' entries from", removed)
 
-		removed := ps.Remove(patterns)
-		text = strs.Fmt("Removed '%v' of '%v' given entries from",
-			removed, patterns.GetCount())
+		default:
+			removed := ps.Remove(patterns)
+			text = strs.Fmt("Removed '%v' of '%v' given entries from",
+				removed, patterns.GetCount())
+		}
 
 	} else {
 
@@ -129,7 +136,8 @@ func runIgnoreShow(ctx *ccm.CmdContext, ignShow *ignoreShowOptions) {
 	ctx.Log.InfoF("Ignore Files [%v]:\n%s", count, sb.String())
 }
 
-func addIgnoreOpts(c *cobra.Command, actOpts *ignoreActionOptions) *cobra.Command {
+func addIgnoreOpts(c *cobra.Command, actOpts *ignoreActionOptions, addAllFlag bool) *cobra.Command {
+
 	c.Flags().BoolVar(&actOpts.UseRepository,
 		"repository", false,
 		`The action affects the repository's main ignore list.`)
@@ -140,13 +148,21 @@ func addIgnoreOpts(c *cobra.Command, actOpts *ignoreActionOptions) *cobra.Comman
 in the subfolder '<hook-name>'.
 (only together with '--repository' flag.)`)
 
+	if addAllFlag {
+		c.Flags().BoolVar(&actOpts.All,
+			"all", false, `Remove all patterns in the targeted ignore file.
+(ignoring '--patterns', '--paths')`)
+	}
+
 	return c
 }
 
 const SeeHookListHelpText = `To see the namespace paths of all hooks in the active repository,
 see '<ns-path>' in the output of 'git hooks list'.`
 
-const NamespaceHelpText = `The namespaced path of a hook file consists of
+const NamespaceHelpText = `#### Hook Namespace Path
+
+The namespaced path of a hook file consists of
 '<namespacePath>' ≔ '<namespace>/<relPath>', where '<relPath>' is the
 relative path of the hook with respect to a base directory
 '<hooksDir>'.
@@ -174,12 +190,19 @@ For previous replace hooks in '<repo>/.git/hooks/<hookName>.replaced.githook':
 - '<hooksDir>'  ≔ '<repo>/.git/hooks'
 - '<namespace>' ≔ 'hooks'`
 
-func addFlags(cmd *cobra.Command, patterns *hooks.HookPatterns) {
-	cmd.Flags().StringSliceVar(&patterns.Patterns, "patterns", nil,
-		"Specified glob patterns matching hook namespace paths.")
+const PatternsHelpText = `#### Glob Pattern Syntax
 
-	cmd.Flags().StringSliceVar(&patterns.NamespacePaths, "paths", nil,
-		"Specified namespace paths matching hook namespace paths.")
+The glob pattern syntax supports the 'globstar' (double star) syntax
+in addition to the syntax in 'https://golang.org/pkg/path/filepath/#Match'.
+Also you can use negation with a prefix '!', where the '!' character is
+escaped by '\!'.`
+
+func addFlags(cmd *cobra.Command, patterns *hooks.HookPatterns) {
+	cmd.Flags().StringArrayVar(&patterns.Patterns, "pattern", nil,
+		"Specified glob pattern matching hook namespace paths.")
+
+	cmd.Flags().StringArrayVar(&patterns.NamespacePaths, "path", nil,
+		"Specified path fully matching a hook namespace path.")
 }
 
 func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
@@ -211,11 +234,8 @@ hook in the current repository.`,
 			`The glob patterns to add given by '--patterns <pattern>...' will match
 the namespaced path '<namespacePath>' of a hook.
 The namespace paths to add given by '--paths <ns-path>...' will match the full
-namespace path '<namespacePath>' of a hook.
-
-The glob pattern syntax supports the 'globstar' (double star) syntax
-in addition to the syntax in 'https://golang.org/pkg/path/filepath/#Match'.` + "\n\n" +
-			NamespaceHelpText,
+namespace path '<namespacePath>' of a hook.` + "\n\n" +
+			NamespaceHelpText + "\n\n" + PatternsHelpText,
 
 		PreRun: func(cmd *cobra.Command, args []string) {
 			ccm.PanicIfAnyArgs(ctx.Log)(cmd, args)
@@ -244,7 +264,7 @@ about the pattern syntax and namespace paths.`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			ccm.PanicIfAnyArgs(ctx.Log)(cmd, args)
 			count := len(patterns.NamespacePaths) + len(patterns.Patterns)
-			ctx.Log.PanicIfF(count == 0,
+			ctx.Log.PanicIfF(!ignoreActionOpts.All && count == 0,
 				"You need to provide at least one pattern or namespace path.")
 		},
 		Run: func(c *cobra.Command, args []string) {
@@ -275,11 +295,11 @@ about the pattern syntax and namespace paths.`,
 		"only-existing", false, "Show only existing ignore files.")
 
 	addFlags(ignoreAddPatternCmd, &patterns)
-	addIgnoreOpts(ignoreAddPatternCmd, &ignoreActionOpts)
+	addIgnoreOpts(ignoreAddPatternCmd, &ignoreActionOpts, false)
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreAddPatternCmd))
 
 	addFlags(ignoreRemovePatternCmd, &patterns)
-	addIgnoreOpts(ignoreRemovePatternCmd, &ignoreActionOpts)
+	addIgnoreOpts(ignoreRemovePatternCmd, &ignoreActionOpts, true)
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreRemovePatternCmd))
 
 	ignoreCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, ignoreShowCmd))

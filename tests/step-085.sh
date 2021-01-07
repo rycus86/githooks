@@ -8,26 +8,18 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
 fi
 
 mkdir -p /tmp/test085 && cd /tmp/test085 || exit 1
+git init || exit 2
 
-! git hooks ignore test || exit 2
+"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --pattern "pre-commit/test-root" &&
+    grep -q 'pre-commit/test-root' ".githooks/.ignore.yaml" || exit 6
 
-git init || exit 3
+"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --path "pre-commit/test-second" &&
+    grep -q "test-root" ".githooks/.ignore.yaml" &&
+    grep -q "test-second" ".githooks/.ignore.yaml" || exit 7
 
-! git hooks ignore || exit 4
-! git hooks ignore pre-commit || exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --hook-name "pre-commit" --path "test-pc" &&
+    grep -q "test-pc" ".githooks/pre-commit/.ignore.yaml" || exit 7
 
-git hooks ignore test-root &&
-    [ -f ".githooks/.ignore" ] &&
-    grep -q "test-root" ".githooks/.ignore" || exit 6
-git hooks ignore test-second &&
-    [ -f ".githooks/.ignore" ] &&
-    grep -q "test-root" ".githooks/.ignore" &&
-    grep -q "test-second" ".githooks/.ignore" || exit 7
-
-git hooks ignore pre-commit test-pc &&
-    [ -f ".githooks/pre-commit/.ignore" ] &&
-    grep -q "test-pc" ".githooks/pre-commit/.ignore" || exit 7
-
-mkdir -p ".githooks/post-commit/.ignore" &&
-    ! git hooks ignore post-commit test-fail &&
-    [ ! -f ".githooks/post-commit/.ignore" ] || exit 8
+mkdir -p ".githooks/post-commit/.ignore.yaml" &&
+    ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --hook-name "post-commit" --pattern "test-fail" &&
+    [ ! -f ".githooks/post-commit/.ignore.yaml" ] || exit 8

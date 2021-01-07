@@ -120,6 +120,15 @@ func (h *HookPatterns) Remove(p *HookPatterns) (removed int) {
 	return
 }
 
+// RemoveAll removes all patterns.
+func (h *HookPatterns) RemoveAll() (removed int) {
+	removed = len(h.Patterns) + len(h.NamespacePaths)
+	h.Patterns = nil
+	h.NamespacePaths = nil
+
+	return
+}
+
 // Reserve reserves 'nPatterns'.
 func (h *HookPatterns) Reseve(nPatterns int) {
 	if h.Patterns == nil {
@@ -131,24 +140,53 @@ func (h *HookPatterns) Reseve(nPatterns int) {
 	}
 }
 
+// checkPatternInversion checks a pattern for inversion prefix "!".
+func checkPatternInversion(p string) (string, bool) {
+
+	if strings.HasPrefix(p, "!") {
+		return p[1:], true
+	} else if strings.HasPrefix(p, `\!`) {
+		return p[2:], false
+	}
+
+	return p, false
+}
+
 // Match returns true if `namespacePath` matches any of the patterns and otherwise `false`.
-func (h *HookPatterns) Matches(namespacePath string) bool {
+func (h *HookPatterns) Matches(namespacePath string) (matched bool) {
+
 	for _, p := range h.Patterns {
+
 		// Note: Only forward slashes need to be used here in `hookPath`
 		cm.DebugAssert(!strings.Contains(namespacePath, `\`),
 			"Only forward slashes")
 
-		matched, err := cm.GlobMatch(p, namespacePath)
+		rawP, inverted := checkPatternInversion(p)
 
-		cm.DebugAssertNoErrorF(err,
-			"List contains malformed pattern '%s'", p)
+		// If we currently have a match, only an inversion can revert this...
+		// so skip until we find an inversion.
+		if matched && !inverted {
+			continue
+		}
 
-		if err == nil && matched {
-			return true
+		isMatch, err := cm.GlobMatch(rawP, namespacePath)
+		cm.DebugAssertNoErrorF(err, "List contains malformed pattern '%s'", p)
+		if err != nil {
+			continue
+		}
+
+		if inverted {
+			matched = matched && !isMatch
+		} else {
+			matched = matched || isMatch
 		}
 	}
 
-	return strs.Includes(h.NamespacePaths, namespacePath)
+	// The full matches can only change the result to `true`
+	// They have no invertion "!" prefix.
+	matched = matched || strs.Includes(h.NamespacePaths, namespacePath)
+
+	return
 }
 
 // IsEmpty checks if there are any patterns stored.

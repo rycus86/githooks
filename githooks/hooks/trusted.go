@@ -205,7 +205,7 @@ func (t *ChecksumStore) SyncChecksumRemove(sha1s ...string) (removed int, err er
 // IsTrusted checks if a path has been trusted.
 func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 
-	sha1, err := git.GetSHA1HashFile(filePath)
+	sha1, err := cm.GetSHA1HashFile(filePath)
 	if err != nil {
 		return false, "",
 			cm.CombineErrors(cm.ErrorF("Could not get hash for '%s'", filePath), err)

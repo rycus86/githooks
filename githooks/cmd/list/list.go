@@ -316,7 +316,7 @@ func GetAllHooksIn(
 		}
 	}
 
-	allHooks, err := hooks.GetAllHooksIn(hooksDir, hookName, hookNamespace, isIgnored, isTrusted)
+	allHooks, err := hooks.GetAllHooksIn(hooksDir, hookName, hookNamespace, isIgnored, isTrusted, false)
 	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hooksDir)
 
 	return allHooks
@@ -381,9 +381,16 @@ func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 1 {
+			if len(args) != 0 {
 				args = strs.MakeUnique(args)
+
+				for _, h := range args {
+					ctx.Log.PanicIfF(!strs.Includes(hooks.ManagedHookNames, h),
+						"Hook type '%s' is not managed by Githooks.", h)
+				}
+
 				runList(ctx, args, true)
+
 			} else {
 				runList(ctx, hooks.ManagedHookNames, false)
 			}

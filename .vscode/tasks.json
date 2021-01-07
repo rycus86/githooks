@@ -72,7 +72,6 @@
         "--",
         "--clone-url=${env:GITHOOKS_REPO}",
         "--clone-branch=feature/go-refactoring",
-        "--non-interactive",
         "--build-from-source"
       ],
       "options": {
@@ -147,12 +146,10 @@
         "--api-version=2",
         "./apps/cli",
         "--",
-        "ignore",
-        "add-pattern",
-        "--repository",
-        "--hook-name",
-        "post-rewrite",
-        "post-rewrite"
+        "trust",
+        "hooks",
+        "--patterns",
+        "--all"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

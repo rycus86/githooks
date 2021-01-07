@@ -9,14 +9,17 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-for SUBCOMMAND in enable disable accept trust list; do
-    if git hooks "$SUBCOMMAND"; then
-        echo "! Expected to fail: $SUBCOMMAND"
-        exit 1
-    fi
+if "$GITHOOKS_EXE_GIT_HOOKS" list; then
+    echo "! Expected to fail"
+    exit 1
+fi
 
-    if git hooks "$SUBCOMMAND"; then
-        echo "! Expected the alias to fail: $SUBCOMMAND"
-        exit 1
-    fi
-done
+if "$GITHOOKS_EXE_GIT_HOOKS" trust; then
+    echo "! Expected to fail"
+    exit 1
+fi
+
+if "$GITHOOKS_EXE_GIT_HOOKS" disable; then
+    echo "! Expected to fail"
+    exit 1
+fi

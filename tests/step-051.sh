@@ -4,7 +4,7 @@
 
 "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
-if ! git hooks version | grep -q "Version: "; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" version | grep -qE ".*\d+\.\d+\.\d+-.*"; then
     echo "! Unexpected cli version output"
     exit 1
 fi

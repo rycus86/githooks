@@ -4,7 +4,7 @@
 
 "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
-if ! git hooks version; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" --version; then
     echo "! The command line helper tool is not available"
     exit 1
 fi

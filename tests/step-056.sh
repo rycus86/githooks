@@ -11,37 +11,94 @@ mkdir -p /tmp/test056/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! git hooks disable update | grep "git hooks update disable"; then
-    echo "! Could not find expected output"
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "**/first"; then
+    echo "! Failed to disable a hook"
     exit 1
 fi
 
-if ! git hooks disable first; then
-    echo "! Failed to disable a hook by name"
-    exit 1
-fi
-
-if ! git hooks list | grep "first" | grep -q "disabled"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'active'"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! git hooks list | grep "second" | grep -qv "disabled"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "pre-commit/**"; then
+    echo "! Failed to disable a hook"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'ignored'"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! git hooks disable pre-commit; then
-    echo "! Failed to disable a hook by type"
+# Negate the pattern
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "!**/second"; then
+    echo "! Failed to disable a hook"
     exit 1
 fi
 
-if ! git hooks list | grep "first" | grep -q "disabled"; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'active'"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! git hooks list | grep "second" | grep -q "disabled"; then
+# Negate the pattern more
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "!**/*"; then
+    echo "! Failed to disable a hook"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'active'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'active'"; then
     echo "! Unexpected cli list output (4)"
+    exit 1
+fi
+
+# Exclude all
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "**/*"; then
+    echo "! Failed to disable a hook"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'ignored'"; then
+    echo "! Unexpected cli list output (5)"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore remove --all; then
+    echo "! Failed to disable alls hooks"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'active'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'active'"; then
+    echo "! Unexpected cli list output (6)"
+    exit 1
+fi
+
+# with full matches by  namespace paths
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "pre-commit/first"; then
+    echo "! Failed to disable a hook"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'active'"; then
+    echo "! Unexpected cli list output (7)"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern "pre-commit/second"; then
+    echo "! Failed to disable a hook"
+    exit 1
+fi
+
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'ignored'" ||
+    ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'ignored'"; then
+    echo "! Unexpected cli list output (8)"
     exit 1
 fi

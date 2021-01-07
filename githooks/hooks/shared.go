@@ -157,7 +157,7 @@ func GetRepoSharedFileRel() string {
 func GetSharedCloneDir(installDir string, url string) string {
 	// Legacy: As we used `git hash-object --stdin` we need to model the same behavior here
 	// @todo Remove `blob`+ length + \0...
-	sha1 := cm.GetSHA1HashString("blob ", strs.Fmt("%v", len([]byte(url))), "\u0000", url)
+	sha1 := cm.GetSHA1HashString(strs.Fmt("blob %v\u0000%s", len([]byte(url)), url))
 
 	name := []rune(url)
 	if len(url) > 48 { // nolint:gomnd

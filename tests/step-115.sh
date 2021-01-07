@@ -13,7 +13,8 @@ mkdir -p /tmp/test115.shared/shared-repo.git/pre-commit &&
     cd /tmp/test115.shared/shared-repo.git &&
     git init &&
     echo 'echo "Shared invoked" > /tmp/test115.out' >pre-commit/test-shared &&
-    git add pre-commit &&
+    echo "mygagahooks" >.namespace &&
+    git add pre-commit .namespace &&
     git commit -m 'Initial commit' ||
     exit 2
 
@@ -31,26 +32,29 @@ if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' | grep 'shared:repo' | 
     exit 5
 fi
 
-git hooks disable --shared 'test-shared' ||
+"$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern 'mygagahooks/**/test-shared' ||
     exit 6
 
-if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'disabled'; then
-    git hooks list
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' |
+    grep "'shared:repo'" | grep "'ignored'" | grep -q "'untrusted'"; then
+    echo "! Failed to ignore shared hook"
     exit 7
 fi
 
-git hooks enable --shared 'test-shared' ||
+"$GITHOOKS_EXE_GIT_HOOKS" ignore add --pattern '!**/test-shared' ||
     exit 8
 
-if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'pending'; then
-    git hooks list
-    exit 9
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' |
+    grep "'shared:repo'" | grep "'active'" | grep -q "'untrusted'"; then
+    echo "! Failed to activate shared hook"
+    exit 7
 fi
 
-git hooks accept --shared pre-commit 'test-shared' ||
+"$GITHOOKS_EXE_GIT_HOOKS" trust hooks --pattern '**/test-shared' ||
     exit 10
 
-if ! git hooks list | grep 'test-shared' | grep 'shared:local' | grep 'active'; then
-    git hooks list
-    exit 11
+if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep 'test-shared' |
+    grep "'shared:repo'" | grep "'active'" | grep -q "'trusted'"; then
+    echo "! Failed to trust shared hook"
+    exit 7
 fi

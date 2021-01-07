@@ -125,7 +125,7 @@ func defineArguments(rootCmd *cobra.Command) {
 		"build-from-source", false,
 		"If the binaries are built from source instead of\n"+
 			"downloaded from the deploy url.")
-	rootCmd.PersistentFlags().StringSlice(
+	rootCmd.PersistentFlags().StringArray(
 		"build-tags", nil,
 		"Build tags for building from source (get extended with defaults).")
 

@@ -336,12 +336,6 @@ func FetchOrClone(
 	return
 }
 
-// GetSHA1HashFile gets the `git hash-object` SHA1 of a `path`.
-// @todo replace with normal SHA, not with Gits File SHA.
-func GetSHA1HashFile(path string) (string, error) {
-	return Ctx().Get("hash-object", path)
-}
-
 // GetTags gets the tags  at `commitSHA`.
 func GetTags(gitx *Context, commitSHA string) ([]string, error) {
 	if strs.IsEmpty(commitSHA) {

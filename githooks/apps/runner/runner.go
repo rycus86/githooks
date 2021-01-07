@@ -439,7 +439,7 @@ func executeOldHook(settings *HookSettings,
 		return trusted, sha
 	}
 
-	hooks, err := hooks.GetAllHooksIn(settings.HookDir, hookName, hookNamespace, isIgnored, isTrusted)
+	hooks, err := hooks.GetAllHooksIn(settings.HookDir, hookName, hookNamespace, isIgnored, isTrusted, true)
 	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", settings.HookDir)
 
 	if len(hooks) == 0 {
@@ -722,7 +722,8 @@ func getHooksIn(
 		settings.HookName,
 		hookNamespace,
 		isIgnored,
-		isTrusted)
+		isTrusted,
+		true)
 
 	log.AssertNoErrorPanicF(err, "Errors while collecting hooks in '%s'.", hooksDir)
 
