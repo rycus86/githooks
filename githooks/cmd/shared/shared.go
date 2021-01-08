@@ -325,7 +325,7 @@ running 'git pull' on existing ones or 'git clone' on new ones.`,
 		Short:  `Get the clone location of a shared repository URL.`,
 		Long:   `Returns the clone location of a shared repository URL.`,
 		Hidden: true,
-		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 0, -1),
+		PreRun: ccm.PanicIfNotRangeArgs(ctx.Log, 1, -1),
 		Run: func(cmd *cobra.Command, args []string) {
 			runSharedLocation(ctx, args)
 		}}

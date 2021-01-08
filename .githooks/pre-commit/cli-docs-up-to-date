@@ -6,6 +6,12 @@ assertStaged
 
 for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qE '^.*/cmd/.*\.go$'; then
-        echo "! You need to regenerate the CLI docs!"
+
+        docDate=$(stat -c %X docs/git_hooks.md)
+
+        if [ "$((docDate + 60 * 5))" -lt "$(date +%s)" ]; then
+            echo "! You need to regenerate the CLI docs (its too old)!"
+            exit 1
+        fi
     fi
 done
