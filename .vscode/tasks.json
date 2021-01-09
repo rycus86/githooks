@@ -146,10 +146,8 @@
         "--api-version=2",
         "./apps/cli",
         "--",
-        "trust",
-        "hooks",
-        "--patterns",
-        "--all"
+        "config",
+        "list"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

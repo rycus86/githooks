@@ -4,6 +4,7 @@ import (
 	"os"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
+	"sort"
 	"strings"
 )
 
@@ -104,15 +105,43 @@ func (c *Context) getConfigWithArgs(key string, scope ConfigScope, args ...strin
 }
 
 // GetConfigAll gets a all Git configuration values for key `key`.
-func (c *Context) GetConfigAll(key string, scope ConfigScope, args ...string) []string {
+func (c *Context) GetConfigAll(key string, scope ConfigScope) []string {
 	return strs.Filter(
 		strs.SplitLines(c.getConfigWithArgs(key, scope, "--get-all")),
 		strs.IsNotEmpty)
 }
 
 // GetConfigAllU gets a all Git configuration values unsplitted for key `key`.
-func (c *Context) GetConfigAllU(key string, scope ConfigScope, args ...string) string {
+func (c *Context) GetConfigAllU(key string, scope ConfigScope) string {
 	return c.getConfigWithArgs(key, scope, "--get-all")
+}
+
+// GetConfigAll gets all Git configuration values for regex `regex`.
+// Returns a list of pairs.
+func (c *Context) GetConfigRegex(regex string, scope ConfigScope) (res [][]string) {
+	configs, err := c.Get("config", string(scope), "--get-regexp", regex)
+
+	if err != nil {
+		return
+	}
+
+	list := strs.SplitLines(configs)
+	sort.Strings(list)
+
+	res = make([][]string, 0, len(list))
+
+	for i := range list {
+		if strs.IsEmpty(list[i]) {
+			continue
+		}
+
+		keyValue := strings.SplitN(list[i], " ", 2)
+		cm.PanicIf(len(keyValue) == 0, "Wrong split.")
+
+		res = append(res, keyValue)
+	}
+
+	return
 }
 
 // SetConfig sets a Git configuration values with key `key`.

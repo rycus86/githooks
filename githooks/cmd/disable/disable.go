@@ -12,9 +12,20 @@ type disableOptions struct {
 	Reset bool
 }
 
-func runDisable(ctx *ccm.CmdContext, reset bool) {
+func RunDisable(ctx *ccm.CmdContext, reset bool, onlyPrint bool) {
 
 	ccm.AssertRepoRoot(ctx)
+
+	if onlyPrint {
+		conf := ctx.GitX.GetConfig(hooks.GitCK_Disable, git.LocalScope)
+		if conf == "true" {
+			ctx.Log.InfoF("Githooks is disabled in the current repository.")
+		} else {
+			ctx.Log.InfoF("Githooks is not disabled in the current repository.")
+		}
+
+		return
+	}
 
 	if reset {
 		err := ctx.GitX.UnsetConfig(hooks.GitCK_Disable, git.LocalScope)
@@ -23,7 +34,7 @@ func runDisable(ctx *ccm.CmdContext, reset bool) {
 
 	} else {
 		err := ctx.GitX.SetConfig(hooks.GitCK_Disable, true, git.LocalScope)
-		ctx.Log.AssertNoErrorPanic(err, "Could not unset Git config '%s'.", hooks.GitCK_Disable)
+		ctx.Log.AssertNoErrorPanic(err, "Could not set Git config '%s'.", hooks.GitCK_Disable)
 		ctx.Log.InfoF("Disabled Githooks in the current repository.")
 	}
 }
@@ -40,7 +51,7 @@ func NewCmd(ctx *ccm.CmdContext) *cobra.Command {
 LFS hooks and replaced previous hooks are still executed.`,
 		PreRun: ccm.PanicIfAnyArgs(ctx.Log),
 		Run: func(cmd *cobra.Command, args []string) {
-			runDisable(ctx, disableOpts.Reset)
+			RunDisable(ctx, disableOpts.Reset, false)
 		}}
 
 	disableCmd.Flags().BoolVar(&disableOpts.Reset, "reset", false,

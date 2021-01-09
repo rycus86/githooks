@@ -4,9 +4,7 @@ import (
 	"os"
 	ccm "rycus86/githooks/cmd/common"
 	cm "rycus86/githooks/common"
-	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
-	strs "rycus86/githooks/strings"
 
 	"github.com/spf13/cobra"
 )
@@ -23,7 +21,7 @@ const (
 func runTrust(ctx *ccm.CmdContext, opt TrustOption) {
 
 	repoRoot, _ := ccm.AssertRepoRoot(ctx)
-	file := hooks.GetTrustFile(repoRoot)
+	file := hooks.GetTrustMarkerFile(repoRoot)
 
 	switch opt {
 	case TrustAdd:
@@ -31,20 +29,20 @@ func runTrust(ctx *ccm.CmdContext, opt TrustOption) {
 		ctx.Log.AssertNoErrorPanicF(err, "Could not touch trust marker '%s'.", file)
 		ctx.Log.Info("The trust marker is added to the repository.")
 
-		err = ctx.GitX.SetConfig(hooks.GitCK_TrustAll, true, git.LocalScope)
-		ctx.Log.AssertNoErrorPanicF(err, "Could set trust settings.", hooks.GitCK_TrustAll)
+		err = hooks.SetTrustAllSetting(ctx.GitX, true, false)
+		ctx.Log.AssertNoErrorPanic(err, "Could not set trust settings.")
 		ctx.Log.Info("The current repository is now trusted.")
 
 		if !ctx.GitX.IsBareRepo() {
 			ctx.Log.Info("Do not forget to commit and push it!")
 		}
 	case TrustForget:
-		trust := ctx.GitX.GetConfig(hooks.GitCK_TrustAll, git.LocalScope)
-		if strs.IsEmpty(trust) {
+		_, isSet := hooks.GetTrustAllSetting(ctx.GitX)
+		if !isSet {
 			ctx.Log.Info("The current repository does not have trust settings.")
 		} else {
-			err := ctx.GitX.UnsetConfig(hooks.GitCK_TrustAll, git.LocalScope)
-			ctx.Log.AssertNoErrorPanicF(err, "Could not unset trust settings.", hooks.GitCK_TrustAll)
+			err := hooks.SetTrustAllSetting(ctx.GitX, false, true)
+			ctx.Log.AssertNoErrorPanic(err, "Could not unset trust settings.")
 		}
 
 		ctx.Log.Info("The current repository is no longer trusted.")
@@ -52,8 +50,8 @@ func runTrust(ctx *ccm.CmdContext, opt TrustOption) {
 	case TrustRevoke:
 		fallthrough
 	case TrustDelete:
-		err := ctx.GitX.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
-		ctx.Log.AssertNoErrorPanicF(err, "Could not set trust settings.", hooks.GitCK_TrustAll)
+		err := hooks.SetTrustAllSetting(ctx.GitX, false, false)
+		ctx.Log.AssertNoErrorPanicF(err, "Could not set trust settings.")
 		ctx.Log.Info("The current repository is no longer trusted.")
 	}
 

@@ -790,15 +790,15 @@ func installBinaries(
 }
 
 func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.IContext) {
-	gitx := git.Ctx()
-	currentSetting := gitx.GetConfig(hooks.GitCK_AutoUpdateEnabled, git.GlobalScope)
+
+	enabled, isSet := updates.GetAutomaticUpdateCheckSettings()
 	promptMsg := ""
 
 	switch {
-	case currentSetting == "true":
-		return // Already enabled.
-	case strs.IsEmpty(currentSetting):
+	case !isSet:
 		promptMsg = "Would you like to enable automatic update checks,\ndone once a day after a commit?"
+	case enabled:
+		return // Already enabled.
 	default:
 		log.Info("Automatic update checks are currently disabled.")
 		if nonInteractive {
@@ -826,14 +826,10 @@ func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.ICo
 			log.Info("[dry run] Would enable automatic update checks.")
 		} else {
 
-			if err := gitx.SetConfig(
-				hooks.GitCK_AutoUpdateEnabled, true, git.GlobalScope); err == nil {
-
+			err := updates.SetAutomaticUpdateCheckSettings(true, false)
+			if log.AssertNoErrorF(err, "Failed to enable automatic update checks.") {
 				log.Info("Automatic update checks are now enabled.")
-			} else {
-				log.Error("Failed to enable automatic update checks.")
 			}
-
 		}
 	} else {
 		log.Info(
@@ -1162,7 +1158,8 @@ func setupSharedRepositories(cliExectuable string, dryRun bool, uiSettings *UISe
 
 func storeSettings(settings *Settings, uiSettings *UISettings) {
 	// Store cached UI values back.
-	err := git.Ctx().SetConfig(hooks.GitCK_DeleteDetectedLFSHooks, uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
+	err := git.Ctx().SetConfig(
+		hooks.GitCK_DeleteDetectedLFSHooksAnswer, uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
 	log.AssertNoError(err, "Could not store config 'githooks.deleteDetectedLFSHooks'.")
 
 	err = settings.RegisteredGitDirs.Store(settings.InstallDir)

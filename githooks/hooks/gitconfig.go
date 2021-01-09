@@ -8,7 +8,7 @@ const (
 	GitCK_ChecksumCacheDir             = "githooks.checksumCacheDir"
 	GitCK_CloneBranch                  = "githooks.cloneBranch"
 	GitCK_CloneUrl                     = "githooks.cloneUrl"
-	GitCK_DeleteDetectedLFSHooks       = "githooks.deleteDetectedLFSHooks"
+	GitCK_DeleteDetectedLFSHooksAnswer = "githooks.deleteDetectedLFSHooks"
 	GitCK_Disable                      = "githooks.disable"
 	GitCK_FailOnNonExistingSharedHooks = "githooks.failOnNonExistingSharedHooks"
 	GitCK_GoExecutable                 = "githooks.goExecutable"
@@ -45,7 +45,7 @@ func GetGlobalGitConfigKeys() []string {
 		GitCK_ChecksumCacheDir,
 		GitCK_CloneBranch,
 		GitCK_CloneUrl,
-		GitCK_DeleteDetectedLFSHooks,
+		GitCK_DeleteDetectedLFSHooksAnswer,
 		GitCK_Disable,
 		GitCK_FailOnNonExistingSharedHooks,
 		GitCK_GoExecutable,

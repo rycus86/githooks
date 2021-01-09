@@ -499,3 +499,24 @@ func (s *SharedRepo) IsCloneValid() bool {
 		return false
 	}
 }
+
+// SetFailOnNonExistingSharedHooks sets settings if the hook runner should fail on non existing hooks.
+func SetFailOnNonExistingSharedHooks(gitx *git.Context, enable bool, reset bool, scope git.ConfigScope) error {
+	switch {
+	case reset:
+		return gitx.UnsetConfig(GitCK_FailOnNonExistingSharedHooks, scope)
+	default:
+		return gitx.SetConfig(GitCK_FailOnNonExistingSharedHooks, enable, scope)
+	}
+}
+
+// GetFailOnNonExistingSharedHooks gets the settings if the hook runner should fail on non existing hooks.
+func GetFailOnNonExistingSharedHooks(gitx *git.Context, scope git.ConfigScope) (enabled bool, isSet bool) {
+	conf := gitx.GetConfig(GitCK_FailOnNonExistingSharedHooks, scope)
+	switch {
+	case strs.IsEmpty(conf):
+		return
+	default:
+		return conf == "true", true
+	}
+}

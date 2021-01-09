@@ -40,12 +40,28 @@ func GetCloneURL() (url string, branch string) {
 }
 
 // SetCloneURL get the clone url and clone branch.
-func SetCloneURL(url string, branch string) error {
-	gitx := git.Ctx()
-	e1 := gitx.SetConfig(hooks.GitCK_CloneUrl, url, git.GlobalScope)
-	e2 := gitx.SetConfig(hooks.GitCK_CloneBranch, branch, git.GlobalScope)
+// The `branch` can be empty.
+func SetCloneURL(url string, branch string) (err error) {
+	cm.DebugAssertF(strs.IsNotEmpty(url), "Wrong input")
 
-	return cm.CombineErrors(e1, e2)
+	err = git.Ctx().SetConfig(hooks.GitCK_CloneUrl, url, git.GlobalScope)
+	if err != nil || strs.IsEmpty(branch) {
+		return
+	}
+
+	return SetCloneBranch(branch)
+}
+
+// Set the Githooks clone branch.
+func SetCloneBranch(branch string) error {
+	cm.DebugAssertF(strs.IsNotEmpty(branch), "Wrong input")
+
+	return git.Ctx().SetConfig(hooks.GitCK_CloneBranch, branch, git.GlobalScope)
+}
+
+// Reset the Githooks clone branch.
+func ResetCloneBranch() error {
+	return git.Ctx().UnsetConfig(hooks.GitCK_CloneBranch, git.GlobalScope)
 }
 
 var unskipTrailerRe = regexp.MustCompile(`Update-NoSkip:\s+true`)

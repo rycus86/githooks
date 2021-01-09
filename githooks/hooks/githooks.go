@@ -284,7 +284,7 @@ func IsGithooksDisabled(gitx *git.Context, checkEnv bool) bool {
 
 	disabled := gitx.GetConfig(GitCK_Disable, git.Traverse)
 
-	return disabled == "true" ||
+	return disabled == "true" || // nolint: goconst
 		disabled == "y" || // Legacy
 		disabled == "Y" // Legacy
 }

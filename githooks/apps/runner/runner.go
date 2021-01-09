@@ -226,12 +226,12 @@ func showTrustRepoPrompt(gitx *git.Context, promptCtx prompt.IContext) (isTruste
 	log.AssertNoErrorF(err, "Could not show prompt.")
 
 	if err == nil && answer == "y" || answer == "Y" {
-		err := gitx.SetConfig(hooks.GitCK_TrustAll, true, git.LocalScope)
-		log.AssertNoErrorF(err, "Could not store trust setting '%s'.", hooks.GitCK_TrustAll)
+		err := hooks.SetTrustAllSetting(gitx, true, false)
+		log.AssertNoErrorF(err, "Could not store trust setting.")
 		isTrusted = true
 	} else {
-		err := gitx.SetConfig(hooks.GitCK_TrustAll, false, git.LocalScope)
-		log.AssertNoErrorF(err, "Could not store trust setting '%s'.", hooks.GitCK_TrustAll)
+		err := hooks.SetTrustAllSetting(gitx, false, false)
+		log.AssertNoErrorF(err, "Could not store trust setting.")
 	}
 
 	return
@@ -270,10 +270,9 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		return
 	}
 
-	log.Info("Record update check time ...")
-	err := settings.GitX.SetConfig(hooks.GitCK_AutoUpdateLastRun,
-		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
-	log.AssertNoError(err, "Could not record update time.")
+	log.Info("Record update check timestamp ...")
+	err := updates.RecordUpdateCheckTimestamp()
+	log.AssertNoError(err, "Could not record update check timestamp.")
 
 	log.Info("Checking for updates ...")
 	cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
@@ -312,19 +311,15 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 		return false
 	}
 
-	enabled := settings.GitX.GetConfig(hooks.GitCK_AutoUpdateEnabled, git.Traverse)
-	if enabled != "true" && enabled != "Y" {
+	enabled, _ := updates.GetAutomaticUpdateCheckSettings()
+	if !enabled {
 		return false
 	}
 
-	timeLastUpdate := settings.GitX.GetConfig(hooks.GitCK_AutoUpdateLastRun, git.GlobalScope)
-	if timeLastUpdate == "" {
-		return true
-	}
-	t, err := strconv.ParseInt(timeLastUpdate, 10, 64)
-	log.AssertNoErrorF(err, "Could not parse update time")
+	lastUpdateCheck, _, err := updates.GetUpdateCheckTimestamp()
+	log.AssertNoErrorF(err, "Could get last update check time.")
 
-	return time.Since(time.Unix(t, 0)).Hours() > 24.0 //nolint: gomnd
+	return time.Since(lastUpdateCheck).Hours() > 24.0 //nolint: gomnd
 }
 
 func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool {

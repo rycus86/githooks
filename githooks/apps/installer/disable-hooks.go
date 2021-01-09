@@ -16,7 +16,7 @@ func getHookDisableCallback(
 
 	if strs.IsEmpty(uiSettings.DeleteDetectedLFSHooks) {
 		// Load default UI value from config.
-		uiSettings.DeleteDetectedLFSHooks = gitx.GetConfig(hooks.GitCK_DeleteDetectedLFSHooks, git.GlobalScope)
+		uiSettings.DeleteDetectedLFSHooks = gitx.GetConfig(hooks.GitCK_DeleteDetectedLFSHooksAnswer, git.GlobalScope)
 	}
 
 	return func(file string) (answer hooks.HookDisableOption) {

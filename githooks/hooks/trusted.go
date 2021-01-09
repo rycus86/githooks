@@ -11,10 +11,29 @@ import (
 	"strings"
 )
 
-const GitConfigTrustAll = "githooks.trust.all"
-
-func GetTrustFile(repoDir string) string {
+// GetTrustMarkerFile get the trust marker file in the current repo.
+func GetTrustMarkerFile(repoDir string) string {
 	return path.Join(GetGithooksDir(repoDir), "trust-all")
+}
+
+// GetTrustAllSetting gets the trust-all setting in the local Git configuration.
+func GetTrustAllSetting(gitx *git.Context) (trustall bool, isSet bool) {
+	conf := gitx.GetConfig(GitCK_TrustAll, git.LocalScope)
+
+	isSet = strs.IsNotEmpty(conf)
+	trustall = conf == "true"
+
+	return
+}
+
+// SetTrustAllSetting sets the trust-all setting in the local Git configuration.
+func SetTrustAllSetting(gitx *git.Context, enable bool, reset bool) error {
+	switch {
+	case reset:
+		return gitx.UnsetConfig(GitCK_TrustAll, git.LocalScope)
+	default:
+		return gitx.SetConfig(GitCK_TrustAll, enable, git.LocalScope)
+	}
 }
 
 // IsRepoTrusted tells if the repository `repoPath` is trusted.
@@ -23,15 +42,11 @@ func IsRepoTrusted(
 	gitx *git.Context,
 	repoPath string) (isTrusted bool, hasTrustFile bool) {
 
-	trustFile := GetTrustFile(repoPath)
+	trustFile := GetTrustMarkerFile(repoPath)
 
 	if cm.IsFile(trustFile) {
 		hasTrustFile = true
-
-		trustFlag := gitx.GetConfig(GitConfigTrustAll, git.LocalScope)
-		if trustFlag == "true" || trustFlag == "y" || trustFlag == "Y" {
-			isTrusted = true
-		}
+		isTrusted, _ = GetTrustAllSetting(gitx)
 	}
 
 	return
