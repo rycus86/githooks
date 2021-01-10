@@ -237,14 +237,6 @@ func GetHookPatternsHooksDir(repoHooksDir string, hookNames []string) (patterns 
 		}
 	}
 
-	if ReadLegacyIgnoreFiles {
-		// Legacy load hooks from old ignore files
-		// @todo Remove and only use the .yaml implementation.
-		ps, e := loadIgnorePatternsLegacy(repoHooksDir, hookNames)
-		err = cm.CombineErrors(err, e)
-		patterns.Add(&ps)
-	}
-
 	return
 }
 
@@ -345,51 +337,6 @@ func StoreIgnorePatterns(patterns HookPatterns, file string) (err error) {
 		NamespacePaths: strs.MakeUnique(patterns.NamespacePaths)}
 
 	return cm.StoreYAML(file, &data)
-}
-
-func loadIgnorePatternsLegacy(repoHooksDir string, hookNames []string) (patterns HookPatterns, err error) {
-
-	file := path.Join(repoHooksDir, ".ignore")
-	if cm.IsFile(file) {
-		patterns, err = loadIgnorePatternsLegacyFile(file)
-	}
-
-	for _, hookName := range hookNames {
-		file = path.Join(repoHooksDir, hookName, ".ignore")
-		if cm.IsFile(file) {
-			p, e := loadIgnorePatternsLegacyFile(file)
-			err = cm.CombineErrors(err, e)
-			patterns.Add(&p)
-		}
-	}
-
-	return
-}
-
-func loadIgnorePatternsLegacyFile(file string) (p HookPatterns, err error) {
-
-	exists, e := cm.IsPathExisting(file)
-	err = cm.CombineErrors(err, e)
-	if exists {
-		data, e := ioutil.ReadFile(file)
-		err = cm.CombineErrors(err, e)
-
-		for _, s := range strs.SplitLines(string(data)) {
-			if s == "" || strings.HasPrefix(s, "#") {
-				continue
-			}
-
-			// We add '**/' to each pattern, as we no longer match filenames only
-			// but a whole namespacePath.
-			if ReadLegacyIgnoreFileFixPatters {
-				s = "**/" + s
-			}
-
-			p.Patterns = append(p.Patterns, s)
-		}
-	}
-
-	return
 }
 
 // GetIgnorePatterns loads all ignore patterns in the worktree's hooks dir and

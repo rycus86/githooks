@@ -1,4 +1,3 @@
-# Example .ignore file that contains
-#   filename patterns to exclude (not paths).
 patterns:
   - "*.md"
+  - "*export-staged"

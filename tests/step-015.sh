@@ -12,8 +12,8 @@ mkdir -p .githooks/pre-commit &&
     echo '#!/bin/sh' >.githooks/pre-commit/test.fourth &&
     echo 'echo "Fourth was run" >> /tmp/test015.out ' >>.githooks/pre-commit/test.fourth &&
     chmod +x .githooks/pre-commit/test.fourth &&
-    echo '*.first' >.githooks/.ignore &&
-    echo '*.second' >.githooks/pre-commit/.ignore &&
+    echo 'patterns: - pre-commit/*first' >.githooks/.ignore.yaml &&
+    echo 'patterns: - pre-commit/*second' >.githooks/pre-commit/.ignore.yaml &&
     "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 

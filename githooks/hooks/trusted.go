@@ -286,14 +286,5 @@ func GetChecksumStorage(gitx *git.Context, gitDirWorktree string) (store Checksu
 		}
 	}
 
-	if ReadWriteLegacyTrustFile {
-		// Legacy: Load the the old file, if existing
-		localChecksums := path.Join(gitDirWorktree, ".githooks.checksum")
-		e := store.AddChecksums(localChecksums, false)
-		if e != nil {
-			err = cm.CombineErrors(err, cm.ErrorF("Could not add checksums from '%s'.", localChecksums), e)
-		}
-	}
-
 	return
 }

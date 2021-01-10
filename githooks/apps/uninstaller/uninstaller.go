@@ -204,16 +204,6 @@ func cleanArtefactsInRepo(gitDir string) {
 		log.AssertNoErrorF(os.RemoveAll(ignoreFile),
 			"Could not delete ignore file '%s'.", ignoreFile)
 	}
-
-	// @todo remove as soon as possible
-	if hooks.ReadWriteLegacyTrustFile {
-		localChecksums := path.Join(gitDir, ".githooks.checksum")
-		if cm.IsFile(localChecksums) {
-			log.AssertNoErrorF(os.Remove(localChecksums),
-				"Could not delete checksum file '%s'.", localChecksums)
-		}
-	}
-
 }
 
 func cleanGitConfigInRepo(gitDir string) {

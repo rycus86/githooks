@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -864,26 +863,5 @@ func storePendingData(
 	if len(uiSettings.TrustedHooks) != 0 {
 		err := checksums.SyncChecksumAdd(uiSettings.TrustedHooks...)
 		log.AssertNoErrorF(err, "Could not store checksum for hook")
-	}
-
-	if hooks.ReadWriteLegacyTrustFile {
-		// Legacy function write disabled and trusted hooks back to `.githooks.checksum`
-		// @todo write them to the correct file!
-		localChecksums := path.Join(settings.GitDirWorktree, ".githooks.checksum")
-		f, err := os.OpenFile(localChecksums, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
-		log.AssertNoErrorPanicF(err, "Could not open file '%s'", localChecksums)
-		defer f.Close()
-
-		for i := range uiSettings.DisabledHooks {
-			d := &uiSettings.DisabledHooks[i]
-			_, err := f.WriteString(fmt.Sprintf("disabled> %s\n", d.Path))
-			cm.AssertNoErrorPanic(err)
-		}
-
-		for i := range uiSettings.TrustedHooks {
-			d := &uiSettings.TrustedHooks[i]
-			_, err := f.WriteString(fmt.Sprintf("%s %s\n", d.SHA1, d.Path))
-			cm.AssertNoErrorPanic(err)
-		}
 	}
 }

@@ -7,8 +7,8 @@
 mkdir -p /tmp/test059/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/test059/.githooks/pre-commit/first &&
     echo 'echo "Hello"' >/tmp/test059/.githooks/pre-commit/second &&
-    echo 'first' >/tmp/test059/.githooks/.ignore &&
-    echo 'second' >/tmp/test059/.githooks/pre-commit/.ignore &&
+    echo 'patterns: - pre-commit/first' >/tmp/test059/.githooks/.ignore.yaml &&
+    echo 'patterns: - pre-commit/second' >/tmp/test059/.githooks/pre-commit/.ignore.yaml &&
     cd /tmp/test059 &&
     git init ||
     exit 1

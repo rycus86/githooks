@@ -75,11 +75,6 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}"
 changelog:
-  sort: desc
-  filters:
-      exclude:
-        - '^\[doc\]'
-        - ^\[np\]
 signs:
   - artifacts: checksum
     cmd: gpg
