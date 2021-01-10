@@ -7,12 +7,13 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-# Update state configuration
+! "$GITHOOKS_EXE_GIT_HOOKS" config update || exit 2
 
-! git hooks config unknown update || exit 2
-git hooks config reset update &&
-    git hooks config print update | grep 'NOT' || exit 3
-git hooks config enable update &&
-    git hooks config print update | grep -v 'NOT' || exit 4
-git hooks config disable update &&
-    git hooks config print update | grep 'NOT' || exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" config update --disable &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config update --print | grep -q 'disabled' || exit 3
+
+"$GITHOOKS_EXE_GIT_HOOKS" config update --enable &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config update --print | grep -q 'enabled' || exit 4
+
+"$GITHOOKS_EXE_GIT_HOOKS" config update --disable &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config update --print | grep -q 'disabled' || exit 5

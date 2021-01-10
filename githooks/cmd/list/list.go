@@ -32,7 +32,7 @@ func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
 			state)
 
 		if count != 0 {
-			ctx.Log.InfoF("Hook: '%s' [%v] :%s", hookName, count, list)
+			ctx.Log.InfoF("Hook: '%s' [%v]:%s", hookName, count, list)
 		}
 
 		total += count
@@ -151,7 +151,7 @@ func printPendingShared(ctx *ccm.CmdContext, shared hooks.SharedRepos) {
 		listPending(shared[idx], indent, tagNames[idx])
 	}
 
-	ctx.Log.InfoF("Pending shared hooks [%v] :%s", count, sb.String())
+	ctx.Log.InfoF("Pending shared hooks [%v]:%s", count, sb.String())
 }
 
 func listHooksForName(

@@ -17,6 +17,7 @@ git hooks config update [flags]
       --enable    Enables automatic update checks for Githooks.
   -h, --help      help for update
       --print     Print the setting.
+      --reset     Reset the setting.
 ```
 
 ### SEE ALSO

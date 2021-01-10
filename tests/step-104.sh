@@ -27,7 +27,7 @@ if ! "$GITHOOKS_EXE_GIT_HOOKS" tools register dialog ./tool; then
 fi
 
 # Trigger dialog, by triggering the trust prompt
-if ! git hooks config deny trusted; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" config trusted --deny; then
     echo "! Failed to set trust setting"
     exit 5
 fi

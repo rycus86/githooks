@@ -61,15 +61,15 @@ if grep 'Previous3' /tmp/test-109.out; then
     exit 1
 fi
 
-out=$(git hooks config print delete-detected-lfs-hooks)
+out=$("$GITHOOKS_EXE_GIT_HOOKS" config delete-detected-lfs-hooks --print)
 if ! echo "$out" | grep -q "default disabled and backed up"; then
     echo "! Expected the correct config behavior"
     echo "$out"
 fi
 
 # For coverage
-git hooks config reset delete-detected-lfs-hooks || exit 1
-out=$(git hooks config print delete-detected-lfs-hooks)
+"$GITHOOKS_EXE_GIT_HOOKS" config delete-detected-lfs-hooks --reset || exit 1
+out=$("$GITHOOKS_EXE_GIT_HOOKS" config delete-detected-lfs-hooks --print)
 if ! echo "$out" | grep -q "default disabled and backed up"; then
     echo "! Expected the correct config behavior"
     echo "$out"

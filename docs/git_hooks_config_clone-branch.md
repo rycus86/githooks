@@ -1,4 +1,4 @@
-## git hooks config clone-url
+## git hooks config clone-branch
 
 Changes the Githooks clone url used for any update.
 
@@ -7,14 +7,15 @@ Changes the Githooks clone url used for any update.
 Changes the Githooks clone url used for any update.
 
 ```
-git hooks config clone-url [flags]
+git hooks config clone-branch [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help    help for clone-url
+  -h, --help    help for clone-branch
       --print   Print the setting.
+      --reset   Reset the setting.
       --set     Set the setting.
 ```
 

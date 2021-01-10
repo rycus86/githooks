@@ -19,9 +19,9 @@ git hooks config fail-on-non-existing-shared-hooks [flags]
                   shared hooks configured is missing.
       --enable    Enable failing hooks with an error when any
                   shared hooks configured is missing.
-      --global    Use the global Git configuration (default).
+      --global    Use the global Git configuration.
   -h, --help      help for fail-on-non-existing-shared-hooks
-      --local     Use the local Git configuration.
+      --local     Use the local Git configuration (default).
       --print     Print the setting.
 ```
 

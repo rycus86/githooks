@@ -7,10 +7,12 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-! git hooks config unknown search-dir || exit 2
-! git hooks config set search-dir || exit 3
+! "$GITHOOKS_EXE_GIT_HOOKS" config search-dir || exit 2
+! "$GITHOOKS_EXE_GIT_HOOKS" config search-dir --set || exit 3
+! "$GITHOOKS_EXE_GIT_HOOKS" config search-dir --set a b c || exit 4
 
-git hooks config set search-dir /prev/search/dir &&
-    git hooks config print search-dir | grep '/prev/search/dir' || exit 4
-git hooks config reset search-dir &&
-    git hooks config print search-dir | grep 'No previous search directory is set' || exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" config search-dir --set /prev/search/dir || exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" config search-dir --print | grep -q '/prev/search/dir' || exit 6
+
+"$GITHOOKS_EXE_GIT_HOOKS" config search-dir --reset
+"$GITHOOKS_EXE_GIT_HOOKS" config search-dir --print | grep -q -i 'previous search directory is not set' || exit 7

@@ -20,16 +20,18 @@ type GitOptions struct {
 	Global bool
 }
 
-func wrapToGitScope(opts *GitOptions) git.ConfigScope {
+func wrapToGitScope(log cm.ILogContext, opts *GitOptions) git.ConfigScope {
 	switch {
+	default:
+		fallthrough
+	case opts.Local && opts.Global:
+		log.PanicF("You cannot use '--local' or '--global' at the same time.")
+
+		return git.LocalScope
 	case opts.Local:
 		return git.LocalScope
 	case opts.Global:
 		return git.GlobalScope
-	default:
-		cm.Panic("Wrong options.")
-
-		return git.LocalScope
 	}
 }
 
@@ -145,17 +147,23 @@ func runList(ctx *ccm.CmdContext, gitOpts *GitOptions) {
 
 		pairs := ctx.GitX.GetConfigRegex("(^githooks|alias.hooks)", scope)
 
-		var sb strings.Builder
-
 		maxLength := 0
 		for i := range pairs {
 			maxLength = math.MaxInt(maxLength, len(pairs[i][0])+2) // nolint: gomnd
 		}
 		keyFmt := strs.Fmt("%%-%vs", maxLength)
 
+		if len(pairs) == 0 {
+			return "[0]: none"
+		}
+
+		var sb strings.Builder
+		_, err := strs.FmtW(&sb, "[%v]:", len(pairs))
+		cm.AssertNoErrorPanic(err, "Could not write message.")
+
 		for i := range pairs {
 			key := strs.Fmt("'%s'", pairs[i][0])
-			_, err := strs.FmtW(&sb, "\n%s "+keyFmt+" : '%s'", ccm.ListItemLiteral, key, pairs[i][1])
+			_, err = strs.FmtW(&sb, "\n%s "+keyFmt+" : '%s'", ccm.ListItemLiteral, key, pairs[i][1])
 			cm.AssertNoErrorPanic(err, "Could not write message.")
 		}
 
@@ -163,11 +171,11 @@ func runList(ctx *ccm.CmdContext, gitOpts *GitOptions) {
 	}
 
 	if gitOpts.Local {
-		ctx.Log.InfoF("Local Git configurations:%s", print(git.LocalScope))
+		ctx.Log.InfoF("Local Githooks configurations %s", print(git.LocalScope))
 	}
 
 	if gitOpts.Global {
-		ctx.Log.InfoF("Global Git configurations:%s", print(git.GlobalScope))
+		ctx.Log.InfoF("Global Githooks configurations %s", print(git.GlobalScope))
 	}
 
 }
@@ -182,16 +190,20 @@ func runSearchDir(ctx *ccm.CmdContext, opts *SetOptions) {
 	case opts.Set:
 		err := ctx.GitX.SetConfig(opt, opts.Values[0], git.GlobalScope)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not set Git config '%s'.", opt)
-		ctx.Log.InfoF("Set previous search dir used during install to '%s'.", opts.Values[0])
+		ctx.Log.InfoF("Set previous search directory used during install to\n'%s'.", opts.Values[0])
 
 	case opts.Reset:
 		err := ctx.GitX.UnsetConfig(opt, git.GlobalScope)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not unset Git config '%s'.", opt)
-		ctx.Log.Info("Unset previous search dir used during install.")
+		ctx.Log.Info("Unset previous search directory used during install.")
 
 	case opts.Print:
 		conf := ctx.GitX.GetConfig(opt, git.GlobalScope)
-		ctx.Log.InfoF("Previous search dir used during install set to '%s'.", conf)
+		if strs.IsEmpty(conf) {
+			ctx.Log.InfoF("Previous search directory is not set.")
+		} else {
+			ctx.Log.InfoF("Previous search directory is set to\n'%s'.", conf)
+		}
 	default:
 		cm.Panic("Wrong arguments.")
 	}
@@ -199,7 +211,6 @@ func runSearchDir(ctx *ccm.CmdContext, opts *SetOptions) {
 
 func runSharedRepos(ctx *ccm.CmdContext, opts *SetOptions, gitOpts *GitOptions) {
 	opt := hooks.GitCK_Shared
-	scope := wrapToGitScope(gitOpts)
 
 	localOrGlobal := "local"
 	if gitOpts.Global {
@@ -208,6 +219,7 @@ func runSharedRepos(ctx *ccm.CmdContext, opts *SetOptions, gitOpts *GitOptions) 
 
 	switch {
 	case opts.Set:
+		scope := wrapToGitScope(ctx.Log, gitOpts)
 		for i := range opts.Values {
 			err := ctx.GitX.AddConfig(opt, opts.Values[i], scope)
 			ctx.Log.AssertNoErrorPanicF(err, "Could not add %s shared repository.", localOrGlobal)
@@ -215,13 +227,33 @@ func runSharedRepos(ctx *ccm.CmdContext, opts *SetOptions, gitOpts *GitOptions) 
 		ctx.Log.InfoF("Added '%v' %s shared repositories.", len(opts.Values), localOrGlobal)
 
 	case opts.Reset:
+		scope := wrapToGitScope(ctx.Log, gitOpts)
 		err := ctx.GitX.UnsetConfig(opt, scope)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not unset %s shared repository.", localOrGlobal)
 		ctx.Log.InfoF("Removed all %s shared repositories.", localOrGlobal)
 
 	case opts.Print:
-		conf := ctx.GitX.GetConfig(opt, git.GlobalScope)
-		ctx.Log.InfoF("Previous search dir used during install set to '%s'.", conf)
+		list := func(sh []string) string {
+			if len(sh) == 0 {
+				return "[0]: none"
+			}
+
+			return strs.Fmt("[%v]:\n%s", len(sh),
+				strings.Join(strs.Map(sh,
+					func(s string) string { return strs.Fmt("%s '%s'", ccm.ListItemLiteral, s) }),
+					"\n"))
+		}
+
+		if gitOpts.Local {
+			shared := ctx.GitX.GetConfigAll(opt, git.LocalScope)
+			ctx.Log.InfoF("Local shared repositories %s", list(shared))
+		}
+
+		if gitOpts.Global {
+			shared := ctx.GitX.GetConfigAll(opt, git.GlobalScope)
+			ctx.Log.InfoF("Global shared repositories %s", list(shared))
+		}
+
 	default:
 		cm.Panic("Wrong arguments.")
 	}
@@ -287,7 +319,7 @@ func runUpdateTime(ctx *ccm.CmdContext, opts *SetOptions) {
 			ctx.Log.InfoF("%s set to '%s'.", ts.Format(time.RFC1123))
 		} else {
 			ctx.Log.InfoF("%s is not set.\n"+
-				"Probably update checks have not been run.", text)
+				"Update checks have never run.", text)
 		}
 	default:
 		cm.Panic("Wrong arguments.")
@@ -310,13 +342,13 @@ func runTrust(ctx *ccm.CmdContext, opts *SetOptions) {
 	case opts.Reset:
 		err := hooks.SetTrustAllSetting(ctx.GitX, false, true)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not set trust-all setting.")
-		ctx.Log.InfoF("The trust-all-hooks setting is unset.")
+		ctx.Log.InfoF("The trust-all-hooks setting is not set in the current repository.")
 
 	case opts.Print:
 		enabled, isSet := hooks.GetTrustAllSetting(ctx.GitX)
 		switch {
 		case !isSet:
-			ctx.Log.Info("The current repository does not have trust settings.")
+			ctx.Log.Info("The trust-all-hooks setting is not set in the current repository.")
 		case enabled:
 			ctx.Log.Info("The current repository trusts all hooks automatically.")
 		default:
@@ -363,7 +395,7 @@ func runUpdate(ctx *ccm.CmdContext, opts *SetOptions) {
 }
 
 func runNonExistingSharedHooks(ctx *ccm.CmdContext, opts *SetOptions, gitOpts *GitOptions) {
-	scope := wrapToGitScope(gitOpts)
+	scope := wrapToGitScope(ctx.Log, gitOpts)
 
 	localOrGlobal := "locally"
 	if gitOpts.Global {
@@ -384,7 +416,7 @@ func runNonExistingSharedHooks(ctx *ccm.CmdContext, opts *SetOptions, gitOpts *G
 
 	case opts.Reset:
 		err := hooks.SetFailOnNonExistingSharedHooks(ctx.GitX, false, true, scope)
-		ctx.Log.AssertNoErrorPanicF(err, "Could not disable failing %s %s.", text, localOrGlobal)
+		ctx.Log.AssertNoErrorPanicF(err, "Could not reset failing %s %s.", text, localOrGlobal)
 		ctx.Log.InfoF("Reset setting for failing %s %s.", text, localOrGlobal)
 
 	case opts.Print:
@@ -446,10 +478,16 @@ func configListCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, gitOpts *GitOp
 Can be either global or local configuration, or both by default.`,
 		PreRun: ccm.PanicIfAnyArgs(ctx.Log),
 		Run: func(cmd *cobra.Command, args []string) {
+
 			if !gitOpts.Local && !gitOpts.Global {
-				gitOpts.Local = true
+				_, _, err := ctx.GitX.GetRepoRoot()
+				gitOpts.Local = err == nil
 				gitOpts.Global = true
+
+			} else if gitOpts.Local {
+				ccm.AssertRepoRoot(ctx)
 			}
+
 			runList(ctx, gitOpts)
 		}}
 
@@ -512,7 +550,7 @@ func configCloneUrlCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, setOpts *S
 func configCloneBranchCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, setOpts *SetOptions) {
 
 	cloneBranchCmd := &cobra.Command{
-		Use:   "clone-url [flags]",
+		Use:   "clone-branch [flags]",
 		Short: "Changes the Githooks clone url used for any update.",
 		Long:  `Changes the Githooks clone url used for any update.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -564,7 +602,6 @@ func configUpdateCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, setOpts *Set
 	wrapToEnableDisable(&optsPSUR)
 	optsPSUR.SetDesc = "Enables automatic update checks for Githooks."
 	optsPSUR.UnsetDesc = "Disables automatic update checks for Githooks."
-	optsPSUR.Reset = "" // disable reset.
 
 	configSetOptions(updateCmd, setOpts, &optsPSUR, ctx.Log, 0, 0)
 	configCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, updateCmd))
@@ -601,9 +638,15 @@ func configSharedCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, setOpts *Set
 The '--add' option accepts multiple '<git-url>' arguments,
 each containing a clone URL of a shared hook repository which gets added.`,
 		Run: func(cmd *cobra.Command, args []string) {
+
 			if !gitOpts.Local && !gitOpts.Global {
+				_, _, err := ctx.GitX.GetRepoRoot()
 				gitOpts.Global = true
+				gitOpts.Local = setOpts.Print && err == nil
+			} else if gitOpts.Local {
+				ccm.AssertRepoRoot(ctx)
 			}
+
 			runSharedRepos(ctx, setOpts, gitOpts)
 		}}
 
@@ -627,8 +670,13 @@ shared hooks are missing. This usually means 'git hooks shared update'
 has not been called yet.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if !gitOpts.Local && !gitOpts.Global {
-				gitOpts.Global = true
+				gitOpts.Local = true
 			}
+
+			if gitOpts.Local {
+				ccm.AssertRepoRoot(ctx)
+			}
+
 			runNonExistingSharedHooks(ctx, setOpts, gitOpts)
 		}}
 
@@ -642,8 +690,8 @@ has not been called yet.`,
 
 	configSetOptions(nonExistSharedCmd, setOpts, &optsPSUR, ctx.Log, 0, 0)
 
-	nonExistSharedCmd.Flags().BoolVar(&gitOpts.Local, "local", false, "Use the local Git configuration.")
-	nonExistSharedCmd.Flags().BoolVar(&gitOpts.Global, "global", false, "Use the global Git configuration (default).")
+	nonExistSharedCmd.Flags().BoolVar(&gitOpts.Local, "local", false, "Use the local Git configuration (default).")
+	nonExistSharedCmd.Flags().BoolVar(&gitOpts.Global, "global", false, "Use the global Git configuration.")
 
 	configCmd.AddCommand(ccm.SetCommandDefaults(ctx.Log, nonExistSharedCmd))
 }

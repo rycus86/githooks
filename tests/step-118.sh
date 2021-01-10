@@ -7,14 +7,20 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-git hooks config clone-url "https://wuagadugu.git"
-if git config githooks.cloneUrl | grep -q "wuagadugu"; then
+"$GITHOOKS_EXE_GIT_HOOKS" config clone-url --set "https://wuagadugu.git" || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" config clone-url --print | grep -q "wuagadugu" || exit 2
+
+if ! git config githooks.cloneUrl | grep -q "wuagadugu"; then
     echo "Expected clone url to be set" >&2
     exit 1
 fi
 
-git hooks config clone-branch "gaga"
-if git config githooks.cloneBranch | grep -q "wuagadugu"; then
-    echo "Expected clone url to be set" >&2
+"$GITHOOKS_EXE_GIT_HOOKS" config clone-branch --set "gaga" || exit 3
+"$GITHOOKS_EXE_GIT_HOOKS" config clone-branch --print | grep -q "gaga" || exit 4
+
+if ! git config githooks.cloneBranch | grep -q "gaga"; then
+    echo "Expected clone branch to be set" >&2
     exit 1
 fi
+
+"$GITHOOKS_EXE_GIT_HOOKS" config clone-branch --reset || exit 5

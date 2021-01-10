@@ -19,7 +19,7 @@ git hooks config
 ### SEE ALSO
 
 * [git hooks](git_hooks.md)	 - Githooks CLI application
-* [git hooks config clone-url](git_hooks_config_clone-url.md)	 - Changes the Githooks clone url used for any update.
+* [git hooks config clone-branch](git_hooks_config_clone-branch.md)	 - Changes the Githooks clone url used for any update.
 * [git hooks config clone-url](git_hooks_config_clone-url.md)	 - Changes the Githooks clone url used for any update.
 * [git hooks config delete-detected-lfs-hooks](git_hooks_config_delete-detected-lfs-hooks.md)	 - Change the behavior for detected LFS hooks during install.
 * [git hooks config disable](git_hooks_config_disable.md)	 - Disables Githooks in the current repository.

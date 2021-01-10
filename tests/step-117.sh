@@ -96,7 +96,7 @@ if "$GITHOOKS_EXE_GIT_HOOKS" shared list --shared | grep -q "shared-clone" >/dev
     exit 1
 fi
 
-git hooks config accept trusted || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" config trusted --accept || exit 1
 "$GITHOOKS_EXE_GIT_HOOKS" shared update || exit 1
 
 # shellcheck disable=SC2012

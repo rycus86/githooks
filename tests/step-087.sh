@@ -7,14 +7,12 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-# Update time configuration
+! "$GITHOOKS_EXE_GIT_HOOKS" config update-time || exit 2
 
-! git hooks config unknown update-time || exit 2
-
-git hooks config print update-time | grep 'never' || exit 3
+"$GITHOOKS_EXE_GIT_HOOKS" config update-time --print | grep -q 'never' || exit 3
 
 git config --global githooks.autoupdate.lastrun 123 &&
-    git hooks config print update-time | grep -v 'never' || exit 4
+    "$GITHOOKS_EXE_GIT_HOOKS" config update-time --print | grep -q 'never' && exit 4
 
-git hooks config reset update-time &&
-    git hooks config print update-time | grep 'never' || exit 5
+"$GITHOOKS_EXE_GIT_HOOKS" config update-time --reset &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config update-time --print | grep -q 'never' || exit 5

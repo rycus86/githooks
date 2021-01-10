@@ -15,7 +15,7 @@ mkdir -p /tmp/test110/hooks &&
 
 # Hooks
 cd /tmp/test110/hooks && git init || exit 1
-git hooks config set disable || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" config disable --set || exit 1
 
 # Server
 cd /tmp/test110/server && git init --bare || exit 1
@@ -37,7 +37,7 @@ echo "Setup shared hook in server repo"
 cd /tmp/test110/server || exit 1
 "$GITHOOKS_EXE_GIT_HOOKS" shared add file:///tmp/test110/hooks || exit 1
 echo "Setup shared hook in server repo: set trusted"
-git hooks config accept trusted || exit 1
+"$GITHOOKS_EXE_GIT_HOOKS" config trusted --accept || exit 1
 echo "Setup shared hook in server repo: update shared"
 "$GITHOOKS_EXE_GIT_HOOKS" shared update || exit 1
 

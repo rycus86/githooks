@@ -9,15 +9,17 @@ fi
 
 mkdir -p /tmp/test093 && cd /tmp/test093 || exit 2
 
-! git hooks config accept trusted || exit 3
+! "$GITHOOKS_EXE_GIT_HOOKS" config trusted --accept || exit 3
 
 git init || exit 4
 
-! git hooks config unknown trusted || exit 5
+! "$GITHOOKS_EXE_GIT_HOOKS" config trusted || exit 5
 
-git hooks config accept trusted &&
-    git hooks config print trusted | grep 'trusts all hooks' || exit 6
-git hooks config deny trusted &&
-    git hooks config print trusted | grep 'does NOT trust hooks' || exit 7
-git hooks config reset trusted &&
-    git hooks config print trusted | grep 'does NOT have' || exit 8
+"$GITHOOKS_EXE_GIT_HOOKS" config trusted --accept &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config trusted --accept | grep -q 'trusts all hooks' || exit 6
+
+"$GITHOOKS_EXE_GIT_HOOKS" config trusted --deny &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config trusted --print | grep -q 'does not trust hooks' || exit 7
+
+"$GITHOOKS_EXE_GIT_HOOKS" config trusted --reset &&
+    "$GITHOOKS_EXE_GIT_HOOKS" config trusted --print | grep -q 'is not set' || exit 8
