@@ -43,7 +43,7 @@ fi
 git config --global --unset githooks.autoupdate.lastrun
 
 OUTPUT=$(
-    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-commit 2>&1
+    "$GITHOOKS_INSTALL_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then

@@ -72,7 +72,7 @@ fi
 
 # Test uninstall to only repo 1
 cd /tmp/test116.1 &&
-    ~/.githooks/bin/uninstaller --stdin --single || exit 1
+    "$GITHOOKS_INSTALL_BIN_DIR/uninstaller" --stdin --single || exit 1
 
 if grep -q /tmp/test116.1 "$REGISTER_FILE" ||
     (! grep -q /tmp/test116.2 "$REGISTER_FILE" &&
@@ -92,9 +92,10 @@ if [ -f "$REGISTER_FILE" ]; then
     exit 1
 fi
 
-if [ -f ~/.githooks/bin/uninstaller ] ||
-    [ -f ~/.githooks/bin/installer ] ||
-    [ -f ~/.githooks/bin/runner ]; then
+if [ -f "$GITHOOKS_INSTALL_BIN_DIR/uninstaller" ] ||
+    [ -f "$GITHOOKS_INSTALL_BIN_DIR/installer" ] ||
+    [ -f "$GITHOOKS_INSTALL_BIN_DIR/runner" ] ||
+    [ -f "$GITHOOKS_INSTALL_BIN_DIR/cli" ]; then
     echo "! Expected that all binaries are deleted."
     exit 1
 fi

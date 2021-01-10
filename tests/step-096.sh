@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: list of staged files (special paths)
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test096/.githooks/pre-commit &&
     cd /tmp/test096 && git init ||
     exit 1
@@ -27,7 +23,7 @@ EOF
 git add sub f*
 
 ACCEPT_CHANGES=A \
-    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ "$(wc -l </tmp/test096.out)" != "4" ]; then
     echo "! Unexpected number of output rows"

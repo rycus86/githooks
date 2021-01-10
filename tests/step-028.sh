@@ -2,17 +2,13 @@
 # Test:
 #   Direct template execution: accept changes to hooks
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test28 && cd /tmp/test28 || exit 1
 git init || exit 1
 
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
     echo 'echo "First execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    ACCEPT_CHANGES=A ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit
+    ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "First execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the first time"
@@ -26,7 +22,7 @@ if [ "$NUMBER_OF_CHECKSUMS" != "1" ]; then
 fi
 
 echo 'echo "Second execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    ACCEPT_CHANGES=Y ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit
+    ACCEPT_CHANGES=Y "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Second execution" /tmp/test028.out; then
     echo "! Expected to execute the hook the second time"

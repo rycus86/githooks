@@ -8,16 +8,12 @@ if [ -n "$LAST_UPDATE" ]; then
     exit 1
 fi
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test29 && cd /tmp/test29 || exit 1
 git init || exit 1
 
 git config --global githooks.autoupdate.enabled true || exit 1
 
-ACCEPT_CHANGES=A ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-commit
+ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then
     echo "! Release clone was not updated, but it should have!"

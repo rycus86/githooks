@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: execute a previously saved hook
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test017 && cd /tmp/test017 || exit 1
 git init || exit 1
 
@@ -14,7 +10,7 @@ mkdir -p .githooks/pre-commit &&
     echo '#!/bin/sh' >.git/hooks/pre-commit.replaced.githook &&
     echo 'echo "Previous hook" >> /tmp/test017.out' >>.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 if ! grep -q 'Direct execution' /tmp/test017.out; then

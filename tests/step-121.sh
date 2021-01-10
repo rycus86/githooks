@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: test a single pre-commit hook file with a runner script
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test12 && cd /tmp/test12 || exit 2
 git init || exit 3
 
@@ -22,7 +18,7 @@ mkdir -p .githooks &&
     exit 4
 
 # Execute pre-commit by the runner
-OUT=$(MONKEY="mon key" ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit 2>&1)
+OUT=$(MONKEY="mon key" "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit 2>&1)
 
 # shellcheck disable=SC2181,SC2016
 if [ "$?" -ne 0 ] || ! echo "$OUT" | grep "Hello" ||

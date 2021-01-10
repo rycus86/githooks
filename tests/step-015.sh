@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: ignoring some hooks
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test15 && cd /tmp/test15 || exit 1
 git init || exit 1
 
@@ -18,7 +14,7 @@ mkdir -p .githooks/pre-commit &&
     chmod +x .githooks/pre-commit/test.fourth &&
     echo '*.first' >.githooks/.ignore &&
     echo '*.second' >.githooks/pre-commit/.ignore &&
-    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 grep -q 'Third was run' /tmp/test015.out &&

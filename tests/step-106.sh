@@ -55,7 +55,7 @@ if ! grep -q 'post-commit' lfs.out || [ -f hook.out ]; then
 fi
 
 # an extra invocation for coverage
-~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-merge unused ||
+"$GITHOOKS_INSTALL_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-merge unused ||
     exit 12
 
 if ! grep -q 'post-merge' lfs.out; then

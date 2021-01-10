@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: list of staged files (simple)
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test095/.githooks/pre-commit &&
     cd /tmp/test095 && git init ||
     exit 1
@@ -22,7 +18,7 @@ EOF
 git add sample.txt second.txt
 
 ACCEPT_CHANGES=A \
-    ~/.githooks/bin/runner "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep 'staged: sample.txt' /tmp/test095.out; then
     echo "! Failed to find expected output (1)"

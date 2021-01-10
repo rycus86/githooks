@@ -2,10 +2,6 @@
 # Test:
 #   Direct template execution: choose to ignore the update (non-single)
 
-# Pseudo installation.
-mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
-    exit 1
 mkdir -p /tmp/test076 && cd /tmp/test076 || exit 1
 git init || exit 1
 
@@ -14,7 +10,7 @@ git config --global githooks.autoupdate.enabled true || exit 1
 
 OUTPUT=$(
     ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
-        ~/.githooks/bin/runner "$(pwd)"/.git/hooks/post-commit 2>&1
+        "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then
