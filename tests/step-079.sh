@@ -9,10 +9,10 @@ fi
 
 mkdir -p /tmp/test079 && cd /tmp/test079 && git init || exit 1
 
-"$GITHOOKS_EXE_GIT_HOOKS" disable &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" disable &&
     [ "$(git config --get githooks.disable)" = "true" ] ||
     exit 1
 
-"$GITHOOKS_EXE_GIT_HOOKS" disable --reset &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" disable --reset &&
     [ "$(git config --get githooks.disable)" != "true" ] ||
     exit 1

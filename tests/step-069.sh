@@ -10,12 +10,12 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
 fi
 
 for SUBCOMMAND in '' ' ' 'x' 'y'; do
-    if "$GITHOOKS_EXE_GIT_HOOKS" "$SUBCOMMAND"; then
+    if "$GITHOOKS_INSTALL_BIN_DIR/cli" "$SUBCOMMAND"; then
         echo "! Expected to fail: $SUBCOMMAND"
         exit 1
     fi
 
-    if "$GITHOOKS_EXE_GIT_HOOKS" "$SUBCOMMAND"; then
+    if "$GITHOOKS_INSTALL_BIN_DIR/cli" "$SUBCOMMAND"; then
         echo "! Expected the alias to fail: $SUBCOMMAND"
         exit 1
     fi

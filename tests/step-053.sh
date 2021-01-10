@@ -10,14 +10,14 @@ mkdir -p /tmp/test053/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'untrusted'" | grep "'active'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "example" | grep "'untrusted'" | grep "'active'"; then
     echo "! Unexpected cli list output"
     exit 1
 fi
 
 git commit -m 'Test'
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'trusted'" | grep "'active'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "example" | grep "'trusted'" | grep "'active'"; then
     echo "! Unexpected cli list output"
     exit 1
 fi

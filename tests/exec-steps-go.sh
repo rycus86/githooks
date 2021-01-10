@@ -17,6 +17,7 @@ SKIPPED=0
 
 FAILED_TEST_LIST=""
 
+export GITHOOKS_INSTALL_BIN_DIR="$HOME/.githooks/bin"
 COMMIT_BEFORE=$(cd /var/lib/githooks && git rev-parse HEAD)
 
 cleanDirs() {

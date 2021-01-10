@@ -9,11 +9,11 @@ fi
 
 mkdir -p /tmp/test086 && cd /tmp/test086 || exit 3
 
-! "$GITHOOKS_EXE_GIT_HOOKS" config list --local || exit 4 # not a Git repo
+! "$GITHOOKS_INSTALL_BIN_DIR/cli" config list --local || exit 4 # not a Git repo
 
 git init || exit 5
 
-"$GITHOOKS_EXE_GIT_HOOKS" config update --enable || exit 7
-"$GITHOOKS_EXE_GIT_HOOKS" config list | grep -q 'githooks.autoupdate.enabled' || exit 8
-"$GITHOOKS_EXE_GIT_HOOKS" config list --global | grep -q 'githooks.autoupdate.enabled' || exit 9
-! "$GITHOOKS_EXE_GIT_HOOKS" config list --local | grep -q 'githooks.autoupdate.enabled' || exit 10
+"$GITHOOKS_INSTALL_BIN_DIR/cli" config update --enable || exit 7
+"$GITHOOKS_INSTALL_BIN_DIR/cli" config list | grep -q 'githooks.autoupdate.enabled' || exit 8
+"$GITHOOKS_INSTALL_BIN_DIR/cli" config list --global | grep -q 'githooks.autoupdate.enabled' || exit 9
+! "$GITHOOKS_INSTALL_BIN_DIR/cli" config list --local | grep -q 'githooks.autoupdate.enabled' || exit 10

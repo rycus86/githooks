@@ -9,18 +9,18 @@ fi
 
 mkdir -p /tmp/not/a/git/repo && cd /tmp/not/a/git/repo || exit 1
 
-if "$GITHOOKS_EXE_GIT_HOOKS" readme add; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" readme add; then
     echo "! Expected to fail"
     exit 1
 fi
 
 mkdir -p /tmp/test080 && cd /tmp/test080 && git init || exit 1
 
-"$GITHOOKS_EXE_GIT_HOOKS" readme update &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" readme update &&
     [ -f .githooks/README.md ] ||
     exit 1
 
-if "$GITHOOKS_EXE_GIT_HOOKS" readme add; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" readme add; then
     echo "! Expected to fail"
     exit 1
 fi

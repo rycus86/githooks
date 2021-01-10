@@ -9,13 +9,13 @@ fi
 
 mkdir -p /tmp/test090 && cd /tmp/test090 || exit 2
 
-! "$GITHOOKS_EXE_GIT_HOOKS" config disable --set || exit 3 # not a Git repository
+! "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --set || exit 3 # not a Git repository
 
 git init || exit 4
 
-! "$GITHOOKS_EXE_GIT_HOOKS" config disable || exit 5
+! "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable || exit 5
 
-"$GITHOOKS_EXE_GIT_HOOKS" config disable --set &&
-    "$GITHOOKS_EXE_GIT_HOOKS" config disable --print | grep -q 'is disabled' || exit 6
-"$GITHOOKS_EXE_GIT_HOOKS" config disable --reset &&
-    "$GITHOOKS_EXE_GIT_HOOKS" config disable --print | grep -q 'is not disabled' || exit 7
+"$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --set &&
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --print | grep -q 'is disabled' || exit 6
+"$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --reset &&
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --print | grep -q 'is not disabled' || exit 7

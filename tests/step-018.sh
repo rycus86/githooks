@@ -17,7 +17,7 @@ git init || exit 1
 
 mkdir -p .githooks &&
     echo 'urls: - file:///tmp/shared/hooks-018.git' >.githooks/.shared.yaml &&
-    "$GITHOOKS_EXE_GIT_HOOKS" shared update ||
+    "$GITHOOKS_BIN_DIR/cli" shared update ||
     exit 1
 
 "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit

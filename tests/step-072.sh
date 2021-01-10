@@ -13,12 +13,12 @@ mkdir -p /tmp/test072/.githooks/pre-commit &&
     git init ||
     exit 1
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list pre-commit; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list pre-commit; then
     echo "! Failed to execute a valid list"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list invalid-type 2>&1 | grep -q 'not managed by'; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list invalid-type 2>&1 | grep -q 'not managed by'; then
     echo "! Unexpected list result"
     exit 1
 fi

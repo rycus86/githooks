@@ -35,9 +35,6 @@ RUN echo "Make test gitrepo to clone from ..." && \\
 
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
 
-# @todo replace this variable in tests with "git hooks"
-ENV GITHOOKS_EXE_GIT_HOOKS="/var/lib/githooks/githooks/bin/cli"
-
 # Do not use the terminal in tests
 RUN sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh && \\
     # Conditionally allow file:// for local shared hooks simulating http:// protocol
@@ -52,7 +49,6 @@ RUN cd /var/lib/githooks/githooks && \\
     git tag "v9.9.0-test" >/dev/null 2>&1 && \\
      ./scripts/clean.sh && \\
     ./scripts/build.sh --build-flags "-tags debug,mock" && \\
-    cp ./bin/installer ../install.sh && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.0-test to repo ..." && \\
     cd /var/lib/githooks && \\
@@ -67,7 +63,6 @@ RUN cd /var/lib/githooks/githooks && \\
     git tag -f "v9.9.1-test" && \\
     ./scripts/clean.sh && \\
     ./scripts/build.sh --build-flags "-tags debug,mock" && \\
-    cp ./bin/installer ../install.sh && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.1-test to repo ..." && \\
     cd /var/lib/githooks && \\

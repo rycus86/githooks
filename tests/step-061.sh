@@ -28,38 +28,38 @@ mkdir -p /tmp/test061/.githooks &&
 git config --local githooks.shared 'file:///tmp/shared/second-shared.git' || exit 1
 git config --global githooks.shared 'file:///tmp/shared/third-shared.git' || exit 1
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "sample-one" | grep -q "'shared:repo'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "sample-one" | grep -q "'shared:repo'"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if "$GITHOOKS_EXE_GIT_HOOKS" list | grep -q "sample-two" ||
-    "$GITHOOKS_EXE_GIT_HOOKS" list | grep -q "sample-three"; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -q "sample-two" ||
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -q "sample-three"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep -qi "pending shared hooks"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -qi "pending shared hooks"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" shared update; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" shared update; then
     echo "! Failed to update the shared hook repositories"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "sample-one" | grep -q "'shared:repo'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "sample-one" | grep -q "'shared:repo'"; then
     echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "sample-two" | grep -q "'shared:local'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "sample-two" | grep -q "'shared:local'"; then
     echo "! Unexpected cli list output (5)"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "sample-three" | grep -q "'shared:global'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "sample-three" | grep -q "'shared:global'"; then
     echo "! Unexpected cli list output (6)"
     exit 1
 fi

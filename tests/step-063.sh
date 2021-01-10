@@ -16,7 +16,7 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
 fi
 
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
-if ! "$GITHOOKS_EXE_GIT_HOOKS" update --yes; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" update --yes; then
     echo "! Failed to run the update"
 fi
 AFTER="$(cd ~/.githooks/release && git rev-parse HEAD)"

@@ -7,14 +7,14 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-"$GITHOOKS_EXE_GIT_HOOKS" unknown && exit 2
-"$GITHOOKS_EXE_GIT_HOOKS" shared add && exit 4
-"$GITHOOKS_EXE_GIT_HOOKS" shared remove && exit 5
-"$GITHOOKS_EXE_GIT_HOOKS" shared add --shared /tmp/some/repo.git && exit 6
-"$GITHOOKS_EXE_GIT_HOOKS" shared remove --shared /tmp/some/repo.git && exit 7
-"$GITHOOKS_EXE_GIT_HOOKS" shared clear && exit 8
-"$GITHOOKS_EXE_GIT_HOOKS" shared clear unknown && exit 9
-"$GITHOOKS_EXE_GIT_HOOKS" shared list unknown && exit 10
-if "$GITHOOKS_EXE_GIT_HOOKS" shared list --shared; then
+"$GITHOOKS_INSTALL_BIN_DIR/cli" unknown && exit 2
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add && exit 4
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared remove && exit 5
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add --shared /tmp/some/repo.git && exit 6
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared remove --shared /tmp/some/repo.git && exit 7
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared clear && exit 8
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared clear unknown && exit 9
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared list unknown && exit 10
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list --shared; then
     exit 11
 fi

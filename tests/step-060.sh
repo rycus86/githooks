@@ -13,12 +13,12 @@ mkdir -p /tmp/test060/.githooks/pre-commit &&
     git config --local githooks.trust.all true ||
     exit 1
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "first" | grep -q "'trusted'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "first" | grep -q "'trusted'"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "second" | grep -q "'trusted'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "second" | grep -q "'trusted'"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi

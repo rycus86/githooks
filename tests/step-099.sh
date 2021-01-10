@@ -29,7 +29,7 @@ ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 git worktree add -b example-a ../test099-A HEAD || exit 2
 cd ../test099-A || exit 2
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep "example" | grep "'active'" | grep -q "'untrusted'"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "example" | grep "'active'" | grep -q "'untrusted'"; then
     echo "! Unexpected cli list output"
     exit 3
 fi

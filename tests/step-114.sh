@@ -27,7 +27,7 @@ y
 ' | "$GITHOOKS_BIN_DIR/installer" --stdin --use-core-hookspath --template-dir ~/.githooks/templates || exit 3
 
 # check if hooks are inside the template folder.
-if ! "$GITHOOKS_EXE_GIT_HOOKS" list | grep -q "test-hook"; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -q "test-hook"; then
     echo "! Hooks were not installed successfully"
     exit 4
 fi
@@ -47,7 +47,7 @@ fi
 
 rm -rf ~/.githooks/templates/hooks/* # Remove to see if the correct folder gets choosen
 
-if ! "$GITHOOKS_EXE_GIT_HOOKS" update --yes; then
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" update --yes; then
     echo "! Failed to run the update"
     exit 1
 fi

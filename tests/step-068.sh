@@ -9,17 +9,17 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-if "$GITHOOKS_EXE_GIT_HOOKS" list; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" list; then
     echo "! Expected to fail"
     exit 1
 fi
 
-if "$GITHOOKS_EXE_GIT_HOOKS" trust; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" trust; then
     echo "! Expected to fail"
     exit 1
 fi
 
-if "$GITHOOKS_EXE_GIT_HOOKS" disable; then
+if "$GITHOOKS_INSTALL_BIN_DIR/cli" disable; then
     echo "! Expected to fail"
     exit 1
 fi

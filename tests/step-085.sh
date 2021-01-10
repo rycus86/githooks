@@ -10,16 +10,16 @@ fi
 mkdir -p /tmp/test085 && cd /tmp/test085 || exit 1
 git init || exit 2
 
-"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --pattern "pre-commit/test-root" &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" ignore add --repository --pattern "pre-commit/test-root" &&
     grep -q 'pre-commit/test-root' ".githooks/.ignore.yaml" || exit 6
 
-"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --path "pre-commit/test-second" &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" ignore add --repository --path "pre-commit/test-second" &&
     grep -q "test-root" ".githooks/.ignore.yaml" &&
     grep -q "test-second" ".githooks/.ignore.yaml" || exit 7
 
-"$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --hook-name "pre-commit" --path "test-pc" &&
+"$GITHOOKS_INSTALL_BIN_DIR/cli" ignore add --repository --hook-name "pre-commit" --path "test-pc" &&
     grep -q "test-pc" ".githooks/pre-commit/.ignore.yaml" || exit 7
 
 mkdir -p ".githooks/post-commit/.ignore.yaml" &&
-    ! "$GITHOOKS_EXE_GIT_HOOKS" ignore add --repository --hook-name "post-commit" --pattern "test-fail" &&
+    ! "$GITHOOKS_INSTALL_BIN_DIR/cli" ignore add --repository --hook-name "post-commit" --pattern "test-fail" &&
     [ ! -f ".githooks/post-commit/.ignore.yaml" ] || exit 8

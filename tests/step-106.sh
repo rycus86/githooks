@@ -45,7 +45,7 @@ fi
 
 # Test LFS invocation if git hooks are disabled
 rm lfs.out && rm hook.out &&
-    "$GITHOOKS_EXE_GIT_HOOKS" config disable --set &&
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --set &&
     ACCEPT_CHANGES=Y git commit --allow-empty -m "Second commit" ||
     exit 10
 
