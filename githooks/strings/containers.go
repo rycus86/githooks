@@ -20,6 +20,9 @@ func AppendUnique(slice []string, elems ...string) (sl []string, appended int) {
 // MakeUnique makes the slice containing only unique items.
 // This function does pertain the order!
 func MakeUnique(slice []string) []string {
+	if slice == nil {
+		return nil
+	}
 
 	keys := make(StringSet, len(slice))
 	s := make([]string, 0, len(slice))
@@ -36,6 +39,10 @@ func MakeUnique(slice []string) []string {
 // Remove removes all occurrences from the slice.
 // The int indicates if a remove occurred.
 func Remove(slice []string, s string) (newitems []string, removed int) {
+	if slice == nil {
+		return nil, 0
+	}
+
 	newitems = make([]string, 0, len(slice))
 
 	for _, el := range slice {
@@ -94,6 +101,10 @@ func All(vs []string, f func(string) bool) bool {
 // Filter returns a new slice containing all strings in the
 // slice that satisfy the predicate `f`.
 func Filter(vs []string, f func(string) bool) []string {
+	if vs == nil {
+		return nil
+	}
+
 	vsf := make([]string, 0)
 	for _, v := range vs {
 		if f(v) {
@@ -107,6 +118,10 @@ func Filter(vs []string, f func(string) bool) []string {
 // Map returns a new slice containing the results of applying
 // the function `f` to each string in the original slice.
 func Map(vs []string, f func(string) string) []string {
+	if vs == nil {
+		return nil
+	}
+
 	vsm := make([]string, len(vs))
 	for i, v := range vs {
 		vsm[i] = f(v)

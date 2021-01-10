@@ -202,7 +202,14 @@ func ExecuteHooksParallel(
 		if pool == nil {
 			for idx := range hooksGroup {
 				var err error
-				res[currIdx+idx].Output, err = cm.GetCombinedOutputFromExecutable(exec, &hooksGroup[idx], true, args...)
+
+				res[currIdx+idx].Output, err =
+					cm.GetCombinedOutputFromExecutable(
+						exec,
+						&hooksGroup[idx],
+						cm.UseOnlyStdin(os.Stdin),
+						args...)
+
 				res[currIdx+idx].Error = err
 				res[currIdx+idx].Hook = &hooksGroup[idx]
 			}
@@ -213,8 +220,12 @@ func ExecuteHooksParallel(
 				func(idx int, pool thx.ThreadPool, erf func() error) error {
 					hook := &hooksGroup[idx]
 					var err error
+
 					res[currIdx+idx].Output, err =
-						cm.GetCombinedOutputFromExecutable(exec, hook, true, args...)
+						cm.GetCombinedOutputFromExecutable(
+							exec,
+							hook,
+							cm.UseOnlyStdin(os.Stdin), args...)
 
 					res[currIdx+idx].Error = err
 					res[currIdx+idx].Hook = hook

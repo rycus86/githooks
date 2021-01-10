@@ -8,11 +8,11 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
 fi
 
 git config --global --unset githooks.autoupdate.enabled &&
-    git hooks update enable &&
+    "$GITHOOKS_EXE_GIT_HOOKS" update --enable &&
     [ "$(git config --get githooks.autoupdate.enabled)" = "true" ] ||
     exit 1
 
 git config --global --unset githooks.autoupdate.enabled &&
-    git hooks update disable &&
+    "$GITHOOKS_EXE_GIT_HOOKS" update --disable &&
     [ "$(git config --get githooks.autoupdate.enabled)" = "false" ] ||
     exit 1

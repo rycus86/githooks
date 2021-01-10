@@ -4,13 +4,10 @@ Uninstalls Githooks locally or globally.
 
 ### Synopsis
 
-
 Uninstalls the Githooks hooks from the current repository.
 
-git hooks uninstall [--global]
-
-    If the `--global` flag is given, it executes the uninstallation
-    globally, including the hook templates and all local repositories.
+If the `--global` flag is given, it executes the uninstallation
+globally, including the hook templates and all local repositories.
 
 ```
 git hooks uninstall [flags]
@@ -19,7 +16,8 @@ git hooks uninstall [flags]
 ### Options
 
 ```
-  -h, --help   help for uninstall
+      --global   Execute the global installation.
+  -h, --help     help for uninstall
 ```
 
 ### SEE ALSO

@@ -53,9 +53,6 @@ func Run() {
 
 func initArgs() {
 
-	err := viper.BindEnv("internalAutoUpdate", "GITHOOKS_INTERNAL_AUTO_UPDATE")
-	cm.AssertNoErrorPanic(err)
-
 	config := viper.GetString("config")
 	if strs.IsNotEmpty(config) {
 		viper.SetConfigFile(config)
@@ -63,7 +60,7 @@ func initArgs() {
 		log.AssertNoErrorPanicF(err, "Could not read config file '%s'.", config)
 	}
 
-	err = viper.Unmarshal(&args)
+	err := viper.Unmarshal(&args)
 	log.AssertNoErrorPanicF(err, "Could not unmarshal parameters.")
 }
 
@@ -381,7 +378,7 @@ func runInstaller(installer string, args *Arguments) {
 	err = cm.RunExecutable(
 		&cm.ExecContext{},
 		&cm.Executable{Path: installer},
-		true,
+		cm.UseStreams(os.Stdin, log.GetInfoWriter(), log.GetErrorWriter()),
 		"--config", file.Name())
 
 	log.AssertNoErrorPanic(err, "Running installer failed.")
@@ -1142,7 +1139,7 @@ func setupSharedRepositories(cliExectuable string, dryRun bool, uiSettings *UISe
 		err := cm.RunExecutable(
 			&cm.ExecContext{},
 			&cm.Executable{Path: cliExectuable, RunCmd: []string{"sh"}},
-			false,
+			cm.UseStreams(nil, log.GetInfoWriter(), log.GetErrorWriter()),
 			"shared", "update", "--global")
 		log.AssertNoError(err, "Could not update shared hook repositories.")
 

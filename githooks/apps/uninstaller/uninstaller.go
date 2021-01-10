@@ -166,7 +166,7 @@ func runUninstaller(uninstaller string, args *Arguments) {
 	err = cm.RunExecutable(
 		&cm.ExecContext{},
 		&cm.Executable{Path: uninstaller},
-		true,
+		cm.UseStreams(os.Stdin, log.GetInfoWriter(), log.GetInfoWriter()),
 		"--config", file.Name())
 
 	log.AssertNoErrorPanic(err, "Running uninstaller failed.")

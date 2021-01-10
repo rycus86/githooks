@@ -7,14 +7,12 @@ Performs an update check.
 
 Executes an update check for a newer Githooks version.
 
-git hooks update [force]
-git hooks update [enable|disable]
+If it finds one and the user accepts the prompt (or `--yes` is used)
+the installer is executed to update to the latest version.
 
-	If it finds one, or if `force` was given, the downloaded
-	install script is executed for the latest version.
-	The `enable` and `disable` options enable or disable
-	the automatic checks that would normally run daily
-	after a successful commit event.
+The `--enable` and `--disable` options enable or disable
+the automatic checks that would normally run daily
+after a successful commit event.
 
 ```
 git hooks update
@@ -23,7 +21,11 @@ git hooks update
 ### Options
 
 ```
-  -h, --help   help for update
+      --disable   Disable daily Githooks update checks.
+      --enable    Enable daily Githooks update checks.
+  -h, --help      help for update
+      --no        Always deny an update and only check for it.
+      --yes       Always accepts a new update (non-interactive).
 ```
 
 ### SEE ALSO

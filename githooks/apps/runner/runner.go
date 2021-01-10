@@ -270,40 +270,23 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		return
 	}
 
-	log.Info("Record update check timestamp ...")
-	err := updates.RecordUpdateCheckTimestamp()
-	log.AssertNoError(err, "Could not record update check timestamp.")
+	updateAvailable, err := updates.RunUpdate(
+		settings.InstallDir,
+		updates.DefaultAcceptUpdateCallback(log, uiSettings.PromptCtx, false),
+		&settings.ExecX,
+		cm.UseStreams(nil, log.GetInfoWriter(), log.GetErrorWriter()))
 
-	log.Info("Checking for updates ...")
-	cloneDir := hooks.GetReleaseCloneDir(settings.InstallDir)
-	status, err := updates.FetchUpdates(cloneDir, "", "", true, updates.ErrorOnWrongRemote)
-	log.AssertNoError(err, "Could not fetch updates.")
-	if err != nil {
-		return
-	}
-	log.DebugF("Fetch status: '%v'", status)
-
-	if shouldRunUpdate(uiSettings, status) {
-
-		_, err = updates.MergeUpdates(cloneDir, true) // Dry run the merge...
-
-		log.AssertNoErrorF(err,
-			"Update cannot run:\n"+
-				"Your release clone '%s' cannot be fast-forward merged.\n"+
-				"Either fix this or delete the clone to retry.",
-			cloneDir)
-
-		if err != nil {
-			return
-		}
-
-		runUpdate(settings, status)
-
+	log.AssertNoErrorPanic(err, "Running update failed.")
+	if updateAvailable {
+		log.Info("Updates successfully dispatched.")
 	} else {
-		log.Info(
-			"If you would like to disable auto-updates, run:",
-			"  $ git hooks update disable")
+		log.InfoF("Githooks is at the latest version '%s'",
+			build.GetBuildVersion().String())
 	}
+
+	log.Info(
+		"If you would like to disable auto-updates, run:",
+		"  $ git hooks update disable")
 }
 
 func shouldRunUpdateCheck(settings *HookSettings) bool {
@@ -320,60 +303,6 @@ func shouldRunUpdateCheck(settings *HookSettings) bool {
 	log.AssertNoErrorF(err, "Could get last update check time.")
 
 	return time.Since(lastUpdateCheck).Hours() > 24.0 //nolint: gomnd
-}
-
-func shouldRunUpdate(uiSettings *UISettings, status updates.ReleaseStatus) bool {
-	if status.IsUpdateAvailable {
-
-		question := "There is a new Githooks update available:\n" +
-			strs.Fmt(" -> Forward-merge to version '%s'\n", status.UpdateVersion) +
-			"Would you like to install it now?"
-
-		answer, err := uiSettings.PromptCtx.ShowPromptOptions(question,
-			"(Yes, no)",
-			"Y/n",
-			"Yes", "No")
-		log.AssertNoErrorF(err, "Could not show prompt.")
-
-		if answer == "y" {
-			return true
-		}
-
-	} else {
-		log.Info("Githooks is on the latest version")
-	}
-
-	return false
-}
-
-func runUpdate(settings *HookSettings, status updates.ReleaseStatus) {
-
-	exec := hooks.GetInstaller(settings.InstallDir)
-
-	execX := settings.ExecX
-	env := os.Environ()
-	env = append(env, "GITHOOKS_INTERNAL_AUTO_UPDATE=true")
-	execX.Env = env
-
-	if cm.IsFile(exec.Path) {
-
-		output, err := cm.GetCombinedOutputFromExecutable(
-			&execX,
-			&exec,
-			false,
-			"--internal-auto-update")
-
-		// @todo installer: remove "--internal-autoupdate"
-
-		log.InfoF("Update:\n%s", output)
-		log.AssertNoErrorF(err, "Updating failed")
-
-	} else {
-		log.WarnF(
-			"Could not execute update, because the installer:\n"+
-				"'%s'\n"+
-				"is not existing.", exec.Path)
-	}
 }
 
 func executeLFSHooks(settings *HookSettings) {
@@ -458,7 +387,7 @@ func executeOldHook(settings *HookSettings,
 	}
 
 	log.DebugF("Executing hook: '%s'.", hook.Path)
-	err = cm.RunExecutable(&settings.ExecX, &hook, true)
+	err = cm.RunExecutable(&settings.ExecX, &hook, cm.UseStdStreams(true, true, true))
 
 	log.AssertNoErrorPanicF(err, "Hook launch failed: '%q'.", hook)
 }

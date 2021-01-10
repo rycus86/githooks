@@ -2,9 +2,11 @@ package updates
 
 import (
 	"regexp"
+	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
+	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 
 	"github.com/google/uuid"
@@ -413,4 +415,143 @@ func MergeUpdates(cloneDir string, dryRun bool) (currentSHA string, err error) {
 	currentSHA, err = gitx.Get("rev-parse", branch)
 
 	return
+}
+
+type AcceptUpdateCallback func(status *ReleaseStatus) bool
+
+// RunUpdate runs the procedure of updating Githooks.
+func RunUpdate(
+	installDir string,
+	acceptUpdate AcceptUpdateCallback,
+	execX cm.IExecContext,
+	pipeSetup cm.PipeSetupFunc) (updateAvailable bool, err error) {
+
+	err = RecordUpdateCheckTimestamp()
+
+	if err != nil {
+		err = cm.Error("Could not record update check timestamp.")
+
+		return
+	}
+
+	cloneDir := hooks.GetReleaseCloneDir(installDir)
+	status, err := FetchUpdates(cloneDir, "", "", true, ErrorOnWrongRemote)
+	if err != nil {
+		err = cm.CombineErrors(cm.Error("Could not fetch updates."), err)
+
+		return
+	}
+
+	updateAvailable = status.IsUpdateAvailable
+
+	if status.IsUpdateAvailable && acceptUpdate(&status) {
+
+		_, err = MergeUpdates(cloneDir, true) // Dry run the merge...
+		if err != nil {
+			err = cm.CombineErrors(cm.ErrorF(
+				"Update cannot run:\n"+
+					"Your release clone '%s' cannot be fast-forward merged.\n"+
+					"Either fix this or delete the clone to retry.",
+				cloneDir), err)
+
+			return
+		}
+
+		err = runUpdate(installDir, execX, pipeSetup)
+	}
+
+	return
+}
+
+func DefaultAcceptUpdateCallback(
+	log cm.ILogContext,
+	promptCtx prompt.IContext,
+	acceptIfNoPrompt bool) AcceptUpdateCallback {
+
+	return func(status *ReleaseStatus) bool {
+		log.DebugF("Fetch status: '%v'", status)
+		cm.DebugAssert(status.IsUpdateAvailable, "Wrong input.")
+
+		versionText := strs.Fmt(
+			"Current version: '%s'\n"+
+				"New version: '%s'",
+			build.GetBuildVersion(),
+			status.UpdateVersion.String())
+
+		if promptCtx != nil {
+			question := "There is a new Githooks update available:\n" +
+				versionText + "\n" +
+				"Would you like to install it now?"
+
+			answer, err := promptCtx.ShowPromptOptions(question,
+				"(Yes, no)",
+				"Y/n",
+				"Yes", "No")
+			log.AssertNoErrorF(err, "Could not show prompt.")
+
+			if answer == "y" {
+				log.Info("-> Execute update ...")
+
+				return true
+			}
+
+		} else {
+			log.InfoF("There is a new Githooks update available:\n%s", versionText)
+
+			if acceptIfNoPrompt {
+				log.Info("-> Execute update ...")
+
+				return true
+			}
+		}
+
+		log.Info("-> Update declined")
+
+		return false
+	}
+}
+
+// runUpdate executes the installer to run the update.
+func runUpdate(
+	installDir string,
+	execC cm.IExecContext,
+	pipeSetup cm.PipeSetupFunc) error {
+
+	exec := hooks.GetInstaller(installDir)
+
+	execX := cm.ExecContext{Cwd: execC.GetWorkingDir()}
+	execX.Env = git.SanitizeEnv(execC.GetEnv())
+
+	if !cm.IsFile(exec.Path) {
+		return cm.ErrorF(
+			"Could not execute update, because the installer:\n"+
+				"'%s'\n"+
+				"is not existing.", exec.Path)
+	}
+
+	if pipeSetup == nil {
+		output, err := cm.GetCombinedOutputFromExecutable(
+			&execX,
+			&exec,
+			nil,
+			"--internal-auto-update")
+		// @todo installer: remove "--internal-autoupdate"
+
+		if err != nil {
+			return cm.CombineErrors(err, cm.ErrorF("Update output:\n%s", output))
+		}
+
+	} else {
+		err := cm.RunExecutable(
+			&execX,
+			&exec,
+			pipeSetup,
+			"--internal-auto-update")
+
+		if err != nil {
+			return cm.CombineErrors(err, cm.Error("Update failed. See output"))
+		}
+	}
+
+	return nil
 }

@@ -1,6 +1,7 @@
 package prompt
 
 import (
+	"os"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
@@ -23,7 +24,7 @@ func showPromptOptions(
 	if p.tool != nil {
 
 		args := append([]string{text, hintText, shortOptions}, longOptions...)
-		ans, e := cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, true, args...)
+		ans, e := cm.GetOutputFromExecutableTrimmed(p.execCtx, p.tool, cm.UseOnlyStdin(os.Stdin), args...)
 		ans = strings.ToLower(ans)
 
 		if e == nil {

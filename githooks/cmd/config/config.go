@@ -361,7 +361,7 @@ func runTrust(ctx *ccm.CmdContext, opts *SetOptions) {
 
 }
 
-func runUpdate(ctx *ccm.CmdContext, opts *SetOptions) {
+func RunUpdate(ctx *ccm.CmdContext, opts *SetOptions) {
 	const text = "Automatic Githooks update"
 
 	switch {
@@ -595,7 +595,7 @@ func configUpdateCmd(ctx *ccm.CmdContext, configCmd *cobra.Command, setOpts *Set
 		Short: "Change Githooks update settings.",
 		Long:  `Enable or disable automatic Githooks updates.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			runUpdate(ctx, setOpts)
+			RunUpdate(ctx, setOpts)
 		}}
 
 	optsPSUR := createOptionMap(true, true, true)

@@ -47,7 +47,7 @@ fi
 
 rm -rf ~/.githooks/templates/hooks/* # Remove to see if the correct folder gets choosen
 
-if ! git hooks update; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" update --yes; then
     echo "! Failed to run the update"
     exit 1
 fi
