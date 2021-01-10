@@ -15,10 +15,10 @@ import (
 )
 
 func runList(ctx *ccm.CmdContext, hookNames []string, warnNotFound bool) {
-	repoDir, gitDir := ccm.AssertRepoRoot(ctx)
+	repoDir, gitDir, gitDirWorktree := ccm.AssertRepoRoot(ctx)
 
 	repoHooksDir := hooks.GetGithooksDir(repoDir)
-	state, shared := PrepareListHookState(ctx, repoDir, repoHooksDir, gitDir, hookNames)
+	state, shared := PrepareListHookState(ctx, repoDir, repoHooksDir, gitDirWorktree, hookNames)
 
 	total := 0
 	for _, hookName := range hookNames {
@@ -52,16 +52,16 @@ func PrepareListHookState(
 	ctx *ccm.CmdContext,
 	repoDir string,
 	repoHooksDir string,
-	gitDir string,
+	gitDirWorktree string,
 	hookNames []string) (*ListHookState, hooks.SharedRepos) {
 
 	// Load checksum store
-	checksums, err := hooks.GetChecksumStorage(ctx.GitX, gitDir)
+	checksums, err := hooks.GetChecksumStorage(ctx.GitX, gitDirWorktree)
 	ctx.Log.AssertNoErrorF(err, "Errors while loading checksum store.")
 	ctx.Log.DebugF("%s", checksums.Summary())
 
 	// Load ignore patterns
-	ignores, err := hooks.GetIgnorePatterns(repoHooksDir, gitDir, hookNames)
+	ignores, err := hooks.GetIgnorePatterns(repoHooksDir, gitDirWorktree, hookNames)
 	ctx.Log.AssertNoErrorF(err, "Errors while loading ignore patterns.")
 	ctx.Log.DebugF("HooksDir ignore patterns: '%+v'.", ignores.HooksDir)
 	ctx.Log.DebugF("User ignore patterns: '%+v'.", ignores.User)

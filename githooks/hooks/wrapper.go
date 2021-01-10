@@ -24,7 +24,7 @@ func GetHookReplacementFileName(fileName string) string {
 
 // GetRunWrapperContent gets the bytes of the hook template.
 func getRunWrapperContent() ([]byte, error) {
-	return build.Asset("base-template-wrapper.sh")
+	return build.Asset(path.Join("githooks/run-wrapper.sh"))
 }
 
 // WriteRunWrapper writes the run wrapper to the file `filePath`.

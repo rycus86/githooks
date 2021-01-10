@@ -184,7 +184,7 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 	log.PanicIfF(!gitx.IsGitRepo(),
 		"The current directory is not a Git repository.")
 
-	gitDir, err := gitx.GetGitCommonDir()
+	gitDir, err := gitx.GetGitDirCommon()
 	cm.AssertNoErrorPanic(err, "Could not get git directory in '%s'.", cwd)
 
 	return

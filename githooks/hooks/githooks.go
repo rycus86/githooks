@@ -224,7 +224,7 @@ func GetUninstallerExecutable(installDir string) (p string) {
 
 // GetCLIExecutable gets the global Githooks CLI executable.
 func GetCLIExecutable(installDir string) string {
-	return path.Join(GetBinaryDir(installDir), "cli.sh")
+	return path.Join(GetBinaryDir(installDir), "cli")
 }
 
 // SetRunnerExecutableAlias sets the global Githooks runner executable.
@@ -255,7 +255,7 @@ func GetReleaseCloneDir(installDir string) string {
 // GetInstaller returns the installer executable in the install directory.
 func GetInstaller(installDir string) cm.Executable {
 	return cm.Executable{
-		Path: path.Join(GetReleaseCloneDir(installDir), "install.sh")}
+		Path: path.Join(GetBinaryDir(installDir), "installer")}
 }
 
 // Gets the LFS-Required file inside the repository.

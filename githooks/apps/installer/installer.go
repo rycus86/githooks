@@ -764,15 +764,6 @@ func installBinaries(
 			"Could not move file '%s' to '%s'.", binary, dest)
 	}
 
-	if hooks.InstallLegacyBinaries {
-		src := path.Join(cloneDir, "cli.sh")
-		dest := path.Join(binDir, path.Base(src))
-		_ = os.Remove(dest)
-		err := cm.CombineErrors(cm.CopyFile(src, dest))
-		err = cm.CombineErrors(err, cm.MakeExecutable(dest))
-		log.AssertNoErrorPanicF(err, "Could not copy legacy executable '%s'.", dest)
-	}
-
 	// Set CLI executable alias.
 	cliTool := hooks.GetCLIExecutable(installDir)
 	err = hooks.SetCLIExecutableAlias(cliTool)
@@ -974,7 +965,7 @@ func getCurrentGitDir(cwd string) (gitDir string) {
 	log.PanicIfF(!gitx.IsGitRepo(),
 		"The current directory is not a Git repository.")
 
-	gitDir, err := gitx.GetGitCommonDir()
+	gitDir, err := gitx.GetGitDirCommon()
 	cm.AssertNoErrorPanic(err, "Could not get git directory in '%s'.", cwd)
 
 	return

@@ -57,8 +57,8 @@ func runIgnoreAddPattern(
 	ctx *ccm.CmdContext, ignAct *ignoreActionOptions,
 	remove bool, patterns *hooks.HookPatterns) {
 
-	repoRoot, gitDir := ccm.AssertRepoRoot(ctx)
-	file, ps := ignoreLoadIgnoreFile(ctx, ignAct, repoRoot, gitDir)
+	repoRoot, _, gitDirWorktree := ccm.AssertRepoRoot(ctx)
+	file, ps := ignoreLoadIgnoreFile(ctx, ignAct, repoRoot, gitDirWorktree)
 
 	var text string
 
@@ -103,7 +103,7 @@ func runIgnoreAddPattern(
 
 func runIgnoreShow(ctx *ccm.CmdContext, ignShow *ignoreShowOptions) {
 
-	repoRoot, gitDir := ccm.AssertRepoRoot(ctx)
+	repoRoot, _, gitDirWorktree := ccm.AssertRepoRoot(ctx)
 	var sb strings.Builder
 	count := 0
 
@@ -121,7 +121,7 @@ func runIgnoreShow(ctx *ccm.CmdContext, ignShow *ignoreShowOptions) {
 	}
 
 	if ignShow.User {
-		print(hooks.GetHookIgnoreFileGitDir(gitDir), "user:local")
+		print(hooks.GetHookIgnoreFileGitDir(gitDirWorktree), "user:local")
 	}
 
 	if ignShow.Repository {

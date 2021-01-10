@@ -20,7 +20,7 @@ const (
 
 func runTrust(ctx *ccm.CmdContext, opt TrustOption) {
 
-	repoRoot, _ := ccm.AssertRepoRoot(ctx)
+	repoRoot, _, _ := ccm.AssertRepoRoot(ctx)
 	file := hooks.GetTrustMarkerFile(repoRoot)
 
 	switch opt {

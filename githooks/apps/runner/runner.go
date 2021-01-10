@@ -52,13 +52,16 @@ func main() {
 	}()
 
 	settings, uiSettings := setMainVariables(cwd)
-	assertRegistered(settings.GitX, settings.InstallDir, settings.GitDir)
+	assertRegistered(settings.GitX, settings.InstallDir)
 
-	checksums, err := hooks.GetChecksumStorage(settings.GitX, settings.GitDir)
+	checksums, err := hooks.GetChecksumStorage(settings.GitX, settings.GitDirWorktree)
 	log.AssertNoErrorF(err, "Errors while loading checksum store.")
 	log.DebugF("%s", checksums.Summary())
 
-	ignores, err := hooks.GetIgnorePatterns(settings.RepositoryHooksDir, settings.GitDir, []string{settings.HookName})
+	ignores, err := hooks.GetIgnorePatterns(
+		settings.RepositoryHooksDir,
+		settings.GitDirWorktree,
+		[]string{settings.HookName})
 	log.AssertNoErrorF(err, "Errors while loading ignore patterns.")
 	log.DebugF("HooksDir ignore patterns: '%+v'.", ignores.HooksDir)
 	log.DebugF("User ignore patterns: '%+v'.", ignores.User)
@@ -114,7 +117,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	// Current git context, in current working dir.
 	gitx := git.Ctx()
 
-	gitDir, err := gitx.GetGitCommonDir()
+	gitDir, err := gitx.GetGitDirWorktree()
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 
 	hookPath, err := filepath.Abs(os.Args[1])
@@ -147,7 +150,7 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 		GitX:               gitx,
 		RepositoryDir:      repoPath,
 		RepositoryHooksDir: path.Join(repoPath, hooks.HooksDirName),
-		GitDir:             gitDir,
+		GitDirWorktree:     gitDir,
 		InstallDir:         installDir,
 
 		HookPath: hookPath,
@@ -197,14 +200,16 @@ func getInstallDir() string {
 	return installDir
 }
 
-func assertRegistered(gitx *git.Context, installDir string, gitDir string) {
+func assertRegistered(gitx *git.Context, installDir string) {
 
 	if !gitx.IsConfigSet(hooks.GitCK_Registered, git.LocalScope) &&
 		!gitx.IsConfigSet(git.GitCK_CoreHooksPath, git.Traverse) {
 
-		log.DebugF("Register repo '%s'", gitDir)
+		gitDir, err := gitx.GetGitDirCommon()
+		log.AssertNoErrorPanicF(err, "Could not get Git common dir.")
 
-		err := hooks.RegisterRepo(gitDir, installDir, true, false)
+		log.DebugF("Register repo '%s'", gitDir)
+		err = hooks.RegisterRepo(gitDir, installDir, true, false)
 		log.AssertNoErrorF(err, "Could not register repo '%s'.", gitDir)
 
 		err = hooks.MarkRepoRegistered(gitx)
@@ -851,7 +856,7 @@ func storePendingData(
 		}
 
 		// ... and store them
-		err := hooks.StoreHookPatternsGitDir(ignores.User, settings.GitDir)
+		err := hooks.StoreHookPatternsGitDir(ignores.User, settings.GitDirWorktree)
 		log.AssertNoErrorF(err, "Could not store disabled hooks.")
 	}
 
@@ -864,7 +869,7 @@ func storePendingData(
 	if hooks.ReadWriteLegacyTrustFile {
 		// Legacy function write disabled and trusted hooks back to `.githooks.checksum`
 		// @todo write them to the correct file!
-		localChecksums := path.Join(settings.GitDir, ".githooks.checksum")
+		localChecksums := path.Join(settings.GitDirWorktree, ".githooks.checksum")
 		f, err := os.OpenFile(localChecksums, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		log.AssertNoErrorPanicF(err, "Could not open file '%s'", localChecksums)
 		defer f.Close()

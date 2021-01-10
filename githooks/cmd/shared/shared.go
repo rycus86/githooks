@@ -53,7 +53,7 @@ func runSharedAdd(ctx *ccm.CmdContext, opts *SharedOpts, remove bool, url string
 
 	switch {
 	case opts.Shared:
-		repoDir, _ := ccm.AssertRepoRoot(ctx)
+		repoDir, _, _ := ccm.AssertRepoRoot(ctx)
 		modified, err := hooks.ModifyRepoSharedHooks(repoDir, url, remove)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not %s shared hooks list '%s'.", t1, hooks.GetRepoSharedFileRel())
 		if modified {
@@ -88,7 +88,7 @@ func runSharedClear(ctx *ccm.CmdContext, opts *SharedOpts) {
 	sharedOptsSetAll(opts)
 
 	if opts.Shared {
-		repoDir, _ := ccm.AssertRepoRoot(ctx)
+		repoDir, _, _ := ccm.AssertRepoRoot(ctx)
 		err := hooks.ClearRepoSharedHooks(repoDir)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not clear shared hook list %s'.", hooks.GetRepoSharedFileRel())
 		ctx.Log.InfoF("Cleared shared hook list '%s'.", hooks.GetRepoSharedFileRel())
@@ -151,7 +151,7 @@ func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 	}
 
 	if opts.Shared {
-		repoDir, _ := ccm.AssertRepoRoot(ctx)
+		repoDir, _, _ := ccm.AssertRepoRoot(ctx)
 		shared, err := hooks.LoadRepoSharedHooks(ctx.InstallDir, repoDir)
 		ctx.Log.AssertNoErrorPanicF(err, "Could not load shared hook list '%s'.", hooks.GetRepoSharedFileRel())
 
@@ -182,7 +182,7 @@ func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 }
 
 func runSharedUpdate(ctx *ccm.CmdContext) {
-	repoDir, _, err := ctx.GitX.GetRepoRoot()
+	repoDir, _, _, err := ctx.GitX.GetRepoRoot()
 
 	var sharedHooks []hooks.SharedRepo
 	updated := 0

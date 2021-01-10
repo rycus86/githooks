@@ -3,15 +3,14 @@
 #   Direct template execution: test pre-commit hooks
 
 mkdir -p ~/.githooks/release &&
-    cp -r /var/lib/githooks/githooks/bin ~/.githooks &&
-    cp /var/lib/githooks/*.sh ~/.githooks/release ||
+    cp -r /var/lib/githooks/githooks/bin ~/.githooks ||
     exit 1
 mkdir -p /tmp/test11 && cd /tmp/test11 || exit 1
 git init || exit 1
 
 # set a non existing githooks.runner
 git config githooks.runner "nonexisting-binary"
-OUT=$(~/.githooks/release/base-template-wrapper.sh 2>&1)
+OUT=$(/var/lib/githooks/githooks/run-wrapper.sh 2>&1)
 
 if ! echo "$OUT" | grep -q "Githooks runner points to a non existing location"; then
     echo "! Expected wrapper template to fail" >&2

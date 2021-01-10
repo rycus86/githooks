@@ -21,9 +21,7 @@ RUN git config --global user.email "githook@test.com" && \\
     git config --global init.defaultBranch master
 
 # Add sources
-COPY --chown=${OS_USER}:${OS_USER} base-template-wrapper.sh cli.sh /var/lib/githooks/
-RUN chmod +x /var/lib/githooks/*.sh
-ADD githooks /var/lib/githooks/githooks
+COPY --chown=${OS_USER}:${OS_USER} githooks /var/lib/githooks/githooks
 RUN sed -i -E 's/^bin//' /var/lib/githooks/githooks/.gitignore # We use the bin folder
 ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
@@ -34,14 +32,6 @@ RUN echo "Make test gitrepo to clone from ..." && \\
     git commit -a -m "Before build" >/dev/null 2>&1
 
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
-
-# Do not use the terminal in tests
-RUN sed -i -E 's|GITHOOKS_CLONE_URL="http.*"|GITHOOKS_CLONE_URL="/var/lib/githooks"|' /var/lib/githooks/cli.sh && \\
-    # Conditionally allow file:// for local shared hooks simulating http:// protocol
-    sed -i -E 's|if(.*grep.*file://.*)|if [ "\$(git config --global githooks.testingTreatFileProtocolAsRemote)" != "true" ] \&\& \1|' /var/lib/githooks/cli.sh
-
-# @todo: Remove this when cli is finished...
-RUN sed -i -E 's|sh -s -- (.*) .+INSTALL_SCRIPT"|"\$INSTALL_SCRIPT" \1|g' /var/lib/githooks/cli.sh
 
 # Build binaries for v9.9.0-test.
 #################################

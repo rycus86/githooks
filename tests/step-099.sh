@@ -2,10 +2,11 @@
 # Test:
 #   Git worktrees: list hooks
 
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+
 mkdir -p /tmp/test099/.git/hooks &&
     cd /tmp/test099 &&
     git init &&
-    "$GITHOOKS_BIN_DIR/installer" --stdin &&
     git config githooks.autoupdate.enabled false ||
     exit 1
 
@@ -26,10 +27,23 @@ echo "test" >testing.txt &&
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks' || exit 1
 
+if [ ! -f "/tmp/test099.out" ]; then
+    echo "! Expected hook to run"
+    exit 1
+fi
+
+if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "example" | grep "'active'" | grep -q "'trusted'"; then
+    echo "! Unexpected cli list output"
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" list
+    exit 3
+fi
+
+# Worktrees have their own trust store...
 git worktree add -b example-a ../test099-A HEAD || exit 2
 cd ../test099-A || exit 2
 
 if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "example" | grep "'active'" | grep -q "'untrusted'"; then
     echo "! Unexpected cli list output"
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" list
     exit 3
 fi

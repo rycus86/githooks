@@ -99,8 +99,13 @@ func (c *Context) GetMainWorktree() (string, error) {
 	return filepath.ToSlash(tree), nil
 }
 
-// GetGitCommonDir returns the common Git directory.
-func (c *Context) GetGitCommonDir() (gitDir string, err error) {
+// GetGitDirCommon returns the common Git directory.
+// For normal repos this points to the `.git` directory.
+// For worktrees this points to the main worktrees git dir.
+// The env. variable GIT_COMMON_DIR has especiall
+// be introduced for multiple worktrees, see:
+// https://github.com/git/git/commit/c7b3a3d2fe2688a30ddb8d516ed000eeda13c24e
+func (c *Context) GetGitDirCommon() (gitDir string, err error) {
 	gitDir, err = c.Get("rev-parse", "--git-common-dir")
 	if err != nil {
 		return
@@ -120,11 +125,34 @@ func (c *Context) GetGitCommonDir() (gitDir string, err error) {
 	return
 }
 
+// GetGitDirWorktree returns the Git directory.
+// For normal repos this points to the `.git` directory.
+// For worktrees this points to the actual worktrees git dir `.git/worktrees/<....>/`.
+func (c *Context) GetGitDirWorktree() (gitDir string, err error) {
+	gitDir, err = c.Get("rev-parse", "--absolute-git-dir")
+	if err != nil {
+		return
+	}
+
+	gitDir = filepath.ToSlash(gitDir)
+
+	return
+}
+
 // GetRepoRoot returns the top level directory in a non-bare repository or the
-// absolute Git directory in a bare repository.
+// absolute Git directory in a bare repository for `topLevel`.
 // This is the root level for Githooks.
-func (c *Context) GetRepoRoot() (topLevel string, gitDir string, err error) {
-	gitDir, err = c.GetGitCommonDir()
+// The `gitDir` is the common Git directory (main Git dir for worktrees).
+//
+func (c *Context) GetRepoRoot() (topLevel string, gitDir string, gitDirWorktree string, err error) {
+	if gitDir, err = c.GetGitDirCommon(); err != nil {
+		return
+	}
+
+	if gitDirWorktree, err = c.GetGitDirWorktree(); err != nil {
+		return
+	}
+
 	if c.IsBareRepo() {
 		topLevel = gitDir
 	} else {
@@ -178,7 +206,7 @@ func FindGitDirs(searchDir string) (all []string, err error) {
 			continue
 		}
 
-		gitDir, e := CtxC(dir).GetGitCommonDir()
+		gitDir, e := CtxC(dir).GetGitDirCommon()
 
 		// Check if its really a git directory.
 		if !repos[gitDir] && // Is not already in the set.

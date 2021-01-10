@@ -3,11 +3,9 @@
 #
 # It allows you to have a .githooks folder per-project that contains
 # its hooks to execute on various Git triggers.
-#
-# This file is auto-generated, do not edit!
 
 # Read the runner script from the local/global or system config
-GITHOOKS_RUNNER="$(cd "$(dirname "$0")/../" && pwd)/githooks/bin/runner"
+GITHOOKS_RUNNER=$(git config githooks.runner)
 
 if [ ! -x "$GITHOOKS_RUNNER" ]; then
     echo "! Githooks runner points to a non existing location" >&2

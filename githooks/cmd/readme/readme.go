@@ -11,7 +11,7 @@ import (
 
 func updateReadme(ctx *ccm.CmdContext, panicIfExists bool) {
 
-	repoDir, _ := ccm.AssertRepoRoot(ctx)
+	repoDir, _, _ := ccm.AssertRepoRoot(ctx)
 
 	file := hooks.GetReadmeFile(repoDir)
 

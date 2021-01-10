@@ -28,15 +28,15 @@ func SetCommandDefaults(log cm.ILogContext, cmd *cobra.Command) *cobra.Command {
 
 // cmd.AssertRepoRoot asserts that the current directory is in a repository.
 // Returns repository root and its git directory.
-func AssertRepoRoot(ctx *CmdContext) (string, string) {
-	repoRoot, gitDir, err := ctx.GitX.GetRepoRoot()
+func AssertRepoRoot(ctx *CmdContext) (repoRoot, gitDir, gitDirWorktree string) {
+	repoRoot, gitDir, gitDirWorktree, err := ctx.GitX.GetRepoRoot()
 
 	ctx.Log.AssertNoErrorPanicF(err,
 		"Current working directory '%s' is neither inside a worktree\n"+
 			"nor inside a bare repository.",
 		ctx.Cwd)
 
-	return repoRoot, gitDir
+	return
 }
 
 // Gets a list of formatted hook names.

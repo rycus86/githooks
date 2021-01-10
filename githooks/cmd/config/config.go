@@ -480,7 +480,7 @@ Can be either global or local configuration, or both by default.`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			if !gitOpts.Local && !gitOpts.Global {
-				_, _, err := ctx.GitX.GetRepoRoot()
+				_, _, _, err := ctx.GitX.GetRepoRoot()
 				gitOpts.Local = err == nil
 				gitOpts.Global = true
 
@@ -640,7 +640,7 @@ each containing a clone URL of a shared hook repository which gets added.`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			if !gitOpts.Local && !gitOpts.Global {
-				_, _, err := ctx.GitX.GetRepoRoot()
+				_, _, _, err := ctx.GitX.GetRepoRoot()
 				gitOpts.Global = true
 				gitOpts.Local = setOpts.Print && err == nil
 			} else if gitOpts.Local {

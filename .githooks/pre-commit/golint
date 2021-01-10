@@ -7,16 +7,16 @@ fi
 
 cd githooks || exit 1
 
-if golangci-lint run -E godot \
-                     -E gomnd \
-                     -E goconst \
-                     -E gochecknoinits \
-                     -E nlreturn \
-                     -E misspell \
-                     -E lll \
-                     -E exportloopref \
-                     -E gocritic \
-                     --max-same-issues 0 ./...; then
+if CGO_ENABLED=0 golangci-lint run -E godot \
+    -E gomnd \
+    -E goconst \
+    -E gochecknoinits \
+    -E nlreturn \
+    -E misspell \
+    -E lll \
+    -E exportloopref \
+    -E gocritic \
+    --max-same-issues 0 ./...; then
     echo "* golangci-lint OK"
 else
     echo "! golangci-lint problems detected"

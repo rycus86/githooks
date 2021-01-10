@@ -13,7 +13,7 @@ type HookSettings struct {
 	GitX               *git.Context   // Git context to execute commands (working dir is this repository).
 	RepositoryDir      string         // Repository directory (bare, non-bare).
 	RepositoryHooksDir string         // Directory with hooks for this repository.
-	GitDir             string         // Git directory.
+	GitDirWorktree     string         // Git directory. (for worktrees this points to the worktree Git dir).
 	InstallDir         string         // Install directory.
 
 	HookPath string // Absolute path of the hook executing this runner.
@@ -29,10 +29,12 @@ func (s HookSettings) toString() string {
 		"\n- Args: '%q'\n"+
 			" • Repo Path: '%s'\n"+
 			" • Repo Hooks: '%s'\n"+
-			" • Git Dir: '%s'\n"+
+			" • Git Dir Worktree: '%s'\n"+
 			" • Install Dir: '%s'\n"+
 			" • Hook Path: '%s'\n"+
 			" • Hook Name: '%s'\n"+
 			" • Trusted: '%v'",
-		s.Args, s.RepositoryDir, s.RepositoryHooksDir, s.GitDir, s.InstallDir, s.HookPath, s.HookName, s.IsRepoTrusted)
+		s.Args, s.RepositoryDir,
+		s.RepositoryHooksDir, s.GitDirWorktree,
+		s.InstallDir, s.HookPath, s.HookName, s.IsRepoTrusted)
 }

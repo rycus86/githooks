@@ -265,10 +265,10 @@ func getHookPatternsGitDir(gitDir string) (HookPatterns, error) {
 	return HookPatterns{}, err
 }
 
-// StoreHookPatternsGitDir stores all ignored hooks in the current Git directory.
-func StoreHookPatternsGitDir(patterns HookPatterns, gitDir string) error {
+// StoreHookPatternsGitDir stores all ignored hooks in the worktrees Git directory `gitDirWorktree`.
+func StoreHookPatternsGitDir(patterns HookPatterns, gitDirWorktree string) error {
 	return StoreIgnorePatterns(patterns,
-		path.Join(gitDir, ".githooks.ignore.yaml"))
+		path.Join(gitDirWorktree, ".githooks.ignore.yaml"))
 }
 
 // getHookPatternsLegacy loads file `.githooks.checksum` and parses "disabled>" entries
@@ -393,8 +393,12 @@ func loadIgnorePatternsLegacyFile(file string) (p HookPatterns, err error) {
 }
 
 // GetIgnorePatterns loads all ignore patterns in the worktree's hooks dir and
-// also in the Git directory.
-func GetIgnorePatterns(repoHooksDir string, gitDir string, hookNames []string) (patt RepoIgnorePatterns, err error) {
+// also in the worktrees Git directory.
+func GetIgnorePatterns(
+	repoHooksDir string,
+	gitDirWorktree string,
+	hookNames []string) (patt RepoIgnorePatterns, err error) {
+
 	var e error
 
 	patt.HooksDir, e = GetHookPatternsHooksDir(repoHooksDir, hookNames)
@@ -402,14 +406,14 @@ func GetIgnorePatterns(repoHooksDir string, gitDir string, hookNames []string) (
 		err = cm.CombineErrors(cm.Error("Could not get worktree ignore patterns."), e)
 	}
 
-	patt.User, e = getHookPatternsGitDir(gitDir)
+	patt.User, e = getHookPatternsGitDir(gitDirWorktree)
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get user ignore patterns."), e)
 	}
 
 	// Legacy
 	// @todo Remove as soon as possible
-	legacyDisabledHooks, e := getHookPatternsLegacy(gitDir)
+	legacyDisabledHooks, e := getHookPatternsLegacy(gitDirWorktree)
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get legacy ignore patterns."), e)
 	}

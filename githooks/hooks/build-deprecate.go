@@ -10,8 +10,4 @@ const (
 	// ReadLegacyIgnoreFileFixPatters add a '**/' to each pattern, because thats
 	// what it needs to make legacy patterns compatible.
 	ReadLegacyIgnoreFileFixPatters = true
-
-	// InstallLegacyBinaries installs cli.sh into the binary directory in the install folder.
-	// @todo This feature needs to be set to `false` and removed.
-	InstallLegacyBinaries = true
 )

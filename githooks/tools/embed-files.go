@@ -20,7 +20,7 @@ func main() {
 
 	srcRoot := path.Join(root, "githooks")
 
-	template := path.Join(root, "base-template-wrapper.sh")
+	template := path.Join(root, "githooks", "run-wrapper.sh")
 	readme := path.Join(root, ".githooks", "README.md")
 
 	c := bindata.Config{

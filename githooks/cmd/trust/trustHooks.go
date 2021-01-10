@@ -80,12 +80,12 @@ func apply(log cm.ILogContext, hook *hooks.Hook, checksums *hooks.ChecksumStore,
 }
 
 func runTrustPatterns(ctx *ccm.CmdContext, reset bool, all bool, patterns *hooks.HookPatterns) {
-	repoDir, gitDir := ccm.AssertRepoRoot(ctx)
+	repoDir, gitDir, gitDirWorktree := ccm.AssertRepoRoot(ctx)
 
 	repoHooksDir := hooks.GetGithooksDir(repoDir)
 	hookNames := hooks.ManagedHookNames
 
-	state, shared := list.PrepareListHookState(ctx, repoDir, repoHooksDir, gitDir, hookNames)
+	state, shared := list.PrepareListHookState(ctx, repoDir, repoHooksDir, gitDirWorktree, hookNames)
 
 	allHooks := getAllHooks(ctx.Log, hookNames, gitDir, repoHooksDir, shared, state)
 
