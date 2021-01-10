@@ -8,17 +8,8 @@ script:
   - sh "tests/${TEST_INSTANCE}.sh"
 
 env:
-  - TEST_INSTANCE=test-alpine
-  - TEST_INSTANCE=test-alpine-user
-  - TEST_INSTANCE=test-alpine-lfs
-  - TEST_INSTANCE=test-debian
-  - TEST_INSTANCE=test-debian-user
-  - TEST_INSTANCE=test-ubuntu
-  - TEST_INSTANCE=test-centos
-  - TEST_INSTANCE=test-arch
-  - TEST_INSTANCE=test-fedora
-  - TEST_INSTANCE=test-opensuse
-  - TEST_INSTANCE=test-corehookspath
-  - TEST_INSTANCE=test-whitespace
+  - TEST_INSTANCE=test-alpine-go
+  - TEST_INSTANCE=test-alpine-nolfs-go
+  - TEST_INSTANCE=test-corehookspath-go
+  - TEST_INSTANCE=test-whitespace-go
   - TEST_INSTANCE=test-rules
-  - TEST_INSTANCE=coverage
