@@ -7,24 +7,11 @@ mkdir -p /tmp/test094/a /tmp/test094/b /tmp/test094/c &&
     cd /tmp/test094/b && git init ||
     exit 1
 
-if ! sh /var/lib/githooks/cli.sh install; then
-    echo "! Failed to run the installation"
-    exit 1
-fi
-
-if ! grep 'rycus86/githooks' .git/hooks/pre-commit; then
-    echo "! Installation was unsuccessful"
-    exit 1
-fi
-
-if grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
-    echo "! Unexpected non-single installation"
-    exit 1
-fi
+"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
 
 git config --global githooks.previousSearchDir /tmp
 
-if ! git hooks install --global; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" install --global; then
     echo "! Failed to run the global installation"
     exit 1
 fi
@@ -34,7 +21,7 @@ if ! grep 'rycus86/githooks' /tmp/test094/a/.git/hooks/pre-commit; then
     exit 1
 fi
 
-if (cd /tmp/test094/c && git hooks install); then
+if (cd /tmp/test094/c && "$GITHOOKS_EXE_GIT_HOOKS" install); then
     echo "! Install expected to fail outside a repository"
     exit 1
 fi
@@ -46,7 +33,7 @@ if ! (cd ~/.githooks/release && git status && git reset --hard HEAD^); then
 fi
 
 CURRENT="$(cd ~/.githooks/release && git rev-parse HEAD)"
-if ! git hooks install --global; then
+if ! "$GITHOOKS_EXE_GIT_HOOKS" install --global; then
     echo "! Expected global installation to succeed"
     exit 1
 fi
