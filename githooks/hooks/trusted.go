@@ -1,14 +1,12 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	strs "rycus86/githooks/strings"
-	"strings"
 )
 
 // GetTrustMarkerFile get the trust marker file in the current repo.
@@ -72,14 +70,7 @@ type ChecksumStore struct {
 	// with file name equal to the checksum.
 	checksumDirs []string
 
-	// Legacy:
-	// @todo Remove this as we only use checksumDirs...
-	// checksumFiles are paths to files containing a list of checksums.
-	checksumFiles []string
-
-	// Legacy:
-	// @todo Remove this as we only use checksumDirs...
-	// checksums are the values from checksumFiles (if existing)
+	// Checksums are the checksums manually added to this store
 	checksums map[string]ChecksumData
 }
 
@@ -107,33 +98,7 @@ func NewChecksumStore(path string, addAsDirIfNonExisting bool) (ChecksumStore, e
 // AddChecksums adds checksum data from `path` (file or directory) to the store.
 func (t *ChecksumStore) AddChecksums(path string, addAsDirIfNonExisting bool) error {
 
-	if cm.IsFile(path) {
-
-		content, err := ioutil.ReadFile(path)
-
-		if err != nil {
-			return cm.ErrorF("Could not read checksum file '%s'", path)
-		}
-
-		t.assertData()
-
-		for idx, l := range strs.SplitLines(string(content)) {
-			l := strings.TrimSpace(l)
-			if l == "" {
-				continue
-			}
-
-			pathAndHash := strings.SplitN(strings.TrimSpace(l), " ", 2)
-			if len(pathAndHash) < 2 || !filepath.IsAbs(pathAndHash[1]) {
-				return cm.ErrorF("Could not parse checksum file '%s:%v: '%q'\nformat: 'sha1<space>absPath'",
-					path, idx+1, pathAndHash)
-			}
-			t.AddChecksum(pathAndHash[0], pathAndHash[1])
-		}
-
-		t.checksumFiles = append(t.checksumFiles, path)
-
-	} else if cm.IsDirectory(path) || addAsDirIfNonExisting {
+	if cm.IsDirectory(path) || addAsDirIfNonExisting {
 		t.checksumDirs = append(t.checksumDirs, path)
 	}
 
@@ -249,10 +214,9 @@ func (t *ChecksumStore) IsTrusted(filePath string) (bool, string, error) {
 // Summary returns a summary of the checksum store.
 func (t *ChecksumStore) Summary() string {
 	return strs.Fmt(
-		"Checksum store contains '%v' parsed checksums from '%v' files\n"+
+		"Checksum store contains '%v' checksums\n"+
 			"and '%v' directory search paths.",
 		len(t.checksums),
-		len(t.checksumFiles),
 		len(t.checksumDirs))
 }
 

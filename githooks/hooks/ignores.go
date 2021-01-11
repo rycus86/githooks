@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"path"
 	"path/filepath"
 	cm "rycus86/githooks/common"
@@ -263,33 +262,6 @@ func StoreHookPatternsGitDir(patterns HookPatterns, gitDirWorktree string) error
 		path.Join(gitDirWorktree, ".githooks.ignore.yaml"))
 }
 
-// getHookPatternsLegacy loads file `.githooks.checksum` and parses "disabled>" entries
-// @todo This needs to be deleted once the test work.
-func getHookPatternsLegacy(gitDir string) (HookPatterns, error) {
-
-	file := path.Join(gitDir, ".githooks.checksum")
-	var p HookPatterns
-
-	if cm.IsFile(file) {
-		data, err := ioutil.ReadFile(file)
-		if err != nil {
-			return p, err
-		}
-
-		s := strs.SplitLines(string(data))
-
-		for _, l := range s {
-			l := strings.TrimSpace(l)
-			if strings.HasPrefix(l, "disabled>") {
-				hookPath := strings.TrimPrefix(l, "disabled>")
-				p.NamespacePaths = append(p.NamespacePaths, path.Base(strings.TrimSpace(hookPath)))
-			}
-		}
-	}
-
-	return p, nil
-}
-
 // loadIgnorePatterns loads patterns.
 func LoadIgnorePatterns(file string) (patterns HookPatterns, err error) {
 	var data hookIgnoreFile
@@ -357,14 +329,6 @@ func GetIgnorePatterns(
 	if e != nil {
 		err = cm.CombineErrors(err, cm.Error("Could not get user ignore patterns."), e)
 	}
-
-	// Legacy
-	// @todo Remove as soon as possible
-	legacyDisabledHooks, e := getHookPatternsLegacy(gitDirWorktree)
-	if e != nil {
-		err = cm.CombineErrors(err, cm.Error("Could not get legacy ignore patterns."), e)
-	}
-	patt.User.Add(&legacyDisabledHooks)
 
 	return
 }

@@ -5,7 +5,7 @@
 mkdir -p /tmp/test32 && cd /tmp/test32 || exit 1
 git init || exit 1
 
-git config --global githooks.autoupdate.enabled true || exit 1
+git config --global githooks.autoUpdateEnabled true || exit 1
 
 OUTPUT=$(
     ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
@@ -17,7 +17,7 @@ if ! cd ~/.githooks/release && git rev-parse HEAD; then
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -z "$LAST_UPDATE" ]; then
     echo "! Update check was expected to start"
     exit 1

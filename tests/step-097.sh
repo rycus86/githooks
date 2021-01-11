@@ -22,7 +22,7 @@ mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&
     "$GITHOOKS_BIN_DIR/installer" --stdin $SINGLE &&
-    git config githooks.autoupdate.enabled false ||
+    git config githooks.autoUpdateEnabled false ||
     exit 1
 
 for HOOK_TYPE in ${MANAGED_HOOK_NAMES}; do

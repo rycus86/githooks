@@ -242,10 +242,17 @@ func GetAllHooksInShared(
 
 		hookNamespace := hooks.GetDefaultHooksNamespaceShared(shRepo)
 
-		allHooks := GetAllHooksIn(log, shRepo.RepositoryDir, hookName, hookNamespace, state, true, false)
-		// @todo remove this as soon as possible
-		allHooks = append(allHooks,
-			GetAllHooksIn(log, hooks.GetGithooksDir(shRepo.RepositoryDir), hookName, hookNamespace, state, true, false)...)
+		var allHooks []hooks.Hook
+
+		if dir := hooks.GetSharedGithooksDir(shRepo.RepositoryDir); cm.IsDirectory(dir) {
+			allHooks = GetAllHooksIn(log, dir, hookName, hookNamespace, state, true, false)
+
+		} else if dir := hooks.GetGithooksDir(shRepo.RepositoryDir); cm.IsDirectory(dir) {
+			allHooks = GetAllHooksIn(log, dir, hookName, hookNamespace, state, true, false)
+
+		} else {
+			allHooks = GetAllHooksIn(log, shRepo.RepositoryDir, hookName, hookNamespace, state, true, false)
+		}
 
 		if len(allHooks) != 0 {
 			count += len(allHooks)

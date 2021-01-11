@@ -2,8 +2,8 @@ package hooks
 
 // Git config keys for globals config.
 const (
-	GitCK_AutoUpdateEnabled            = "githooks.autoupdate.enabled"
-	GitCK_AutoUpdateLastRun            = "githooks.autoupdate.lastrun"
+	GitCK_AutoUpdateEnabled            = "githooks.autoUpdateEnabled"
+	GitCK_AutoUpdateCheckTimestamp     = "githooks.autoUpdateCheckTimestamp"
 	GitCK_BugReportInfo                = "githooks.bugReportInfo"
 	GitCK_ChecksumCacheDir             = "githooks.checksumCacheDir"
 	GitCK_CloneBranch                  = "githooks.cloneBranch"
@@ -26,7 +26,7 @@ const (
 // Git config keys for local config.
 const (
 	GitCK_Registered = "githooks.registered"
-	GitCK_TrustAll   = "githooks.trust.all"
+	GitCK_TrustAll   = "githooks.trustAll"
 )
 
 // Git config keys for local/global config.
@@ -40,7 +40,7 @@ func GetGlobalGitConfigKeys() []string {
 	return []string{
 
 		GitCK_AutoUpdateEnabled,
-		GitCK_AutoUpdateLastRun,
+		GitCK_AutoUpdateCheckTimestamp,
 		GitCK_BugReportInfo,
 		GitCK_ChecksumCacheDir,
 		GitCK_CloneBranch,

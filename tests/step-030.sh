@@ -5,7 +5,7 @@
 mkdir -p /tmp/test30 && cd /tmp/test30 || exit 1
 git init || exit 1
 
-git config --global githooks.autoupdate.enabled false || exit 1
+git config --global githooks.autoUpdateEnabled false || exit 1
 
 ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
 
@@ -15,7 +15,7 @@ if cd ~/.githooks/release && git rev-parse HEAD; then
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update unexpectedly run"
     exit 1

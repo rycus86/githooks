@@ -11,12 +11,12 @@ import (
 )
 
 func RecordUpdateCheckTimestamp() error {
-	return git.Ctx().SetConfig(hooks.GitCK_AutoUpdateLastRun,
+	return git.Ctx().SetConfig(hooks.GitCK_AutoUpdateCheckTimestamp,
 		fmt.Sprintf("%v", time.Now().Unix()), git.GlobalScope)
 }
 
 func ResetUpdateCheckTimestamp() error {
-	return git.Ctx().UnsetConfig(hooks.GitCK_AutoUpdateLastRun, git.GlobalScope)
+	return git.Ctx().UnsetConfig(hooks.GitCK_AutoUpdateCheckTimestamp, git.GlobalScope)
 }
 
 func GetUpdateCheckTimestamp() (t time.Time, isSet bool, err error) {
@@ -24,7 +24,7 @@ func GetUpdateCheckTimestamp() (t time.Time, isSet bool, err error) {
 	// Initialize with too old time...
 	t = time.Unix(0, 0)
 
-	timeLastUpdateCheck := git.Ctx().GetConfig(hooks.GitCK_AutoUpdateLastRun, git.GlobalScope)
+	timeLastUpdateCheck := git.Ctx().GetConfig(hooks.GitCK_AutoUpdateCheckTimestamp, git.GlobalScope)
 	if strs.IsEmpty(timeLastUpdateCheck) {
 		return
 	}

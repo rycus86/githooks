@@ -104,6 +104,11 @@ func GetGithooksDir(repoDir string) string {
 	return path.Join(repoDir, HooksDirName)
 }
 
+// GetSharedGithooksDir gets the hooks directory for Githooks inside a shared repository.
+func GetSharedGithooksDir(repoDir string) string {
+	return path.Join(repoDir, "githooks")
+}
+
 // HandleCLIErrors generally handles errors for the Githooks executables. Argument `cwd` can be empty.
 func HandleCLIErrors(err interface{}, cwd string, log cm.ILogContext) bool {
 	if err == nil {

@@ -10,7 +10,7 @@ mkdir -p /tmp/test060/.githooks/pre-commit &&
     touch /tmp/test060/.githooks/trust-all &&
     cd /tmp/test060 &&
     git init &&
-    git config --local githooks.trust.all true ||
+    git config --local githooks.trustAll true ||
     exit 1
 
 if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep "first" | grep -q "'trusted'"; then

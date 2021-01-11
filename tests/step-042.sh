@@ -7,7 +7,7 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update already marked as run"
     exit 1
@@ -22,13 +22,13 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin --single; then
     exit 1
 fi
 
-ARE_UPDATES_ENABLED=$(git config --global --get githooks.autoupdate.enabled)
+ARE_UPDATES_ENABLED=$(git config --global --get githooks.autoUpdateEnabled)
 if [ "$ARE_UPDATES_ENABLED" != "true" ]; then
     echo "! Auto updates were expected to be enabled"
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update already marked as run"
     exit 1
@@ -40,7 +40,7 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
     exit 1
 fi
 
-git config --global --unset githooks.autoupdate.lastrun
+git config --global --unset githooks.autoUpdateCheckTimestamp
 
 OUTPUT=$(
     "$GITHOOKS_INSTALL_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
@@ -52,7 +52,7 @@ if ! echo "$OUTPUT" | grep -q "All done! Enjoy!"; then
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -z "$LAST_UPDATE" ]; then
     echo "! Update did not run"
     exit 1

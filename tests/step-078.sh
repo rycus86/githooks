@@ -7,12 +7,12 @@ if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
     exit 1
 fi
 
-git config --global --unset githooks.autoupdate.enabled &&
+git config --global --unset githooks.autoUpdateEnabled &&
     "$GITHOOKS_INSTALL_BIN_DIR/cli" update --enable &&
-    [ "$(git config --get githooks.autoupdate.enabled)" = "true" ] ||
+    [ "$(git config --get githooks.autoUpdateEnabled)" = "true" ] ||
     exit 1
 
-git config --global --unset githooks.autoupdate.enabled &&
+git config --global --unset githooks.autoUpdateEnabled &&
     "$GITHOOKS_INSTALL_BIN_DIR/cli" update --disable &&
-    [ "$(git config --get githooks.autoupdate.enabled)" = "false" ] ||
+    [ "$(git config --get githooks.autoUpdateEnabled)" = "false" ] ||
     exit 1

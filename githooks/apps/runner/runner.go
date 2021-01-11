@@ -690,14 +690,20 @@ func getHooksInShared(settings *HookSettings,
 
 	hookNamespace := hooks.GetDefaultHooksNamespaceShared(shRepo)
 
-	// Legacy
-	// @todo Remove this, dont support /.githooks because it will enable
-	// using hooks in hook repos!
-	dir := hooks.GetGithooksDir(shRepo.RepositoryDir)
+	// 1. priority has non-dot folder 'githooks'
+	dir := hooks.GetSharedGithooksDir(shRepo.RepositoryDir)
 	if cm.IsDirectory(dir) {
 		return getHooksIn(settings, uiSettings, dir, true, hookNamespace, ignores, checksums)
 	}
 
+	// 2. priority is the normal '.githooks' folder.
+	// This is second, to allow internal development Githooks inside shared repos.
+	dir = hooks.GetGithooksDir(shRepo.RepositoryDir)
+	if cm.IsDirectory(dir) {
+		return getHooksIn(settings, uiSettings, dir, true, hookNamespace, ignores, checksums)
+	}
+
+	// 3. Fallback to the whole repository.
 	return getHooksIn(settings, uiSettings, shRepo.RepositoryDir, true, hookNamespace, ignores, checksums)
 }
 

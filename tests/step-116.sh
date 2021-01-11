@@ -129,8 +129,8 @@ if ! (cd ~/.githooks/release && git reset --hard HEAD~1 >/dev/null); then
 fi
 
 cd /tmp/test116.3 &&
-    git config --global githooks.autoupdate.enabled true &&
-    git config --global githooks.autoupdate.lastrun $MOCK_LAST_RUN &&
+    git config --global githooks.autoUpdateEnabled true &&
+    git config --global githooks.autoUpdateCheckTimestamp $MOCK_LAST_RUN &&
     git commit --allow-empty -m 'Second commit' || exit 1
 
 # Check that all hooks are updated

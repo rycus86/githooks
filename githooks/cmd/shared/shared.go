@@ -184,43 +184,15 @@ func runSharedList(ctx *ccm.CmdContext, opts *SharedOpts) {
 func runSharedUpdate(ctx *ccm.CmdContext) {
 	repoDir, _, _, err := ctx.GitX.GetRepoRoot()
 
-	var sharedHooks []hooks.SharedRepo
-	updated := 0
-	count := 0
-
-	if err == nil {
-
-		sharedHooks, e := hooks.LoadRepoSharedHooks(ctx.InstallDir, repoDir)
-
-		ctx.Log.AssertNoErrorF(e, "Could not load shared hooks in '%s'.", hooks.GetRepoSharedFileRel())
-		if e == nil {
-			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Repo)
-			updated += count
-		}
-		err = cm.CombineErrors(err, e)
-
-		sharedHooks, e = hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.LocalScope)
-		ctx.Log.AssertNoErrorF(e, "Could not load local shared hooks.")
-		if e == nil {
-			count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Local)
-			updated += count
-		}
-		err = cm.CombineErrors(err, e)
-
-	} else {
+	if err != nil {
+		repoDir = ""
 		ctx.Log.WarnF("Not inside a bare or non-bare repository.\n" +
 			"Updating shared and local shared hooks skipped.")
 	}
 
-	sharedHooks, e := hooks.LoadConfigSharedHooks(ctx.InstallDir, ctx.GitX, git.GlobalScope)
-	ctx.Log.AssertNoErrorF(e, "Could not load global shared hooks.")
-	if e == nil {
-		count, e = hooks.UpdateSharedHooks(ctx.Log, sharedHooks, hooks.SharedHookTypeV.Global)
-		updated += count
-	}
-	err = cm.CombineErrors(err, e)
+	updated, err := hooks.UpdateAllSharedHooks(ctx.Log, ctx.GitX, ctx.InstallDir, repoDir)
+	ctx.Log.ErrorIf(err != nil, "There have been errors while updating shared hooks")
 
-	ctx.Log.AssertNoErrorPanicF(err, "There have been errors while updating shared hooks")
 	ctx.Log.InfoF("Update '%v' shared repositories.", updated)
 }
 

@@ -1056,7 +1056,7 @@ func installIntoRegisteredRepos(
 
 }
 
-func setupSharedRepositories(cliExectuable string, dryRun bool, uiSettings *UISettings) {
+func setupSharedRepositories(installDir string, cliExectuable string, dryRun bool, uiSettings *UISettings) {
 
 	gitx := git.Ctx()
 	sharedRepos := gitx.GetConfigAll(hooks.GitCK_Shared, git.GlobalScope)
@@ -1125,14 +1125,10 @@ func setupSharedRepositories(cliExectuable string, dryRun bool, uiSettings *UISe
 				"Note: Shared hook repos listed in the '%s'\n",
 			"file will still be executed", hooks.GitCK_Shared, hooks.GetRepoSharedFileRel())
 	} else {
-		// @todo This functionality should be shared
-		// with cli/runner and here
-		err := cm.RunExecutable(
-			&cm.ExecContext{},
-			&cm.Executable{Path: cliExectuable, RunCmd: []string{"sh"}},
-			cm.UseStreams(nil, log.GetInfoWriter(), log.GetErrorWriter()),
-			"shared", "update", "--global")
-		log.AssertNoError(err, "Could not update shared hook repositories.")
+
+		updated, err := hooks.UpdateAllSharedHooks(log, gitx, installDir, "")
+		log.ErrorIf(err != nil, "Could not update shared hook repositories.")
+		log.InfoF("Updated '%v' shared hook repositories.", updated)
 
 		log.InfoF(
 			"Shared hook repositories have been set up.\n"+
@@ -1269,6 +1265,7 @@ func runUpdate(
 
 		if !args.InternalAutoUpdate && !args.NonInteractive {
 			setupSharedRepositories(
+				settings.InstallDir,
 				hooks.GetCLIExecutable(settings.InstallDir),
 				args.DryRun,
 				uiSettings)

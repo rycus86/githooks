@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: execute auto-update
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -n "$LAST_UPDATE" ]; then
     echo "! Update already marked as run"
     exit 1
@@ -11,7 +11,7 @@ fi
 mkdir -p /tmp/test29 && cd /tmp/test29 || exit 1
 git init || exit 1
 
-git config --global githooks.autoupdate.enabled true || exit 1
+git config --global githooks.autoUpdateEnabled true || exit 1
 
 ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
 
@@ -20,7 +20,7 @@ if ! cd ~/.githooks/release && git rev-parse HEAD; then
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ -z "$LAST_UPDATE" ]; then
     echo "! Update check did not run"
     exit 1

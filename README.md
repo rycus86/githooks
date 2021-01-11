@@ -160,7 +160,7 @@ You can also manage and update shared hook repositories using the [command line 
 
 To try and make things a little bit more secure, Githooks checks if any new hooks were added we haven't run before, or if any of the existing ones have changed. When they have, it will prompt for confirmation whether you accept those changes or not, and you can also disable specific hooks to skip running them until you decide otherwise. The accepted checksums are maintained in the `.git/.githooks.checksum` file, per local repository.
 
-If the repository contains a `.githooks/trust-all` file, it is marked as a trusted repository. On the first interaction with hooks, Githooks will ask for confirmation that the user trusts all existing and future hooks in the repository, and if she does, no more confirmation prompts will be shown. This can be reverted by running either the `git config --unset githooks.trust.all`, or the `git hooks config reset trusted` command. This is a per-repository setting. These can be set up and changed with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as well, run `git hooks trust help` and `git hooks config help` for more information.
+If the repository contains a `.githooks/trust-all` file, it is marked as a trusted repository. On the first interaction with hooks, Githooks will ask for confirmation that the user trusts all existing and future hooks in the repository, and if she does, no more confirmation prompts will be shown. This can be reverted by running either the `git config --unset githooks.trustAll`, or the `git hooks config reset trusted` command. This is a per-repository setting. These can be set up and changed with the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool as well, run `git hooks trust help` and `git hooks config help` for more information.
 
 There is a caveat worth mentioning: if a terminal *(tty)* can't be allocated, then the default action is to accept the changes or new hooks. Let me know in an issue if you strongly disagree, and you think this is a big enough risk worth having slightly worse UX instead.
 
@@ -354,11 +354,11 @@ You can also enable automatic update checks during the installation, that is exe
 ```shell
 # enable with either:
 $ git hooks update enable
-$ git config --global githooks.autoupdate.enabled true
+$ git config --global githooks.autoUpdateEnabled true
 # disable with either:
 $ git hooks update disable
-$ git config --global githooks.autoupdate.enabled false
-$ git config --global --unset githooks.autoupdate.enabled
+$ git config --global githooks.autoUpdateEnabled false
+$ git config --global --unset githooks.autoUpdateEnabled
 ```
 
 You can also check for updates at any time by executing `git hooks update`, using the [command line helper](https://github.com/rycus86/githooks/blob/master/docs/command-line-tool.md) tool. You can also use its `git hooks config [enable|disable] update` command to enable or disable the automatic update checks.

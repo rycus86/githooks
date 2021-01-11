@@ -7,7 +7,7 @@
 mkdir -p /tmp/test099/.git/hooks &&
     cd /tmp/test099 &&
     git init &&
-    git config githooks.autoupdate.enabled false ||
+    git config githooks.autoUpdateEnabled false ||
     exit 1
 
 if ! git worktree list >/dev/null 2>/dev/null; then

@@ -96,14 +96,14 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
 
 5. Disabling hooks will no more be stored in the `.githooks.checksum` but rather as a **user ignore** in `<repo>/.git/.githooks.ignore.yaml`.
 
-    - @todo remove legacy store/load from old location.
+    - @todo remove legacy store/load from old location. **[done]**
     - changes in CLI *[not done]*
 
 ### Trusting and Checksums
 
 1. Trust file becomes a YAML file. **[done]**
 
-    - @todo remove legacy store/load from old location
+    - @todo remove legacy store/load from old location **[done]**
     - no backward compatibility, since it just means -> retrusting hooks.
 
 2. A new checksum cache mechanism is implemented which has search directories
@@ -133,7 +133,7 @@ folder and have nothing to do with checked in hooks and their ignores. They can 
 
 This is more efficient, since we only have to search for such a file and we know we have trusted this hook. Instead of parsing the file for every hook run. Note: `git commit` runs several hooks, and all need to re-read the same stuff again.
 
-4. Move config `githooks.trust.all` to `githooks.trust.all`. **[done]**
+4. Move config `githooks.trustAll` to `githooks.trustAll`. **[done]**
 
 ### Hook Runner
 

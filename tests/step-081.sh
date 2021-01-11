@@ -11,21 +11,21 @@ mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" trust &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "true" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "true" ] ||
     exit 1
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" trust revoke &&
     [ -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "false" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "false" ] ||
     exit 2
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" trust delete &&
     [ ! -f .githooks/trust-all ] &&
-    [ "$(git config --local --get githooks.trust.all)" = "false" ] ||
+    [ "$(git config --local --get githooks.trustAll)" = "false" ] ||
     exit 3
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" trust forget &&
-    [ -z "$(git config --local --get githooks.trust.all)" ] &&
+    [ -z "$(git config --local --get githooks.trustAll)" ] &&
     "$GITHOOKS_INSTALL_BIN_DIR/cli" trust forget ||
     exit 4
 

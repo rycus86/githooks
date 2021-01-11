@@ -5,12 +5,12 @@
 CURRENT_TIME=$(date +%s)
 MOCK_LAST_RUN=$((CURRENT_TIME - 5))
 
-git config --global githooks.autoupdate.lastrun $MOCK_LAST_RUN || exit 1
+git config --global githooks.autoUpdateCheckTimestamp $MOCK_LAST_RUN || exit 1
 
 mkdir -p /tmp/test31 && cd /tmp/test31 || exit 1
 git init || exit 1
 
-git config --global githooks.autoupdate.enabled true || exit 1
+git config --global githooks.autoUpdateEnabled true || exit 1
 
 ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
 
@@ -20,7 +20,7 @@ if cd ~/.githooks/release && git rev-parse HEAD; then
     exit 1
 fi
 
-LAST_UPDATE=$(git config --global --get githooks.autoupdate.lastrun)
+LAST_UPDATE=$(git config --global --get githooks.autoUpdateCheckTimestamp)
 if [ "$LAST_UPDATE" != "$MOCK_LAST_RUN" ]; then
     echo "! Update did not behave as expected"
     exit 1
