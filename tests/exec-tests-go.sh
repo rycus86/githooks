@@ -17,8 +17,7 @@ FROM githooks:${IMAGE_TYPE}-base
 
 RUN git config --global user.email "githook@test.com" && \\
     git config --global user.name "Githook Tests" && \\
-    # @todo Change this to main as soon as possible. And check if all tests rund through... cli.sh still using master...
-    git config --global init.defaultBranch master
+    git config --global init.defaultBranch main
 
 ENV GITHOOKS_TEST_REPO=/var/lib/githooks
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
