@@ -1,49 +1,61 @@
 #!/bin/sh
-if [ -n "$TEST_STEP" ]; then
-    STEPS_TO_RUN="step-${TEST_STEP}.sh"
-else
-    STEPS_TO_RUN="step-*"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$DIR/.."
+
+git config --global user.email "githook@test.com" &&
+    git config --global user.name "Githook Tests" &&
+    git config --global init.defaultBranch master || exit 1
+
+ROOT_DIR="C:/Program Files/githooks-tests"
+export GITHOOKS_TEST_REPO="$ROOT_DIR/githooks"
+export GITHOOKS_BIN_DIR="$GITHOOKS_TEST_REPO/githooks/bin"
+
+if [ -d "$ROOT_DIR" ]; then
+    echo "! You need to delete '$ROOT_DIR' first."
 fi
 
-ROOT_DIR="C:/Program Files"
-mkdir -p "$ROOT_DIR/githooks" || true
-cp base-template.sh "$ROOT_DIR/githooks"/ || exit 1
-cp base-template-wrapper.sh "$ROOT_DIR/githooks"/ || exit 1
-cp install.sh "$ROOT_DIR/githooks"/ || exit 1
-cp uninstall.sh "$ROOT_DIR/githooks"/ || exit 1
-cp cli.sh "$ROOT_DIR/githooks"/ || exit 1
-cp examples "$ROOT_DIR/githooks"/ || exit 1
-chmod +x "$ROOT_DIR"/*.sh || exit 1
+mkdir -p "$GITHOOKS_TEST_REPO" || true
+cp -rf "$REPO_DIR" "$GITHOOKS_TEST_REPO" || exit 1
+rm -rf "$GITHOOKS_TEST_REPO/.git" || exit 1
+# We use the bin folder.
+sed -i -E 's/^bin//' "$GITHOOKS_TEST_REPO/githooks/.gitignore" || exit 1
 
-GITHOOKS_TESTS="$ROOT_DIR/tests"
+echo "Make test gitrepo to clone from ..." &&
+    cd "${GITHOOKS_TEST_REPO}" && git init &&
+    git add . &&
+    git commit -a -m "Before build" || exit 1
 
-git config --global user.email "githook@test.com" || exit 2
-git config --global user.name "Githook Tests" || exit 2
+# Build binaries for v9.9.0-test.
+#################################
+cd "${GITHOOKS_TEST_REPO}/githooks" &&
+    git tag "v9.9.0-test" &&
+    ./scripts/clean.sh &&
+    ./scripts/build.sh --build-flags "-tags debug,mock" &&
+    ./bin/installer --version || exit 1
+echo "Commit build v9.9.0-test to repo ..." &&
+    cd "${GITHOOKS_TEST_REPO}" &&
+    git add . &&
+    git commit -a --allow-empty -m "Version 9.9.0-test" &&
+    git tag -f "v9.9.0-test" || exit 1
 
-cp tests/exec-steps.sh "$GITHOOKS_TESTS"/ || exit 3
-# shellcheck disable=SC2086
-cp tests/$STEPS_TO_RUN "$GITHOOKS_TESTS"/ || exit 3
+# Build binaries for v9.9.1-test.
+#################################
+cd "${GITHOOKS_TEST_REPO}/githooks" &&
+    git commit -a --allow-empty -m "Before build" &&
+    git tag -f "v9.9.1-test" &&
+    ./scripts/clean.sh &&
+    ./scripts/build.sh --build-flags "-tags debug,mock" &&
+    ./bin/installer --version || exit 1
+echo "Commit build v9.9.1-test to repo ..." &&
+    cd "${GITHOOKS_TEST_REPO}" &&
+    git commit -a --allow-empty -m "Version 9.9.01test" &&
+    git tag -f "v9.9.1-test" || exit 1
 
-# Do not use the terminal in tests
-sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh || exit 4
-
-# Change the base template so we can pass in the hook name and accept flags
-# shellcheck disable=SC2016
-sed -i 's|</dev/tty||g' "$ROOT_DIR"/install.sh &&
-    # Change the base template so we can pass in the hook name and accept flags
-    sed -i -E 's|GITHOOKS_RUNNER=(.*)|GITHOOKS_RUNNER=\1; GITHOOKS_RUNNER="\${GITHOOKS_RUNNER:-/var/lib/githooks/base-template.sh}"|' "$ROOT_DIR"/base-template-wrapper.sh &&
-    sed -i -E 's|HOOK_FOLDER=(.*)|HOOK_FOLDER="\${HOOK_FOLDER:-\1}"|' "$ROOT_DIR"/base-template.sh &&
-    sed -i -E 's|HOOK_NAME=(.*)|HOOK_NAME="\${HOOK_NAME:-\1}"|' "$ROOT_DIR"/base-template.sh &&
-    sed -i 's|ACCEPT_CHANGES=|ACCEPT_CHANGES=\${ACCEPT_CHANGES}|' "$ROOT_DIR"/base-template.sh &&
-    sed -i 's|read -r "\$VARIABLE"|eval "\$VARIABLE=\$\$(eval echo "\$VARIABLE")" # disabled for tests: read -r "\$VARIABLE"|' "$ROOT_DIR"/base-template.sh &&
-    sed -i -E "s|GITHOOKS_CLONE_URL=\"http.*\"|GITHOOKS_CLONE_URL=\"$ROOT_DIR\"|" "$ROOT_DIR"/cli.sh "$ROOT_DIR"/base-template.sh "$ROOT_DIR"/install.sh | exit 5
+# Copy the tests somewhere different
+cp "$REPO_DIR/tests" "$ROOT_DIR/tests" || exit 1
 
 if [ -n "${EXTRA_INSTALL_ARGS}" ]; then
-    sed -i -E "s|sh (.*)/install.sh|sh \1/install.sh \${EXTRA_INSTALL_ARGS}|g" "$GITHOOKS_TESTS"/step-* || exit 6
+    sed -i -E "s|(.*)/installer\"|\1/installer\" ${EXTRA_INSTALL_ARGS}|g" "$ROOT_DIR"/tests/step-*
 fi
 
-# Patch all paths to use windows base path
-sed -i -E "s|([^\"])/var/lib/|\1\"$ROOT_DIR\"/|g" "$GITHOOKS_TESTS"/exec-tests.sh "$GITHOOKS_TESTS"/step-* || exit 7
-sed -i -E "s|\"/var/lib/|\"$ROOT_DIR/|g" "$GITHOOKS_TESTS"/exec-tests.sh "$GITHOOKS_TESTS"/step-* || exit 7
-
-sh "$GITHOOKS_TESTS"/exec-steps.sh
+sh "$ROOT_DIR"/tests/exec-steps.sh

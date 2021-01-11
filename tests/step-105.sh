@@ -22,7 +22,7 @@ LFS_UNMANAGED=""
 for LFS_HOOK_PATH in $(grep -l git-lfs .git/hooks/*); do
     LFS_HOOK=$(basename "$LFS_HOOK_PATH")
 
-    if ! sed -n -E '/LFSHookNames\s*=.*\{/,/\}/p;' /var/lib/githooks/githooks/hooks/githooks.go | grep -q "$LFS_HOOK"; then
+    if ! sed -n -E '/LFSHookNames\s*=.*\{/,/\}/p;' "$GITHOOKS_TEST_REPO/githooks/hooks/githooks.go" | grep -q "$LFS_HOOK"; then
         echo "! LFS hook appears unmanaged: $LFS_HOOK"
         LFS_UNMANAGED=Y
     fi

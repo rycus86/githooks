@@ -20,45 +20,47 @@ RUN git config --global user.email "githook@test.com" && \\
     # @todo Change this to main as soon as possible. And check if all tests rund through... cli.sh still using master...
     git config --global init.defaultBranch master
 
+ENV GITHOOKS_TEST_REPO=/var/lib/githooks
+ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
+
 # Add sources
-COPY --chown=${OS_USER}:${OS_USER} githooks /var/lib/githooks/githooks
-RUN sed -i -E 's/^bin//' /var/lib/githooks/githooks/.gitignore # We use the bin folder
-ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
-ADD examples /var/lib/githooks/examples
+COPY --chown=${OS_USER}:${OS_USER} githooks \${GITHOOKS_TEST_REPO}/githooks
+RUN sed -i -E 's/^bin//' \${GITHOOKS_TEST_REPO}/githooks/.gitignore # We use the bin folder
+ADD .githooks/README.md \${GITHOOKS_TEST_REPO}/.githooks/README.md
+ADD examples \${GITHOOKS_TEST_REPO}/examples
 
 RUN echo "Make test gitrepo to clone from ..." && \\
-    cd /var/lib/githooks && git init >/dev/null 2>&1 && \\
+    cd \${GITHOOKS_TEST_REPO} && git init >/dev/null 2>&1 && \\
     git add . >/dev/null 2>&1 && \\
     git commit -a -m "Before build" >/dev/null 2>&1
 
-ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
-
 # Build binaries for v9.9.0-test.
 #################################
-RUN cd /var/lib/githooks/githooks && \\
+RUN cd \${GITHOOKS_TEST_REPO}/githooks && \\
     git tag "v9.9.0-test" >/dev/null 2>&1 && \\
      ./scripts/clean.sh && \\
     ./scripts/build.sh --build-flags "-tags debug,mock" && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.0-test to repo ..." && \\
-    cd /var/lib/githooks && \\
+    cd \${GITHOOKS_TEST_REPO} && \\
     git add . >/dev/null 2>&1 && \\
     git commit -a --allow-empty -m "Version 9.9.0-test" >/dev/null 2>&1 && \\
     git tag -f "v9.9.0-test"
 
 # Build binaries for v9.9.1-test.
 #################################
-RUN cd /var/lib/githooks/githooks && \\
+RUN cd \${GITHOOKS_TEST_REPO}/githooks && \\
     git commit -a --allow-empty -m "Before build" >/dev/null 2>&1 && \\
     git tag -f "v9.9.1-test" && \\
     ./scripts/clean.sh && \\
     ./scripts/build.sh --build-flags "-tags debug,mock" && \\
     ./bin/installer --version
 RUN echo "Commit build v9.9.1-test to repo ..." && \\
-    cd /var/lib/githooks && \\
+    cd \${GITHOOKS_TEST_REPO} && \\
     git commit -a --allow-empty -m "Version 9.9.01test" >/dev/null 2>&1 && \\
     git tag -f "v9.9.1-test"
 
+# Copy the tests somewhere different
 ADD tests /var/lib/tests/
 RUN if [ -n "\${EXTRA_INSTALL_ARGS}" ]; then \\
         sed -i -E 's|(.*)/installer\"|\1/installer" \${EXTRA_INSTALL_ARGS}|g' /var/lib/tests/step-* ; \\

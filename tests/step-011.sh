@@ -7,7 +7,7 @@ git init || exit 1
 
 # set a non existing githooks.runner
 git config githooks.runner "nonexisting-binary"
-OUT=$(/var/lib/githooks/githooks/run-wrapper.sh 2>&1)
+OUT=$("$GITHOOKS_TEST_REPO/githooks/run-wrapper.sh" 2>&1)
 
 if ! echo "$OUT" | grep -q "Githooks runner points to a non existing location"; then
     echo "! Expected wrapper template to fail" >&2
