@@ -15,3 +15,6 @@ for FILE in $STAGED_FILES; do
         fi
     fi
 done
+
+
+echo "* CLI docs is up to date"

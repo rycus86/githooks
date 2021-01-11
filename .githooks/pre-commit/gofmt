@@ -1,5 +1,4 @@
 #!/bin/bash
-DIR=$(cd "$(dirname "$0")" && pwd)
 
 if ! command -v gofmt >/dev/null 2>&1; then
     echo "! Skipping gofmt - not installed"
