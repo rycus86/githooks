@@ -759,7 +759,7 @@ func installBinaries(
 
 	for _, binary := range binaries {
 		dest := path.Join(binDir, path.Base(binary))
-		err := cm.MoveFileWithBackup(binary, dest, tempDir)
+		err := cm.CopyFileWithBackup(binary, dest, tempDir, false)
 		log.AssertNoErrorPanicF(err,
 			"Could not move file '%s' to '%s'.", binary, dest)
 	}
@@ -1174,8 +1174,8 @@ func updateClone(cloneDir string, updateToSHA string) {
 			"remote branch in the release clone\n"+
 			"'%s'.\n"+
 			"This seems rather odd.\n"+
-			"Either fix the problems or delete the clone\n",
-		"to trigger a new checkout.", cloneDir)
+			"Either fix the problems or delete the clone\n"+
+			"to trigger a new checkout.", cloneDir)
 
 	cm.DebugAssert(err != nil ||
 		commitSHA == updateToSHA, "Wrong updateToSHA.")

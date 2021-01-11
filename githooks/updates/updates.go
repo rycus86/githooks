@@ -221,12 +221,12 @@ func FetchUpdates(
 		}
 	}
 
-	if isNewClone {
-		// Set the url/branch back...
-		if err = SetCloneURL(url, branch); err != nil {
-			return
-		}
+	// Set the url/branch back...
+	if err = SetCloneURL(url, branch); err != nil {
+		return
+	}
 
+	if isNewClone {
 		// Reset to latest release tag on the branch
 		tag, e := gitx.Get("describe", "--tags", "--abbrev=0", git.HEAD)
 

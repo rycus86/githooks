@@ -233,12 +233,23 @@ func GetTempPath(dir string, postfix string) (file string) {
 	return
 }
 
-// MoveFileWithBackup moves the contents of the file named `src` to the file named
+// CopyFileWithBackup copies (if `!doMoveInstead`, otherwise moves) the contents of
+// the file named `src` to the file named
 // by `dst`. If `dst` already exists it will be force moved to `backupDir/dst`.
+// Make sure that `backupDir` is on the same device as `dst`
+// as otherwise this will fail!
 // After this, any failure tries to recover as good as possible
 // to not have touched/moved `dst`.
-func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
+func CopyFileWithBackup(src string, dst string, backupDir string, doMoveInstead bool) (err error) {
 	backupFile := ""
+
+	var action func(src string, dest string) error
+
+	if doMoveInstead {
+		action = os.Rename
+	} else {
+		action = CopyFile
+	}
 
 	if !IsFile(src) {
 		return ErrorF("Source file '%s' does not exist.", src)
@@ -248,7 +259,7 @@ func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
 		// Force remove any backup file.
 		backupFile := GetTempPath(backupDir, "-"+path.Base(dst))
 
-		// Move destination to the backup file.
+		// Copy destination to the backup file.
 		if err = os.Rename(dst, backupFile); err != nil {
 			return
 		}
@@ -265,8 +276,8 @@ func MoveFileWithBackup(src string, dst string, backupDir string) (err error) {
 		}
 	}()
 
-	// The critical part. Move `src` to `dest`.
-	err = os.Rename(src, dst)
+	// The critical part. Copy (or move) `src` to `dest`.
+	err = action(src, dst)
 
 	return
 }
