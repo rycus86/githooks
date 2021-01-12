@@ -1,4 +1,4 @@
-package main
+package install
 
 import (
 	"rycus86/githooks/prompt"

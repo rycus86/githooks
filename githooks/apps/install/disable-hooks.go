@@ -1,4 +1,4 @@
-package main
+package install
 
 import (
 	cm "rycus86/githooks/common"
@@ -7,7 +7,7 @@ import (
 	strs "rycus86/githooks/strings"
 )
 
-func getHookDisableCallback(
+func GetHookDisableCallback(
 	log cm.ILogContext,
 	nonInteractive bool,
 	uiSettings *UISettings) func(file string) hooks.HookDisableOption {
@@ -48,8 +48,12 @@ func getHookDisableCallback(
 		case "a":
 			fallthrough // yes delete all...
 		case "y":
+			log.WarnF("Previous hook '%s' will be disabled (deleted)", file)
+
 			return hooks.DeleteHook
 		default:
+			log.WarnF("Previous hook '%s' will be disabled (backuped)", file)
+
 			return hooks.BackupHook
 		}
 	}

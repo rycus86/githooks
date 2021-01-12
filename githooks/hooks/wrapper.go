@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime"
 	"rycus86/githooks/build"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
@@ -69,7 +70,6 @@ const (
 
 func disableHookIfLFSDetected(
 	filePath string,
-	tempDir string,
 	disableCallBack func(file string) HookDisableOption) (disabled bool, deleted bool, err error) {
 
 	found, err := cm.MatchLineRegexInFile(filePath, lfsDetectionRe)
@@ -87,25 +87,23 @@ func disableHookIfLFSDetected(
 			err = os.Rename(filePath, filePath+".disabled.githooks")
 			disabled = true
 		case DeleteHook:
-			// Don't delete the hook yet, move it to the temporary directory.
-			// The file could potentially be opened/read.
-			moveFile := cm.GetTempPath(tempDir, "-"+path.Base(filePath))
-			err = os.Rename(filePath, moveFile)
+			// The file cannot be potentially be opened/read.
+			// Only a run-wrapper can be running (triggering an update)
+			// and a run-wrapper gets not detected as an LFS hook.
+			err = os.Remove(filePath)
 			disabled = true
 			deleted = true
-		}
-
-		if err != nil {
-			return
 		}
 	}
 
 	return
 }
 
+// Moves existing hook `dest` to `dir(path)/GetHookReplacementFileName(dest)`
+// if its not a Githooks run-wrapper.
+// If it is a run-wrapper dont do anything.
 func moveExistingHooks(
 	dest string,
-	tempDir string,
 	disableHookIfLFS func(file string) HookDisableOption,
 	log cm.ILogContext) error {
 
@@ -126,17 +124,9 @@ func moveExistingHooks(
 		// Try to detect a potential LFS statements and
 		// disable the hook (backup or delete).
 		if disableHookIfLFS != nil {
-			disabled, deleted, err := disableHookIfLFSDetected(dest, tempDir, disableHookIfLFS)
+			_, _, err := disableHookIfLFSDetected(dest, disableHookIfLFS)
 			if err != nil {
 				return err
-			}
-
-			if log != nil {
-				if disabled && deleted {
-					log.WarnF("Previous hook '%s' is now disabled (deleted)", dest)
-				} else if disabled && !deleted {
-					log.WarnF("Previous hook '%s' is now disabled (backuped)", dest)
-				}
 			}
 		}
 
@@ -158,6 +148,29 @@ func moveExistingHooks(
 	return nil
 }
 
+// getHookDirTemp gets the Githooks temp. directory inside Git's hook directory.
+func getHookDirTemp(hookDir string) string {
+	return path.Join(hookDir, ".githooks-tmp")
+}
+
+// DeleteHookDirTemp deletes the temporary director inside the Git's hook directory.
+func DeleteHookDirTemp(hookDir string) (err error) {
+	dir := getHookDirTemp(hookDir)
+	if cm.IsDirectory(dir) {
+		return os.RemoveAll(dir)
+	}
+
+	return nil
+}
+
+// Cleans the temporary director inside the Git's hook directory.
+func assertHookDirTemp(hookDir string) (dir string, err error) {
+	dir = getHookDirTemp(hookDir)
+	err = os.MkdirAll(dir, cm.DefaultFileModeDirectory)
+
+	return
+}
+
 // InstallRunWrappers installs run wrappers for the given `hookNames` in `dir`.
 // Existing custom hooks get renamed.
 // All deleted hooks by this function get moved to the `tempDir` directory, because
@@ -165,7 +178,7 @@ func moveExistingHooks(
 func InstallRunWrappers(
 	dir string,
 	hookNames []string,
-	tempDir string,
+	beforeSaveCallback func(file string),
 	disableHookIfLFS func(file string) HookDisableOption,
 	log cm.ILogContext) error {
 
@@ -173,28 +186,46 @@ func InstallRunWrappers(
 
 		dest := path.Join(dir, hookName)
 
-		err := moveExistingHooks(dest, tempDir, disableHookIfLFS, log)
+		err := moveExistingHooks(dest, disableHookIfLFS, log)
 		if err != nil {
 			return err
 		}
 
-		if log != nil {
-			log.InfoF("Saving Githooks run wrapper to '%s'.", dest)
-		}
+		beforeSaveCallback(dest)
 
 		if cm.IsFile(dest) {
-			// If still existing:
+			// If still existing, it is a run-wrapper:
+
 			// The file `dest` could be currently running,
 			// therefore we move it to the temporary directly.
 			// On Unix we could simply remove the file.
 			// But on Windows, an opened file (mostly) cannot be deleted.
 			// it might work, but is ugly.
-			moveDest := cm.GetTempPath(tempDir, "-"+path.Base(dest))
-			err = os.Rename(dest, moveDest)
-			if err != nil {
-				return cm.CombineErrors(err,
-					cm.ErrorF("Could not move file '%s' to '%s'.", dest, moveDest))
+
+			if runtime.GOOS == "windows" {
+				backupDir, err := assertHookDirTemp(dir)
+				if err != nil {
+					return cm.CombineErrors(err,
+						cm.ErrorF("Could not create temp. dir in '%s'.", dir))
+				}
+
+				moveDest := cm.GetTempPath(backupDir, "-"+path.Base(dest))
+				err = os.Rename(dest, moveDest)
+				if err != nil {
+					return cm.CombineErrors(err,
+						cm.ErrorF("Could not move file '%s' to '%s'.", dest, moveDest))
+				}
+
+			} else {
+				// On Unix we simply delete the file, because that works even if the file is
+				// open at the moment.
+				err = os.Remove(dest)
+				if err != nil {
+					return cm.CombineErrors(err,
+						cm.ErrorF("Could not delete file '%s'.", dest))
+				}
 			}
+
 		}
 
 		err = WriteRunWrapper(dest)

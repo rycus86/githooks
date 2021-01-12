@@ -119,6 +119,9 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	gitDir, err := gitx.GetGitDirWorktree()
 	cm.AssertNoErrorPanic(err, "Could not get git directory.")
 
+	err = hooks.DeleteHookDirTemp(path.Join(gitDir, "hooks"))
+	log.AssertNoErrorF(err, "Could not clean temporary directory in '%s/hooks'.", gitDir)
+
 	hookPath, err := filepath.Abs(os.Args[1])
 	cm.AssertNoErrorPanicF(err, "Could not abs. path from '%s'.",
 		os.Args[1])

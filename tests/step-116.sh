@@ -71,8 +71,11 @@ if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
 fi
 
 # Test uninstall to only repo 1
-cd /tmp/test116.1 &&
-    "$GITHOOKS_INSTALL_BIN_DIR/uninstaller" --stdin --single || exit 1
+cd /tmp/test116.1 || exit 1
+if ! "$GITHOOKS_BIN_DIR/cli" uninstall --non-interactive; then
+    echo "! Uninstall from current repo failed"
+    exit 1
+fi
 
 if grep -q /tmp/test116.1 "$REGISTER_FILE" ||
     (! grep -q /tmp/test116.2 "$REGISTER_FILE" &&

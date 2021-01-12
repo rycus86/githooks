@@ -12,8 +12,6 @@ type Arguments struct {
 	DryRun         bool
 	NonInteractive bool
 
-	SingleInstall bool
-
 	SkipInstallIntoExisting bool
 
 	OnlyServerHooks bool

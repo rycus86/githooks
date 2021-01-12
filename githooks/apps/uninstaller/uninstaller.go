@@ -4,7 +4,6 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"rycus86/githooks/apps/install"
@@ -73,10 +72,6 @@ func defineArguments(rootCmd *cobra.Command) {
 	cm.AssertNoErrorPanic(rootCmd.PersistentFlags().MarkHidden("config"))
 
 	// User commands
-	rootCmd.PersistentFlags().Bool("single", false,
-		"Uninstall Githooks in the active repository only\n"+
-			"instead of globally.")
-
 	rootCmd.PersistentFlags().Bool(
 		"non-interactive", false,
 		"Run the uninstallation non-interactively\n"+
@@ -88,8 +83,6 @@ func defineArguments(rootCmd *cobra.Command) {
 		viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config")))
 	cm.AssertNoErrorPanic(
 		viper.BindPFlag("nonInteractive", rootCmd.PersistentFlags().Lookup("non-interactive")))
-	cm.AssertNoErrorPanic(
-		viper.BindPFlag("singleUninstall", rootCmd.PersistentFlags().Lookup("single")))
 
 	setupMockFlags(rootCmd)
 }
@@ -179,105 +172,6 @@ func thankYou() {
 			"the install instructions at '%s'.", hooks.GithooksWebpage)
 }
 
-func getCurrentGitDir(cwd string) (gitDir string) {
-	gitx := git.CtxC(cwd)
-	log.PanicIfF(!gitx.IsGitRepo(),
-		"The current directory is not a Git repository.")
-
-	gitDir, err := gitx.GetGitDirCommon()
-	cm.AssertNoErrorPanic(err, "Could not get git directory in '%s'.", cwd)
-
-	return
-}
-
-func cleanArtefactsInRepo(gitDir string) {
-
-	// Remove checksum files...
-	cacheDir := hooks.GetChecksumDirectoryGitDir(gitDir)
-	if cm.IsDirectory(cacheDir) {
-		log.AssertNoErrorF(os.RemoveAll(cacheDir),
-			"Could not delete checksum cache dir '%s'.", cacheDir)
-	}
-
-	ignoreFile := hooks.GetHookIgnoreFileGitDir(gitDir)
-	if cm.IsDirectory(ignoreFile) {
-		log.AssertNoErrorF(os.RemoveAll(ignoreFile),
-			"Could not delete ignore file '%s'.", ignoreFile)
-	}
-}
-
-func cleanGitConfigInRepo(gitDir string) {
-	gitx := git.CtxC(gitDir)
-
-	for _, k := range hooks.GetLocalGitConfigKeys() {
-
-		log.AssertNoErrorF(gitx.UnsetConfig(k, git.LocalScope),
-			"Could not unset Git config '%s' in '%s'.", k, gitDir)
-
-	}
-}
-
-func uninstallFromRepo(
-	gitDir string,
-	lfsAvailable bool,
-	tempDir string,
-	nonInteractive bool,
-	uiSettings *UISettings) bool {
-
-	hookDir := path.Join(gitDir, "hooks")
-
-	if cm.IsDirectory(hookDir) {
-
-		err := hooks.UninstallRunWrappers(hookDir, hooks.ManagedHookNames)
-
-		log.AssertNoErrorF(err,
-			"Could not uninstall Githooks run wrappers from\n'%s'.",
-			hookDir)
-
-		if err == nil {
-
-			if lfsAvailable {
-				err = hooks.InstallLFSHooks(gitDir)
-
-				log.AssertNoErrorF(err,
-					"Could not reinstall Git LFS hooks in\n"+
-						"'%[1]s'.\n"+
-						"Please try manually by invoking:\n"+
-						"  $ git -C '%[1]s' lfs install", gitDir)
-
-			}
-		}
-	}
-
-	cleanArtefactsInRepo(gitDir)
-	cleanGitConfigInRepo(gitDir)
-
-	log.InfoF("Githooks uninstalled from '%s'.", gitDir)
-
-	return true
-}
-
-func uninstallFromCurrentRepo(
-	gitDir string,
-	lfsAvailable bool,
-	tempDir string,
-	nonInteractive bool,
-	uninstalledRepos UninstallSet,
-	registeredRepos *hooks.RegisterRepos,
-	uiSettings *UISettings) {
-
-	if uninstallFromRepo(
-		gitDir,
-		lfsAvailable,
-		tempDir,
-		nonInteractive,
-		uiSettings) {
-
-		registeredRepos.Remove(gitDir)
-		uninstalledRepos.Insert(gitDir)
-	}
-}
-
 func uninstallFromExistingRepos(
 	lfsAvailable bool,
 	tempDir string,
@@ -294,9 +188,7 @@ func uninstallFromExistingRepos(
 		uiSettings.PromptCtx,
 		func(gitDir string) {
 
-			if uninstallFromRepo(
-				gitDir, lfsAvailable, tempDir,
-				nonInteractive, uiSettings) {
+			if install.UninstallFromRepo(log, gitDir, lfsAvailable, true) {
 
 				registeredRepos.Remove(gitDir)
 				uninstalledRepos.Insert(gitDir)
@@ -329,9 +221,7 @@ func uninstallFromRegisteredRepos(
 		true,
 		uiSettings.PromptCtx,
 		func(gitDir string) {
-			if uninstallFromRepo(
-				gitDir, lfsAvailable, tempDir,
-				nonInteractive, uiSettings) {
+			if install.UninstallFromRepo(log, gitDir, lfsAvailable, true) {
 
 				registeredRepos.Remove(gitDir)
 				uninstalledRepos.Insert(gitDir)
@@ -437,14 +327,6 @@ func cleanRegister(installDir string) {
 	}
 }
 
-func storeSettings(settings *Settings) {
-	log.InfoF("reg: %v", settings.RegisteredGitDirs.GitDirs)
-	err := settings.RegisteredGitDirs.Store(settings.InstallDir)
-	log.AssertNoError(err,
-		"Could not store registered file in '%s'.",
-		settings.InstallDir)
-}
-
 func runUninstallSteps(
 	settings *Settings,
 	uiSettings *UISettings,
@@ -458,46 +340,30 @@ func runUninstallSteps(
 
 	log.InfoF("Running uninstall at version '%s' ...", build.BuildVersion)
 
-	if args.SingleUninstall {
+	uninstallFromExistingRepos(
+		settings.LFSAvailable,
+		settings.TempDir,
+		args.NonInteractive,
+		settings.UninstalledGitDirs,
+		&settings.RegisteredGitDirs,
+		uiSettings)
 
-		uninstallFromCurrentRepo(
-			getCurrentGitDir(settings.Cwd),
-			settings.LFSAvailable,
-			settings.TempDir,
-			args.NonInteractive,
-			settings.UninstalledGitDirs,
-			&settings.RegisteredGitDirs,
-			uiSettings)
+	uninstallFromRegisteredRepos(
+		settings.LFSAvailable,
+		settings.TempDir,
+		args.NonInteractive,
+		settings.UninstalledGitDirs,
+		&settings.RegisteredGitDirs,
+		uiSettings)
 
-		storeSettings(settings)
+	cleanTemplateDir()
 
-	} else {
+	cleanSharedClones(settings.InstallDir)
+	cleanReleaseClone(settings.InstallDir)
+	cleanBinaries(settings.InstallDir, settings.TempDir)
+	cleanRegister(settings.InstallDir)
 
-		uninstallFromExistingRepos(
-			settings.LFSAvailable,
-			settings.TempDir,
-			args.NonInteractive,
-			settings.UninstalledGitDirs,
-			&settings.RegisteredGitDirs,
-			uiSettings)
-
-		uninstallFromRegisteredRepos(
-			settings.LFSAvailable,
-			settings.TempDir,
-			args.NonInteractive,
-			settings.UninstalledGitDirs,
-			&settings.RegisteredGitDirs,
-			uiSettings)
-
-		cleanTemplateDir()
-
-		cleanSharedClones(settings.InstallDir)
-		cleanReleaseClone(settings.InstallDir)
-		cleanBinaries(settings.InstallDir, settings.TempDir)
-		cleanRegister(settings.InstallDir)
-
-		cleanGitConfig()
-	}
+	cleanGitConfig()
 
 	if logStats.ErrorCount() == 0 {
 		thankYou()

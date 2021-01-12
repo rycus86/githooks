@@ -6,8 +6,7 @@ type Arguments struct {
 
 	InternalPostDispatch bool
 
-	NonInteractive  bool
-	SingleUninstall bool
+	NonInteractive bool
 
 	UseStdin bool
 }

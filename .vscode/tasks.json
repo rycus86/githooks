@@ -146,8 +146,8 @@
         "--api-version=2",
         "./apps/cli",
         "--",
-        "config",
-        "list"
+        "install",
+        "--non-interactive"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

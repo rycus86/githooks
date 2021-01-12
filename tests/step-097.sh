@@ -11,19 +11,21 @@ MANAGED_HOOK_NAMES="
     post-index-change
 "
 
-SINGLE="--single"
-if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
-    # Do not use single install with core.hooksPath
-    SINGLE=""
-fi
-
 # shellcheck disable=SC2086
 mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&
-    "$GITHOOKS_BIN_DIR/installer" --stdin $SINGLE &&
+    "$GITHOOKS_BIN_DIR/installer" --stdin &&
     git config githooks.autoUpdateEnabled false ||
     exit 1
+
+if ! echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    # When not using core.hooksPath we install into the current repository.
+    if ! "$GITHOOKS_BIN_DIR/cli" install --non-interactive; then
+        echo "! Install into current repo failed"
+        exit 1
+    fi
+fi
 
 for HOOK_TYPE in ${MANAGED_HOOK_NAMES}; do
     mkdir -p ".githooks/${HOOK_TYPE}" || exit 1

@@ -87,11 +87,6 @@ func defineArguments(rootCmd *cobra.Command) {
 		"Run the installation non-interactively\n"+
 			"without showing prompts.")
 	rootCmd.PersistentFlags().Bool(
-		"single", false,
-		"Install Githooks in the active repository only.\n"+
-			"This does not mean it won't install necessary\n"+
-			"files into the installation directory.")
-	rootCmd.PersistentFlags().Bool(
 		"skip-install-into-existing", false,
 		"Skip installation into existing repositories\n"+
 			"defined by a search path.")
@@ -138,8 +133,6 @@ func defineArguments(rootCmd *cobra.Command) {
 	cm.AssertNoErrorPanic(
 		viper.BindPFlag("nonInteractive", rootCmd.PersistentFlags().Lookup("non-interactive")))
 	cm.AssertNoErrorPanic(
-		viper.BindPFlag("singleInstall", rootCmd.PersistentFlags().Lookup("single")))
-	cm.AssertNoErrorPanic(
 		viper.BindPFlag("skipInstallIntoExisting", rootCmd.PersistentFlags().Lookup("skip-install-into-existing")))
 	cm.AssertNoErrorPanic(
 		viper.BindPFlag("onlyServerHooks", rootCmd.PersistentFlags().Lookup("only-server-hooks")))
@@ -168,15 +161,9 @@ func validateArgs(cmd *cobra.Command, args *Arguments) {
 		log.PanicIfF(f.Changed && strs.IsEmpty(f.Value.String()),
 			"Flag '%s' needs an non-empty value.", f.Name)
 	})
-
-	log.PanicIfF(args.SingleInstall && args.UseCoreHooksPath,
-		"Cannot use --single and --use-core-hookspath together. See `--help`.")
-
-	log.PanicIfF(args.SingleInstall && args.SkipInstallIntoExisting,
-		"Cannot use --single and --skip-install-into-existing together. See `--help`.")
 }
 
-func setMainVariables(args *Arguments) (Settings, UISettings) {
+func setMainVariables(args *Arguments) (Settings, install.UISettings) {
 
 	var promptCtx prompt.IContext
 	var err error
@@ -213,7 +200,7 @@ func setMainVariables(args *Arguments) (Settings, UISettings) {
 			CloneDir:         hooks.GetReleaseCloneDir(installDir),
 			TempDir:          tempDir,
 			InstalledGitDirs: make(InstallSet, 10)},
-		UISettings{PromptCtx: promptCtx}
+		install.UISettings{PromptCtx: promptCtx}
 }
 
 func setInstallDir(installDir string) {
@@ -701,7 +688,7 @@ func setupHookTemplates(
 	onlyServerHooks bool,
 	nonInteractive bool,
 	dryRun bool,
-	uiSettings *UISettings) {
+	uiSettings *install.UISettings) {
 
 	if dryRun {
 		log.InfoF("[dry run] Would install Git hook templates into '%s'.",
@@ -722,8 +709,10 @@ func setupHookTemplates(
 	err := hooks.InstallRunWrappers(
 		hookTemplateDir,
 		hookNames,
-		tempDir,
-		getHookDisableCallback(log, nonInteractive, uiSettings),
+		func(dest string) {
+			log.InfoF("Saving Githooks run wrapper to '%s'.", dest)
+		},
+		install.GetHookDisableCallback(log, nonInteractive, uiSettings),
 		log)
 
 	log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookTemplateDir)
@@ -826,179 +815,13 @@ func setupAutomaticUpdate(nonInteractive bool, dryRun bool, promptCtx prompt.ICo
 	}
 }
 
-func setupReadme(
-	repoGitDir string,
-	dryRun bool,
-	uiSettings *UISettings) {
-
-	mainWorktree, err := git.CtxC(repoGitDir).GetMainWorktree()
-	if err != nil || !git.CtxC(mainWorktree).IsGitRepo() {
-		log.WarnF("Main worktree could not be determined in:\n'%s'\n"+
-			"-> Skipping Readme setup.",
-			repoGitDir)
-
-		return
-	}
-
-	readme := hooks.GetReadmeFile(mainWorktree)
-	hookDir := path.Dir(readme)
-
-	if !cm.IsFile(readme) {
-
-		createFile := false
-
-		switch uiSettings.AnswerSetupIncludedReadme {
-		case "s":
-			// OK, we already said we want to skip all
-			return
-		case "a":
-			createFile = true
-		default:
-
-			var msg string
-			if cm.IsDirectory(hookDir) {
-				msg = strs.Fmt(
-					"Looks like you don't have a '%s' folder in repository\n"+
-						"'%s' yet.\n"+
-						"Would you like to create one with a 'README'\n"+
-						"containing a brief overview of Githooks?", hookDir, mainWorktree)
-			} else {
-				msg = strs.Fmt(
-					"Looks like you don't have a 'README.md' in repository\n"+
-						"'%s' yet.\n"+
-						"A 'README' file might help contributors\n"+
-						"and other team members learn about what is this for.\n"+
-						"Would you like to add one now containing a\n"+
-						"brief overview of Githooks?", mainWorktree)
-			}
-
-			answer, err := uiSettings.PromptCtx.ShowPromptOptions(
-				msg, "(Yes, no, all, skip all)",
-				"Y/n/a/s",
-				"Yes", "No", "All", "Skip All")
-			log.AssertNoError(err, "Could not show prompt.")
-
-			switch answer {
-			case "s":
-				uiSettings.AnswerSetupIncludedReadme = answer
-			case "a":
-				uiSettings.AnswerSetupIncludedReadme = answer
-
-				fallthrough
-			case "y":
-				createFile = true
-			}
-		}
-
-		if createFile {
-
-			if dryRun {
-				log.InfoF("[dry run] Readme file '%s' would have been written.", readme)
-
-				return
-			}
-
-			err := os.MkdirAll(path.Dir(readme), cm.DefaultFileModeDirectory)
-
-			if err != nil {
-				log.WarnF("Could not create directory for '%s'.\n"+
-					"-> Skipping Readme setup.", readme)
-
-				return
-			}
-
-			err = hooks.WriteReadmeFile(readme)
-			log.AssertNoErrorF(err, "Could not write README file '%s'.", readme)
-			log.InfoF("Readme file has been written to '%s'.", readme)
-		}
-	}
-}
-
-func installIntoRepo(
-	repoGitDir string,
-	tempDir string,
-	nonInteractive bool,
-	dryRun bool,
-	uiSettings *UISettings) bool {
-
-	hookDir := path.Join(repoGitDir, "hooks")
-	if !cm.IsDirectory(hookDir) {
-		err := os.MkdirAll(hookDir, cm.DefaultFileModeDirectory)
-		log.AssertNoErrorPanic(err,
-			"Could not create hook directory in '%s'.", repoGitDir)
-	}
-
-	isBare := git.CtxC(repoGitDir).IsBareRepo()
-
-	var hookNames []string
-	if isBare {
-		hookNames = hooks.ManagedServerHookNames
-	} else {
-		hookNames = hooks.ManagedHookNames
-	}
-
-	if dryRun {
-		log.InfoF("[dry run] Hooks would have been installed into\n'%s'.",
-			repoGitDir)
-	} else {
-		err := hooks.InstallRunWrappers(
-			hookDir, hookNames, tempDir,
-			getHookDisableCallback(log, nonInteractive, uiSettings),
-			nil)
-		log.AssertNoErrorPanicF(err, "Could not install run wrappers into '%s'.", hookDir)
-		log.InfoF("Githooks run wrappers installed into '%s'.",
-			repoGitDir)
-	}
-
-	// Offer to setup the intro README if running in interactive mode
-	// Let's skip this in non-interactive mode or in a bare repository
-	// to avoid polluting the repos with README files
-	if !nonInteractive && !isBare {
-		setupReadme(repoGitDir, dryRun, uiSettings)
-	}
-
-	return !dryRun
-}
-
-func getCurrentGitDir(cwd string) (gitDir string) {
-	gitx := git.CtxC(cwd)
-	log.PanicIfF(!gitx.IsGitRepo(),
-		"The current directory is not a Git repository.")
-
-	gitDir, err := gitx.GetGitDirCommon()
-	cm.AssertNoErrorPanic(err, "Could not get git directory in '%s'.", cwd)
-
-	return
-}
-
-func installIntoCurrentRepo(
-	gitDir string,
-	tempDir string,
-	nonInteractive bool,
-	dryRun bool,
-	installedGitDirs InstallSet,
-	registeredGitDirs *hooks.RegisterRepos,
-	uiSettings *UISettings) {
-
-	if installIntoRepo(
-		gitDir,
-		tempDir,
-		nonInteractive,
-		dryRun,
-		uiSettings) {
-
-		registeredGitDirs.Insert(gitDir)
-		installedGitDirs.Insert(gitDir)
-	}
-}
-
 func installIntoExistingRepos(
 	tempDir string,
 	nonInteractive bool,
 	dryRun bool,
 	installedRepos InstallSet,
 	registeredRepos *hooks.RegisterRepos,
-	uiSettings *UISettings) {
+	uiSettings *install.UISettings) {
 
 	// Show prompt and run callback.
 	install.PromptExistingRepos(
@@ -1009,8 +832,8 @@ func installIntoExistingRepos(
 
 		func(gitDir string) {
 
-			if installIntoRepo(
-				gitDir, tempDir,
+			if install.InstallIntoRepo(
+				log, gitDir,
 				nonInteractive, dryRun, uiSettings) {
 
 				registeredRepos.Insert(gitDir)
@@ -1026,7 +849,7 @@ func installIntoRegisteredRepos(
 	dryRun bool,
 	installedRepos InstallSet,
 	registeredRepos *hooks.RegisterRepos,
-	uiSettings *UISettings) {
+	uiSettings *install.UISettings) {
 
 	if len(registeredRepos.GitDirs) == 0 {
 		return
@@ -1045,8 +868,8 @@ func installIntoRegisteredRepos(
 		false,
 		uiSettings.PromptCtx,
 		func(gitDir string) {
-			if installIntoRepo(
-				gitDir, tempDir,
+			if install.InstallIntoRepo(
+				log, gitDir,
 				nonInteractive, dryRun, uiSettings) {
 
 				registeredRepos.Insert(gitDir)
@@ -1056,7 +879,7 @@ func installIntoRegisteredRepos(
 
 }
 
-func setupSharedRepositories(installDir string, cliExectuable string, dryRun bool, uiSettings *UISettings) {
+func setupSharedRepositories(installDir string, cliExectuable string, dryRun bool, uiSettings *install.UISettings) {
 
 	gitx := git.Ctx()
 	sharedRepos := gitx.GetConfigAll(hooks.GitCK_Shared, git.GlobalScope)
@@ -1140,7 +963,7 @@ func setupSharedRepositories(installDir string, cliExectuable string, dryRun boo
 	}
 }
 
-func storeSettings(settings *Settings, uiSettings *UISettings) {
+func storeSettings(settings *Settings, uiSettings *install.UISettings) {
 	// Store cached UI values back.
 	err := git.Ctx().SetConfig(
 		hooks.GitCK_DeleteDetectedLFSHooksAnswer, uiSettings.DeleteDetectedLFSHooks, git.GlobalScope)
@@ -1191,7 +1014,7 @@ func thankYou() {
 
 func runUpdate(
 	settings *Settings,
-	uiSettings *UISettings,
+	uiSettings *install.UISettings,
 	args *Arguments) {
 
 	log.InfoF("Running install to version '%s' ...", build.BuildVersion)
@@ -1229,32 +1052,10 @@ func runUpdate(
 		setupAutomaticUpdate(args.NonInteractive, args.DryRun, uiSettings.PromptCtx)
 	}
 
-	if args.SingleInstall {
+	if !args.SkipInstallIntoExisting && !args.UseCoreHooksPath {
 
-		installIntoCurrentRepo(
-			getCurrentGitDir(settings.Cwd),
-			settings.TempDir,
-			args.NonInteractive,
-			args.DryRun,
-			settings.InstalledGitDirs,
-			&settings.RegisteredGitDirs,
-			uiSettings)
-
-	} else {
-
-		if !args.SkipInstallIntoExisting && !args.UseCoreHooksPath {
-
-			if !args.InternalAutoUpdate {
-				installIntoExistingRepos(
-					settings.TempDir,
-					args.NonInteractive,
-					args.DryRun,
-					settings.InstalledGitDirs,
-					&settings.RegisteredGitDirs,
-					uiSettings)
-			}
-
-			installIntoRegisteredRepos(
+		if !args.InternalAutoUpdate {
+			installIntoExistingRepos(
 				settings.TempDir,
 				args.NonInteractive,
 				args.DryRun,
@@ -1263,13 +1064,21 @@ func runUpdate(
 				uiSettings)
 		}
 
-		if !args.InternalAutoUpdate && !args.NonInteractive {
-			setupSharedRepositories(
-				settings.InstallDir,
-				hooks.GetCLIExecutable(settings.InstallDir),
-				args.DryRun,
-				uiSettings)
-		}
+		installIntoRegisteredRepos(
+			settings.TempDir,
+			args.NonInteractive,
+			args.DryRun,
+			settings.InstalledGitDirs,
+			&settings.RegisteredGitDirs,
+			uiSettings)
+	}
+
+	if !args.InternalAutoUpdate && !args.NonInteractive {
+		setupSharedRepositories(
+			settings.InstallDir,
+			hooks.GetCLIExecutable(settings.InstallDir),
+			args.DryRun,
+			uiSettings)
 	}
 
 	if !args.DryRun {
