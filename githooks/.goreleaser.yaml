@@ -9,47 +9,50 @@ builds:
   - id: runner
     binary: runner
     main: ./apps/runner
-    env:
+    env: &ENV
       - CGO_ENABLED=0
-    goos:
+    goos: &GOOS
+      - freebsd
+      - illumos
       - linux
+      - openbsd
+      - solaris
       - darwin
       - windows
-    goarch:
+    goarch: &GOARCH
       - amd64
+      - arm64
+    ignore:
+      - goos: dragonfly
+        goarch: arm64
+      - goos: illumos
+        goarch: arm64
+      - goos: darwin
+        goarch: arm64
+      - goos: plan9
+        goarch: arm64
+      - goos: solaris
+        goarch: arm64
+      - goos: windows
+        goarch: arm64
   - id: installer
     binary: installer
     main: ./apps/installer
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
+    env: *ENV
+    goos: *GOOS
+    goarch: *GOARCH
   - id: uninstaller
     binary: uninstaller
     main: ./apps/uninstaller
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
+    env: *ENV
+    goos: *GOOS
+    goarch: *GOARCH
   - id: cli
     binary: cli
     main: ./apps/cli
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
+    env: *ENV
+    goos: *GOOS
+    goarch: *GOARCH
 archives:
   - id: githooks
     builds:
@@ -57,15 +60,13 @@ archives:
       - installer
       - uninstaller
       - cli
-    name_template: "{{ .ProjectName }}-{{ .Version }}.{{ .Os }}.{{ .Arch }}]"
+    name_template: "{{ .ProjectName }}-{{ .Version }}.{{ .Os }}.{{ .Arch }}"
     format: tar.gz
     files:
       - none*
     replacements:
       windows: windows
       darwin: macos
-      linux: linux
-      amd64: 64bit
     format_overrides:
       - goos: windows
         format: zip

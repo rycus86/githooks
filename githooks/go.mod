@@ -6,6 +6,7 @@ require (
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/goccy/go-yaml v1.8.2
+	github.com/google/go-github/v33 v33.0.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.1.2
 	github.com/gookit/color v1.3.1

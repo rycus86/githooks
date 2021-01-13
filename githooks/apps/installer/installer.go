@@ -322,7 +322,7 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 				status.Branch,
 				status.RemoteCommitSHA)
 		} else {
-			binaries = downloadBinaries(settings, tempDir, status)
+			binaries = downloadBinaries(log, settings, tempDir, status)
 		}
 
 		installer = binaries.Installer
