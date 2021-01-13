@@ -60,7 +60,7 @@ archives:
       - installer
       - uninstaller
       - cli
-    name_template: "{{ .ProjectName }}-{{ .Version }}.{{ .Os }}.{{ .Arch }}"
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}.{{ .Arch }}"
     format: tar.gz
     files:
       - none*
@@ -79,6 +79,8 @@ changelog:
 signs:
   - artifacts: checksum
     cmd: gpg
+    # Signing with the private key where 'deploy.asc' is this public key in this repo.
+    args: ["-u", "BF056E9F49CAACF0", "--output", "${signature}", "--detach-sign", "${artifact}"]
     signature: "${artifact}.sig"
 release:
   github:

@@ -21,6 +21,7 @@ type ReleaseStatus struct {
 	IsNewClone bool
 
 	LocalCommitSHA  string
+	LocalTag        string
 	RemoteCommitSHA string
 
 	UpdateCommitSHA   string
@@ -204,9 +205,11 @@ func FetchUpdates(
 		branch = DefaultBranch
 	}
 
-	// Fetch or clone he repository:
-	depth := -1 // Fetch the whole branch because we need tags on the branch
-	isNewClone, err := git.FetchOrClone(cloneDir, url, branch, depth, check)
+	// Fetch or clone the repository:
+	// Fetch the whole branch because we need it.
+	// The head could be in between tags which we avoid by this.
+	depth := -1
+	isNewClone, err := git.FetchOrClone(cloneDir, url, branch, depth, true, check)
 	if err != nil {
 		return
 	}
@@ -214,7 +217,7 @@ func FetchUpdates(
 	gitx := git.CtxCSanitized(cloneDir)
 	resetRemoteTo := ""
 
-	// If branch was empty, determine it now.
+	// If branch was empty (default branch), determine it now.
 	if strs.IsEmpty(branch) {
 		if branch, err = gitx.GetCurrentBranch(); err != nil {
 			return
@@ -227,7 +230,10 @@ func FetchUpdates(
 	}
 
 	if isNewClone {
-		// Reset to latest release tag on the branch
+		// On a new clone we reset local and remote branch to
+		// the latest release tag decending from HEAD.
+
+		// Reset HEAD to the latest tag.
 		tag, e := gitx.Get("describe", "--tags", "--abbrev=0", git.HEAD)
 
 		if e != nil {
@@ -247,7 +253,7 @@ func FetchUpdates(
 			return
 		}
 
-		// Get the commit it points to and reset the remote to it
+		// Get the commit it points to and reset the remote to it too.
 		resetRemoteTo, e = gitx.Get("rev-list", "-n", "1", tag)
 		if e != nil {
 			err = e
@@ -329,6 +335,9 @@ func getStatus(
 		return
 	}
 
+	// Get the tag (corresponding to a version) at the latest commit.
+	_, tag, _ := git.GetVersionAt(gitx, localSHA)
+
 	remoteSHA, err = gitx.Get("rev-parse", remoteBranch)
 	if err != nil {
 		return
@@ -348,9 +357,12 @@ func getStatus(
 	}
 
 	status = ReleaseStatus{
-		RemoteURL:       url,
-		RemoteName:      remoteName,
-		LocalCommitSHA:  localSHA,
+		RemoteURL:  url,
+		RemoteName: remoteName,
+
+		LocalCommitSHA: localSHA,
+		LocalTag:       tag,
+
 		RemoteCommitSHA: remoteSHA,
 
 		IsUpdateAvailable: updateVersion != nil,

@@ -22,11 +22,13 @@ func main() {
 
 	template := path.Join(root, "githooks", "run-wrapper.sh")
 	readme := path.Join(root, ".githooks", "README.md")
+	deployPGP := path.Join(root, ".deploy-pgp")
 
 	c := bindata.Config{
 		Input: []bindata.InputConfig{
 			{Path: template, Recursive: false},
-			{Path: readme, Recursive: false}},
+			{Path: readme, Recursive: false},
+			{Path: deployPGP, Recursive: false}},
 		Package:        pkg,
 		NoMemCopy:      false,
 		NoCompress:     false,

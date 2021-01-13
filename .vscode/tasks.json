@@ -71,8 +71,7 @@
         "./apps/installer",
         "--",
         "--clone-url=${env:GITHOOKS_REPO}",
-        "--clone-branch=feature/go-refactoring",
-        "--build-from-source"
+        "--clone-branch=feature/go-refactoring"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",
@@ -148,6 +147,43 @@
         "--",
         "install",
         "--non-interactive"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/githooks",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        },
+        "env": {
+          "GOPATH": "${workspaceFolder}/githooks/.go",
+          "GOBIN": "${workspaceFolder}/githooks/bin",
+          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "dependsOn": [
+        "[Dev Container] clean-install",
+        "[Dev Container] go-build-temp"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "[Dev Container] go-delve-test",
+      "type": "shell",
+      "command": "dlv",
+      "args": [
+        "debug",
+        "--headless",
+        "--listen=127.0.0.1:2345",
+        "--log",
+        "--build-flags",
+        "-tags debug",
+        "--api-version=2",
+        "./apps/test",
+        "--"
       ],
       "options": {
         "cwd": "${workspaceFolder}/githooks",

@@ -32,5 +32,8 @@ func GetHooksNamespace(hookDir string) (s string, err error) {
 // GetDefaultHooksNamespaceShared returns the default hooks namespace for
 // a shared url.
 func GetDefaultHooksNamespaceShared(sharedRepo *SharedRepo) string {
-	return cm.GetSHA1HashString(sharedRepo.OriginalURL)[0:10]
+	hash, err := cm.GetSHA1Hash(strings.NewReader(sharedRepo.OriginalURL))
+	cm.AssertNoErrorPanic(err, "Could not compute default hash.")
+
+	return hash[0:10]
 }

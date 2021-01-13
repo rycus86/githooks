@@ -286,6 +286,7 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 
 	} else {
 
+		log.Info("Fetching update in Githooks clone...")
 		status, err = updates.FetchUpdates(
 			settings.CloneDir,
 			args.CloneURL,
@@ -315,14 +316,21 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 		defer os.RemoveAll(tempDir)
 
 		if args.BuildFromSource {
+
 			binaries = buildFromSource(
 				args.BuildTags,
 				tempDir,
 				status.RemoteURL,
 				status.Branch,
 				status.RemoteCommitSHA)
+
 		} else {
-			binaries = downloadBinaries(log, settings, tempDir, status)
+			tag := status.UpdateTag
+			if status.IsNewClone {
+				tag = status.LocalTag
+			}
+
+			binaries = downloadBinaries(log, settings, tempDir, tag)
 		}
 
 		installer = binaries.Installer

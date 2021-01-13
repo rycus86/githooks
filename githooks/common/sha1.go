@@ -44,12 +44,13 @@ func GetSHA1HashFile(path string) (sha string, err error) {
 	return
 }
 
-// GetSHA1HashString gets the SHA1 hash of a string.
-func GetSHA1HashString(strs ...string) string {
+// GetSHA1Hash gets the SHA1 hash of a string.
+func GetSHA1Hash(reader io.Reader) (string, error) {
 	h := sha1.New()
-	for _, s := range strs {
-		_, _ = h.Write([]byte(s))
+
+	if _, err := io.Copy(h, reader); err != nil {
+		return "", nil
 	}
 
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

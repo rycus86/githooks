@@ -155,7 +155,8 @@ func GetRepoSharedFileRel() string {
 }
 
 func GetSharedCloneDir(installDir string, url string) string {
-	sha1 := cm.GetSHA1HashString(url)
+	sha1, err := cm.GetSHA1Hash(strings.NewReader(url))
+	cm.AssertNoErrorPanicF(err, "Could not compute hash.")
 
 	name := []rune(url)
 	if len(url) > 48 { // nolint:gomnd
