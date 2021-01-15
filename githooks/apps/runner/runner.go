@@ -277,16 +277,20 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 		return
 	}
 
-	updateAvailable, err := updates.RunUpdate(
+	updateAvailable, accepted, err := updates.RunUpdate(
 		settings.InstallDir,
 		updates.DefaultAcceptUpdateCallback(log, uiSettings.PromptCtx, false),
 		&settings.ExecX,
 		cm.UseStreams(nil, log.GetInfoWriter(), log.GetErrorWriter()))
 
 	log.AssertNoErrorPanic(err, "Running update failed.")
-	if updateAvailable {
+
+	switch {
+	case updateAvailable:
 		log.Info("Updates successfully dispatched.")
-	} else {
+	case !accepted:
+		log.Info("Updates declined.")
+	default:
 		log.InfoF("Githooks is at the latest version '%s'",
 			build.GetBuildVersion().String())
 	}

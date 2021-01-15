@@ -25,7 +25,7 @@ func runUpdate(ctx *ccm.CmdContext, setOpts *config.SetOptions, answer string) {
 			promptCtx = ctx.PromptCtx
 		}
 
-		updateAvailable, err := updates.RunUpdate(
+		updateAvailable, accepted, err := updates.RunUpdate(
 			ctx.InstallDir,
 			updates.DefaultAcceptUpdateCallback(ctx.Log, promptCtx, answer == "y"),
 			&cm.ExecContext{},
@@ -33,9 +33,12 @@ func runUpdate(ctx *ccm.CmdContext, setOpts *config.SetOptions, answer string) {
 
 		ctx.Log.AssertNoErrorPanic(err, "Running update failed.")
 
-		if updateAvailable {
+		switch {
+		case updateAvailable:
 			ctx.Log.Info("Updates successfully dispatched.")
-		} else {
+		case !accepted:
+			ctx.Log.Info("Updates declined.")
+		default:
 			ctx.Log.InfoF("Githooks is at the latest version '%s'",
 				build.GetBuildVersion().String())
 		}

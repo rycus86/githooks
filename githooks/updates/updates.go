@@ -81,7 +81,10 @@ func getNewUpdateCommit(
 		return
 	}
 
-	for _, commit := range commits {
+	// Iterate from (firstSHA, lastSHA], the list is reversed.
+	for i := range commits {
+
+		commit := commits[len(commits)-1-i]
 
 		version, tag, e := git.GetVersionAt(gitx, commit)
 
@@ -339,9 +342,7 @@ func getStatus(
 	remoteBranch string,
 	skipPrerelease bool) (status ReleaseStatus, err error) {
 
-	var localSHA, remoteSHA string
-
-	localSHA, err = gitx.Get("rev-parse", branch)
+	localSHA, err := gitx.Get("rev-parse", branch)
 	if err != nil {
 		return
 	}
@@ -350,7 +351,7 @@ func getStatus(
 	// at the latest commit.
 	_, tag, _ := git.GetVersionAt(gitx, localSHA)
 
-	remoteSHA, err = gitx.Get("rev-parse", remoteBranch)
+	remoteSHA, err := gitx.Get("rev-parse", remoteBranch)
 	if err != nil {
 		return
 	}
@@ -464,7 +465,7 @@ func RunUpdate(
 	installDir string,
 	acceptUpdate AcceptUpdateCallback,
 	execX cm.IExecContext,
-	pipeSetup cm.PipeSetupFunc) (updateAvailable bool, err error) {
+	pipeSetup cm.PipeSetupFunc) (updateAvailable bool, accepted bool, err error) {
 
 	err = RecordUpdateCheckTimestamp()
 
@@ -483,9 +484,10 @@ func RunUpdate(
 		return
 	}
 
-	updateAvailable = status.IsUpdateAvailable
+	accepted = acceptUpdate(&status)
+	updateAvailable = status.IsUpdateAvailable && accepted
 
-	if status.IsUpdateAvailable && acceptUpdate(&status) {
+	if updateAvailable {
 
 		_, err = MergeUpdates(cloneDir, true) // Dry run the merge...
 		if err != nil {
@@ -531,7 +533,6 @@ func DefaultAcceptUpdateCallback(
 			log.AssertNoErrorF(err, "Could not show prompt.")
 
 			if answer == "y" {
-				log.Info("-> Execute update ...")
 
 				return true
 			}
@@ -540,13 +541,10 @@ func DefaultAcceptUpdateCallback(
 			log.InfoF("There is a new Githooks update available:\n%s", versionText)
 
 			if acceptIfNoPrompt {
-				log.Info("-> Execute update ...")
 
 				return true
 			}
 		}
-
-		log.Info("-> Update declined")
 
 		return false
 	}

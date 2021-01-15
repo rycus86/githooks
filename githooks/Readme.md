@@ -236,6 +236,7 @@ When installer is finished for testing:
 - calling cli.sh (cli executable) is inappropriate, -> share functionality already in runner.
 - set installdir at the end of the install...
 - Document `githooks.autoUpdateUsePrerelease` config value.
+- Document `unskipTrailerRe`.
 
 ## Problems
 
