@@ -11,12 +11,15 @@ import (
 )
 
 func downloadBinaries(
+	log cm.ILogContext,
 	settings *Settings,
 	tempDir string,
-	status updates.ReleaseStatus) updates.Binaries {
+	tag string) updates.Binaries {
 
 	bin := os.Getenv("GITHOOKS_BIN_DIR")
 	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_BIN_DIR undefined")
+
+	log.Info("Faking download: taking from '%s'.", bin)
 
 	others := []string{
 		path.Join(tempDir, "cli"),

@@ -274,12 +274,14 @@ func buildFromSource(
 
 func prepareDispatch(settings *Settings, args *Arguments) bool {
 
+	skipPrerelease := !(git.Ctx().GetConfig(hooks.GitCK_AutoUpdateUsePrerelease, git.GlobalScope) == "true")
+
 	var status updates.ReleaseStatus
 	var err error
 
 	if args.InternalAutoUpdate {
 
-		status, err = updates.GetStatus(settings.CloneDir, true)
+		status, err = updates.GetStatus(settings.CloneDir, true, skipPrerelease)
 		log.AssertNoErrorPanic(err,
 			"Could not get status of release clone '%s'",
 			settings.CloneDir)
@@ -291,7 +293,9 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 			settings.CloneDir,
 			args.CloneURL,
 			args.CloneBranch,
-			true, updates.RecloneOnWrongRemote)
+			true,
+			updates.RecloneOnWrongRemote,
+			skipPrerelease)
 
 		log.AssertNoErrorPanicF(err,
 			"Could not assert release clone '%s' existing",
@@ -338,16 +342,13 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 		installer = binaries.Installer
 	}
 
-	updateTo := ""
-	if updateAvailable {
-		updateTo = status.RemoteCommitSHA
-	}
-
-	// Set variables for further update
-	// procedure...
+	// Set variables for further update procedure...
 	args.InternalPostDispatch = true
-	args.InternalUpdateTo = updateTo
 	args.InternalBinaries = binaries.All
+	if updateAvailable {
+		args.InternalUpdateFromVersion = build.BuildVersion
+		args.InternalUpdateTo = status.UpdateCommitSHA
+	}
 
 	if DevIsDispatchSkipped {
 		return false

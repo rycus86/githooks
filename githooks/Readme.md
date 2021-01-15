@@ -235,6 +235,7 @@ When installer is finished for testing:
 - // @todo installer: remove "--internal-install" in runner. it needs to launch the normal one first...
 - calling cli.sh (cli executable) is inappropriate, -> share functionality already in runner.
 - set installdir at the end of the install...
+- Document `githooks.autoUpdateUsePrerelease` config value.
 
 ## Problems
 

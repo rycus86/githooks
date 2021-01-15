@@ -4,6 +4,7 @@ package hooks
 const (
 	GitCK_AutoUpdateEnabled            = "githooks.autoUpdateEnabled"
 	GitCK_AutoUpdateCheckTimestamp     = "githooks.autoUpdateCheckTimestamp"
+	GitCK_AutoUpdateUsePrerelease      = "githooks.autoUpdateUsePrerelease"
 	GitCK_BugReportInfo                = "githooks.bugReportInfo"
 	GitCK_ChecksumCacheDir             = "githooks.checksumCacheDir"
 	GitCK_CloneBranch                  = "githooks.cloneBranch"
@@ -41,6 +42,7 @@ func GetGlobalGitConfigKeys() []string {
 
 		GitCK_AutoUpdateEnabled,
 		GitCK_AutoUpdateCheckTimestamp,
+		GitCK_AutoUpdateUsePrerelease,
 		GitCK_BugReportInfo,
 		GitCK_ChecksumCacheDir,
 		GitCK_CloneBranch,

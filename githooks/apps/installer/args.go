@@ -6,8 +6,10 @@ type Arguments struct {
 
 	InternalAutoUpdate   bool
 	InternalPostDispatch bool
-	InternalUpdateTo     string
-	InternalBinaries     []string
+
+	InternalUpdateFromVersion string   // Build version we are updating from.
+	InternalUpdateTo          string   // Commit SHA to update local branch to remote.
+	InternalBinaries          []string // Binaries which need to get installed.
 
 	DryRun         bool
 	NonInteractive bool

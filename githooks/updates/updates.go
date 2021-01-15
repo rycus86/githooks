@@ -72,7 +72,8 @@ var unskipTrailerRe = regexp.MustCompile(`Update-NoSkip:\s+true`)
 func getNewUpdateCommit(
 	gitx *git.Context,
 	firstSHA string,
-	lastSHA string) (commitF string, tagF string, versionF *version.Version, err error) {
+	lastSHA string,
+	skipPrerelease bool) (commitF string, tagF string, versionF *version.Version, err error) {
 
 	// Get all commits in (firstSHA, lastSHA]
 	commits, err := gitx.GetCommits(firstSHA, lastSHA)
@@ -84,11 +85,16 @@ func getNewUpdateCommit(
 
 		version, tag, e := git.GetVersionAt(gitx, commit)
 
-		if e != nil {
+		switch {
+		case e != nil:
 			err = e
-			return //nolint: nlreturn
-		} else if version == nil || strs.IsEmpty(tag) {
+
+			return
+		case version == nil || strs.IsEmpty(tag):
 			continue // no version tag on this commit
+		case skipPrerelease && strs.IsNotEmpty(version.Prerelease()):
+			// Skipping prerelease version
+			continue
 		}
 
 		// Check if it is an unskippable commit:
@@ -96,7 +102,8 @@ func getNewUpdateCommit(
 		mess, e := gitx.Get("tag", "-l", "--format=%(contents)", tag)
 		if e != nil {
 			err = e
-			return //nolint: nlreturn
+
+			return
 		}
 
 		// We have a valid new version on commit 'commit'
@@ -130,7 +137,8 @@ func FetchUpdates(
 	url string,
 	branch string,
 	checkRemote bool,
-	checkRemoteAction RemoteCheckAction) (status ReleaseStatus, err error) {
+	checkRemoteAction RemoteCheckAction,
+	skipPrerelease bool) (status ReleaseStatus, err error) {
 
 	cm.AssertOrPanic(strs.IsNotEmpty(cloneDir))
 
@@ -262,7 +270,7 @@ func FetchUpdates(
 	}
 
 	remoteBranch := defaultRemote + "/" + branch
-	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch)
+	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch, skipPrerelease)
 
 	status.IsNewClone = isNewClone
 	if status.IsUpdateAvailable {
@@ -283,7 +291,7 @@ func FetchUpdates(
 }
 
 // GetStatus returns the status of the release clone.
-func GetStatus(cloneDir string, checkRemote bool) (status ReleaseStatus, err error) {
+func GetStatus(cloneDir string, checkRemote, skipPrerelease bool) (status ReleaseStatus, err error) {
 
 	gitx := git.CtxCSanitized(cloneDir)
 
@@ -318,7 +326,7 @@ func GetStatus(cloneDir string, checkRemote bool) (status ReleaseStatus, err err
 
 	remoteBranch := defaultRemote + "/" + branch
 
-	return getStatus(gitx, url, defaultRemote, branch, remoteBranch)
+	return getStatus(gitx, url, defaultRemote, branch, remoteBranch, skipPrerelease)
 }
 
 func getStatus(
@@ -326,7 +334,8 @@ func getStatus(
 	url string,
 	remoteName string,
 	branch string,
-	remoteBranch string) (status ReleaseStatus, err error) {
+	remoteBranch string,
+	skipPrerelease bool) (status ReleaseStatus, err error) {
 
 	var localSHA, remoteSHA string
 
@@ -335,7 +344,8 @@ func getStatus(
 		return
 	}
 
-	// Get the tag (corresponding to a version) at the latest commit.
+	// Get the tag (corresponding to a version)
+	// at the latest commit.
 	_, tag, _ := git.GetVersionAt(gitx, localSHA)
 
 	remoteSHA, err = gitx.Get("rev-parse", remoteBranch)
@@ -350,7 +360,11 @@ func getStatus(
 	if localSHA != remoteSHA {
 		// We have a potential update available...
 		// Get the latest update commit in the range (localSHA, remoteSHA]
-		updateCommit, updateTag, updateVersion, err = getNewUpdateCommit(gitx, localSHA, remoteSHA)
+		// - Skip prerelease versions
+		// - also never skip annotated (Git trailers) "non-skip" versions.
+		updateCommit, updateTag, updateVersion, err =
+			getNewUpdateCommit(gitx, localSHA, remoteSHA, skipPrerelease)
+
 		if err != nil {
 			return
 		}
@@ -447,7 +461,8 @@ func RunUpdate(
 	}
 
 	cloneDir := hooks.GetReleaseCloneDir(installDir)
-	status, err := FetchUpdates(cloneDir, "", "", true, ErrorOnWrongRemote)
+	skipPrerelease := true
+	status, err := FetchUpdates(cloneDir, "", "", true, ErrorOnWrongRemote, skipPrerelease)
 	if err != nil {
 		err = cm.CombineErrors(cm.Error("Could not fetch updates."), err)
 
