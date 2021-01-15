@@ -280,6 +280,7 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 	var err error
 
 	if args.InternalAutoUpdate {
+		log.Info("Executing auto update...")
 
 		status, err = updates.GetStatus(settings.CloneDir, true, skipPrerelease)
 		log.AssertNoErrorPanic(err,
@@ -287,7 +288,6 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 			settings.CloneDir)
 
 	} else {
-
 		log.Info("Fetching update in Githooks clone...")
 		status, err = updates.FetchUpdates(
 			settings.CloneDir,
@@ -303,6 +303,9 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 	}
 
 	updateAvailable := status.LocalCommitSHA != status.RemoteCommitSHA
+
+	cm.PanicIfF(args.InternalAutoUpdate && !updateAvailable,
+		"An autoupdate should only be triggered when and update is found.")
 
 	installer := hooks.GetInstallerExecutable(settings.InstallDir)
 	haveInstaller := cm.IsFile(installer)

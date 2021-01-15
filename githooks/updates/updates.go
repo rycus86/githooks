@@ -297,6 +297,8 @@ func GetStatus(cloneDir string, checkRemote, skipPrerelease bool) (status Releas
 
 	var url, branch string
 	url, branch, err = gitx.GetRemoteURLAndBranch(defaultRemote)
+	cm.DebugAssert(strs.IsNotEmpty(url) &&
+		strs.IsNotEmpty(branch), "Wrong output!")
 	if err != nil {
 		return
 	}
@@ -422,13 +424,25 @@ func MergeUpdates(cloneDir string, dryRun bool) (currentSHA string, err error) {
 	if dryRun {
 		// Checkout a temporary branch from the current
 		// and merge the remote to see if it works.
-		branch = "update-" + uuid.New().String()
-		if err = gitx.Check("branch", branch); err != nil {
+		oldBranch := branch
+		branch = "dryrunmerge-" + uuid.New().String() // ust this dry-run branch from now
+		if err = gitx.Check("branch", branch, oldBranch); err != nil {
 			return
 		}
+
 		// Delete the branch on exit.
 		defer func() {
 			err = cm.CombineErrors(err, gitx.Check("branch", "-D", branch))
+		}()
+
+		// Checkout the branch
+		if err = gitx.Check("checkout", branch); err != nil {
+			return
+		}
+
+		// Checkout the old branch on exit.
+		defer func() {
+			err = cm.CombineErrors(err, gitx.Check("checkout", oldBranch))
 		}()
 	}
 

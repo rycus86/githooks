@@ -12,13 +12,13 @@ builds:
     env: &ENV
       - CGO_ENABLED=0
     goos: &GOOS
-      - freebsd
-      - illumos
+      # - freebsd
+      # - illumos
       - linux
-      - openbsd
-      - solaris
-      - darwin
-      - windows
+      # - openbsd
+      # - solaris
+      # - darwin
+      # - windows
     goarch: &GOARCH
       - amd64
       - arm64
