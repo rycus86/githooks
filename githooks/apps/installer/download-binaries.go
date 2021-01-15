@@ -17,7 +17,7 @@ func downloadBinaries(
 	tempDir string,
 	tag string) updates.Binaries {
 
-	publicPGP, err := build.Asset(".deploy-pgp")
+	publicPGP, err := build.Asset(path.Join("githooks", ".deploy-pgp"))
 	log.AssertNoErrorPanicF(err, "Could not get deploy PGP key.")
 
 	err = download.DownloadGithub("gabyx", "githooks", tag, tempDir, string(publicPGP))

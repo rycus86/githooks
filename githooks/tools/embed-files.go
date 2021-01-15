@@ -22,7 +22,7 @@ func main() {
 
 	template := path.Join(root, "githooks", "run-wrapper.sh")
 	readme := path.Join(root, ".githooks", "README.md")
-	deployPGP := path.Join(root, ".deploy-pgp")
+	deployPGP := path.Join(root, "githooks", ".deploy-pgp")
 
 	c := bindata.Config{
 		Input: []bindata.InputConfig{
