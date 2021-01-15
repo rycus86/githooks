@@ -317,6 +317,7 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 
 		if args.BuildFromSource {
 
+			log.Info("Building from clone...")
 			binaries = buildFromSource(
 				args.BuildTags,
 				tempDir,
@@ -325,6 +326,7 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 				status.RemoteCommitSHA)
 
 		} else {
+			log.Info("Download from deploy source...")
 			tag := status.UpdateTag
 			if status.IsNewClone {
 				tag = status.LocalTag
