@@ -22,7 +22,7 @@ SKIPPED=0
 FAILED_TEST_LIST=""
 
 export GITHOOKS_INSTALL_BIN_DIR="$HOME/.githooks/bin"
-COMMIT_BEFORE=$(cd /var/lib/githooks && git rev-parse HEAD)
+COMMIT_BEFORE=$(cd "$GITHOOKS_TEST_REPO" && git rev-parse HEAD)
 
 cleanDirs() {
     if [ -w /usr/share/git-core ]; then
@@ -34,7 +34,10 @@ cleanDirs() {
     rm -rf /tmp/* >/dev/null 2>&1
 }
 
-for STEP in /var/lib/tests/step-*.sh; do
+echo "Test repo: '$GITHOOKS_TEST_REPO'"
+echo "Tests dir: '$GITHOOKS_TESTS_DIR'"
+
+for STEP in "$GITHOOKS_TESTS_DIR"/step-*.sh; do
     STEP_NAME=$(basename "$STEP" | sed 's/.sh$//')
     STEP_DESC=$(head -3 "$STEP" | tail -1 | sed 's/#\s*//')
 
@@ -47,8 +50,8 @@ for STEP in /var/lib/tests/step-*.sh; do
 
     cleanDirs
 
-    git -C /var/lib/githooks reset --hard "$COMMIT_BEFORE" >/dev/null 2>&1 &&
-        git -C /var/lib/githooks clean -df >/dev/null 2>&1
+    git -C "$GITHOOKS_TEST_REPO" reset --hard "$COMMIT_BEFORE" >/dev/null 2>&1 &&
+        git -C "$GITHOOKS_TEST_REPO" clean -df >/dev/null 2>&1
 
     TEST_RUNS=$((TEST_RUNS + 1))
 

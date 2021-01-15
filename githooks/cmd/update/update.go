@@ -35,9 +35,11 @@ func runUpdate(ctx *ccm.CmdContext, setOpts *config.SetOptions, answer string) {
 
 		switch {
 		case updateAvailable:
-			ctx.Log.Info("Updates successfully dispatched.")
-		case !accepted:
-			ctx.Log.Info("Updates declined.")
+			if accepted {
+				ctx.Log.Info("Update successfully dispatched.")
+			} else {
+				ctx.Log.Info("Update declined.")
+			}
 		default:
 			ctx.Log.InfoF("Githooks is at the latest version '%s'",
 				build.GetBuildVersion().String())

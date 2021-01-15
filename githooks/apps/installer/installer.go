@@ -1077,7 +1077,9 @@ func runUpdate(
 				&settings.RegisteredGitDirs,
 				uiSettings)
 		}
+	}
 
+	if !args.UseCoreHooksPath {
 		installIntoRegisteredRepos(
 			settings.TempDir,
 			args.NonInteractive,

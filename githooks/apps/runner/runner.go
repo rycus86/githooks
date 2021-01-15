@@ -287,9 +287,11 @@ func updateGithooks(settings *HookSettings, uiSettings *UISettings) {
 
 	switch {
 	case updateAvailable:
-		log.Info("Updates successfully dispatched.")
-	case !accepted:
-		log.Info("Updates declined.")
+		if accepted {
+			log.Info("Update successfully dispatched.")
+		} else {
+			log.Info("Update declined.")
+		}
 	default:
 		log.InfoF("Githooks is at the latest version '%s'",
 			build.GetBuildVersion().String())

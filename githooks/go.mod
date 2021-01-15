@@ -3,6 +3,7 @@ module rycus86/githooks
 go 1.15
 
 require (
+	code.gitea.io/sdk/gitea v0.13.2
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/goccy/go-yaml v1.8.2

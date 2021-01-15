@@ -11,16 +11,37 @@ import (
 	"rycus86/githooks/updates/download"
 )
 
+func getDefaultDeploySettings() (IDeploySettings, error) {
+
+	publicPGP, err := build.Asset(path.Join("githooks", ".deploy-pgp"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &download.GithubDeploySettings{
+		Owner:      "gabyx",
+		Repository: "githooks",
+		PublicPGP:  string(publicPGP)}, nil
+}
+
+type IDeploySettings interface {
+	Download(versionTag string, dir string) error
+}
+
+func getDeploySettings(log cm.ILogContext, settings *Settings) (IDeploySettings, error) {
+	return getDefaultDeploySettings()
+}
+
 func downloadBinaries(
 	log cm.ILogContext,
 	settings *Settings,
 	tempDir string,
-	tag string) updates.Binaries {
+	versionTag string) updates.Binaries {
 
-	publicPGP, err := build.Asset(path.Join("githooks", ".deploy-pgp"))
-	log.AssertNoErrorPanicF(err, "Could not get deploy PGP key.")
+	deploySettings, err := getDeploySettings(log, settings)
+	log.AssertNoErrorPanicF(err, "Could not get deploy settings")
 
-	err = download.DownloadGithub("gabyx", "githooks", tag, tempDir, string(publicPGP))
+	err = deploySettings.Download(versionTag, tempDir)
 	log.AssertNoErrorPanicF(err, "Could not download binaries.")
 
 	ext := ""

@@ -14,20 +14,20 @@ type Arguments struct {
 	DryRun         bool
 	NonInteractive bool
 
-	SkipInstallIntoExisting bool
+	SkipInstallIntoExisting bool // Skip install into existing repositories.
 
-	OnlyServerHooks bool
+	OnlyServerHooks bool // Only maintain server hooks.
 
-	UseCoreHooksPath bool
+	UseCoreHooksPath bool // Use the `core.hooksPath` for the template dir.
 
-	CloneURL    string
-	CloneBranch string
+	InstallPrefix string // Install prefix for Githooks.
+	TemplateDir   string // Template dir to use for the hooks.
 
-	BuildFromSource bool
-	BuildTags       []string
+	CloneURL    string // Clone URL of the Githooks repository.
+	CloneBranch string // Clone branch for Githooks repository.
 
-	InstallPrefix string
-	TemplateDir   string
+	BuildFromSource bool     // If we build the install/update from source.
+	BuildTags       []string // Go build tags.
 
 	UseStdin bool
 }

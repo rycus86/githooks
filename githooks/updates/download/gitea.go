@@ -1,49 +1,47 @@
 package download
 
 import (
-	"context"
 	"io"
 	"os"
 	"path"
 	cm "rycus86/githooks/common"
 
-	"github.com/google/go-github/v33/github"
+	"code.gitea.io/sdk/gitea"
 )
 
-// The deploy settings for Github.
-type GithubDeploySettings struct {
-	Owner      string // The owner of the repository.
-	Repository string // The repository name.
-
-	// If empty, the internal Githooks binary
-	// embedded PGP is taken from `.deploy.pgp`.
-	PublicPGP string
+// The deploy settings for Gitea.
+type GiteaDeploySettings struct {
+	GithubDeploySettings
+	GiteaURL string // Base url of the Gitea service.
 }
 
 // Providing interface `IDeploySettings`.
-func (s *GithubDeploySettings) Download(versionTag string, dir string) error {
-	return downloadGithub(s.Owner, s.Repository, versionTag, dir, s.PublicPGP)
+func (s *GiteaDeploySettings) Download(versionTag string, dir string) error {
+	return downloadGitea(s.GiteaURL, s.Owner, s.Repository, versionTag, dir, s.PublicPGP)
 }
 
 // Downloads the Githooks release with tag `versionTag` and
 // extracts the matched asset into `dir`.
 // The assert matches the OS and architecture of the current runtime.
-func downloadGithub(owner string, repo string, versionTag string, dir string, publicPGP string) error {
+func downloadGitea(url string, owner string, repo string, versionTag string, dir string, publicPGP string) error {
 
-	client := github.NewClient(nil)
-	rel, _, err := client.Repositories.GetReleaseByTag(context.Background(),
-		owner, repo, versionTag)
+	client, err := gitea.NewClient(url)
+	if err != nil {
+		return cm.CombineErrors(err, cm.Error("Cannot initialize Gitea client"))
+	}
+
+	rel, _, err := client.GetReleaseByTag(owner, repo, versionTag)
 	if err != nil {
 		return cm.CombineErrors(err, cm.Error("Failed to get release"))
 	}
 
 	// Wrap into our list
 	var assets []Asset
-	for i := range rel.Assets {
+	for i := range rel.Attachments {
 		assets = append(assets,
 			Asset{
-				FileName: path.Base(rel.Assets[i].GetName()),
-				Url:      rel.Assets[i].GetBrowserDownloadURL()})
+				FileName: path.Base(rel.Attachments[i].Name),
+				Url:      rel.Attachments[i].DownloadURL})
 	}
 
 	target, checksums, err := getGithooksAsset(assets)
@@ -87,11 +85,10 @@ func downloadGithub(owner string, repo string, versionTag string, dir string, pu
 		return cm.CombineErrors(err, cm.ErrorF("Checksum validation failed."))
 	}
 
-	// Extract the file.
 	err = Extract(tempFile, target.Extension, dir)
 	if err != nil {
 		return cm.CombineErrors(err,
-			cm.ErrorF("Assert extractiuon from url '%s' failed.", target.Url))
+			cm.ErrorF("Assert extractiuon from url '%s' failed.", url))
 	}
 
 	return nil

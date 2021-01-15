@@ -484,10 +484,13 @@ func RunUpdate(
 		return
 	}
 
-	accepted = acceptUpdate(&status)
-	updateAvailable = status.IsUpdateAvailable && accepted
+	updateAvailable = status.IsUpdateAvailable
 
-	if updateAvailable {
+	if status.IsUpdateAvailable {
+		accepted = acceptUpdate(&status)
+	}
+
+	if updateAvailable && accepted {
 
 		_, err = MergeUpdates(cloneDir, true) // Dry run the merge...
 		if err != nil {

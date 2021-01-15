@@ -7,6 +7,7 @@ git config --global user.email "githook@test.com" &&
     git config --global init.defaultBranch master || exit 1
 
 ROOT_DIR="C:/Program Files/githooks-tests"
+export GITHOOKS_TESTS_DIR="$ROOT_DIR/tests"
 export GITHOOKS_TEST_REPO="$ROOT_DIR/githooks"
 export GITHOOKS_BIN_DIR="$GITHOOKS_TEST_REPO/githooks/bin"
 
@@ -25,37 +26,37 @@ echo "Make test gitrepo to clone from ..." &&
     git add . &&
     git commit -a -m "Before build" || exit 1
 
-# Build binaries for v9.9.0-test.
+# Build binaries for v9.9.0.
 #################################
 cd "${GITHOOKS_TEST_REPO}/githooks" &&
-    git tag "v9.9.0-test" &&
+    git tag "v9.9.0" &&
     ./scripts/clean.sh &&
     ./scripts/build.sh --build-flags "-tags debug,mock" &&
     ./bin/installer --version || exit 1
-echo "Commit build v9.9.0-test to repo ..." &&
+echo "Commit build v9.9.0 to repo ..." &&
     cd "${GITHOOKS_TEST_REPO}" &&
     git add . &&
-    git commit -a --allow-empty -m "Version 9.9.0-test" &&
-    git tag -f "v9.9.0-test" || exit 1
+    git commit -a --allow-empty -m "Version 9.9.0" &&
+    git tag -f "v9.9.0" || exit 1
 
-# Build binaries for v9.9.1-test.
+# Build binaries for v9.9.1.
 #################################
 cd "${GITHOOKS_TEST_REPO}/githooks" &&
     git commit -a --allow-empty -m "Before build" &&
-    git tag -f "v9.9.1-test" &&
+    git tag -f "v9.9.1" &&
     ./scripts/clean.sh &&
     ./scripts/build.sh --build-flags "-tags debug,mock" &&
     ./bin/installer --version || exit 1
-echo "Commit build v9.9.1-test to repo ..." &&
+echo "Commit build v9.9.1 to repo ..." &&
     cd "${GITHOOKS_TEST_REPO}" &&
     git commit -a --allow-empty -m "Version 9.9.01test" &&
-    git tag -f "v9.9.1-test" || exit 1
+    git tag -f "v9.9.1" || exit 1
 
 # Copy the tests somewhere different
-cp -rf "$REPO_DIR/tests" "$ROOT_DIR/tests" || exit 1
+cp -rf "$REPO_DIR/tests" "$GITHOOKS_TESTS_DIR" || exit 1
 
 if [ -n "${EXTRA_INSTALL_ARGS}" ]; then
-    sed -i -E "s|(.*)/installer\"|\1/installer\" ${EXTRA_INSTALL_ARGS}|g" "$ROOT_DIR"/tests/step-*
+    sed -i -E "s|(.*)/installer\"|\1/installer\" ${EXTRA_INSTALL_ARGS}|g" "$GITHOOKS_TESTS_DIR"/step-*
 fi
 
-sh "$ROOT_DIR"/tests/exec-steps-go.sh --skip-docker-check
+sh "$GITHOOKS_TESTS_DIR/exec-steps-go.sh" --skip-docker-check
