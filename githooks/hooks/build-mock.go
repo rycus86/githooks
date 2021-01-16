@@ -3,6 +3,7 @@
 package hooks
 
 import (
+	"os"
 	"rycus86/githooks/git"
 )
 
@@ -16,7 +17,7 @@ func AllowLocalURLInRepoSharedHooks() bool {
 
 // GetDefaultCloneURL returns the default clone url.
 func GetDefaultCloneURL() string {
-	return "/var/lib/githooks"
+	return os.Getenv("GITHOOKS_TEST_REPO")
 }
 
 // GetDefaultCloneBranch returns the default clone branch name.
