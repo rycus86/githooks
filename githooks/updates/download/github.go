@@ -94,7 +94,7 @@ func downloadGithub(owner string, repo string, versionTag string, dir string, pu
 	err = Extract(tempFile, target.Extension, dir)
 	if err != nil {
 		return cm.CombineErrors(err,
-			cm.ErrorF("Assert extractiuon from url '%s' failed.", target.Url))
+			cm.ErrorF("Archive extraction from url '%s' failed.", target.Url))
 	}
 
 	return nil

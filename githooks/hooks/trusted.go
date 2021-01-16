@@ -144,7 +144,7 @@ func (t *ChecksumStore) SyncChecksumAdd(checksums ...ChecksumResult) error {
 			return err
 		}
 
-		err = cm.StoreYAML(path.Join(dir, checksum.SHA1[2:]), checksumFile{checksum.Path})
+		err = cm.StoreYAML(path.Join(dir, checksum.SHA1[2:]), &checksumFile{checksum.Path})
 		if err != nil {
 			return err
 		}

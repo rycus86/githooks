@@ -20,10 +20,10 @@ jobs:
     env: TEST_INSTANCE=test-corehookspath-go
   - os: linux
     env: TEST_INSTANCE=test-whitespace-go
-  - os: linux
-    env: TEST_INSTANCE=test-rules
   - os: windows
     env: TEST_INSTANCE=test-windows
+  - os: linux
+    env: TEST_INSTANCE=test-rules
 
 script:
   - sh "tests/${TEST_INSTANCE}.sh"

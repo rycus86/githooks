@@ -13,6 +13,7 @@ type deploySettings struct {
 	Gitea  *GiteaDeploySettings  `yaml:"gitea"`
 	Github *GithubDeploySettings `yaml:"github"`
 	Http   *HttpDeploySettings   `yaml:"http"`
+	Local  *LocalDeploySettings  `yaml:"local"`
 }
 
 const deploySettingsVersion = 1
@@ -35,6 +36,8 @@ func LoadDeploySettings(file string) (IDeploySettings, error) {
 		return settings.Github, nil
 	case settings.Http != nil:
 		return settings.Http, nil
+	case settings.Local != nil:
+		return settings.Local, nil
 	}
 
 	return nil, nil
@@ -55,11 +58,13 @@ func StoreDeploySettings(file string, settings IDeploySettings) error {
 		s.Github = v
 	case *HttpDeploySettings:
 		s.Http = v
+	case *LocalDeploySettings:
+		s.Local = v
 	default:
 		cm.PanicF("Cannot store deploy settings for type '%T'", v)
 	}
 
-	return cm.StoreYAML(file, settings)
+	return cm.StoreYAML(file, &s)
 }
 
 func GetDeploySettingsFile(installDir string) string {

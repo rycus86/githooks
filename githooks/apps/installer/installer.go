@@ -412,15 +412,13 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 		} else {
 
 			tag := status.UpdateTag
-			if status.IsNewClone {
+			if strs.IsEmpty(tag) {
 				tag = status.LocalTag
 			}
 
 			log.InfoF("Download '%s' from deploy source...", tag)
 
 			deploySettings := getDeploySettings(settings.InstallDir, status.RemoteURL, args)
-			log.PanicIfF(deploySettings == nil, "Could not determine deploy settings.")
-
 			binaries = downloadBinaries(log, deploySettings, tempDir, tag)
 		}
 

@@ -11,6 +11,14 @@ import (
 	"rycus86/githooks/updates/download"
 )
 
+// detectDeploySettings tries to detect the deploy settings.
+// Currently that works for Github automatically.
+// For Gitea you need to specify the deploy api `deployAPI`.
+// Others will fail and need a special deploy settings config file.
+func detectDeploySettings(cloneUrl string, deployAPI string) (download.IDeploySettings, error) {
+	return nil, nil
+}
+
 func downloadBinaries(
 	log cm.ILogContext,
 	deploySettings download.IDeploySettings,

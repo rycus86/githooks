@@ -91,7 +91,7 @@ func downloadGitea(url string, owner string, repo string, versionTag string, dir
 	err = Extract(tempFile, target.Extension, dir)
 	if err != nil {
 		return cm.CombineErrors(err,
-			cm.ErrorF("Assert extractiuon from url '%s' failed.", url))
+			cm.ErrorF("Archive extraction from url '%s' failed.", url))
 	}
 
 	return nil
