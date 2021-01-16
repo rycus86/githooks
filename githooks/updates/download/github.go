@@ -10,11 +10,14 @@ import (
 	"github.com/google/go-github/v33/github"
 )
 
-// The deploy settings for Github.
-type GithubDeploySettings struct {
+type RepoSettings struct {
 	Owner      string // The owner of the repository.
 	Repository string // The repository name.
+}
 
+// The deploy settings for Github.
+type GithubDeploySettings struct {
+	RepoSettings
 	// If empty, the internal Githooks binary
 	// embedded PGP is taken from `.deploy.pgp`.
 	PublicPGP string

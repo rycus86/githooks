@@ -2,24 +2,33 @@ package hooks
 
 // Git config keys for globals config.
 const (
-	GitCK_AutoUpdateEnabled            = "githooks.autoUpdateEnabled"
-	GitCK_AutoUpdateCheckTimestamp     = "githooks.autoUpdateCheckTimestamp"
-	GitCK_AutoUpdateUsePrerelease      = "githooks.autoUpdateUsePrerelease"
-	GitCK_BugReportInfo                = "githooks.bugReportInfo"
-	GitCK_ChecksumCacheDir             = "githooks.checksumCacheDir"
-	GitCK_CloneBranch                  = "githooks.cloneBranch"
-	GitCK_CloneUrl                     = "githooks.cloneUrl"
+	GitCK_InstallDir = "githooks.installDir"
+	GitCK_Runner     = "githooks.runner"
+	GitCK_Disable    = "githooks.disable"
+
+	GitCK_MaintainOnlyServerHooks = "githooks.maintainOnlyServerHooks"
+
+	GitCK_AutoUpdateEnabled        = "githooks.autoUpdateEnabled"
+	GitCK_AutoUpdateCheckTimestamp = "githooks.autoUpdateCheckTimestamp"
+	GitCK_AutoUpdateUsePrerelease  = "githooks.autoUpdateUsePrerelease"
+
+	GitCK_BugReportInfo = "githooks.bugReportInfo"
+
+	GitCK_ChecksumCacheDir = "githooks.checksumCacheDir"
+
+	GitCK_CloneBranch     = "githooks.cloneBranch"
+	GitCK_CloneUrl        = "githooks.cloneUrl"
+	GitCK_BuildFromSource = "githooks.buildFromSource"
+	GitCK_GoExecutable    = "githooks.goExecutable"
+
 	GitCK_DeleteDetectedLFSHooksAnswer = "githooks.deleteDetectedLFSHooks"
-	GitCK_Disable                      = "githooks.disable"
 	GitCK_FailOnNonExistingSharedHooks = "githooks.failOnNonExistingSharedHooks"
-	GitCK_GoExecutable                 = "githooks.goExecutable"
-	GitCK_InstallDir                   = "githooks.installDir"
-	GitCK_MaintainOnlyServerHooks      = "githooks.maintainOnlyServerHooks"
-	GitCK_NumThreads                   = "githooks.numThreads"
-	GitCK_PreviousSearchDir            = "githooks.previousSearchDir"
-	GitCK_Runner                       = "githooks.runner"
-	GitCK_UseCoreHooksPath             = "githooks.useCoreHooksPath"
-	GitCK_PathForUseCoreHooksPath      = "githooks.pathForUseCoreHooksPath"
+
+	GitCK_UseCoreHooksPath        = "githooks.useCoreHooksPath"
+	GitCK_PathForUseCoreHooksPath = "githooks.pathForUseCoreHooksPath"
+
+	GitCK_PreviousSearchDir = "githooks.previousSearchDir"
+	GitCK_NumThreads        = "githooks.numThreads"
 
 	GitCK_AliasHooks = "alias.hooks"
 )
@@ -39,27 +48,37 @@ const (
 // GetGlobalGitConfigKeys gets all global git config keys relevant for Githooks.
 func GetGlobalGitConfigKeys() []string {
 	return []string{
+		GitCK_InstallDir,
+		GitCK_Runner,
+		GitCK_Disable,
+
+		GitCK_MaintainOnlyServerHooks,
+		GitCK_PreviousSearchDir,
 
 		GitCK_AutoUpdateEnabled,
 		GitCK_AutoUpdateCheckTimestamp,
 		GitCK_AutoUpdateUsePrerelease,
+
 		GitCK_BugReportInfo,
+
 		GitCK_ChecksumCacheDir,
+
 		GitCK_CloneBranch,
 		GitCK_CloneUrl,
-		GitCK_DeleteDetectedLFSHooksAnswer,
-		GitCK_Disable,
-		GitCK_FailOnNonExistingSharedHooks,
 		GitCK_GoExecutable,
-		GitCK_InstallDir,
-		GitCK_MaintainOnlyServerHooks,
-		GitCK_NumThreads,
-		GitCK_PreviousSearchDir,
-		GitCK_Runner,
+		GitCK_BuildFromSource,
+
+		GitCK_DeleteDetectedLFSHooksAnswer,
+		GitCK_FailOnNonExistingSharedHooks,
+
 		GitCK_UseCoreHooksPath,
 		GitCK_PathForUseCoreHooksPath,
+
+		GitCK_NumThreads,
+
 		GitCK_AliasHooks,
 
+		// User and global.
 		GitCK_Shared,
 		GitCK_SharedUpdateTriggers}
 }

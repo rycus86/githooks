@@ -8,13 +8,14 @@ import (
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
+	"rycus86/githooks/updates/download"
 )
 
 func downloadBinaries(
 	log cm.ILogContext,
-	settings *Settings,
+	deploySettings download.IDeploySettings,
 	tempDir string,
-	tag string) updates.Binaries {
+	versionTag string) updates.Binaries {
 
 	bin := os.Getenv("GITHOOKS_BIN_DIR")
 	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_BIN_DIR undefined")

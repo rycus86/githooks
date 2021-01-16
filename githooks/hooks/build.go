@@ -16,7 +16,7 @@ func AllowLocalURLInRepoSharedHooks() bool {
 
 // GetDefaultCloneURL returns the default clone url.
 func GetDefaultCloneURL() string {
-	return "https://github.com/rycus86/githooks.git"
+	return "https://github.com/gabyx/githooks.git"
 }
 
 // GetDefaultCloneBranch returns the default clone branch name.

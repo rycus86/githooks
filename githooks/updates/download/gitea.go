@@ -11,13 +11,16 @@ import (
 
 // The deploy settings for Gitea.
 type GiteaDeploySettings struct {
-	GithubDeploySettings
-	GiteaURL string // Base url of the Gitea service.
+	APIUrl string // API url of the Gitea service.
+	RepoSettings
+	// If empty, the internal Githooks binary
+	// embedded PGP is taken from `.deploy.pgp`.
+	PublicPGP string
 }
 
 // Providing interface `IDeploySettings`.
 func (s *GiteaDeploySettings) Download(versionTag string, dir string) error {
-	return downloadGitea(s.GiteaURL, s.Owner, s.Repository, versionTag, dir, s.PublicPGP)
+	return downloadGitea(s.APIUrl, s.Owner, s.Repository, versionTag, dir, s.PublicPGP)
 }
 
 // Downloads the Githooks release with tag `versionTag` and

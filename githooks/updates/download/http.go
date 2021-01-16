@@ -2,7 +2,6 @@ package download
 
 import (
 	cm "rycus86/githooks/common"
-	"rycus86/githooks/updates"
 )
 
 // The deploy settings for Gitea.
@@ -16,8 +15,8 @@ type HttpDeploySettings struct {
 
 // Download downloads the Githooks from a template URL and
 // extracts it into `dir`.
-func (s *HttpDeploySettings) Download() updates.Binaries {
+func (s *HttpDeploySettings) Download(versionTag string, dir string) error {
 	cm.Panic("Not implemented.")
 
-	return updates.Binaries{}
+	return nil
 }

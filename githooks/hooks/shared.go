@@ -167,24 +167,12 @@ func GetSharedCloneDir(installDir string, url string) string {
 	return path.Join(GetSharedDir(installDir), sha1+"-"+nameAbrev)
 }
 
-var reURLScheme *regexp.Regexp = regexp.MustCompile(`(?m)^[^:/?#]+://`)
-var reShortSCPSyntax = regexp.MustCompile(`(?m)^.+@.+:.+`)
-var reFileURLScheme = regexp.MustCompile(`(?m)^file://`)
-
-func isSharedUrlALocalPath(url string) bool {
-	return !(reURLScheme.MatchString(url) || reShortSCPSyntax.MatchString(url))
-}
-
-func isSharedUrlALocalURL(url string) bool {
-	return reFileURLScheme.MatchString(url)
-}
-
 func parseSharedUrl(installDir string, url string) (SharedRepo, error) {
 
 	h := SharedRepo{IsCloned: true, IsLocal: false, OriginalURL: url}
 	doSplit := true
 
-	if isSharedUrlALocalPath(url) {
+	if git.IsCloneUrlALocalPath(url) {
 
 		h.IsLocal = true
 
@@ -196,7 +184,7 @@ func parseSharedUrl(installDir string, url string) (SharedRepo, error) {
 			h.RepositoryDir = url
 		}
 
-	} else if isSharedUrlALocalURL(url) {
+	} else if git.IsCloneUrlALocalURL(url) {
 		h.IsLocal = true
 	}
 

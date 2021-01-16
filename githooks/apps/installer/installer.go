@@ -9,12 +9,14 @@ import (
 	"rycus86/githooks/apps/install"
 	"rycus86/githooks/build"
 	"rycus86/githooks/builder"
+	ccm "rycus86/githooks/cmd/common"
 	cm "rycus86/githooks/common"
 	"rycus86/githooks/git"
 	"rycus86/githooks/hooks"
 	"rycus86/githooks/prompt"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
+	"rycus86/githooks/updates/download"
 	"strings"
 	"time"
 
@@ -33,7 +35,8 @@ var rootCmd = &cobra.Command{
 	Short: "Githooks installer application",
 	Long: "Githooks installer application\n" +
 		"See further information at https://github.com/rycus86/githooks/blob/master/README.md",
-	Run: runInstall}
+	PreRun: ccm.PanicIfAnyArgs(log),
+	Run:    runInstall}
 
 // Run adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -105,14 +108,28 @@ func defineArguments(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().Bool(
 		"use-core-hookspath", false,
 		"If the install mode 'core.hooksPath' should be used.")
+
 	rootCmd.PersistentFlags().String(
 		"clone-url", "",
 		"The clone url from which Githooks should clone\n"+
-			"and install itself.")
+			"and install/update itself. Githooks tries to\n"+
+			"auto-detect the deploy setting for downloading binaries.\n"+
+			"You can however provide a deploy settings file yourself if\n"+
+			"the auto-detection does not work (see '--deploy-settings').")
 	rootCmd.PersistentFlags().String(
 		"clone-branch", "",
 		"The clone branch from which Githooks should\n"+
-			"clone and install itself.")
+			"clone and install/update itself.")
+	rootCmd.PersistentFlags().String(
+		"deploy-api", "",
+		"The deploy api type (e.g. ['gitea', 'github']) to use for updates\n"+
+			"of the specified 'clone-url' for helping the deploy settings\n"+
+			"auto-detection. For Github urls, this is not needed.")
+	rootCmd.PersistentFlags().String(
+		"deploy-settings", "",
+		"The deploy settings YAML file to use for updates of the specified\n"+
+			"'--clone-url'. See the documentation for further details.")
+
 	rootCmd.PersistentFlags().Bool(
 		"build-from-source", false,
 		"If the binaries are built from source instead of\n"+
@@ -143,6 +160,10 @@ func defineArguments(rootCmd *cobra.Command) {
 	cm.AssertNoErrorPanic(
 		viper.BindPFlag("cloneBranch", rootCmd.PersistentFlags().Lookup("clone-branch")))
 	cm.AssertNoErrorPanic(
+		viper.BindPFlag("deploySettings", rootCmd.PersistentFlags().Lookup("deploy-settings")))
+	cm.AssertNoErrorPanic(
+		viper.BindPFlag("deployAPI", rootCmd.PersistentFlags().Lookup("deploy-api")))
+	cm.AssertNoErrorPanic(
 		viper.BindPFlag("buildFromSource", rootCmd.PersistentFlags().Lookup("build-from-source")))
 	cm.AssertNoErrorPanic(
 		viper.BindPFlag("buildTags", rootCmd.PersistentFlags().Lookup("build-tags")))
@@ -161,6 +182,18 @@ func validateArgs(cmd *cobra.Command, args *Arguments) {
 		log.PanicIfF(f.Changed && strs.IsEmpty(f.Value.String()),
 			"Flag '%s' needs an non-empty value.", f.Name)
 	})
+
+	// Check deploy-settings and deploy-api are not given together.
+	log.PanicIfF(strs.IsNotEmpty(args.DeployAPI) &&
+		strs.IsNotEmpty(args.DeploySettings),
+		"You cannot specify a deploy api type together with\n"+
+			"a deploy settings file.")
+
+	log.PanicIf(args.BuildFromSource &&
+		(strs.IsNotEmpty(args.DeployAPI) || strs.IsNotEmpty(args.DeploySettings)),
+		"You cannot build binaries from source together with specifying\n",
+		"a deploy settings file or deploy api.")
+
 }
 
 func setMainVariables(args *Arguments) (Settings, install.UISettings) {
@@ -269,7 +302,51 @@ func buildFromSource(
 			strs.IsEmpty(binaries.Installer),
 		"No binaries or installer found in '%s'", binPath)
 
+	// Remember to build from source
+	err = gitx.SetConfig(hooks.GitCK_BuildFromSource, true, git.GlobalScope)
+	log.AssertNoErrorF(err, "Could not store Git config '%s'.", hooks.GitCK_BuildFromSource)
+
 	return binaries
+}
+
+func getDeploySettings(
+	installDir string,
+	cloneUrl string,
+	args *Arguments) download.IDeploySettings {
+
+	var err error
+	var deploySettings download.IDeploySettings
+
+	installDeploySettings := download.GetDeploySettingsFile(installDir)
+	fileToLoad := ""
+	switch {
+	case strs.IsNotEmpty(args.DeploySettings):
+		// If the user specified a deploy settings file use this.
+		cm.DebugAssert(cm.IsFile(args.DeploySettings))
+		fileToLoad = args.DeploySettings
+	case strs.IsEmpty(args.DeployAPI):
+		// If the user specified a deploy api type,
+		// dont load the deploy settings from install dir.
+		fileToLoad = installDeploySettings
+	}
+
+	if cm.IsFile(fileToLoad) {
+		deploySettings, err = download.LoadDeploySettings(fileToLoad)
+		log.AssertNoErrorPanicF(err, "Could not load deploy settings '%s'.", fileToLoad)
+	}
+
+	// If nothing is specified yet, try to detect it.
+	if deploySettings == nil {
+		deploySettings, err = detectDeploySettings(cloneUrl, args.DeployAPI)
+		log.AssertNoErrorF(err, "Could not auto-detect deploy settings.")
+	}
+
+	if deploySettings != nil {
+		err := download.StoreDeploySettings(installDeploySettings, deploySettings)
+		log.AssertNoErrorPanicF(err, "Could not store deploy settings '%s'.", installDeploySettings)
+	}
+
+	return deploySettings
 }
 
 func prepareDispatch(settings *Settings, args *Arguments) bool {
@@ -333,13 +410,18 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 				status.RemoteCommitSHA)
 
 		} else {
-			log.Info("Download from deploy source...")
+
 			tag := status.UpdateTag
 			if status.IsNewClone {
 				tag = status.LocalTag
 			}
 
-			binaries = downloadBinaries(log, settings, tempDir, tag)
+			log.InfoF("Download '%s' from deploy source...", tag)
+
+			deploySettings := getDeploySettings(settings.InstallDir, status.RemoteURL, args)
+			log.PanicIfF(deploySettings == nil, "Could not determine deploy settings.")
+
+			binaries = downloadBinaries(log, deploySettings, tempDir, tag)
 		}
 
 		installer = binaries.Installer
