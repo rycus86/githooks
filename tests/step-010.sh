@@ -8,7 +8,7 @@ git init || exit 1
 echo 'n
 y
 /
-' | "$GITHOOKS_BIN_DIR/installer" --stdin --dry-run || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin --dry-run || exit 1
 
 mkdir -p /tmp/test10/b && cd /tmp/test10/b || exit 1
 git init || exit 1

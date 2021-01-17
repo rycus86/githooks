@@ -2,7 +2,7 @@
 # Test:
 #   Test registering mechanism.
 
-if ! "$GITHOOKS_BIN_DIR/installer"; then
+if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
@@ -60,7 +60,7 @@ mkdir -p /tmp/test116.3 && cd /tmp/test116.3 && git init
 
 echo 'Y
 /tmp
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 if ! grep -q /tmp/test116.1/.git "$REGISTER_FILE" ||
     ! grep -q /tmp/test116.2/.git "$REGISTER_FILE" ||
@@ -72,7 +72,7 @@ fi
 
 # Test uninstall to only repo 1
 cd /tmp/test116.1 || exit 1
-if ! "$GITHOOKS_BIN_DIR/cli" uninstall --non-interactive; then
+if ! "$GITHOOKS_TEST_BIN_DIR/cli" uninstall --non-interactive; then
     echo "! Uninstall from current repo failed"
     exit 1
 fi
@@ -88,7 +88,7 @@ fi
 # Test total uninstall to all repos
 echo 'Y
 /tmp
-' | "$GITHOOKS_BIN_DIR/uninstaller" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/uninstaller" --stdin || exit 1
 
 if [ -f "$REGISTER_FILE" ]; then
     echo "! Expected registered list to not exist"
@@ -107,7 +107,7 @@ fi
 echo 'Y
 y
 /tmp
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 # Update Test
 # Set all other hooks to dirty by adding something

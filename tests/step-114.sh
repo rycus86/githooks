@@ -24,7 +24,7 @@ mkdir -p ~/.githooks/templates
 echo 'n
 y
 /tmp/test114
-' | "$GITHOOKS_BIN_DIR/installer" --stdin --use-core-hookspath --template-dir ~/.githooks/templates || exit 3
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin --use-core-hookspath --template-dir ~/.githooks/templates || exit 3
 
 # check if hooks are inside the template folder.
 if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -q "test-hook"; then

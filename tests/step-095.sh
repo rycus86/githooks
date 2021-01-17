@@ -18,7 +18,7 @@ EOF
 git add sample.txt second.txt
 
 ACCEPT_CHANGES=A \
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep 'staged: sample.txt' /tmp/test095.out; then
     echo "! Failed to find expected output (1)"

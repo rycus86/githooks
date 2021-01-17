@@ -4,12 +4,12 @@
 
 mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
 
-if ! "$GITHOOKS_BIN_DIR/installer"; then
+if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
     echo "! Expected to succeed"
     exit 1
 fi
 
-if "$GITHOOKS_BIN_DIR/cli" install; then
+if "$GITHOOKS_TEST_BIN_DIR/cli" install; then
     echo "! Install into current repo should have failed"
     exit 1
 fi

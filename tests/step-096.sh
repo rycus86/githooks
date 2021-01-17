@@ -23,7 +23,7 @@ EOF
 git add sub f*
 
 ACCEPT_CHANGES=A \
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ "$(wc -l </tmp/test096.out)" != "4" ]; then
     echo "! Unexpected number of output rows"

@@ -19,7 +19,7 @@ echo 'y
 y
 y
 y
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 if ! [ -f /tmp/git-templates/templates/hooks/pre-commit ]; then
     # verify that a new hook file was installed

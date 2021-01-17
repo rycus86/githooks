@@ -15,13 +15,13 @@ MANAGED_HOOK_NAMES="
 mkdir -p /tmp/test097/.git/hooks &&
     cd /tmp/test097 &&
     git init &&
-    "$GITHOOKS_BIN_DIR/installer" --stdin &&
+    "$GITHOOKS_TEST_BIN_DIR/installer" --stdin &&
     git config githooks.autoUpdateEnabled false ||
     exit 1
 
 if ! echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     # When not using core.hooksPath we install into the current repository.
-    if ! "$GITHOOKS_BIN_DIR/cli" install --non-interactive; then
+    if ! "$GITHOOKS_TEST_BIN_DIR/cli" install --non-interactive; then
         echo "! Install into current repo failed"
         exit 1
     fi

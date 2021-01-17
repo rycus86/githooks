@@ -12,7 +12,7 @@ git init || exit 1
 
 git config --global githooks.autoUpdateEnabled true || exit 1
 
-ACCEPT_CHANGES=A "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
+ACCEPT_CHANGES=A "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
 
 # shellcheck disable=SC2181
 if cd ~/.githooks/release && git rev-parse HEAD; then

@@ -18,7 +18,7 @@ mkdir -p .githooks &&
     exit 4
 
 # Execute pre-commit by the runner
-OUT=$(MONKEY="mon key" "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit 2>&1)
+OUT=$(MONKEY="mon key" "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit 2>&1)
 
 # shellcheck disable=SC2181,SC2016
 if [ "$?" -ne 0 ] || ! echo "$OUT" | grep "Hello" ||

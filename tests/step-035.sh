@@ -9,7 +9,7 @@ mkdir -p .githooks/pre-commit &&
     touch .githooks/trust-all &&
     echo 'echo "Accepted hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
     TRUST_ALL_HOOKS=N ACCEPT_CHANGES=Y \
-        "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+        "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if ! grep -q "Accepted hook" /tmp/test35.out; then
     echo "! Expected hook was not run"
@@ -18,7 +18,7 @@ fi
 
 echo 'echo "Changed hook" > /tmp/test35.out' >.githooks/pre-commit/test &&
     TRUST_ALL_HOOKS="" ACCEPT_CHANGES=N \
-        "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+        "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if grep -q "Changed hook" /tmp/test35.out; then
     echo "! Changed hook was unexpectedly run"

@@ -7,7 +7,7 @@ git init || exit 1
 
 mkdir -p .githooks &&
     echo 'exit 1' >.githooks/pre-commit &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -17,7 +17,7 @@ fi
 rm .githooks/pre-commit &&
     mkdir .githooks/pre-commit &&
     echo 'exit 1' >.githooks/pre-commit/test &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -25,5 +25,5 @@ if [ $? -ne 1 ]; then
 fi
 
 echo 'exit 0' >.githooks/pre-commit/test &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

@@ -3,7 +3,7 @@
 #   Run a simple install non-interactively and verify the hooks are in place
 
 # run the default install
-"$GITHOOKS_BIN_DIR/installer" --non-interactive || exit 1
+"$GITHOOKS_TEST_BIN_DIR/installer" --non-interactive || exit 1
 
 mkdir -p /tmp/test1 && cd /tmp/test1 || exit 1
 git init || exit 1

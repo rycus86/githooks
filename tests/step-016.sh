@@ -28,10 +28,10 @@ git init || exit 1
 mkdir -p .githooks &&
     git config --global githooks.shared '/tmp/shared/hooks-016-a.git' &&
     echo 'urls: - file:///tmp/shared/hooks-016-b.git' >.githooks/.shared.yaml &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-merge unused ||
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-merge unused ||
     exit 1
 
-"$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
+"$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 if ! grep -q 'From shared hook A' /tmp/test-016.out; then
@@ -45,7 +45,7 @@ if ! grep -q 'From shared hook B' /tmp/test-016.out; then
 fi
 
 # Trigger the shared hooks update
-OUT=$("$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-merge unused 2>&1)
+OUT=$("$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-merge unused 2>&1)
 if ! echo "$OUT" | grep -q "Updating shared hooks from"; then
     echo "! Expected shared hooks update"
     exit 1

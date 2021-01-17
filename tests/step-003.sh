@@ -3,7 +3,7 @@
 #   Run a simple install and verify multiple hooks trigger properly
 
 # run the default install
-"$GITHOOKS_BIN_DIR/installer" || exit 1
+"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
 
 mkdir -p /tmp/test3 && cd /tmp/test3 || exit 1
 git init || exit 1

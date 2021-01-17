@@ -2,9 +2,9 @@
 # Test:
 #   Cli tool: print help and usage
 
-"$GITHOOKS_BIN_DIR/installer" || exit 1
+"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
 
-if ! "$GITHOOKS_BIN_DIR/cli" --help | grep -q "See further information at"; then
+if ! "$GITHOOKS_TEST_BIN_DIR/cli" --help | grep -q "See further information at"; then
     echo "! Unexpected cli help output"
     exit 1
 fi

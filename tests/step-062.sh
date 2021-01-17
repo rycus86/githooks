@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: run update check
 
-"$GITHOOKS_BIN_DIR/installer" || exit 1
+"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
 
 mkdir -p /tmp/test062 &&
     cd /tmp/test062 &&

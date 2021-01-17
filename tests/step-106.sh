@@ -11,7 +11,7 @@ mkdir -p /tmp/test106-lfs &&
 
 export PATH=/tmp/test106-lfs:"$PATH" || exit 2
 
-"$GITHOOKS_BIN_DIR/installer" || exit 3
+"$GITHOOKS_TEST_BIN_DIR/installer" || exit 3
 
 mkdir -p /tmp/test106 &&
     cd /tmp/test106 &&

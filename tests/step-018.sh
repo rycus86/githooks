@@ -17,10 +17,10 @@ git init || exit 1
 
 mkdir -p .githooks &&
     echo 'urls: - file:///tmp/shared/hooks-018.git' >.githooks/.shared.yaml &&
-    "$GITHOOKS_BIN_DIR/cli" shared update ||
+    "$GITHOOKS_TEST_BIN_DIR/cli" shared update ||
     exit 1
 
-"$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+"$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected to fail on shared hook execution"

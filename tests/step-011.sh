@@ -18,7 +18,7 @@ git config --unset githooks.runner
 
 mkdir -p .githooks/pre-commit &&
     echo 'echo "Direct execution" > /tmp/test011.out' >.githooks/pre-commit/test &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 grep -q 'Direct execution' /tmp/test011.out

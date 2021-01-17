@@ -17,12 +17,12 @@ mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
 
 git init || exit 1
 
-if ! "$GITHOOKS_BIN_DIR/installer"; then
+if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
     echo "! Installation failed"
     exit 1
 fi
 
-if ! "$GITHOOKS_BIN_DIR/cli" install; then
+if ! "$GITHOOKS_TEST_BIN_DIR/cli" install; then
     echo "! Install into current repo failed"
     exit 1
 fi

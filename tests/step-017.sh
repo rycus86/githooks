@@ -10,7 +10,7 @@ mkdir -p .githooks/pre-commit &&
     echo '#!/bin/sh' >.git/hooks/pre-commit.replaced.githook &&
     echo 'echo "Previous hook" >> /tmp/test017.out' >>.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1
 
 if ! grep -q 'Direct execution' /tmp/test017.out; then

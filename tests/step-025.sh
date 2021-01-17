@@ -11,7 +11,7 @@ mkdir -p .githooks &&
     echo "#!/bin/sh" >.git/hooks/pre-commit.replaced.githook &&
     echo 'exit 1' >>.git/hooks/pre-commit.replaced.githook &&
     chmod +x .git/hooks/pre-commit.replaced.githook &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
 
 if [ $? -ne 1 ]; then
     echo "! Expected the hooks to fail"
@@ -19,5 +19,5 @@ if [ $? -ne 1 ]; then
 fi
 
 printf 'patterns:\n   - "**/*.replaced.githook"' >.git/.githooks.ignore.yaml &&
-    "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
+    "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit ||
     exit 1

@@ -9,7 +9,7 @@ git config --global githooks.autoUpdateEnabled true || exit 1
 
 OUTPUT=$(
     ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
-        "$GITHOOKS_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
+        "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then

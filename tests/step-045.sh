@@ -16,7 +16,7 @@ echo "n
 y
 /tmp/test045
 s
-" | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+" | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 if ! grep "github.com/rycus86/githooks" /tmp/test045/001/.git/hooks/pre-commit; then
     echo "! Hooks were not installed into 001"

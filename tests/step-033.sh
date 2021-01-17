@@ -5,7 +5,7 @@
 mkdir -p /tmp/test33/a && cd /tmp/test33/a || exit 1
 git init || exit 1
 
-"$GITHOOKS_BIN_DIR/installer" --dry-run --non-interactive || exit 1
+"$GITHOOKS_TEST_BIN_DIR/installer" --dry-run --non-interactive || exit 1
 
 mkdir -p /tmp/test33/b && cd /tmp/test33/b || exit 1
 git init || exit 1

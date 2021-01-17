@@ -2,7 +2,7 @@
 # Test:
 #   Run the cli tool trying to list a not yet trusted repo
 
-if ! "$GITHOOKS_BIN_DIR/installer"; then
+if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi

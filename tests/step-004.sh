@@ -21,7 +21,7 @@ fi
 echo 'n
 y
 /tmp/test4
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 if ! grep -r 'github.com/rycus86/githooks' /tmp/test4/p001/.git/hooks; then
     echo "! Hooks were not installed successfully"

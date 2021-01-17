@@ -10,14 +10,14 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo 'n
 y
 
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 else
     echo 'n
 n
 y
 
-' | "$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
 
 fi
 
