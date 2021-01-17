@@ -119,7 +119,7 @@ func GetAllHooksIn(
 
 		trusted := false
 		sha := ""
-		var runCmd []string
+		var runCmd cm.Executable
 
 		if !ignored || !lazyIfIgnored {
 			trusted, sha = isTrusted(hookPath)
@@ -132,7 +132,7 @@ func GetAllHooksIn(
 
 		allHooks = append(allHooks,
 			Hook{
-				Executable:    cm.Executable{Path: hookPath, RunCmd: runCmd},
+				Executable:    runCmd,
 				NamespacePath: namespacedPath,
 				Active:        !ignored,
 				Trusted:       trusted,

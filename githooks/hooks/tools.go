@@ -24,13 +24,7 @@ func GetToolScript(installDir string, tool string) (cm.IExecutable, error) {
 		return nil, nil
 	}
 
-	runCmd, err := GetToolRunCmd(tool)
+	runCmd, err := GetHookRunCmd(tool)
 
-	return &cm.Executable{Path: tool, RunCmd: runCmd}, err
-}
-
-// GetToolRunCmd gets the command string for the tool `toolPath`.
-// It returns the command arguments which is `nil` if its an executable.
-func GetToolRunCmd(toolPath string) ([]string, error) {
-	return GetHookRunCmd(toolPath)
+	return &runCmd, err
 }

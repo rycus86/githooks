@@ -11,29 +11,37 @@ import (
 
 // GetHookRunCmd gets the command string for the hook `hookPath`.
 // It returns the command arguments which is `nil` if its an executable.
-func GetHookRunCmd(hookPath string) ([]string, error) {
+func GetHookRunCmd(hookPath string) (exec cm.Executable, err error) {
+	exec.Path = hookPath
+
 	if cm.IsExecutable(hookPath) {
-		return nil, nil
+		return
 	}
 
 	runnerFile := hookPath + ".runner"
 
-	if cm.IsFile(runnerFile) {
-		content, e := ioutil.ReadFile(runnerFile)
-		if e != nil {
-			return nil, cm.ErrorF("Could not read runner file '%s'", runnerFile)
-		}
-
-		args, e := shlex.Split(replaceEnvVariables(string(content)))
-		if e != nil {
-			return nil, cm.ErrorF("Could not parse runner file '%s'", runnerFile)
-		}
-
-		return args, nil
+	if !cm.IsFile(runnerFile) {
+		// It does not exists -> get the default runner.
+		return GetDefaultRunner(hookPath), nil
 	}
 
-	// It does not exists -> default is the shell interpreter.
-	return defaultRunner, nil
+	content, e := ioutil.ReadFile(runnerFile)
+	if e != nil {
+		err = cm.CombineErrors(err, cm.ErrorF("Could not read runner file '%s'", runnerFile))
+
+		return
+	}
+
+	args, e := shlex.Split(replaceEnvVariables(string(content)))
+	if e != nil {
+		err = cm.CombineErrors(err, cm.ErrorF("Could not parse runner file '%s'", runnerFile))
+
+		return
+	}
+
+	exec.RunCmd = args
+
+	return
 }
 
 var reEnvVariable = regexp.MustCompile(`\$?\$(\{[a-zA-Z]\w*\}|[a-zA-Z]\w*)`)

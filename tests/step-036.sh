@@ -10,7 +10,7 @@ if [ "$(git config --global --get githooks.autoUpdateEnabled)" != "true" ]; then
     exit 1
 fi
 
-OUTPUT=$("$GH_TEST_BIN/installer" --stdin 2>&1)
+OUTPUT=$("$GH_TEST_BIN/installer" 2>&1)
 
 # shellcheck disable=SC2181
 if [ $? -ne 0 ] || echo "$OUTPUT" | grep -qi "automatic update checks"; then

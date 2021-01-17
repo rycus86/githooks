@@ -7,7 +7,7 @@ git config --global user.email "githook@test.com" &&
     git config --global init.defaultBranch master &&
     git config --global core.autocrlf false || exit 1
 
-ROOT_DIR="C:/Program Files/githooks-tests"
+ROOT_DIR="C:/githooks-tests"
 export GH_TESTS="$ROOT_DIR/tests"
 export GH_TEST_REPO="$ROOT_DIR/githooks"
 export GH_TEST_TMP="$ROOT_DIR/tmp"
