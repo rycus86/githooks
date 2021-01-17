@@ -19,6 +19,7 @@ ENV GH_TESTS="/var/lib/githooks-tests"
 ENV GH_TEST_REPO="/var/lib/githooks"
 ENV GH_TEST_TMP="/tmp"
 ENV GH_TEST_BIN="/var/lib/githooks/githooks/bin"
+ENV GH_TEST_GIT_CORE="/usr/share/git-core"
 
 ${ADDITIONAL_PRE_INSTALL_STEPS:-}
 

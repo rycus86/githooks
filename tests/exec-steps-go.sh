@@ -25,9 +25,9 @@ export GITHOOKS_INSTALL_BIN_DIR="$HOME/.githooks/bin"
 COMMIT_BEFORE=$(cd "$GH_TEST_REPO" && git rev-parse HEAD)
 
 cleanDirs() {
-    if [ -w /usr/share/git-core ]; then
-        mkdir -p /usr/share/git-core/templates/hooks
-        rm -rf /usr/share/git-core/templates/hooks/*
+    if [ -w "$GH_TEST_GIT_CORE" ]; then
+        mkdir -p "$GH_TEST_GIT_CORE/templates/hooks"
+        rm -rf "$GH_TEST_GIT_CORE/templates/hooks/*"
     fi
 
     rm -rf ~/test* >/dev/null 2>&1

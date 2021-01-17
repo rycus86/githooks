@@ -59,7 +59,7 @@ func runSharedAdd(ctx *ccm.CmdContext, opts *SharedOpts, remove bool, url string
 		if modified {
 			ctx.Log.InfoF(t2+" shared hooks list '%s'.", url, hooks.GetRepoSharedFileRel())
 		} else {
-			ctx.Log.InfoF("Shared hooks url '%s' in '%s' does not exist.", url, hooks.GetRepoSharedFileRel())
+			ctx.Log.WarnF("Shared hooks url '%s' in '%s' does not exist.", url, hooks.GetRepoSharedFileRel())
 		}
 
 	case opts.Local:
@@ -69,7 +69,7 @@ func runSharedAdd(ctx *ccm.CmdContext, opts *SharedOpts, remove bool, url string
 		if modified {
 			ctx.Log.InfoF(t2+" local shared hooks.", url)
 		} else {
-			ctx.Log.InfoF("Local shared hooks url '%s' does not exist.", url)
+			ctx.Log.WarnF("Local shared hooks url '%s' does not exist.", url)
 		}
 
 	case opts.Global:
@@ -78,7 +78,7 @@ func runSharedAdd(ctx *ccm.CmdContext, opts *SharedOpts, remove bool, url string
 		if modified {
 			ctx.Log.InfoF(t2+" global shared hooks.", url)
 		} else {
-			ctx.Log.InfoF("Global shared hooks url '%s' does not exist.", url)
+			ctx.Log.WarnF("Global shared hooks url '%s' does not exist.", url)
 		}
 
 	}

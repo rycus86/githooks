@@ -12,6 +12,7 @@ export GH_TESTS="$ROOT_DIR/tests"
 export GH_TEST_REPO="$ROOT_DIR/githooks"
 export GH_TEST_TMP="$ROOT_DIR/tmp"
 export GH_TEST_BIN="$GH_TEST_REPO/githooks/bin"
+export GH_TEST_GIT_CORE="C:/Program Files/Git/mingw64/share/git-core"
 
 if [ -d "$ROOT_DIR" ]; then
     echo "! You need to delete '$ROOT_DIR' first."

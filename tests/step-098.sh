@@ -6,7 +6,7 @@
 mkdir -p "$GH_TEST_TMP/test098/.git/hooks" &&
     cd "$GH_TEST_TMP/test098" &&
     git init &&
-    "$GH_TEST_BIN/installer" --stdin &&
+    "$GH_TEST_BIN/installer" &&
     git config githooks.autoUpdateEnabled false ||
     exit 1
 

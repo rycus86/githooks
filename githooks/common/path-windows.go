@@ -56,7 +56,6 @@ func IsWritable(path string) bool {
 		return false
 	}
 
-	err = nil
 	if !info.IsDir() {
 		return false
 	}

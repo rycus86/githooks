@@ -11,7 +11,7 @@ install: skip
 jobs:
   include:
   - os: windows
-    env: TEST_INSTANCE=test-windows
+    env: TEST_INSTANCE=test-windows-go
   - os: linux
     env: TEST_INSTANCE=test-alpine-go
   - os: linux

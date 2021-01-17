@@ -2,7 +2,7 @@
 # Test:
 #   Run an install that preserves an existing hook in the templates directory
 
-cd /usr/share/git-core/templates/hooks &&
+cd "$GH_TEST_GIT_CORE/templates/hooks" &&
     echo '#!/bin/sh' >>pre-commit &&
     echo "echo 'Previous' >> '$GH_TEST_TMP/test-008.out'" >>pre-commit &&
     chmod +x pre-commit ||
@@ -10,7 +10,7 @@ cd /usr/share/git-core/templates/hooks &&
 
 "$GH_TEST_BIN/installer" || exit 1
 
-ls -al /usr/share/git-core/templates/hooks
+ls -al "$GH_TEST_GIT_CORE/templates/templates/hooks"
 
 mkdir -p "$GH_TEST_TMP/test8/.githooks/pre-commit" &&
     cd "$GH_TEST_TMP/test8" &&

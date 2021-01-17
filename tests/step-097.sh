@@ -15,7 +15,7 @@ MANAGED_HOOK_NAMES="
 mkdir -p "$GH_TEST_TMP/test097/.git/hooks" &&
     cd "$GH_TEST_TMP/test097" &&
     git init &&
-    "$GH_TEST_BIN/installer" --stdin &&
+    "$GH_TEST_BIN/installer" &&
     git config githooks.autoUpdateEnabled false ||
     exit 1
 
@@ -37,6 +37,7 @@ for STAGED in \${STAGED_FILES}; do
     echo "\${STAGED}" >> "$GH_TEST_TMP/test097.out"
 done
 EOF
+
 done
 
 echo "test" >testing.txt

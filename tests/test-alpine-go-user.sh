@@ -11,8 +11,8 @@ EOF
 # shellcheck disable=SC2016,SC1004
 export ADDITIONAL_PRE_INSTALL_STEPS='
 RUN adduser -D -u 1099 test && \
-    mkdir -p "$GH_TEST_REPO" /usr/share/git-core/templates/hooks && \
-    chown -R test:test "$GH_TEST_REPO" /usr/share/git-core
+    mkdir -p "$GH_TEST_REPO" "$GH_TEST_GIT_CORE/templates/hooks" && \
+    chown -R test:test "$GH_TEST_REPO" "$GH_TEST_GIT_CORE"
 USER test
 '
 

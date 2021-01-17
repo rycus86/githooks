@@ -9,7 +9,7 @@ fi
 
 # move the built-in git template folder
 mkdir -p "$GH_TEST_TMP/git-templates" &&
-    mv /usr/share/git-core/templates "$GH_TEST_TMP/git-templates/" &&
+    mv "$GH_TEST_GIT_CORE/templates" "$GH_TEST_TMP/git-templates/" &&
     rm -f "$GH_TEST_TMP/git-templates/templates/hooks/"* &&
     touch "$GH_TEST_TMP/git-templates/templates/hooks/pre-commit.sample" ||
     exit 1

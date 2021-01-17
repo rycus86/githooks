@@ -7,7 +7,7 @@ if [ "$(id -u)" != "0" ] || ! echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hoo
     exit 249
 fi
 
-rm -rf /usr/share/git-core/templates/hooks || exit 1
+rm -rf "$GH_TEST_GIT_CORE/templates/hooks" || exit 1
 
 "$GH_TEST_BIN/installer" --non-interactive || exit 1
 

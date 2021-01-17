@@ -833,7 +833,7 @@ func installBinaries(
 
 	msg := strs.Map(binaries, func(s string) string { return strs.Fmt(" • '%s'", path.Base(s)) })
 	if dryRun {
-		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg)
+		log.InfoF("[dry run] Would install binaries:\n%s\n"+"to '%s'.", msg, binDir)
 		return // nolint:nlreturn
 	}
 

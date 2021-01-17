@@ -8,7 +8,7 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
 fi
 
 # delete the built-in git template folder
-rm -rf /usr/share/git-core/templates || exit 1
+rm -rf "$GH_TEST_GIT_CORE/templates" || exit 1
 
 # run the install, and let it search for the templates
 echo 'n
