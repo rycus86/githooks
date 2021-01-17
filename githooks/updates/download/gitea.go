@@ -11,8 +11,9 @@ import (
 
 // The deploy settings for Gitea.
 type GiteaDeploySettings struct {
-	APIUrl string // API url of the Gitea service.
 	RepoSettings
+	APIUrl string // API url of the Gitea service.
+
 	// If empty, the internal Githooks binary
 	// embedded PGP is taken from `.deploy.pgp`.
 	PublicPGP string

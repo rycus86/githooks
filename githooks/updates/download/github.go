@@ -18,6 +18,7 @@ type RepoSettings struct {
 // The deploy settings for Github.
 type GithubDeploySettings struct {
 	RepoSettings
+
 	// If empty, the internal Githooks binary
 	// embedded PGP is taken from `.deploy.pgp`.
 	PublicPGP string

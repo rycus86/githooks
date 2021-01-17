@@ -15,12 +15,17 @@ import (
 type LocalDeploySettings struct {
 	// Path template string which can contain
 	// - `{{VersionTag}}` : The version tag to download.
+	// - `{{Version}}` : The version to download (removed prefix 'v' of `VersionTag`).
 	// - `{{Os}}` : The `runtime.GOOS` variable with the operating system.
 	// - `{{Arch}}` : The `runtime.GOARCH` for type architecture.
 	// pointing to the compressed archive of the Githooks binaries.
-	// in the same directory need to be a checksum file
+	// In the same directory need to be a checksum file
+	// `githooks.checksums`
 	// and a checksum signature file.
+	// `githooks.checksums.sig` which is validated using
+	// the `PublicPGP`.
 	PathTemplate string
+
 	// If empty, the internal Githooks binary
 	// embedded PGP is taken from `.deploy.pgp`.
 	PublicPGP string
@@ -35,10 +40,12 @@ func (s *LocalDeploySettings) Download(versionTag string, dir string) error {
 	var buf bytes.Buffer
 	err := pathTmpl.Execute(&buf, struct {
 		VersionTag string
+		Version    string
 		Os         string
 		Arch       string
 	}{
 		VersionTag: versionTag,
+		Version:    strings.TrimPrefix(versionTag, "v"),
 		Os:         runtime.GOOS,
 		Arch:       runtime.GOARCH,
 	})
@@ -80,7 +87,8 @@ func (s *LocalDeploySettings) Download(versionTag string, dir string) error {
 	// Validate checksum.
 	err = checkChecksum(targetFile, checksumBytes)
 	if err != nil {
-		return cm.CombineErrors(err, cm.ErrorF("Checksum validation failed."))
+		return cm.CombineErrors(err,
+			cm.ErrorF("Checksum validation failed."))
 	}
 
 	// Extract the file.

@@ -166,7 +166,7 @@ func FetchUpdates(
 		}
 
 		if checkRemote {
-			u, b, e := gitx.GetRemoteURLAndBranch(defaultRemote)
+			u, b, e := gitx.GetRemoteURLAndBranch(DefaultRemote)
 
 			if e != nil {
 				return false, cm.CombineErrors(cm.ErrorF(
@@ -187,7 +187,7 @@ func FetchUpdates(
 						"    'git hooks config [set|print] clone-branch'\n"+
 						"Either fix this or delete the clone\n"+
 						"'%[1]s'\n"+
-						"to trigger a new checkout.", gitx.Cwd, u, b, url, branch, defaultRemote)
+						"to trigger a new checkout.", gitx.Cwd, u, b, url, branch, DefaultRemote)
 				}
 
 				// Do a reclone
@@ -205,7 +205,7 @@ func FetchUpdates(
 		url = cURL
 	}
 	if strs.IsEmpty(url) {
-		url = DefaultURL
+		url = GetDefaultCloneURL()
 	}
 
 	// Fallback for branch.
@@ -213,7 +213,7 @@ func FetchUpdates(
 		branch = cBranch
 	}
 	if strs.IsEmpty(branch) {
-		branch = DefaultBranch
+		branch = GetDefaultCloneBranch()
 	}
 
 	// Fetch or clone the repository:
@@ -272,8 +272,8 @@ func FetchUpdates(
 		}
 	}
 
-	remoteBranch := defaultRemote + "/" + branch
-	status, err = getStatus(gitx, url, defaultRemote, branch, remoteBranch, skipPrerelease)
+	remoteBranch := DefaultRemote + "/" + branch
+	status, err = getStatus(gitx, url, DefaultRemote, branch, remoteBranch, skipPrerelease)
 
 	status.IsNewClone = isNewClone
 	if status.IsUpdateAvailable {
@@ -299,7 +299,7 @@ func GetStatus(cloneDir string, checkRemote, skipPrerelease bool) (status Releas
 	gitx := git.CtxCSanitized(cloneDir)
 
 	var url, branch string
-	url, branch, err = gitx.GetRemoteURLAndBranch(defaultRemote)
+	url, branch, err = gitx.GetRemoteURLAndBranch(DefaultRemote)
 	cm.DebugAssert(strs.IsNotEmpty(url) &&
 		strs.IsNotEmpty(branch), "Wrong output!")
 	if err != nil {
@@ -329,9 +329,9 @@ func GetStatus(cloneDir string, checkRemote, skipPrerelease bool) (status Releas
 		}
 	}
 
-	remoteBranch := defaultRemote + "/" + branch
+	remoteBranch := DefaultRemote + "/" + branch
 
-	return getStatus(gitx, url, defaultRemote, branch, remoteBranch, skipPrerelease)
+	return getStatus(gitx, url, DefaultRemote, branch, remoteBranch, skipPrerelease)
 }
 
 func getStatus(
