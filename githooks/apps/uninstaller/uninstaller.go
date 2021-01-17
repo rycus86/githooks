@@ -256,7 +256,7 @@ func cleanSharedClones(installDir string) {
 }
 
 func deleteDir(dir string, tempDir string) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == cm.WindowsOsName {
 		// On Windows we cannot move binaries which we execute at the moment.
 		// We move everything to a new random folder inside tempDir
 		// and notify the user.

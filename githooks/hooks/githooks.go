@@ -200,8 +200,8 @@ func CleanTemporaryDir(installDir string) (string, error) {
 // GetRunnerExecutable gets the installed Githooks runner executable.
 func GetRunnerExecutable(installDir string) (p string) {
 	p = path.Join(GetBinaryDir(installDir), "runner")
-	if runtime.GOOS == "windows" { //nolint: goconst
-		p += ".exe" //nolint: goconst
+	if runtime.GOOS == cm.WindowsOsName {
+		p += cm.WindowsExecutableSuffix
 	}
 
 	return
@@ -210,8 +210,8 @@ func GetRunnerExecutable(installDir string) (p string) {
 // GetInstallerExecutable gets the global Githooks installer executable.
 func GetInstallerExecutable(installDir string) (p string) {
 	p = path.Join(GetBinaryDir(installDir), "installer")
-	if runtime.GOOS == "windows" { //nolint: goconst
-		p += ".exe" //nolint: goconst
+	if runtime.GOOS == cm.WindowsOsName {
+		p += cm.WindowsExecutableSuffix
 	}
 
 	return
@@ -220,16 +220,21 @@ func GetInstallerExecutable(installDir string) (p string) {
 // GetUninstallerExecutable gets the global Githooks installer executable.
 func GetUninstallerExecutable(installDir string) (p string) {
 	p = path.Join(GetBinaryDir(installDir), "uninstaller")
-	if runtime.GOOS == "windows" { //nolint: goconst
-		p += ".exe" //nolint: goconst
+	if runtime.GOOS == cm.WindowsOsName {
+		p += cm.WindowsExecutableSuffix
 	}
 
 	return
 }
 
 // GetCLIExecutable gets the global Githooks CLI executable.
-func GetCLIExecutable(installDir string) string {
-	return path.Join(GetBinaryDir(installDir), "cli")
+func GetCLIExecutable(installDir string) (p string) {
+	p = path.Join(GetBinaryDir(installDir), "cli")
+	if runtime.GOOS == cm.WindowsOsName {
+		p += cm.WindowsExecutableSuffix
+	}
+
+	return
 }
 
 // SetRunnerExecutableAlias sets the global Githooks runner executable.

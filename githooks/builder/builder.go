@@ -142,8 +142,8 @@ func Build(repoPath string, buildTags []string) (string, error) {
 	// Compile everything.
 	cmd := []string{"install", "-mod=vendor"}
 
-	if runtime.GOOS == "windows" {
-		buildTags = append(buildTags, "windows")
+	if runtime.GOOS == cm.WindowsOsName {
+		buildTags = append(buildTags, cm.WindowsOsName)
 	}
 
 	if len(buildTags) != 0 {

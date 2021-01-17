@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path"
+	"runtime"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"rycus86/githooks/updates"
@@ -30,13 +31,16 @@ func downloadBinaries(
 
 	log.Info("Faking download: taking from '%s'.", bin)
 
-	others := []string{
-		path.Join(tempDir, "cli"),
-		path.Join(tempDir, "runner"),
-		path.Join(tempDir, "uninstaller")}
-	installer := path.Join(tempDir, "installer")
+	ext := ""
+	if runtime.GOOS == cm.WindowsOsName {
+		ext = cm.WindowsExecutableSuffix
+	}
 
-	all := append(others, installer)
+	all := []string{
+		path.Join(tempDir, "installer"+ext),
+		path.Join(tempDir, "uninstaller"+ext),
+		path.Join(tempDir, "cli"+ext),
+		path.Join(tempDir, "runner"+ext)}
 
 	for _, exe := range all {
 		src := path.Join(bin, path.Base(exe))
@@ -44,8 +48,5 @@ func downloadBinaries(
 		cm.AssertNoErrorPanicF(err, "Copy from '%s' to '%s' failed.", src, exe)
 	}
 
-	return updates.Binaries{
-		Installer: installer,
-		Others:    others,
-		All:       all}
+	return updates.Binaries{All: all, Installer: all[0], Others: all[1:]}
 }

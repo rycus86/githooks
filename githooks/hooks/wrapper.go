@@ -202,7 +202,7 @@ func InstallRunWrappers(
 			// But on Windows, an opened file (mostly) cannot be deleted.
 			// it might work, but is ugly.
 
-			if runtime.GOOS == "windows" {
+			if runtime.GOOS == cm.WindowsOsName {
 				backupDir, err := assertHookDirTemp(dir)
 				if err != nil {
 					return cm.CombineErrors(err,

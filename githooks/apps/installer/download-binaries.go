@@ -106,8 +106,8 @@ func downloadBinaries(
 	log.AssertNoErrorPanicF(err, "Could not download binaries.")
 
 	ext := ""
-	if runtime.GOOS == "windows" {
-		ext = ".exe"
+	if runtime.GOOS == cm.WindowsOsName {
+		ext = cm.WindowsExecutableSuffix
 	}
 
 	all := []string{

@@ -410,7 +410,6 @@ func prepareDispatch(settings *Settings, args *Arguments) bool {
 				status.RemoteCommitSHA)
 
 		} else {
-
 			tag := status.UpdateTag
 			if strs.IsEmpty(tag) {
 				tag = status.LocalTag
