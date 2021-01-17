@@ -12,10 +12,8 @@ EOF
 
 # shellcheck disable=SC2016
 export ADDITIONAL_INSTALL_STEPS='
-# add a space in paths and wrap in double-quotes
-RUN find "$GITHOOKS_TESTS_DIR" -name "*.sh" -exec sed -i -E "s|/tmp/test([0-9.]+)|\"/tmp/test \1\"|g" {} \;
-# remove the double-quotes if the path is the only thing on the whole line
-RUN find "$GITHOOKS_TESTS_DIR" -name "*.sh" -exec sed -i -E "s|^\"/tmp/test([^\"]+)\"|/tmp/test\1|g" {} \;
+# add a space in paths
+RUN find "$GH_TESTS" -name "*.sh" -exec sed -i -E "s|GH_TEST_TMP/test([0-9.]+)|GH_TEST_TMP/test \1|g" {} \;
 '
 
 exec sh "$TEST_DIR"/exec-tests-go.sh 'alpine-lfs-go-whitespace' "$@"

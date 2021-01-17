@@ -2,14 +2,14 @@
 # Test:
 #   Cli tool: list shows ignored files
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test059/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test059/.githooks/pre-commit/first &&
-    echo 'echo "Hello"' >/tmp/test059/.githooks/pre-commit/second &&
-    echo 'patterns: - pre-commit/first' >/tmp/test059/.githooks/.ignore.yaml &&
-    echo 'patterns: - pre-commit/second' >/tmp/test059/.githooks/pre-commit/.ignore.yaml &&
-    cd /tmp/test059 &&
+mkdir -p "$GH_TEST_TMP/test059/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test059/.githooks/pre-commit/first" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test059/.githooks/pre-commit/second" &&
+    echo 'patterns: - pre-commit/first' >"$GH_TEST_TMP/test059/.githooks/.ignore.yaml" &&
+    echo 'patterns: - pre-commit/second' >"$GH_TEST_TMP/test059/.githooks/pre-commit/.ignore.yaml" &&
+    cd "$GH_TEST_TMP/test059" &&
     git init ||
     exit 1
 

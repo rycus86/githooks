@@ -5,7 +5,7 @@ package updates
 import "os"
 
 // DefaultURL is the default remote url for release clones.
-var defaultURL = os.Getenv("GITHOOKS_TEST_REPO")
+var defaultURL = os.Getenv("GH_TEST_REPO")
 
 // DefaultBranch is the default branch for release clones.
 var defaultBranch = ""

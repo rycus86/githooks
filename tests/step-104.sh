@@ -2,21 +2,21 @@
 # Test:
 #   Cli tool: run the dialog tool
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test104/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test104/.githooks/pre-commit/testing &&
-    cd /tmp/test104 &&
+mkdir -p "$GH_TEST_TMP/test104/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test104/.githooks/pre-commit/testing" &&
+    cd "$GH_TEST_TMP/test104" &&
     git init ||
     exit 1
 
 mkdir tool
 cat <<EOF >tool/run
 #!/bin/sh
-echo "Written for testing" > /tmp/test104/output
+echo "Written for testing" > "$GH_TEST_TMP/test104/output"
 # printf "Dialog Tool Prompt: %s %s [%s]:" "\$1" "\$2" "\$3"
 echo "Y" # Return always Yes
 EOF
@@ -39,7 +39,7 @@ if ! git commit -m "Test"; then
     exit 7
 fi
 
-if ! grep -q "Written for testing" /tmp/test104/output; then
+if ! grep -q "Written for testing" "$GH_TEST_TMP/test104/output"; then
     echo "! Expected output not found"
     exit 8
 fi
@@ -48,7 +48,7 @@ fi
 
 cat <<EOF >tool/run
 #!/bin/sh
-echo "Written for testing" > /tmp/test104/output-fail
+echo "Written for testing" > "$GH_TEST_TMP/test104/output-fail"
 # printf "Dialog Tool Prompt: %s %s [%s]:" "\$1" "\$2" "\$3"
 echo "Y" # Return always Yes
 exit 1 # fall back to stdin prompt...
@@ -67,7 +67,7 @@ if ! echo "$OUTPUT" | grep -q "Do you accept the changes?"; then
     exit 11
 fi
 
-if ! grep -q "Written for testing" /tmp/test104/output-fail; then
+if ! grep -q "Written for testing" "$GH_TEST_TMP/test104/output-fail"; then
     echo "! Expected output not found"
     exit 8
 fi

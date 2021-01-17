@@ -17,7 +17,7 @@ func AllowLocalURLInRepoSharedHooks() bool {
 
 // GetDefaultCloneURL returns the default clone url.
 func GetDefaultCloneURL() string {
-	return os.Getenv("GITHOOKS_TEST_REPO")
+	return os.Getenv("GH_TEST_REPO")
 }
 
 // GetDefaultCloneBranch returns the default clone branch name.

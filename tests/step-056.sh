@@ -2,12 +2,12 @@
 # Test:
 #   Cli tool: disable a hook
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test056/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test056/.githooks/pre-commit/first &&
-    echo 'echo "Hello"' >/tmp/test056/.githooks/pre-commit/second &&
-    cd /tmp/test056 &&
+mkdir -p "$GH_TEST_TMP/test056/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test056/.githooks/pre-commit/first" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test056/.githooks/pre-commit/second" &&
+    cd "$GH_TEST_TMP/test056" &&
     git init ||
     exit 1
 

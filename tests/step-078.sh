@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: enable/disable auto updates
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi

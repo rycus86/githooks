@@ -2,12 +2,12 @@
 # Test:
 #   Cli tool: enable a hook
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test057/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test057/.githooks/pre-commit/first &&
-    echo 'echo "Hello"' >/tmp/test057/.githooks/pre-commit/second &&
-    cd /tmp/test057 &&
+mkdir -p "$GH_TEST_TMP/test057/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test057/.githooks/pre-commit/first" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test057/.githooks/pre-commit/second" &&
+    cd "$GH_TEST_TMP/test057" &&
     git init ||
     exit 1
 

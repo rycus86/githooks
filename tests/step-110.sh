@@ -4,26 +4,26 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test110/hooks &&
-    mkdir -p /tmp/test110/server &&
-    mkdir -p /tmp/test110/local || exit 1
+mkdir -p "$GH_TEST_TMP/test110/hooks" &&
+    mkdir -p "$GH_TEST_TMP/test110/server" &&
+    mkdir -p "$GH_TEST_TMP/test110/local" || exit 1
 
 # Hooks
-cd /tmp/test110/hooks && git init || exit 1
+cd "$GH_TEST_TMP/test110/hooks" && git init || exit 1
 "$GITHOOKS_INSTALL_BIN_DIR/cli" config disable --set || exit 1
 
 # Server
-cd /tmp/test110/server && git init --bare || exit 1
+cd "$GH_TEST_TMP/test110/server" && git init --bare || exit 1
 # Repo
-git clone /tmp/test110/server /tmp/test110/local || exit 1
+git clone "$GH_TEST_TMP/test110/server" "$GH_TEST_TMP/test110/local" || exit 1
 
 echo "Setup hooks"
-cd /tmp/test110/hooks || exit 1
+cd "$GH_TEST_TMP/test110/hooks" || exit 1
 mkdir -p ".githooks/update"
 HOOK=".githooks/update/testhook"
 echo "#!/bin/sh" >"$HOOK"
@@ -34,15 +34,15 @@ git add "$HOOK" || exit 1
 git commit -a -m "Hooks" || exit 1
 
 echo "Setup shared hook in server repo"
-cd /tmp/test110/server || exit 1
-"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add file:///tmp/test110/hooks || exit 1
+cd "$GH_TEST_TMP/test110/server" || exit 1
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add file://"$GH_TEST_TMP/test110/hooks" || exit 1
 echo "Setup shared hook in server repo: set trusted"
 "$GITHOOKS_INSTALL_BIN_DIR/cli" config trusted --accept || exit 1
 echo "Setup shared hook in server repo: update shared"
 "$GITHOOKS_INSTALL_BIN_DIR/cli" shared update || exit 1
 
 echo "Test hook from push"
-cd /tmp/test110/local || exit 1
+cd "$GH_TEST_TMP/test110/local" || exit 1
 echo "Test" >Test
 git add Test || exit 1
 git commit -a -m "First" || exit 1
@@ -57,16 +57,16 @@ if [ $? -eq 0 ] || ! echo "$OUTPUT" | grep -q "Update hook run"; then
 fi
 
 echo "Modify hook to succeed"
-cd /tmp/test110/hooks || exit 1
+cd "$GH_TEST_TMP/test110/hooks" || exit 1
 sed -i 's/exit 1/exit 0/g' "$HOOK"
 git commit -a -m "Make hook succeed"
 
 echo "Update hooks"
-cd /tmp/test110/server || exit 1
+cd "$GH_TEST_TMP/test110/server" || exit 1
 "$GITHOOKS_INSTALL_BIN_DIR/cli" shared update || exit 1
 
 echo "Push hook to succeed"
-cd /tmp/test110/local || exit 1
+cd "$GH_TEST_TMP/test110/local" || exit 1
 OUTPUT=$(git push 2>&1)
 
 # shellcheck disable=SC2181

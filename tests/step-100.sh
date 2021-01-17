@@ -21,7 +21,7 @@ fi
 echo 'n
 y
 
-' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin --skip-install-into-existing || exit 1
+' | "$GH_TEST_BIN/installer" --stdin --skip-install-into-existing || exit 1
 
 if grep -r 'github.com/rycus86/githooks' ~/test100/; then
     echo "! Hooks were installed but shouldn't have"
@@ -32,7 +32,7 @@ fi
 echo 'n
 y
 
-' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin
+' | "$GH_TEST_BIN/installer" --stdin
 
 if ! grep -r 'github.com/rycus86/githooks' ~/test100/p001/.git/hooks; then
     echo "! Hooks were not installed successfully"

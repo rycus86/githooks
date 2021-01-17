@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: choose to ignore the update (non-single)
 
-mkdir -p /tmp/test076 && cd /tmp/test076 || exit 1
+mkdir -p "$GH_TEST_TMP/test076" && cd "$GH_TEST_TMP/test076" || exit 1
 git init || exit 1
 
 # Reset to trigger update
@@ -10,7 +10,7 @@ git config --global githooks.autoUpdateEnabled true || exit 1
 
 OUTPUT=$(
     ACCEPT_CHANGES=A EXECUTE_UPDATE=N \
-        "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
+        "$GH_TEST_BIN/runner" "$(pwd)"/.git/hooks/post-commit 2>&1
 )
 
 if ! cd ~/.githooks/release && git rev-parse HEAD; then

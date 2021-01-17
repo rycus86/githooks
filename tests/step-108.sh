@@ -2,10 +2,10 @@
 # Test:
 #   Custom install prefix test
 
-TEST_PREFIX_DIR="/tmp/githooks"
+TEST_PREFIX_DIR=""$GH_TEST_TMP/githooks""
 GITHOOKS_INSTALL_BIN_DIR="$TEST_PREFIX_DIR/.githooks/bin"
 
-"$GITHOOKS_TEST_BIN_DIR/installer" --prefix "$TEST_PREFIX_DIR" || exit 1
+"$GH_TEST_BIN/installer" --prefix "$TEST_PREFIX_DIR" || exit 1
 
 if [ ! -d "$TEST_PREFIX_DIR/.githooks" ]; then
     echo "! Expected the install directory to be in \`$TEST_PREFIX_DIR\`"
@@ -26,9 +26,9 @@ if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" --help 2>&1 | grep -q "Githooks installatio
     exit 4
 fi
 
-mkdir -p /tmp/test108/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test108/.githooks/pre-commit/testing &&
-    cd /tmp/test108 &&
+mkdir -p "$GH_TEST_TMP/test108/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test108/.githooks/pre-commit/testing" &&
+    cd "$GH_TEST_TMP/test108" &&
     git init ||
     exit 5
 

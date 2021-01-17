@@ -2,14 +2,14 @@
 # Test:
 #   Run an single-repo install in a directory that is not a Git repository
 
-mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
+mkdir "$GH_TEST_TMP/not-a-git-repo" && cd "$GH_TEST_TMP/not-a-git-repo" || exit 1
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Expected to succeed"
     exit 1
 fi
 
-if "$GITHOOKS_TEST_BIN_DIR/cli" install; then
+if "$GH_TEST_BIN/cli" install; then
     echo "! Install into current repo should have failed"
     exit 1
 fi

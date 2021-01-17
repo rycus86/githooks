@@ -60,7 +60,7 @@ RUN T=$(mktemp); curl -fsSL https://github.com/koalaman/shellcheck/releases/down
 
 # Githooks settings
 ENV GITHOOKS_REPO="/workspaces/githooks"
-ENV GITHOOKS_BIN_DIR="/workspaces/githooks/githooks/bin"
+ENV GH_TEST_BIN="/workspaces/githooks/githooks/bin"
 
 RUN chown -R vscode:vscode "$GOPATH"
 USER vscode

@@ -13,16 +13,16 @@ if [ -n "$LAST_UPDATE" ]; then
     exit 1
 fi
 
-mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
+mkdir -p "$GH_TEST_TMP/start/dir" && cd "$GH_TEST_TMP/start/dir" || exit 1
 
 git init || exit 1
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Installation failed"
     exit 1
 fi
 
-if ! "$GITHOOKS_TEST_BIN_DIR/cli" install; then
+if ! "$GH_TEST_BIN/cli" install; then
     echo "! Install into current repo failed"
     exit 1
 fi

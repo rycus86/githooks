@@ -9,11 +9,11 @@ if git-lfs --version; then
 fi
 
 # run Githooks install
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
 # setup the first repository
-mkdir -p /tmp/test107a/.githooks &&
-    cd /tmp/test107a &&
+mkdir -p "$GH_TEST_TMP/test107a/.githooks" &&
+    cd "$GH_TEST_TMP/test107a" &&
     touch .githooks/.lfs-required &&
     touch .githooks/keep-dir &&
     git init &&
@@ -24,21 +24,21 @@ mkdir -p /tmp/test107a/.githooks &&
 git commit -m "Test commit" || exit 3
 
 # try to clone, which should fail on `post-checkout`
-if git clone /tmp/test107a /tmp/test107b; then
+if git clone "$GH_TEST_TMP/test107a" "$GH_TEST_TMP/test107b"; then
     echo "! Clone was expected to fail on post-checkout"
     exit 4
 fi
 
 # drop the LFS required file from the first repo
-cd /tmp/test107a &&
+cd "$GH_TEST_TMP/test107a" &&
     rm -f .githooks/.lfs-required &&
     git add --all .githooks/.lfs-required &&
     git commit -m "Remove LFS required for now" ||
     exit 5
 
 # try the `clone` again which should now work
-git clone /tmp/test107a /tmp/test107c &&
-    cd /tmp/test107c &&
+git clone "$GH_TEST_TMP/test107a" "$GH_TEST_TMP/test107c" &&
+    cd "$GH_TEST_TMP/test107c" &&
     git checkout -b testing &&
     # add the LFS requirement back
     touch testing &&

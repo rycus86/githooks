@@ -2,12 +2,12 @@
 # Test:
 #   Cli tool: manage ignore files
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test085 && cd /tmp/test085 || exit 1
+mkdir -p "$GH_TEST_TMP/test085" && cd "$GH_TEST_TMP/test085" || exit 1
 git init || exit 2
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" ignore add --repository --pattern "pre-commit/test-root" &&

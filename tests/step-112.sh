@@ -4,26 +4,26 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test112.shared/shared-repo.git/.githooks/pre-commit &&
-    cd /tmp/test112.shared/shared-repo.git &&
+mkdir -p "$GH_TEST_TMP/test112.shared/shared-repo.git/.githooks/pre-commit" &&
+    cd "$GH_TEST_TMP/test112.shared/shared-repo.git" &&
     git init &&
-    echo 'echo "Shared invoked" > /tmp/test112.out' >.githooks/pre-commit/test-shared &&
+    echo "echo 'Shared invoked' > '$GH_TEST_TMP/test112.out'" >.githooks/pre-commit/test-shared &&
     echo "mygagahooks" >.githooks/.namespace &&
     git add .githooks &&
     git commit -m 'Initial commit' ||
     exit 2
 
-mkdir -p /tmp/test112.repo &&
-    cd /tmp/test112.repo &&
+mkdir -p "$GH_TEST_TMP/test112.repo" &&
+    cd "$GH_TEST_TMP/test112.repo" &&
     git init ||
     exit 3
 
-"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add --shared file:///tmp/test112.shared/shared-repo.git || exit 41
+"$GITHOOKS_INSTALL_BIN_DIR/cli" shared add --shared file://"$GH_TEST_TMP/test112.shared/shared-repo.git" || exit 41
 "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list | grep "shared-repo" | grep "'pending'" || exit 42
 "$GITHOOKS_INSTALL_BIN_DIR/cli" shared update || exit 43
 

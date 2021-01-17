@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list hooks for all types of hook sources
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
 url1="ssh://git@github.com/test/repo1.git"
 location1=$("$GITHOOKS_INSTALL_BIN_DIR/cli" shared location "$url1") || exit 1
@@ -36,13 +36,13 @@ mkdir -p "$location3"/post-update &&
     echo 'echo "Hello"' >post-update/shared-pre3 ||
     exit 1
 
-mkdir -p /tmp/test055/.githooks/pre-commit &&
-    mkdir -p /tmp/test055/.githooks/post-commit &&
-    echo 'echo "Hello"' >/tmp/test055/.githooks/pre-commit/local-pre &&
-    echo 'echo "Hello"' >/tmp/test055/.githooks/post-commit/local-post &&
-    echo 'echo "Hello"' >/tmp/test055/.githooks/post-merge &&
-    echo "urls: - $url2" >/tmp/test055/.githooks/.shared.yaml &&
-    cd /tmp/test055 &&
+mkdir -p "$GH_TEST_TMP/test055/.githooks/pre-commit" &&
+    mkdir -p "$GH_TEST_TMP/test055/.githooks/post-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test055/.githooks/pre-commit/local-pre" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test055/.githooks/post-commit/local-post" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test055/.githooks/post-merge" &&
+    echo "urls: - $url2" >"$GH_TEST_TMP/test055/.githooks/.shared.yaml" &&
+    cd "$GH_TEST_TMP/test055" &&
     git init &&
     mkdir -p .git/hooks &&
     echo 'echo "Hello"' >.git/hooks/pre-commit.replaced.githook &&

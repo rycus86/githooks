@@ -2,9 +2,9 @@
 # Test:
 #   Run the cli tool with an invalid subcommand
 
-mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
+mkdir "$GH_TEST_TMP/not-a-git-repo" && cd "$GH_TEST_TMP/not-a-git-repo" || exit 1
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi

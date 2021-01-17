@@ -3,18 +3,18 @@
 #   Git LFS delegation
 
 # shellcheck disable=SC2016
-mkdir -p /tmp/test106-lfs &&
-    echo '#!/bin/sh' >/tmp/test106-lfs/git-lfs &&
-    echo 'echo "lfs-exec:$1" > /tmp/test106/lfs.out' >/tmp/test106-lfs/git-lfs &&
-    chmod +x /tmp/test106-lfs/git-lfs ||
+mkdir -p "$GH_TEST_TMP/test106-lfs" &&
+    echo '#!/bin/sh' >"$GH_TEST_TMP/test106-lfs/git-lfs" &&
+    echo 'echo "lfs-exec:$1" > "$GH_TEST_TMP/test106/lfs.out"' >"$GH_TEST_TMP/test106-lfs/git-lfs" &&
+    chmod +x "$GH_TEST_TMP/test106-lfs/git-lfs" ||
     exit 1
 
-export PATH=/tmp/test106-lfs:"$PATH" || exit 2
+export PATH="$GH_TEST_TMP/test106-lfs:$PATH" || exit 2
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 3
+"$GH_TEST_BIN/installer" || exit 3
 
-mkdir -p /tmp/test106 &&
-    cd /tmp/test106 &&
+mkdir -p "$GH_TEST_TMP/test106" &&
+    cd "$GH_TEST_TMP/test106" &&
     git init &&
     git lfs install ||
     exit 4
@@ -24,9 +24,9 @@ if ! grep -q 'lfs-exec:install' lfs.out; then
     exit 5
 fi
 
-mkdir -p /tmp/test106/.githooks &&
-    echo '#!/bin/sh' >/tmp/test106/.githooks/post-commit &&
-    echo 'echo "Regular hook run" > /tmp/test106/hook.out' >/tmp/test106/.githooks/post-commit ||
+mkdir -p "$GH_TEST_TMP/test106/.githooks" &&
+    echo '#!/bin/sh' >"$GH_TEST_TMP/test106/.githooks/post-commit" &&
+    echo 'echo "Regular hook run" > "$GH_TEST_TMP/test106/hook.out"' >"$GH_TEST_TMP/test106/.githooks/post-commit" ||
     exit 6
 
 git add .githooks &&

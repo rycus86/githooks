@@ -26,8 +26,8 @@ func downloadBinaries(
 	tempDir string,
 	versionTag string) updates.Binaries {
 
-	bin := os.Getenv("GITHOOKS_BIN_DIR")
-	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_BIN_DIR undefined")
+	bin := os.Getenv("GH_TEST_BIN")
+	cm.PanicIf(strs.IsEmpty(bin), "GH_TEST_BIN undefined")
 
 	log.InfoF("Faking download: taking from '%s'.", bin)
 

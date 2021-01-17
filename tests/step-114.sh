@@ -7,13 +7,13 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-mkdir -p /tmp/test114/.githooks/pre-commit &&
-    echo 'echo "Testing 114" > /tmp/test114.out' >/tmp/test114/.githooks/pre-commit/test-hook &&
-    cd /tmp/test114 &&
+mkdir -p "$GH_TEST_TMP/test114/.githooks/pre-commit" &&
+    echo "echo 'Testing 114' > '$GH_TEST_TMP/test114.out'" >"$GH_TEST_TMP/test114/.githooks/pre-commit/test-hook" &&
+    cd "$GH_TEST_TMP/test114" &&
     git init ||
     exit 1
 
-if grep -r 'github.com/rycus86/githooks' /tmp/test114/.git; then
+if grep -r 'github.com/rycus86/githooks' "$GH_TEST_TMP/test114/.git"; then
     echo "! Hooks were installed ahead of time"
     exit 2
 fi
@@ -21,10 +21,10 @@ fi
 mkdir -p ~/.githooks/templates
 
 # run the install, and select installing hooks into existing repos
-echo 'n
+echo "n
 y
-/tmp/test114
-' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin --use-core-hookspath --template-dir ~/.githooks/templates || exit 3
+$GH_TEST_TMP/test114
+" | "$GH_TEST_BIN/installer" --stdin --use-core-hookspath --template-dir ~/.githooks/templates || exit 3
 
 # check if hooks are inside the template folder.
 if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list | grep -q "test-hook"; then
@@ -34,7 +34,7 @@ fi
 
 git add . && git commit -m 'Test commit' || exit 5
 
-if ! grep 'Testing 114' /tmp/test114.out; then
+if ! grep 'Testing 114' "$GH_TEST_TMP/test114.out"; then
     echo "! Expected hook did not run"
     exit 6
 fi

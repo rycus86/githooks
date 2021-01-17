@@ -2,14 +2,14 @@
 # Test:
 #   Cli tool: list pending changes
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test074/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test074/.githooks/pre-commit/testing &&
-    cd /tmp/test074 &&
+mkdir -p "$GH_TEST_TMP/test074/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test074/.githooks/pre-commit/testing" &&
+    cd "$GH_TEST_TMP/test074" &&
     git init ||
     exit 1
 
@@ -28,7 +28,7 @@ if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list pre-commit | grep 'testing' | grep "'a
     exit 1
 fi
 
-echo 'echo "Changed"' >/tmp/test074/.githooks/pre-commit/testing || exit 1
+echo 'echo "Changed"' >"$GH_TEST_TMP/test074/.githooks/pre-commit/testing" || exit 1
 
 if ! "$GITHOOKS_INSTALL_BIN_DIR/cli" list pre-commit | grep 'testing' | grep "'active'" | grep -q "'untrusted'"; then
     echo "! Unexpected list result (2)"

@@ -2,14 +2,14 @@
 # Test:
 #   Run the cli tool trying to list hooks of invalid type
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test072/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test072/.githooks/pre-commit/testing &&
-    cd /tmp/test072 &&
+mkdir -p "$GH_TEST_TMP/test072/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test072/.githooks/pre-commit/testing" &&
+    cd "$GH_TEST_TMP/test072" &&
     git init ||
     exit 1
 

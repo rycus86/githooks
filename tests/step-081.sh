@@ -2,12 +2,12 @@
 # Test:
 #   Cli tool: manage trust settings
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
+mkdir -p "$GH_TEST_TMP/test081" && cd "$GH_TEST_TMP/test081" && git init || exit 1
 
 "$GITHOOKS_INSTALL_BIN_DIR/cli" trust &&
     [ -f .githooks/trust-all ] &&

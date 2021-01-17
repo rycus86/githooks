@@ -13,7 +13,7 @@ OUTPUT=$(
     echo 'n
 y
 /does/not/exist
-' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin 2>&1
+' | "$GH_TEST_BIN/installer" --stdin 2>&1
 )
 
 if ! echo "$OUTPUT" | grep "Answer must be an existing directory"; then

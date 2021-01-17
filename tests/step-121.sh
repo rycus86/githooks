@@ -2,7 +2,7 @@
 # Test:
 #   Direct template execution: test a single pre-commit hook file with a runner script
 
-mkdir -p /tmp/test12 && cd /tmp/test12 || exit 2
+mkdir -p "$GH_TEST_TMP/test12" && cd "$GH_TEST_TMP/test12" || exit 2
 git init || exit 3
 
 launch=".githooks/lau nch" # whitespace is intentional
@@ -18,7 +18,7 @@ mkdir -p .githooks &&
     exit 4
 
 # Execute pre-commit by the runner
-OUT=$(MONKEY="mon key" "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit 2>&1)
+OUT=$(MONKEY="mon key" "$GH_TEST_BIN/runner" "$(pwd)"/.git/hooks/pre-commit 2>&1)
 
 # shellcheck disable=SC2181,SC2016
 if [ "$?" -ne 0 ] || ! echo "$OUT" | grep "Hello" ||

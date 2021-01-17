@@ -2,10 +2,10 @@
 # Test:
 #   Cli tool: run an update
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test063 &&
-    cd /tmp/test063 &&
+mkdir -p "$GH_TEST_TMP/test063" &&
+    cd "$GH_TEST_TMP/test063" &&
     git init ||
     exit 1
 

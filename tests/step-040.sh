@@ -7,21 +7,21 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
+mkdir -p "$GH_TEST_TMP/start/dir" && cd "$GH_TEST_TMP/start/dir" || exit 1
 
 git init || exit 1
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer" --non-interactive; then
+if ! "$GH_TEST_BIN/installer" --non-interactive; then
     echo "! Installation failed"
     exit 1
 fi
 
-if ! "$GITHOOKS_TEST_BIN_DIR/cli" install --non-interactive; then
+if ! "$GH_TEST_BIN/cli" install --non-interactive; then
     echo "! Install into current repo failed"
     exit 1
 fi
 
-if ! grep -r 'github.com/rycus86/githooks' /tmp/start/dir/.git/hooks; then
+if ! grep -r 'github.com/rycus86/githooks' "$GH_TEST_TMP/start/dir/.git/hooks"; then
     echo "! Hooks were not installed"
     exit 1
 fi

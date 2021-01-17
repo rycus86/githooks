@@ -2,11 +2,11 @@
 # Test:
 #   Cli tool: list current hooks
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test053/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test053/.githooks/pre-commit/example &&
-    cd /tmp/test053 &&
+mkdir -p "$GH_TEST_TMP/test053/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test053/.githooks/pre-commit/example" &&
+    cd "$GH_TEST_TMP/test053" &&
     git init ||
     exit 1
 

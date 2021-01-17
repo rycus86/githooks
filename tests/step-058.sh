@@ -2,12 +2,12 @@
 # Test:
 #   Cli tool: accept changes to a hook
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test058/.githooks/pre-commit &&
-    echo 'echo "Hello 1"' >/tmp/test058/.githooks/pre-commit/first &&
-    echo 'echo "Hello 2"' >/tmp/test058/.githooks/pre-commit/second &&
-    cd /tmp/test058 &&
+mkdir -p "$GH_TEST_TMP/test058/.githooks/pre-commit" &&
+    echo 'echo "Hello 1"' >"$GH_TEST_TMP/test058/.githooks/pre-commit/first" &&
+    echo 'echo "Hello 2"' >"$GH_TEST_TMP/test058/.githooks/pre-commit/second" &&
+    cd "$GH_TEST_TMP/test058" &&
     git init ||
     exit 1
 

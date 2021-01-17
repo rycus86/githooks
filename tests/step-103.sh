@@ -4,23 +4,23 @@
 
 git config --global githooks.testingTreatFileProtocolAsRemote "true"
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/shared/hooks-103.git/pre-commit &&
-    echo 'exit 0' >/tmp/shared/hooks-103.git/pre-commit/succeed &&
-    cd /tmp/shared/hooks-103.git &&
+mkdir -p "$GH_TEST_TMP/shared/hooks-103.git/pre-commit" &&
+    echo 'exit 0' >"$GH_TEST_TMP/shared/hooks-103.git/pre-commit/succeed" &&
+    cd "$GH_TEST_TMP/shared/hooks-103.git" &&
     git init &&
     git add . &&
     git commit -m 'Initial commit' ||
     exit 1
 
 # Install shared hook url into a repo.
-mkdir -p /tmp/test103 && cd /tmp/test103 || exit 1
+mkdir -p "$GH_TEST_TMP/test103" && cd "$GH_TEST_TMP/test103" || exit 1
 git init || exit 1
-mkdir -p .githooks && echo 'urls: - file:///tmp/shared/hooks-103.git' >.githooks/.shared.yaml || exit 1
+mkdir -p .githooks && echo "urls: - file://$GH_TEST_TMP/shared/hooks-103.git" >.githooks/.shared.yaml || exit 1
 git add .githooks/.shared.yaml
 "$GITHOOKS_INSTALL_BIN_DIR/cli" shared update
 
@@ -97,8 +97,8 @@ fi
 
 # Clone a new one
 echo "Cloning"
-cd /tmp || exit 1
-git clone /tmp/test103 test103-clone && cd test103-clone || exit 1
+cd "$GH_TEST_TMP" || exit 1
+git clone "$GH_TEST_TMP/test103" test103-clone && cd test103-clone || exit 1
 
 # shellcheck disable=SC2012
 RESULT=$(find ~/.githooks/shared/ -type f 2>/dev/null | wc -l)

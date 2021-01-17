@@ -11,16 +11,16 @@ fi
 rm -rf /usr/share/git-core/templates || exit 1
 
 # run the install, and let it search for the templates
-echo 'n
+echo "n
 y
-/tmp/.test-020-templates
-' | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
+$GH_TEST_TMP/.test-020-templates
+" | "$GH_TEST_BIN/installer" --stdin || exit 1
 
-mkdir -p /tmp/test20 && cd /tmp/test20 || exit 1
+mkdir -p "$GH_TEST_TMP/test20" && cd "$GH_TEST_TMP/test20" || exit 1
 git init || exit 1
 
 # verify that the hooks are installed and are working
-if ! grep 'github.com/rycus86/githooks' /tmp/test20/.git/hooks/pre-commit; then
+if ! grep 'github.com/rycus86/githooks' "$GH_TEST_TMP/test20/.git/hooks/pre-commit"; then
     echo "! Githooks were not installed into a new repo"
     exit 1
 fi

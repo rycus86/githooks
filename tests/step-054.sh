@@ -2,13 +2,13 @@
 # Test:
 #   Cli tool: list current hooks per type
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test054/.githooks/pre-commit &&
-    mkdir -p /tmp/test054/.githooks/post-commit &&
-    echo 'echo "Hello"' >/tmp/test054/.githooks/pre-commit/pre-example &&
-    echo 'echo "Hello"' >/tmp/test054/.githooks/post-commit/post-example &&
-    cd /tmp/test054 &&
+mkdir -p "$GH_TEST_TMP/test054/.githooks/pre-commit" &&
+    mkdir -p "$GH_TEST_TMP/test054/.githooks/post-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test054/.githooks/pre-commit/pre-example" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test054/.githooks/post-commit/post-example" &&
+    cd "$GH_TEST_TMP/test054" &&
     git init ||
     exit 1
 

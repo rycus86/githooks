@@ -7,25 +7,25 @@ if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     exit 249
 fi
 
-mkdir -p /tmp/test046/.githooks/pre-commit &&
-    echo 'echo "Testing" > /tmp/test46.out' >/tmp/test046/.githooks/pre-commit/test &&
-    cd /tmp/test046 ||
+mkdir -p "$GH_TEST_TMP/test046/.githooks/pre-commit" &&
+    echo "echo 'Testing' > '$GH_TEST_TMP/test46.out'" >"$GH_TEST_TMP/test046/.githooks/pre-commit/test" &&
+    cd "$GH_TEST_TMP/test046" ||
     exit 1
 
 git init || exit 1
 
 echo "n
 y
-/tmp/test046
+$GH_TEST_TMP/test046
 y
-" | "$GITHOOKS_TEST_BIN_DIR/installer" --stdin || exit 1
+" | "$GH_TEST_BIN/installer" --stdin || exit 1
 
-if ! grep "github.com/rycus86/githooks" /tmp/test046/.git/hooks/pre-commit; then
+if ! grep "github.com/rycus86/githooks" "$GH_TEST_TMP/test046/.git/hooks/pre-commit"; then
     echo "! Hooks were not installed"
     exit 1
 fi
 
-if ! grep "github.com/rycus86/githooks" /tmp/test046/.githooks/README.md; then
+if ! grep "github.com/rycus86/githooks" "$GH_TEST_TMP/test046/.githooks/README.md"; then
     echo "! README was not installed"
     exit 1
 fi

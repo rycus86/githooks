@@ -2,13 +2,13 @@
 # Test:
 #   Cli tool: list shows files in trusted repos
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test060/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test060/.githooks/pre-commit/first &&
-    echo 'echo "Hello"' >/tmp/test060/.githooks/pre-commit/second &&
-    touch /tmp/test060/.githooks/trust-all &&
-    cd /tmp/test060 &&
+mkdir -p "$GH_TEST_TMP/test060/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test060/.githooks/pre-commit/first" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test060/.githooks/pre-commit/second" &&
+    touch "$GH_TEST_TMP/test060/.githooks/trust-all" &&
+    cd "$GH_TEST_TMP/test060" &&
     git init &&
     git config --local githooks.trustAll true ||
     exit 1

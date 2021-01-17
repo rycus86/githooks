@@ -7,12 +7,12 @@ MOCK_LAST_RUN=$((CURRENT_TIME - 5))
 
 git config --global githooks.autoUpdateCheckTimestamp $MOCK_LAST_RUN || exit 1
 
-mkdir -p /tmp/test31 && cd /tmp/test31 || exit 1
+mkdir -p "$GH_TEST_TMP/test31" && cd "$GH_TEST_TMP/test31" || exit 1
 git init || exit 1
 
 git config --global githooks.autoUpdateEnabled true || exit 1
 
-ACCEPT_CHANGES=A "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/post-commit
+ACCEPT_CHANGES=A "$GH_TEST_BIN/runner" "$(pwd)"/.git/hooks/post-commit
 
 # shellcheck disable=SC2181
 if cd ~/.githooks/release && git rev-parse HEAD; then

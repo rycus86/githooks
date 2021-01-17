@@ -15,13 +15,13 @@ mkdir -p ~/.test-019/hooks &&
     git config --global init.templateDir '~/.test-019' ||
     exit 1
 
-"$GITHOOKS_TEST_BIN_DIR/installer" || exit 1
+"$GH_TEST_BIN/installer" || exit 1
 
-mkdir -p /tmp/test19 && cd /tmp/test19 || exit 1
+mkdir -p "$GH_TEST_TMP/test19" && cd "$GH_TEST_TMP/test19" || exit 1
 git init || exit 1
 
 # verify that the hooks are installed and are working
-if ! grep 'github.com/rycus86/githooks' /tmp/test19/.git/hooks/pre-commit; then
+if ! grep 'github.com/rycus86/githooks' "$GH_TEST_TMP/test19/.git/hooks/pre-commit"; then
     echo "! Githooks were not installed into a new repo"
     exit 1
 fi

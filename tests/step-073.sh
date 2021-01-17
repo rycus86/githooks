@@ -2,15 +2,15 @@
 # Test:
 #   Run the cli tool trying to list a not yet trusted repo
 
-if ! "$GITHOOKS_TEST_BIN_DIR/installer"; then
+if ! "$GH_TEST_BIN/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi
 
-mkdir -p /tmp/test073/.githooks/pre-commit &&
-    echo 'echo "Hello"' >/tmp/test073/.githooks/pre-commit/testing &&
-    touch /tmp/test073/.githooks/trust-all &&
-    cd /tmp/test073 &&
+mkdir -p "$GH_TEST_TMP/test073/.githooks/pre-commit" &&
+    echo 'echo "Hello"' >"$GH_TEST_TMP/test073/.githooks/pre-commit/testing" &&
+    touch "$GH_TEST_TMP/test073/.githooks/trust-all" &&
+    cd "$GH_TEST_TMP/test073" &&
     git init ||
     exit 1
 

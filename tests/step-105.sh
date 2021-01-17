@@ -7,8 +7,8 @@ if ! git-lfs --version; then
     exit 249
 fi
 
-mkdir -p /tmp/test105 &&
-    cd /tmp/test105 &&
+mkdir -p "$GH_TEST_TMP/test105" &&
+    cd "$GH_TEST_TMP/test105" &&
     git init &&
     git lfs install ||
     exit 1
@@ -22,7 +22,7 @@ LFS_UNMANAGED=""
 for LFS_HOOK_PATH in $(grep -l git-lfs .git/hooks/*); do
     LFS_HOOK=$(basename "$LFS_HOOK_PATH")
 
-    if ! sed -n -E '/LFSHookNames\s*=.*\{/,/\}/p;' "$GITHOOKS_TEST_REPO/githooks/hooks/githooks.go" | grep -q "$LFS_HOOK"; then
+    if ! sed -n -E '/LFSHookNames\s*=.*\{/,/\}/p;' "$GH_TEST_REPO/githooks/hooks/githooks.go" | grep -q "$LFS_HOOK"; then
         echo "! LFS hook appears unmanaged: $LFS_HOOK"
         LFS_UNMANAGED=Y
     fi

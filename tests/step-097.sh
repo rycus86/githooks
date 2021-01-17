@@ -12,16 +12,16 @@ MANAGED_HOOK_NAMES="
 "
 
 # shellcheck disable=SC2086
-mkdir -p /tmp/test097/.git/hooks &&
-    cd /tmp/test097 &&
+mkdir -p "$GH_TEST_TMP/test097/.git/hooks" &&
+    cd "$GH_TEST_TMP/test097" &&
     git init &&
-    "$GITHOOKS_TEST_BIN_DIR/installer" --stdin &&
+    "$GH_TEST_BIN/installer" --stdin &&
     git config githooks.autoUpdateEnabled false ||
     exit 1
 
 if ! echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     # When not using core.hooksPath we install into the current repository.
-    if ! "$GITHOOKS_TEST_BIN_DIR/cli" install --non-interactive; then
+    if ! "$GH_TEST_BIN/cli" install --non-interactive; then
         echo "! Install into current repo failed"
         exit 1
     fi
@@ -31,10 +31,10 @@ for HOOK_TYPE in ${MANAGED_HOOK_NAMES}; do
     mkdir -p ".githooks/${HOOK_TYPE}" || exit 1
 
     cat <<EOF >".githooks/${HOOK_TYPE}/${HOOK_TYPE}" || exit 1
-printf "hook=\$(basename \$0) -- " >> /tmp/test097.out
+printf "hook=\$(basename \$0) -- " >> "$GH_TEST_TMP/test097.out"
 
 for STAGED in \${STAGED_FILES}; do
-    echo "\${STAGED}" >> /tmp/test097.out
+    echo "\${STAGED}" >> "$GH_TEST_TMP/test097.out"
 done
 EOF
 done
@@ -44,14 +44,14 @@ git add testing.txt
 
 ACCEPT_CHANGES=A git commit -m 'testing hooks'
 
-cat /tmp/test097.out
+cat "$GH_TEST_TMP/test097.out"
 
-if [ "$(grep -c "testing.txt" /tmp/test097.out)" != "3" ]; then
+if [ "$(grep -c "testing.txt" "$GH_TEST_TMP/test097.out")" != "3" ]; then
     echo "! Unexpected number of output rows"
     exit 1
 fi
 
-if [ "$(grep -c "hook=" /tmp/test097.out)" != "4" ]; then
+if [ "$(grep -c "hook=" "$GH_TEST_TMP/test097.out")" != "4" ]; then
     echo "! Unexpected number of hooks run"
     exit 1
 fi

@@ -80,9 +80,7 @@
           "args": ["-c"]
         },
         "env": {
-          "GOPATH": "${workspaceFolder}/githooks/.go",
           "GOBIN": "${workspaceFolder}/githooks/bin",
-          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
         }
       },
       "presentation": {
@@ -116,9 +114,7 @@
           "args": ["-c"]
         },
         "env": {
-          "GOPATH": "${workspaceFolder}/githooks/.go",
           "GOBIN": "${workspaceFolder}/githooks/bin",
-          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
         }
       },
       "presentation": {
@@ -155,9 +151,7 @@
           "args": ["-c"]
         },
         "env": {
-          "GOPATH": "${workspaceFolder}/githooks/.go",
           "GOBIN": "${workspaceFolder}/githooks/bin",
-          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
         }
       },
       "presentation": {
@@ -192,9 +186,7 @@
           "args": ["-c"]
         },
         "env": {
-          "GOPATH": "${workspaceFolder}/githooks/.go",
           "GOBIN": "${workspaceFolder}/githooks/bin",
-          "GITHOOKS_DOWNLOAD_BIN_DIR": "/tmp/githooks"
         }
       },
       "presentation": {

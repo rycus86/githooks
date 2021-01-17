@@ -2,15 +2,15 @@
 # Test:
 #   Direct template execution: accept changes to hooks
 
-mkdir -p /tmp/test28 && cd /tmp/test28 || exit 1
+mkdir -p "$GH_TEST_TMP/test28" && cd "$GH_TEST_TMP/test28" || exit 1
 git init || exit 1
 
 mkdir -p .githooks &&
     mkdir -p .githooks/pre-commit &&
-    echo 'echo "First execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    ACCEPT_CHANGES=A "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+    echo "echo 'First execution' >> '$GH_TEST_TMP/test028.out'" >.githooks/pre-commit/test &&
+    ACCEPT_CHANGES=A "$GH_TEST_BIN/runner" "$(pwd)"/.git/hooks/pre-commit
 
-if ! grep -q "First execution" /tmp/test028.out; then
+if ! grep -q "First execution" "$GH_TEST_TMP/test028.out"; then
     echo "! Expected to execute the hook the first time"
     exit 1
 fi
@@ -21,10 +21,10 @@ if [ "$NUMBER_OF_CHECKSUMS" != "1" ]; then
     exit 1
 fi
 
-echo 'echo "Second execution" >> /tmp/test028.out' >.githooks/pre-commit/test &&
-    ACCEPT_CHANGES=Y "$GITHOOKS_TEST_BIN_DIR/runner" "$(pwd)"/.git/hooks/pre-commit
+echo "echo 'Second execution' >> '$GH_TEST_TMP/test028.out'" >.githooks/pre-commit/test &&
+    ACCEPT_CHANGES=Y "$GH_TEST_BIN/runner" "$(pwd)"/.git/hooks/pre-commit
 
-if ! grep -q "Second execution" /tmp/test028.out; then
+if ! grep -q "Second execution" "$GH_TEST_TMP/test028.out"; then
     echo "! Expected to execute the hook the second time"
     exit 1
 fi
