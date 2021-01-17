@@ -9,7 +9,7 @@ fi
 
 rm -rf /usr/share/git-core/templates/hooks || exit 1
 
-"$GITHOOKS_BIN_DIR/installer" --stdin --non-interactive || exit 1
+"$GITHOOKS_BIN_DIR/installer" --non-interactive || exit 1
 
 if [ -n "$(git config init.templateDir)" ]; then
     echo "! Expected to have init.templateDir not set!" >&2

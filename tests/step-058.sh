@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: accept changes to a hook
 
-"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" || exit 1
 
 mkdir -p /tmp/test058/.githooks/pre-commit &&
     echo 'echo "Hello 1"' >/tmp/test058/.githooks/pre-commit/first &&

@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: list shows files in trusted repos
 
-"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" || exit 1
 
 mkdir -p /tmp/test060/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/test060/.githooks/pre-commit/first &&

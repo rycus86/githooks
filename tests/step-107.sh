@@ -9,7 +9,7 @@ if git-lfs --version; then
 fi
 
 # run Githooks install
-"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" || exit 1
 
 # setup the first repository
 mkdir -p /tmp/test107a/.githooks &&

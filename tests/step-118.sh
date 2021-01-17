@@ -2,7 +2,7 @@
 # Test:
 #   Test clone url and clone branch settings
 
-if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
+if ! "$GITHOOKS_BIN_DIR/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi

@@ -5,7 +5,7 @@
 TEST_PREFIX_DIR="/tmp/githooks"
 GITHOOKS_INSTALL_BIN_DIR="$TEST_PREFIX_DIR/.githooks/bin"
 
-"$GITHOOKS_BIN_DIR/installer" --stdin --prefix "$TEST_PREFIX_DIR" || exit 1
+"$GITHOOKS_BIN_DIR/installer" --prefix "$TEST_PREFIX_DIR" || exit 1
 
 if [ ! -d "$TEST_PREFIX_DIR/.githooks" ]; then
     echo "! Expected the install directory to be in \`$TEST_PREFIX_DIR\`"

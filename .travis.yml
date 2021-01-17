@@ -15,7 +15,7 @@ jobs:
   - os: linux
     env: TEST_INSTANCE=test-alpine-go
   - os: linux
-    env: TEST_INSTANCE=test-alpine-go
+    env: TEST_INSTANCE=test-alpine-go-user
   - os: linux
     env: TEST_INSTANCE=test-alpine-nolfs-go
   - os: linux

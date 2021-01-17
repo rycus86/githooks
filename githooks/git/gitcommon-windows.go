@@ -4,5 +4,5 @@ package git
 
 // GetDefaultTemplateDir gets the default Git template dir.
 func GetDefaultTemplateDir() string {
-	return "C:/Program Files/Git/mingw64/libexec/git-core/templates"
+	return "C:/Program Files/Git/mingw64/share/git-core/templates"
 }

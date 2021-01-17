@@ -4,7 +4,7 @@
 
 mkdir /tmp/not-a-git-repo && cd /tmp/not-a-git-repo || exit 1
 
-if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
+if ! "$GITHOOKS_BIN_DIR/installer"; then
     echo "! Expected to succeed"
     exit 1
 fi

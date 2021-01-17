@@ -15,13 +15,16 @@ fi
 cat <<EOF | docker build --force-rm -t githooks:"$IMAGE_TYPE" -f - .
 FROM githooks:${IMAGE_TYPE}-base
 
-RUN git config --global user.email "githook@test.com" && \\
-    git config --global user.name "Githook Tests" && \\
-    git config --global init.defaultBranch main
-
-ENV GITHOOKS_TESTS_DIR="/var/lib/tests"
+ENV GITHOOKS_TESTS_DIR="/var/lib/githooks-tests"
 ENV GITHOOKS_TEST_REPO=/var/lib/githooks
 ENV GITHOOKS_BIN_DIR=/var/lib/githooks/githooks/bin
+
+${ADDITIONAL_PRE_INSTALL_STEPS:-}
+
+RUN git config --global user.email "githook@test.com" && \\
+    git config --global user.name "Githook Tests" && \\
+    git config --global init.defaultBranch main && \\
+    git config --global core.autocrlf false
 
 # Add sources
 COPY --chown=${OS_USER}:${OS_USER} githooks \${GITHOOKS_TEST_REPO}/githooks
@@ -30,9 +33,9 @@ ADD .githooks/README.md \${GITHOOKS_TEST_REPO}/.githooks/README.md
 ADD examples \${GITHOOKS_TEST_REPO}/examples
 
 RUN echo "Make test gitrepo to clone from ..." && \\
-    cd \${GITHOOKS_TEST_REPO} && git init >/dev/null 2>&1 && \\
-    git add . >/dev/null 2>&1 && \\
-    git commit -a -m "Before build" >/dev/null 2>&1
+    cd \${GITHOOKS_TEST_REPO} && git init  2>&1 && \\
+    git add . 2>&1 && \\
+    git commit -a -m "Before build" 2>&1
 
 # Build binaries for v9.9.0.
 #################################

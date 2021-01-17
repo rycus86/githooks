@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: shared hook repository management failures
 
-if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
+if ! "$GITHOOKS_BIN_DIR/installer"; then
     echo "! Failed to execute the install script"
     exit 1
 fi

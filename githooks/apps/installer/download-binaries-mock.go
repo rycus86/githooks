@@ -29,7 +29,7 @@ func downloadBinaries(
 	bin := os.Getenv("GITHOOKS_BIN_DIR")
 	cm.PanicIf(strs.IsEmpty(bin), "GITHOOKS_BIN_DIR undefined")
 
-	log.Info("Faking download: taking from '%s'.", bin)
+	log.InfoF("Faking download: taking from '%s'.", bin)
 
 	ext := ""
 	if runtime.GOOS == cm.WindowsOsName {

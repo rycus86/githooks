@@ -7,7 +7,7 @@ mkdir -p /tmp/test094/a /tmp/test094/b /tmp/test094/c &&
     cd /tmp/test094/b && git init ||
     exit 1
 
-"$GITHOOKS_BIN_DIR/installer" --stdin || exit 1
+"$GITHOOKS_BIN_DIR/installer" || exit 1
 
 git config --global githooks.previousSearchDir /tmp
 

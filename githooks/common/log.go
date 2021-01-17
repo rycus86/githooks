@@ -121,7 +121,7 @@ func CreateLogContext(onlyStderr bool) (*LogContext, error) {
 	}
 
 	if DebugLog {
-		debug = info
+		debug = error
 	}
 
 	infoIsATerminal := term.IsTerminal(int(info.Fd()))

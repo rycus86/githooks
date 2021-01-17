@@ -17,7 +17,7 @@ mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
 
 git init || exit 1
 
-if ! "$GITHOOKS_BIN_DIR/installer" --stdin; then
+if ! "$GITHOOKS_BIN_DIR/installer"; then
     echo "! Installation failed"
     exit 1
 fi

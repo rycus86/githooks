@@ -74,7 +74,7 @@ func CreateContext(
 
 	var err error
 
-	var output io.Writer
+	var output io.Writer // If this output is nil, we fallback to taking default answer.
 	if !assertOutputIsTerminal || log.IsInfoATerminal() {
 		output = log.GetInfoWriter()
 	}
@@ -89,8 +89,8 @@ func CreateContext(
 		maxTries = uint(1) //nolint: gomnd
 	} else {
 		input, err = cm.GetCtty()
-		// if err != nil we construct below
-		// which acts as a fallback
+		// if err != nil => input == nil and we fallback
+		// to taking default answers.
 	}
 
 	p := Context{
