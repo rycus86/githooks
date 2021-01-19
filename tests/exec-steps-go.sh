@@ -9,8 +9,13 @@ else
     fi
 fi
 
+if [ "$1" = "--show-output" ]; then
+    shift
+    TEST_SHOW="true"
+fi
+
 SEQUENCE=""
-if [ "$1" = "--sequence" ]; then
+if [ "$1" = "--seq" ]; then
     shift
     SEQUENCE=$(for f in "$@"; do echo "step-$f"; done)
 fi
@@ -66,11 +71,14 @@ for STEP in "$GH_TESTS"/step-*.sh; do
     elif [ $TEST_RESULT -ne 0 ]; then
         FAILURE=$(echo "$TEST_OUTPUT" | tail -1)
         echo "! $STEP has failed with code $TEST_RESULT ($FAILURE), output:"
-        echo "$TEST_OUTPUT"
+        echo "$TEST_OUTPUT" | sed -E "s/^/ x: /g"
         FAILED=$((FAILED + 1))
         FAILED_TEST_LIST="$FAILED_TEST_LIST
 - $STEP ($TEST_RESULT -- $FAILURE)"
 
+    elif [ -n "$TEST_SHOW" ]; then
+        echo ":: Output was:"
+        echo "$TEST_OUTPUT" | sed -E "s/^/  | /g"
     fi
 
     cleanDirs

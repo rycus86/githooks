@@ -377,6 +377,8 @@ func runUninstallSteps(
 
 func runUninstall(cmd *cobra.Command, auxArgs []string) {
 
+	log.InfoF("Githooks Uninstaller [version: %s]", build.BuildVersion)
+
 	log.DebugF("Arguments: %+v", args)
 
 	settings, uiSettings := setMainVariables(&args)
@@ -408,8 +410,6 @@ func main() {
 	cwd = filepath.ToSlash(cwd)
 
 	setupLog()
-
-	log.InfoF("Githooks Uninstaller [version: %s]", build.BuildVersion)
 
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()

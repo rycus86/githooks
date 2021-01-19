@@ -1,10 +1,6 @@
 #!/bin/sh
 IMAGE_TYPE="$1"
 shift
-# shellcheck disable=SC2124
-SEQUENCE="$@"
-
-[ -n "$SEQUENCE" ] && SEQUENCE="--sequence $SEQUENCE"
 
 if echo "$IMAGE_TYPE" | grep -q "\-user"; then
     OS_USER="test"
@@ -35,9 +31,9 @@ ADD .githooks/README.md \${GH_TEST_REPO}/.githooks/README.md
 ADD examples \${GH_TEST_REPO}/examples
 
 RUN echo "Make test gitrepo to clone from ..." && \\
-    cd \$GH_TEST_REPO && git init  2>&1 && \\
-    git add . 2>&1 && \\
-    git commit -a -m "Before build" 2>&1
+    cd \$GH_TEST_REPO && git init  >/dev/null 2>&1  && \\
+    git add . >/dev/null 2>&1  && \\
+    git commit -a -m "Before build" >/dev/null 2>&1
 
 # Build binaries for v9.9.0.
 #################################
@@ -77,11 +73,12 @@ RUN git config --global githooks.deleteDetectedLFSHooks "n"
 ${ADDITIONAL_INSTALL_STEPS:-}
 
 RUN echo "Git version: \$(git --version)"
-
-RUN sh "\$GH_TESTS"/exec-steps-go.sh $SEQUENCE
+WORKDIR \$GH_TESTS
 EOF
 
+docker run -a stdout -a stderr githooks:"$IMAGE_TYPE" ./exec-steps-go.sh "$@"
 RESULT=$?
-docker rmi githooks:"$IMAGE_TYPE"
-docker rmi githooks:"${IMAGE_TYPE}-base"
+
+docker rmi "githooks:$IMAGE_TYPE"
+docker rmi "githooks:${IMAGE_TYPE}-base"
 exit $RESULT

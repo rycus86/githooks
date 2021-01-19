@@ -136,13 +136,12 @@ func setMainVariables(repoPath string) (HookSettings, UISettings) {
 	}
 
 	promptCtx, err := prompt.CreateContext(log, &execx, dialogTool, true, false)
-	log.AssertNoErrorF(err, "Prompt setup failed -> using fallback.")
+	log.DebugIfF(err != nil, "Prompt setup failed -> using fallback.")
 
 	isTrusted, hasTrustFile := hooks.IsRepoTrusted(gitx, repoPath)
 	if !isTrusted && hasTrustFile {
 		isTrusted = showTrustRepoPrompt(gitx, promptCtx)
 	}
-	log.AssertNoError(err, "Could not get trust settings.")
 
 	failOnNonExistingHooks := gitx.GetConfig(hooks.GitCK_FailOnNonExistingSharedHooks, git.Traverse) == "true"
 

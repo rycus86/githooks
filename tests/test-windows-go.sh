@@ -50,4 +50,9 @@ EOF
 docker run -a stdout -a stderr -v "$REPO_DIR:C:\githooks" \
     "githooks:windows-lfs-go" \
     "C:\Program Files\Git\bin\sh.exe" \
-    "C:/githooks/tests/exec-tests-windows-go.sh"
+    "C:/githooks/tests/exec-tests-windows-go.sh" "$@"
+RESULT=$?
+
+docker rmi "githooks:$IMAGE_TYPE"
+docker rmi "githooks:$IMAGE_TYPE-base"
+exit $RESULT
