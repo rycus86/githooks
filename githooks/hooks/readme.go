@@ -28,16 +28,11 @@ func WriteReadmeFile(filePath string) (err error) {
 		return
 	}
 
-	file, err := os.Create(filePath)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, cm.DefaultFileModeFile)
 	if err != nil {
 		return
 	}
 	defer file.Close()
-
-	err = file.Chmod(cm.DefaultFileModeFile)
-	if err != nil {
-		return
-	}
 
 	_, err = file.Write(readmeContent)
 	if err != nil {

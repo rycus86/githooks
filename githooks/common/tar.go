@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"runtime"
 )
 
 func ExtractTarGz(gzipStream io.Reader, baseDir string) (err error) {
@@ -54,9 +55,15 @@ func ExtractTarGz(gzipStream io.Reader, baseDir string) (err error) {
 				return CombineErrors(ErrorF("Copy of data to '%s' failed", outPath), err)
 			}
 
-			err = file.Chmod(header.FileInfo().Mode())
-			if err != nil {
-				return
+			if runtime.GOOS == WindowsOsName {
+				file.Close()
+				if err = Chmod(outPath, header.FileInfo().Mode()); err != nil {
+					return
+				}
+			} else {
+				if err = file.Chmod(header.FileInfo().Mode()); err != nil {
+					return
+				}
 			}
 
 		default:

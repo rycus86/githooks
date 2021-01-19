@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"unsafe"
+
+	"github.com/hectane/go-acl"
 )
 
 var (
@@ -66,4 +68,15 @@ func IsWritable(path string) bool {
 	}
 
 	return true
+}
+
+// MakeExecutable makes a file executable.
+func MakeExecutable(path string) error {
+	// On Windows this does not make sense.
+	return nil
+}
+
+// Chmod is a wrapper around the Windows ACL.
+func Chmod(filePath string, mode os.FileMode) error {
+	return acl.Chmod(filePath, mode)
 }

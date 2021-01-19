@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/gookit/color v1.3.1
 	github.com/hashicorp/go-version v1.2.1
+	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
 	github.com/loov/hrtime v1.0.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v1.4.1

@@ -160,19 +160,6 @@ func ReplaceTilde(p string) (string, error) {
 	return p, nil
 }
 
-// MakeExecutable makes a file executable.
-func MakeExecutable(path string) (err error) {
-	stats, err := os.Stat(path)
-	if err != nil {
-		return
-	}
-
-	var executeMask os.FileMode = 0111
-	err = os.Chmod(path, stats.Mode()|executeMask)
-
-	return
-}
-
 // TouchFile touches a file `path`.
 func TouchFile(filePath string, makeDirs bool) (err error) {
 	if IsFile(filePath) {
@@ -189,11 +176,8 @@ func TouchFile(filePath string, makeDirs bool) (err error) {
 		}
 
 		var file *os.File
-		if file, err = os.Create(filePath); err != nil {
-			return
-		}
-
-		err = file.Chmod(DefaultFileModeFile)
+		file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, DefaultFileModeFile)
+		defer file.Close()
 	}
 
 	return

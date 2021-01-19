@@ -109,27 +109,6 @@ func saveRepoSharedHooks(file string, config *sharedHookConfig) error {
 	return cm.StoreYAML(file, &config)
 }
 
-func saveLegacyRepoSharedHooks(file string, config *sharedHookConfig) error {
-	err := os.MkdirAll(path.Dir(file), cm.DefaultFileModeDirectory)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-	_ = f.Chmod(cm.DefaultFileModeFile)
-
-	for _, url := range config.Urls {
-		_, _ = f.WriteString(url + "\n")
-	}
-
-	return nil
-}
-
 // SharedConfigName defines the config name used to define local/global
 // shared hooks in the local/global Git configuration.
 var reEscapeURL = regexp.MustCompile(`[^a-zA-Z0-9]+`)
@@ -338,9 +317,6 @@ func ModifyRepoSharedHooks(repoDir string, url string, remove bool) (modified bo
 		modified = config.AddUrl(url)
 	}
 
-	// @todo remove as soon as possible
-	_ = saveLegacyRepoSharedHooks(getRepoSharedFileLegacy(repoDir), &config)
-
 	return modified, saveRepoSharedHooks(file, &config)
 }
 
@@ -485,12 +461,13 @@ func ClearRepoSharedHooks(repoDir string) error {
 		return nil
 	}
 
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
+	f, err := os.OpenFile(
+		file,
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC,
+		cm.DefaultFileModeFile)
+	defer f.Close()
 
-	return f.Chmod(cm.DefaultFileModeFile)
+	return err
 }
 
 // ClearLocalSharedHooks clears the shared hook list in the local Git config.
