@@ -39,6 +39,15 @@ cleanDirs() {
     rm -rf /tmp/* >/dev/null 2>&1
 }
 
+if [ -z "$GH_TESTS" ] ||
+    [ -z "$GH_TEST_REPO" ] ||
+    [ -z "$GH_TEST_BIN" ] ||
+    [ -z "$GH_TEST_TMP" ] ||
+    [ -z "$GH_TEST_GIT_CORE" ]; then
+    echo "!! Missing env. variables."
+    exit 1
+fi
+
 echo "Test repo: '$GH_TEST_REPO'"
 echo "Tests dir: '$GH_TESTS'"
 

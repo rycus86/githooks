@@ -1,6 +1,4 @@
 #!/bin/sh
-DIR="$(cd "$(dirname "$0")" && pwd -W)"
-REPO_DIR="$DIR/.."
 
 cat <<'EOF' | docker build --force-rm -t githooks:windows-lfs-go -f - .
 FROM mcr.microsoft.com/windows/servercore:1809
@@ -44,15 +42,29 @@ RUN $url = 'https://storage.googleapis.com/golang/go1.15.6.windows-amd64.zip'; \
     \
     Write-Host 'Complete.';
 
-WORKDIR C:/githooks
+
+ENV GH_TESTS="c:/githooks-tests/tests"
+ENV GH_TEST_TMP="c:/githooks-tests/tmp"
+ENV GH_TEST_REPO="c:/githooks-tests/githooks"
+ENV GH_TEST_BIN="c:/githooks-tests/githooks/githooks/bin"
+ENV GH_TEST_GIT_CORE="c:/Program Files/Git/mingw64/share/git-core"
+
+# Add sources
+COPY githooks "$GH_TEST_REPO/githooks"
+ADD .githooks/README.md "$GH_TEST_REPO/.githooks/README.md"
+ADD examples "$GH_TEST_REPO/examples"
+ADD tests "$GH_TESTS"
+
+RUN & "'C:/Program Files/Git/bin/sh.exe'" "C:/githooks-tests/tests/test-windows-setup.sh"
+WORKDIR C:/githooks-tests/tests
 EOF
 
-docker run -a stdout -a stderr -v "$REPO_DIR:C:\githooks" \
-    "githooks:windows-lfs-go" \
-    "C:\Program Files\Git\bin\sh.exe" \
-    "C:/githooks/tests/exec-tests-windows-go.sh" "$@"
+docker run --rm \
+    -a stdout \
+    -a stderr "githooks:windows-lfs-go" \
+    "C:/Program Files/Git/bin/sh.exe" ./exec-steps-go.sh --skip-docker-check "$@"
+
 RESULT=$?
 
-docker rmi "githooks:$IMAGE_TYPE"
-docker rmi "githooks:$IMAGE_TYPE-base"
+docker rmi "githooks:windows-lfs-go"
 exit $RESULT
