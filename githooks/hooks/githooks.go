@@ -262,12 +262,6 @@ func GetReleaseCloneDir(installDir string) string {
 	return path.Join(installDir, "release")
 }
 
-// GetInstaller returns the installer executable in the install directory.
-func GetInstaller(installDir string) cm.Executable {
-	return cm.Executable{
-		Path: path.Join(GetBinaryDir(installDir), "installer")}
-}
-
 // Gets the LFS-Required file inside the repository.
 func GetLFSRequiredFile(repoDir string) string {
 	return path.Join(GetGithooksDir(repoDir), ".lfs-required")
