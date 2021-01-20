@@ -86,7 +86,7 @@ func GetOutputFromExecutable(
 	out, err := cmd.Output()
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %v'.", exe.GetCommand(), args), err)
+			ErrorF("Command failed: '%s %q'.", exe.GetCommand(), args), err)
 	}
 
 	return out, err
@@ -111,7 +111,7 @@ func GetCombinedOutputFromExecutable(
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %v'.", exe.GetCommand(), args), err)
+			ErrorF("Command failed: '%s %q'.", exe.GetCommand(), args), err)
 	}
 
 	return out, err
@@ -152,7 +152,7 @@ func GetOutputFromExecutableSep(
 	err := cmd.Run()
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %v'.", exe.GetCommand(), args), err)
+			ErrorF("Command failed: '%s %q'.", exe.GetCommand(), args), err)
 	}
 
 	return b1.Bytes(), b2.Bytes(), err
@@ -177,7 +177,7 @@ func RunExecutable(
 	err := cmd.Run()
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %v'.", exe.GetCommand(), args), err)
+			ErrorF("Command failed: '%s %q'.", exe.GetCommand(), args), err)
 	}
 
 	return err

@@ -126,7 +126,7 @@ func Build(repoPath string, buildTags []string) (string, error) {
 	out, err := gox.GetCombined(vendorCmd...)
 	if err != nil {
 		return goBinPath,
-			cm.ErrorF("Module vendor command failed:\n'%s %v'\nOutput:\n%s",
+			cm.ErrorF("Module vendor command failed:\n'%s %q'\nOutput:\n%s",
 				gox.BaseCmd, vendorCmd, out)
 	}
 
@@ -135,7 +135,7 @@ func Build(repoPath string, buildTags []string) (string, error) {
 	out, err = gox.GetCombined(generateCmd...)
 	if err != nil {
 		return goBinPath,
-			cm.ErrorF("Generate command failed:\n'%s %v'\nOutput:\n%s",
+			cm.ErrorF("Generate command failed:\n'%s %q'\nOutput:\n%s",
 				gox.BaseCmd, generateCmd, out)
 	}
 
@@ -155,7 +155,7 @@ func Build(repoPath string, buildTags []string) (string, error) {
 
 	if err != nil {
 		return goBinPath,
-			cm.ErrorF("Compile command failed:\n'%s %v'\nOutput:\n%s",
+			cm.ErrorF("Compile command failed:\n'%s %q'\nOutput:\n%s",
 				gox.BaseCmd, cmd, out)
 	}
 

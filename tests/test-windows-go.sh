@@ -48,6 +48,7 @@ ENV GH_TEST_TMP="c:/githooks-tests/tmp"
 ENV GH_TEST_REPO="c:/githooks-tests/githooks"
 ENV GH_TEST_BIN="c:/githooks-tests/githooks/githooks/bin"
 ENV GH_TEST_GIT_CORE="c:/Program Files/Git/mingw64/share/git-core"
+ENV GH_ON_WINDOWS="true"
 
 # Add sources
 COPY githooks "$GH_TEST_REPO/githooks"

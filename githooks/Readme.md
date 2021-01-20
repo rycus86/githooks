@@ -149,9 +149,20 @@ This is more efficient, since we only have to search for such a file and we know
 
     - Substitute over all args all environment variables in `sh` style. **[done, test 121]**
 
-2. Default runner on Unix is `sh` and on Windows its `sh -c` since
-there is no notion of execution permissions and this
-honors the shebang correctly. **[done]**
+**Rework this and make a proper `<hookName>.yaml`:** *[not done]*
+
+```yaml
+version: 1
+runner:
+  path: "${repositoryDir}/my.exe"
+  args: # are always appended before the hook arguments...
+    - "bla"
+    - "${env:MONKEY}" # environment expansion
+    - "${hooksDir}/bla"
+    - "${repositoryDir}/bla"
+```
+
+1. Default runner on Unix is `sh` and on Windows its `sh` (which resolves to the `sh.exe` of git-for-windows) **[done]**
 
 ### Parallel Execution
 

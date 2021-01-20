@@ -39,20 +39,21 @@ EOF
 # Compile and test it.
 # shellcheck disable=SC2211
 cd "$GH_TEST_TMP/test106-lfs" &&
-    go build -o git-lfs ./... &&
-    ./git-lfs testing &&
+    go build -o git-lfs.exe ./... &&
+    ./git-lfs.exe testing &&
     [ -f "$GH_TEST_TMP/test106/lfs.out" ] &&
     rm -f "$GH_TEST_TMP/test106/lfs.out" || exit 3
 
-if uname | grep -q "MINGW"; then
+if [ -n "$GH_ON_WINDOWS" ]; then
     # On windows replace the original git-lfs completely,
     # because git.exe perturbates the PATH
     ORIGINAL_GIT_LFS=$(cygpath -m "$(command -v git-lfs)")
     cp -f "$ORIGINAL_GIT_LFS" "$GH_TEST_TMP/test106-lfs/git-lfs-backup" &&
-        cp -f "$GH_TEST_TMP/test106-lfs/git-lfs" "$ORIGINAL_GIT_LFS" || exit 4
+        cp -f "$GH_TEST_TMP/test106-lfs/git-lfs.exe" "$ORIGINAL_GIT_LFS" || exit 4
     trap onExit EXIT # Move the original back in place
 else
     # On Unix, a git-lfs shell script is enough.
+    ln -s "$GH_TEST_TMP/test106-lfs/git-lfs.exe" "$GH_TEST_TMP/test106-lfs/git-lfs"
     export PATH="$GH_TEST_TMP/test106-lfs:$PATH" || exit 4
 fi
 

@@ -30,7 +30,7 @@ func (c *CmdContext) Get(args ...string) (string, error) {
 
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+			ErrorF("Command failed: '%s %q'.", c.BaseCmd, args), err)
 	}
 
 	return strings.TrimSpace(string(stdout)), err
@@ -46,7 +46,7 @@ func (c *CmdContext) GetCombined(args ...string) (string, error) {
 
 	if err != nil {
 		err = CombineErrors(
-			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+			ErrorF("Command failed: '%s %q'.", c.BaseCmd, args), err)
 	}
 
 	return strings.TrimSpace(string(stdout)), err
@@ -62,7 +62,7 @@ func (c *CmdContext) Check(args ...string) error {
 
 	if err != nil {
 		return CombineErrors(
-			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+			ErrorF("Command failed: '%s %q'.", c.BaseCmd, args), err)
 	}
 
 	return nil
@@ -101,7 +101,7 @@ func (c *CmdContext) CheckPiped(args ...string) error {
 
 	if err != nil {
 		return CombineErrors(
-			ErrorF("Command failed: '%s %s'.", c.BaseCmd, args), err)
+			ErrorF("Command failed: '%s %q'.", c.BaseCmd, args), err)
 	}
 
 	return nil
