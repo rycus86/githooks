@@ -16,6 +16,7 @@ var (
 	procGetBinaryTypeW = kernel32.NewProc("GetBinaryTypeW")
 )
 
+//nolint: deadcode,varcheck
 const (
 	scs32BitBinary = 0
 	scs64BitBinary = 6
@@ -41,10 +42,13 @@ func IsExecutable(path string) bool {
 	}
 
 	var t uint32
+	pPath, err := syscall.UTF16PtrFromString(path)
+	AssertNoErrorPanicF(err, "Path cannot be converted to UTF16 Pointer '%s'", path)
+
 	_, _, e := syscall.Syscall(
 		procGetBinaryTypeW.Addr(),
 		2,
-		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(path))),
+		uintptr(unsafe.Pointer(pPath)),
 		uintptr(unsafe.Pointer(&t)),
 		0)
 
@@ -63,7 +67,7 @@ func IsWritable(path string) bool {
 	}
 
 	// Check if the user bit is enabled in file permission
-	if info.Mode().Perm()&(1<<(uint(7))) == 0 {
+	if info.Mode().Perm()&(1<<(uint(7))) == 0 { //nolint: gomnd
 		return false
 	}
 

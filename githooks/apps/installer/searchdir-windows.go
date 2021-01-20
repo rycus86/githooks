@@ -19,5 +19,6 @@ func GetDefaultTemplateSearchDir() (first []string, second []string) {
 
 	first = append(first, "C:/Program Files", "C:/Program Files (x86)")
 	second = []string{"C:/"}
+
 	return
 }

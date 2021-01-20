@@ -91,6 +91,11 @@ for STEP in "$GH_TESTS"/step-*.sh; do
         echo "$TEST_OUTPUT" | sed -E "s/^/  | /g"
     fi
 
+    if [ $TEST_RESULT -eq 111 ]; then
+        echo "! $STEP triggered fatal test abort."
+        break
+    fi
+
     cleanDirs
 
     UNINSTALL_OUTPUT=$(printf "n\\n" | "$GH_TEST_BIN/uninstaller" --stdin 2>&1)

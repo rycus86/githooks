@@ -177,6 +177,9 @@ func TouchFile(filePath string, makeDirs bool) (err error) {
 
 		var file *os.File
 		file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, DefaultFileModeFile)
+		if err != nil {
+			return
+		}
 		defer file.Close()
 	}
 

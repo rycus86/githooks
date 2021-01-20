@@ -60,10 +60,8 @@ func ExtractTarGz(gzipStream io.Reader, baseDir string) (err error) {
 				if err = Chmod(outPath, header.FileInfo().Mode()); err != nil {
 					return
 				}
-			} else {
-				if err = file.Chmod(header.FileInfo().Mode()); err != nil {
-					return
-				}
+			} else if err = file.Chmod(header.FileInfo().Mode()); err != nil {
+				return
 			}
 
 		default:

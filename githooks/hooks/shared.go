@@ -123,11 +123,6 @@ func GetRepoSharedFile(repoDir string) string {
 	return path.Join(GetGithooksDir(repoDir), ".shared.yaml")
 }
 
-// GetRepoSharedFile gets the shared file with respect to the hooks dir in the repository.
-func getRepoSharedFileLegacy(repoDir string) string {
-	return path.Join(GetGithooksDir(repoDir), ".shared")
-}
-
 // GetRepoSharedFile gets the shared file with respect to the repository.
 func GetRepoSharedFileRel() string {
 	return path.Join(HooksDirName, ".shared.yaml")
@@ -465,9 +460,12 @@ func ClearRepoSharedHooks(repoDir string) error {
 		file,
 		os.O_RDWR|os.O_CREATE|os.O_TRUNC,
 		cm.DefaultFileModeFile)
+	if err != nil {
+		return err
+	}
 	defer f.Close()
 
-	return err
+	return nil
 }
 
 // ClearLocalSharedHooks clears the shared hook list in the local Git config.
