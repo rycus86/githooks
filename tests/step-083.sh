@@ -23,7 +23,11 @@ mkdir -p "$GH_TEST_TMP/shared/first-shared.git/.githooks/pre-commit" &&
 mkdir -p "$GH_TEST_TMP/test083" && cd "$GH_TEST_TMP/test083" && git init || exit 1
 
 testShared() {
-    "$GITHOOKS_INSTALL_BIN_DIR/cli" shared add --shared file://"$GH_TEST_TMP/shared/first-shared.git" || exit 1
+
+    url1="file://$GH_TEST_TMP/shared/first-shared.git"
+    location1=$("$GITHOOKS_INSTALL_BIN_DIR/cli" shared location "$url1") || exit 1
+
+    "$GITHOOKS_INSTALL_BIN_DIR/cli" shared add --shared "$url1" || exit 1
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list | grep "first-shared" | grep "pending" || exit 2
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared pull || exit 3
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list | grep "first-shared" | grep "active" || exit 4
@@ -31,9 +35,11 @@ testShared() {
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared add file://"$GH_TEST_TMP/shared/third-shared.git" || exit 6
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list --shared | grep "second-shared" | grep "pending" || exit 7
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list --all | grep "third-shared" | grep "pending" || exit 8
-    (cd ~/.githooks/shared/*shared-first-shared-git* &&
+
+    (cd "$location1" &&
         git remote rm origin &&
         git remote add origin /some/other/url.git) || exit 9
+
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list | grep "first-shared" | grep "invalid" || exit 10
     "$GITHOOKS_INSTALL_BIN_DIR/cli" shared remove --shared file://"$GH_TEST_TMP/shared/first-shared.git" || exit 11
     ! "$GITHOOKS_INSTALL_BIN_DIR/cli" shared list | grep "first-shared" || exit 12

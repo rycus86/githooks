@@ -37,6 +37,7 @@ cleanDirs() {
 
     rm -rf ~/test* >/dev/null 2>&1
     rm -rf "$GH_TEST_TMP" >/dev/null 2>&1
+    mkdir -p "$GH_TEST_TMP" >/dev/null 2>&1
 }
 
 if [ -z "$GH_TESTS" ] ||
