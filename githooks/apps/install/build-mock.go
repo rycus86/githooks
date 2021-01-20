@@ -3,5 +3,5 @@
 package install
 
 const (
-	TestingSortAllGlobs = true
+	SortSearchResults = true
 )

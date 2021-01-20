@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	cm "rycus86/githooks/common"
 	strs "rycus86/githooks/strings"
 	"strings"
@@ -188,16 +189,23 @@ func FindGitDirs(searchDir string) (all []string, err error) {
 	repos := make(strs.StringSet, len(candidates))
 	var dir, relPath string
 
+	// Be consistent here , on windows we might get twice `
+	// C:/a/.git` and also `c:/a/.git` in the loop below
+	// because of the output of `GetGitDirCommon()``.
+	// -> adjust the volume label to UpperCase always for storing
+	// the result in the `StringMap`
+	adjustVolumeNameCase := runtime.GOOS == cm.WindowsOsName
+
 	// Filter wrong dirs out.
 	for i := range candidates {
 		dir = path.Dir(candidates[i])
+		normalGitDir := path.Base(dir) == ".git"
 
-		relPath, err = filepath.Rel(searchDir, dir)
+		relPath, err = filepath.Rel(searchDir, dir) // filepath, because path.Rel is not available.
 		if err != nil {
 			return
 		}
-
-		normalGitDir := path.Base(dir) == ".git"
+		relPath = filepath.ToSlash(relPath)
 
 		if normalGitDir && cm.ContainsDotFile(path.Dir(relPath)) ||
 			!normalGitDir && cm.ContainsDotFile(relPath) {
@@ -206,11 +214,16 @@ func FindGitDirs(searchDir string) (all []string, err error) {
 			continue
 		}
 
+		// gitDir is always an absolute path
 		gitDir, e := CtxC(dir).GetGitDirCommon()
 
+		if adjustVolumeNameCase && len(gitDir) >= 2 {
+			gitDir = strings.ToUpper(gitDir[0:2]) + gitDir[2:]
+		}
+
 		// Check if its really a git directory.
-		if !repos[gitDir] && // Is not already in the set.
-			e == nil &&
+		if e == nil &&
+			!repos[gitDir] && // Is not already in the set.
 			CtxC(gitDir).IsGitRepo() {
 			repos[gitDir] = true
 		}

@@ -18,7 +18,7 @@ func (t *PreCommitSearchTask) Run(exitCh chan bool) (err error) {
 		"**/templates/hooks/pre-commit.sample"),
 		true)
 
-	if TestingSortAllGlobs {
+	if SortSearchResults {
 		sort.Strings(t.Matches)
 	}
 
@@ -40,7 +40,7 @@ type GitDirsSearchTask struct {
 func (t *GitDirsSearchTask) Run(exitCh chan bool) (err error) {
 	t.Matches, err = git.FindGitDirs(t.Dir)
 
-	if TestingSortAllGlobs {
+	if SortSearchResults {
 		sort.Strings(t.Matches)
 	}
 
