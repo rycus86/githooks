@@ -32,12 +32,12 @@ COMMIT_BEFORE=$(cd "$GH_TEST_REPO" && git rev-parse HEAD)
 cleanDirs() {
     if [ -w "$GH_TEST_GIT_CORE" ]; then
         mkdir -p "$GH_TEST_GIT_CORE/templates/hooks"
-        rm -rf "$GH_TEST_GIT_CORE/templates/hooks/*"
+        rm -rf "$GH_TEST_GIT_CORE/templates/hooks/"*
     fi
 
-    rm -rf ~/test* >/dev/null 2>&1
-    rm -rf "$GH_TEST_TMP" >/dev/null 2>&1
-    mkdir -p "$GH_TEST_TMP" >/dev/null 2>&1
+    rm -rf ~/test*
+    rm -rf "$GH_TEST_TMP"
+    mkdir -p "$GH_TEST_TMP"
 }
 
 if [ -z "$GH_TESTS" ] ||
