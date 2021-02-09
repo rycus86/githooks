@@ -4,6 +4,9 @@
 
 mkdir ~/test121 && cd ~/test121 && git init
 
+# need to fake some input for this script
+set -- "mock/input"
+
 # shellcheck disable=SC1091
 . /var/lib/githooks/base-template.sh
 
