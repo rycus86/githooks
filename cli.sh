@@ -683,7 +683,7 @@ get_hook_state() {
 is_repository_disabled() {
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
     if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
-        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || # Legacy
         [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     else
@@ -1289,7 +1289,7 @@ git hooks shared pull
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a URL `<scheme>://...``
+    if echo "$1" | grep -Eq "^[^:/?#]+://" || # its a URL `<scheme>://...``
         echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
@@ -1353,6 +1353,18 @@ set_shared_root() {
             SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
         else
             SHARED_REPO_CLONE_URL="$1"
+            SHARED_REPO_CLONE_BRANCH=""
+        fi
+
+        # Double-check what we did above
+        if echo "$SHARED_REPO_CLONE_BRANCH" | grep -q ":"; then
+            # the branch name had a ":" so it was probably not a branch name
+            SHARED_REPO_CLONE_URL="${SHARED_REPO_CLONE_URL}@${SHARED_REPO_CLONE_BRANCH}"
+            SHARED_REPO_CLONE_BRANCH=""
+
+        elif echo "$SHARED_REPO_CLONE_URL" | grep -qE ".*://[^/]+$"; then
+            # the clone URL is something starting with a protocol then no path parts, then we probably split at the wrong place
+            SHARED_REPO_CLONE_URL="${SHARED_REPO_CLONE_URL}@${SHARED_REPO_CLONE_BRANCH}"
             SHARED_REPO_CLONE_BRANCH=""
         fi
 

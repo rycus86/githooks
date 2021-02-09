@@ -49,7 +49,7 @@ are_githooks_disabled() {
 
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
     if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
-        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || # Legacy
         [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     fi
@@ -497,7 +497,7 @@ process_shared_hooks() {
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
+    if echo "$1" | grep -Eq "^[^:/?#]+://" || # its a <scheme>://
         echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
@@ -560,6 +560,18 @@ set_shared_root() {
             SHARED_REPO_CLONE_BRANCH="$(echo "$1" | sed -E "s|^.+@(.+)$|\\1|")"
         else
             SHARED_REPO_CLONE_URL="$1"
+            SHARED_REPO_CLONE_BRANCH=""
+        fi
+
+        # Double-check what we did above
+        if echo "$SHARED_REPO_CLONE_BRANCH" | grep -q ":"; then
+            # the branch name had a ":" so it was probably not a branch name
+            SHARED_REPO_CLONE_URL="${SHARED_REPO_CLONE_URL}@${SHARED_REPO_CLONE_BRANCH}"
+            SHARED_REPO_CLONE_BRANCH=""
+
+        elif echo "$SHARED_REPO_CLONE_URL" | grep -qE ".*://[^/]+$"; then
+            # the clone URL is something starting with a protocol then no path parts, then we probably split at the wrong place
+            SHARED_REPO_CLONE_URL="${SHARED_REPO_CLONE_URL}@${SHARED_REPO_CLONE_BRANCH}"
             SHARED_REPO_CLONE_BRANCH=""
         fi
 
@@ -771,6 +783,13 @@ check_for_updates_if_needed() {
     should_run_update_checks || return
     record_update_time
     fetch_latest_updates || return
+
+    if ! is_update_available; then
+        # stop here if things are up-to-date
+        echo "* Githooks is on the latest version" >&2
+        return
+    fi
+
     should_run_update && execute_update && return
     print_update_disable_info
 }
