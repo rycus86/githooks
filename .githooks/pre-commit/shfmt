@@ -14,6 +14,7 @@ for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qE "\.sh$" &&
         ! shfmt -p -d -i 4 "$FILE" >/dev/null 2>&1; then
         echo "! shfmt problems detected in $FILE"
+        shfmt -p -d -i 4 "$FILE" 1>&2
         SUCCESS=1
     fi
 done

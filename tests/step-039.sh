@@ -12,16 +12,23 @@ mkdir -p /tmp/start/dir && cd /tmp/start/dir || exit 1
 mkdir -p /tmp/empty &&
     GIT_TEMPLATE_DIR=/tmp/empty git init || exit 1
 
-git config --local githooks.single.install "Y"
-OUT=$(sh /var/lib/githooks/install.sh --single 2>&1)
-if ! echo "$OUT" | grep -iq "DEPRECATION WARNING: Single install"; then
-    echo "! Expected installation to fail because of single install flag: $OUT"
+if ! sh /var/lib/githooks/install.sh --single; then
+    echo "! Installation failed (first)"
     exit 1
 fi
-git config --local --unset githooks.single.install
+
+if [ -n "$(git config --get githooks.single.install)" ]; then
+    echo "! Deprecated flag was set"
+    exit 1
+fi
+
+if [ -n "$(git config --get init.templateDir)" ]; then
+    echo "! Git template dir was set: $(git config --get init.templateDir)"
+    exit 1
+fi
 
 if ! sh /var/lib/githooks/install.sh --single; then
-    echo "! Installation failed"
+    echo "! Installation failed (second)"
     exit 1
 fi
 

@@ -68,7 +68,11 @@ execute_installation() {
     fi
 
     # Find the directory to install to
-    prepare_target_template_directory || return 1
+    if is_single_repo_install; then
+        get_cwd_git_dir || return 1
+    else
+        prepare_target_template_directory || return 1
+    fi
 
     # Install the hook templates if needed
     setup_hook_templates || return 1
@@ -135,7 +139,7 @@ check_deprecation() {
 #   We are not yet deleting  old values since the install
 #   could go wrong and dry-run could also be activated.
 #
-# Returns: 0 if succesful, 1 otherwise
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 legacy_transform_before_update() {
 
@@ -175,7 +179,7 @@ legacy_transform_before_update() {
 # Tests if the commit sha `$1`
 #   is before or equal of the commit sha `$2`.
 #
-# Returns: 0 if succesful, 1 otherwise
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 legacy_transform_is_ancestor() {
     if [ -n "$1" ] && [ -n "$2" ] &&
@@ -192,7 +196,7 @@ legacy_transform_is_ancestor() {
 # Function to dispatch to all legacy transformations
 #   right after the update.
 #
-# Returns: 0 if succesful, 1 otherwise
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 legacy_transform_after_update() {
     COMMIT_COUNT=$(execute_git "$GITHOOKS_CLONE_DIR" rev-list --count HEAD)
@@ -292,7 +296,7 @@ legacy_transform_split_global_shared_entries() {
     if [ "$FAILURE" = "true" ]; then
         echo "! Warning: Could not migrate the global shared hook repositories setting:" >&2
         echo "\`$CURRENT_LIST\`" >&2
-        echo " Please check \`githooks.shared\` and add all comma-speparated" >&2
+        echo " Please check \`githooks.shared\` and add all comma-separated" >&2
         echo " values manually by running:" >&2
         echo "  \$ git config --global --add githooks.shared <value>" >&2
         LEGACY_TRANSFORM_FAILURES="true"
@@ -448,7 +452,7 @@ legacy_transform_adjust_local_paths() {
             echo "  These paths are now moved to the local Git" >&2
             echo "  configuration value \`githooks.shared\`." >&2
             echo "  The file \`$SHARED_FILE\` has been changed and" >&2
-            echo "  should be commited!" >&2
+            echo "  should be committed!" >&2
         fi
 
         rm -rf "$MOVED_URLS" >/dev/null 2>&1
@@ -489,8 +493,8 @@ legacy_transform_update_shared_hooks() {
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
-        echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
+    if echo "$1" | grep -Eq "^[^:/?#]+://" || # it is a <scheme>://
+        echo "$1" | grep -Eq "^.+@.+:.+"; then # or it is a short scp syntax
         return 1
     fi
     return 0
@@ -554,7 +558,7 @@ load_install_dir() {
 # Checks if we are running an internal install
 #  from the release repository.
 #
-# Returns: 0 if `true`, 1 oterhwise
+# Returns: 0 if `true`, 1 otherwise
 ############################################################
 is_running_internal_install() {
     if [ "$INTERNAL_INSTALL" = "true" ] ||
@@ -593,7 +597,7 @@ parse_command_line_arguments() {
         elif [ "$p" = "--prefix" ]; then
             : # nothing to do here
         elif [ "$prev_p" = "--prefix" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
-            # Allow user to pass prefered install prefix
+            # Allow user to pass preferred install prefix
             INSTALL_DIR="$p"
 
             # Try to see if the path is given with a tilde
@@ -607,7 +611,7 @@ parse_command_line_arguments() {
         elif [ "$p" = "--template-dir" ]; then
             : # nothing to do here
         elif [ "$prev_p" = "--template-dir" ] && (echo "$p" | grep -qvE '^\-\-.*'); then
-            # Allow user to pass prefered template dir
+            # Allow user to pass preferred template dir
             TARGET_TEMPLATE_DIR="$p"
         elif [ "$p" = "--only-server-hooks" ]; then
             INSTALL_ONLY_SERVER_HOOKS="true"
@@ -872,7 +876,7 @@ prepare_target_template_directory() {
 #
 # Sets ${TARGET_TEMPLATE_DIR} if found.
 #
-# Returns: 0 if succesfull found, otherwise 1
+# Returns: 0 if successful found, otherwise 1
 ############################################################
 find_git_hook_templates() {
 
@@ -1232,7 +1236,7 @@ find_existing_git_dirs() {
 
         # Try to go to the root git dir (works in bare and non-bare repositories)
         # to neglect false positives from the find above
-        # e.g. spourious HEAD file or .git dir which does not mark a repository
+        # e.g. spurious HEAD file or .git dir which does not mark a repository
         REPO_GIT_DIR=$(cd "$EXISTING" && cd "$(git rev-parse --git-common-dir 2>/dev/null)" && pwd)
 
         if is_git_repo "$REPO_GIT_DIR" && ! echo "$EXISTING_REPOSITORY_LIST" | grep -F -q "$REPO_GIT_DIR"; then
@@ -1347,9 +1351,9 @@ disable_lfs_hook_if_detected() {
         fi
 
         if ! is_non_interactive && [ -z "$DELETE_DETECTED_LFS_HOOKS" ]; then
-            echo "! There is an LFS commmand statement in \`$HOOK_FILE\`."
+            echo "! There is an LFS command statement in \`$HOOK_FILE\`."
             echo "  Githooks will call LFS hooks internally and LFS should not be called twice."
-            printf "  Do you want to delete this hook instead of beeing disabled/backed up? (No, yes, all, skip all) [N,y,a,s] "
+            printf "  Do you want to delete this hook instead of being disabled/backed up? (No, yes, all, skip all) [N,y,a,s] "
 
             read -r DELETE_DETECTED_LFS_HOOKS </dev/tty
 
@@ -1413,7 +1417,7 @@ install_into_registered_repositories() {
                 echo "$INSTALLED_REPO" >>"$NEW_LIST"
 
             else
-                # Existing registed repository, install.
+                # Existing registered repository, install.
                 echo "$INSTALLED_REPO" >>"$NEW_LIST"
                 echo "$INSTALLED_REPO" >>"$INSTALL_LIST"
             fi
@@ -1793,7 +1797,7 @@ update_release_clone() {
     # - we have an existing clone AND
     #   - url or branch of the existing clone does not match the settings OR
     #   - the existing clone has modifications (should not be the case)
-    # - we dont have an existing clone
+    # - we do not have an existing clone
 
     # If not set by the user, check the config for url and branch
     if [ -z "$GITHOOKS_CLONE_URL" ]; then
@@ -1936,7 +1940,7 @@ is_clone_updated() {
 # Clone the URL `$GITHOOKS_CLONE_URL` into the install
 #   folder `$GITHOOKS_CLONE_DIR` for further updates.
 #
-# Returns: 0 if succesful, 1 otherwise
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 clone_release_repository() {
 
@@ -1983,7 +1987,7 @@ clone_release_repository() {
 ############################################################
 # Run the install from the update clone.
 
-# Returns: 0 if succesful, 1 otherwise
+# Returns: 0 if successful, 1 otherwise
 ############################################################
 run_internal_install() {
     INSTALL_SCRIPT="$GITHOOKS_CLONE_DIR/install.sh"
