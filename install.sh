@@ -75,8 +75,10 @@ execute_installation() {
     fi
 
     # Install the hook templates if needed
-    setup_hook_templates || return 1
-    echo # For visual separation
+    if ! is_single_repo_install; then
+        setup_hook_templates || return 1
+        echo # For visual separation
+    fi
 
     # Install the command line helper tool
     install_command_line_tool
