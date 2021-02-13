@@ -1584,8 +1584,6 @@ git hooks update [enable|disable]
 
     record_update_time
 
-    echo "Checking for updates ..."
-
     if ! fetch_latest_updates; then
         echo "! Failed to check for updates: cannot fetch updates"
         exit 1
