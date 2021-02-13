@@ -341,7 +341,7 @@ uninstall_hooks_from_repo() {
     # Remove all install relevant local githooks configs
     (
         cd "${TARGET}" &&
-            git config --local --unset githooks.single.install >/dev/null &&             # legacy setting (deperecated)
+            git config --local --unset githooks.single.install >/dev/null && # legacy setting (deperecated)
             git config --local --unset githooks.autoupdate.registered >/dev/null 2>&1 && # legacy settings (deprecated)
             git config --local --unset githooks.install.registered >/dev/null 2>&1 &&
             git config --local --unset-all githooks.shared >/dev/null 2>&1 &&
@@ -608,6 +608,7 @@ uninstall() {
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
+    git config --global --unset githooks.noReadme
     git config --global --unset githooks.cloneUrl
     git config --global --unset githooks.cloneBranch
     git config --global --unset githooks.previousSearchDir

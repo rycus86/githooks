@@ -1355,7 +1355,7 @@ disable_lfs_hook_if_detected() {
         if ! is_non_interactive && [ -z "$DELETE_DETECTED_LFS_HOOKS" ]; then
             echo "! There is an LFS command statement in \`$HOOK_FILE\`."
             echo "  Githooks will call LFS hooks internally and LFS should not be called twice."
-            printf "  Do you want to delete this hook instead of being disabled/backed up? (No, yes, all, skip all) [N,y,a,s] "
+            printf "  Do you want to delete this hook instead of being disabled/backed up? (No, yes, all, skip all) [N/y/a/s] "
 
             read -r DELETE_DETECTED_LFS_HOOKS </dev/tty
 
@@ -1440,7 +1440,7 @@ install_into_registered_repositories() {
                 echo "\`$LIST\`"
                 echo "contain a Githooks installation:"
                 sed -E "s/^/ - /" <"$INSTALL_LIST"
-                printf 'Do you want to install to all of them? [Yn] '
+                printf 'Do you want to install to all of them? [Y/n] '
 
                 read -r DO_INSTALL </dev/tty
                 if [ "$DO_INSTALL" = "n" ] || [ "$DO_INSTALL" = "N" ]; then
@@ -1543,7 +1543,10 @@ install_hooks_into_repo() {
 
         if [ -d "$TARGET_ROOT" ] && is_git_repo "$TARGET_ROOT" &&
             [ ! -f "$TARGET_ROOT/.githooks/README.md" ]; then
-            if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
+
+            NEVER_SETUP_README=$(git config --global githooks.noReadme)
+
+            if [ "$NEVER_SETUP_README" = "yes" ] || [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
                 true # OK, we already said we want to skip all
 
             elif [ "$SETUP_INCLUDED_README" = "a" ] || [ "$SETUP_INCLUDED_README" = "A" ]; then
@@ -1573,6 +1576,15 @@ install_hooks_into_repo() {
 
                     mkdir -p "${TARGET_ROOT}/.githooks" &&
                         cp "$GITHOOKS_CLONE_DIR/.githooks/README.md" "${TARGET_ROOT}/.githooks/README.md"
+                fi
+
+                if [ "$SETUP_INCLUDED_README" = "s" ] || [ "$SETUP_INCLUDED_README" = "S" ]; then
+                    printf "Would you like to always skip adding the Githooks README in the future? [y/N] "
+                    read -r ALWAYS_SKIP_ADDING_README </dev/tty
+
+                    if [ "$ALWAYS_SKIP_ADDING_README" = "y" ] || [ "$ALWAYS_SKIP_ADDING_README" = "Y" ]; then
+                        git config --global githooks.noReadme "yes"
+                    fi
                 fi
             fi
         fi
