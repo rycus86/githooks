@@ -2008,7 +2008,7 @@ git hooks readme [add|update]
         exit 1
     fi
 
-    README_FILE="$INSTALL_DIR/release/README.md"
+    README_FILE="$INSTALL_DIR/release/.githooks/README.md"
     mkdir -p "$(pwd)/.githooks" &&
         cat "$README_FILE" >"$(pwd)/.githooks/README.md" &&
         echo "The README file is updated." &&
