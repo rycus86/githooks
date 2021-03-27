@@ -9,6 +9,11 @@ To make this work, it creates hook templates that are installed into the `.git/h
 
 > Check out the [blog post](https://blog.viktoradam.net/2018/07/26/githooks-auto-install-hooks/) for the long read!
 
+## Go version
+
+Thanks to [@gabyx](https://github.com/gabyx), this project has now been also ported over to Go in [gabyx/githooks](https://github.com/gabyx/githooks).
+Check it out if you're after some extra features like parallel execution, automatic updates, GUI dialog integration, colored terminal output, and more...
+
 ## Layout and options
 
 Take this snippet of a project layout as an example:
