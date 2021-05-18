@@ -2206,8 +2206,8 @@ The \`print\` option outputs the current behavior.
 
     CONFIG_ARGUMENT="$2"
 
-    shift
-    shift
+    [ "$#" -ge 1 ] && shift
+    [ "$#" -ge 2 ] && shift
 
     case "$CONFIG_ARGUMENT" in
     "disable")
