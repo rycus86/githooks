@@ -15,7 +15,7 @@ EOF
 FAILURES=""
 
 run_pre_commit_test() {
-    if ! docker run --rm -it -v "$(pwd)":/data -w /data githooks:test-rules sh ".githooks/pre-commit/$1"; then
+    if ! docker run --rm -v "$(pwd)":/data -w /data githooks:test-rules sh ".githooks/pre-commit/$1"; then
         FAILURES="$FAILURES
   - $1 failed"
     fi

@@ -3,7 +3,7 @@
 TEST_DIR=$(dirname "$0")
 
 cat <<EOF | docker build --force-rm -t githooks:arch-base -
-FROM archlinux/base
+FROM archlinux/archlinux
 RUN echo Y | pacman -Sy git gawk
 EOF
 

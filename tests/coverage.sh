@@ -89,8 +89,7 @@ RUN git config --global user.email "githook@test.com" && \
 
 ######################################################
 
-RUN kcov \
-    --coveralls-id="$TRAVIS_JOB_ID" \
+RUN CI=${CI} kcov \
     --include-pattern="/home/coverage/.githooks/release" \
     ~/cover \
     "/var/lib/tests/exec-steps.sh"
@@ -104,12 +103,11 @@ fi
 # Make sure we delete the previous run results
 docker run --user root --rm --security-opt seccomp=unconfined \
     -v "${RUN_DIR}/cover":/cover \
-    --entrypoint sh \
     githooks:coverage \
-    -c 'rm -rf /cover/*'
+    sh -c 'rm -rf /cover/*'
 
 # Collect the coverage info
 docker run --user root --rm --security-opt seccomp=unconfined \
     -v "${RUN_DIR}/cover":/cover \
     githooks:coverage \
-    bash -c 'cp -r /home/coverage/cover /cover/'
+    sh -c 'cp -r /home/coverage/cover /cover/'

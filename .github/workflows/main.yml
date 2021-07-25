@@ -1,0 +1,39 @@
+name: Run tests
+
+on: [push, pull_request]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: test-alpine
+          - runner: test-alpine-user
+          - runner: test-alpine-lfs
+          - runner: test-debian
+          - runner: test-debian-user
+          - runner: test-ubuntu
+          - runner: test-centos
+          - runner: test-arch
+          - runner: test-fedora
+          - runner: test-opensuse
+          - runner: test-corehookspath
+          - runner: test-whitespace
+          - runner: test-rules
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run tests for ${{ matrix.runner }}
+        run: |
+          sh "tests/${{ matrix.runner }}.sh"
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run tests and collect coverage
+        run: |
+          sh "tests/coverage.sh"
+    # will need to work out how to get KCov uploaded to Coveralls from GitHub Actions

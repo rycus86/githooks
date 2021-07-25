@@ -56,7 +56,7 @@ RUN git config --global githooks.deleteDetectedLFSHooks "n"
 
 ${ADDITIONAL_INSTALL_STEPS:-}
 
-RUN sh /var/lib/tests/exec-steps.sh
+RUN CI=${CI} sh /var/lib/tests/exec-steps.sh
 EOF
 
 RESULT=$?
