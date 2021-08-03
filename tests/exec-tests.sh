@@ -24,7 +24,8 @@ ADD .githooks/README.md /var/lib/githooks/.githooks/README.md
 ADD examples /var/lib/githooks/examples
 
 RUN git config --global user.email "githook@test.com" && \
-    git config --global user.name "Githook Tests"
+    git config --global user.name "Githook Tests" && \
+    git config --global init.defaultBranch master
 
 ADD tests/exec-steps.sh tests/${STEPS_TO_RUN} /var/lib/tests/
 
