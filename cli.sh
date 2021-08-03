@@ -791,16 +791,37 @@ get_hook_enabled_or_disabled_state() {
 #   in the shared hook repositories found locally.
 #####################################################
 list_hooks_in_shared_repos() {
+    SHARED_LIST_TYPE="$1"
+    ALREADY_LISTED=""
+
+    IFS="$IFS_NEWLINE"
+    for SHARED_REPO_ITEM in $SHARED_REPOS_LIST; do
+        unset IFS
+
+        set_shared_root "$SHARED_REPO_ITEM"
+
+        if [ -e "${SHARED_ROOT}/.githooks/${SHARED_LIST_TYPE}" ]; then
+            echo "${SHARED_ROOT}/.githooks/${SHARED_LIST_TYPE}"
+        elif [ -e "${SHARED_ROOT}/${SHARED_LIST_TYPE}" ]; then
+            echo "${SHARED_ROOT}/${SHARED_LIST_TYPE}"
+        fi
+
+        ALREADY_LISTED="$ALREADY_LISTED
+        ${SHARED_ROOT}"
+    done
+
     if [ ! -d "$INSTALL_DIR/shared" ]; then
         return
     fi
-
-    SHARED_LIST_TYPE="$1"
 
     IFS="$IFS_NEWLINE"
     for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
         unset IFS
         if [ ! -d "$SHARED_ROOT" ]; then
+            continue
+        fi
+
+        if echo "$ALREADY_LISTED" | grep -F -q "$SHARED_ROOT"; then
             continue
         fi
 

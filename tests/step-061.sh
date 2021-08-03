@@ -20,18 +20,28 @@ mkdir -p /tmp/test061/.githooks &&
     git init ||
     exit 1
 
-if git hooks list | grep -q "sample"; then
+if git hooks list | grep -q "sample-one"; then
     echo "! Unexpected cli list output (1)"
     exit 1
 fi
 
-if ! git hooks pull; then
+if ! git hooks list | grep -q "sample-two"; then
+    echo "! Unexpected cli list output (2)"
+    exit 1
+fi
+
+if ! git hooks shared pull; then
     echo "! Failed to update the shared hook repositories"
     exit 1
 fi
 
-if ! git hooks list | grep -q "sample"; then
-    echo "! Unexpected cli list output (2)"
+if ! git hooks list | grep -q "sample-one"; then
+    echo "! Unexpected cli list output (3)"
+    exit 1
+fi
+
+if ! git hooks list | grep -q "sample-two"; then
+    echo "! Unexpected cli list output (4)"
     exit 1
 fi
 
@@ -40,7 +50,7 @@ if ! git hooks pull help | grep -q "deprecated"; then
     exit 1
 fi
 
-if ! git hooks pull || ! git hooks list; then
+if ! git hooks shared pull || ! git hooks list; then
     echo "! The Git alias integration failed"
     exit 1
 fi
