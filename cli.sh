@@ -539,6 +539,7 @@ check_git_hooks_setup_is_correct() {
             echo "  \`git config core.hooksPath\` is set to $(git config core.hooksPath)," >&2
             echo "  but Githooks is not configured to use that folder," >&2
             echo "  which could mean the hooks in this repository are not run by Githooks" >&2
+            echo >&2
         fi
     else
         if [ "true" = "$(git config githooks.useCoreHooksPath)" ]; then
@@ -546,6 +547,7 @@ check_git_hooks_setup_is_correct() {
             echo "  Githooks is configured to consider \`git config core.hooksPath\`," >&2
             echo "  but that git setting is not currently set," >&2
             echo "  which could mean the hooks in this repository are not run by Githooks" >&2
+            echo >&2
         fi
     fi
 }
