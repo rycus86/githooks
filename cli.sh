@@ -528,6 +528,29 @@ git hooks trust [forget]
 }
 
 #####################################################
+# Checks if Githhoks is set up correctly,
+#   and that other git settings do not prevent it
+#   from executing scripts.
+#####################################################
+check_git_hooks_setup_is_correct() {
+    if [ -n "$(git config core.hooksPath)" ]; then
+        if [ "true" != "$(git config githooks.useCoreHooksPath)" ]; then
+            echo "! WARNING" >&2
+            echo "  \`git config core.hooksPath\` is set to $(git config core.hooksPath)," >&2
+            echo "  but Githooks is not configured to use that folder," >&2
+            echo "  which could mean the hooks in this repository are not run by Githooks" >&2
+        fi
+    else
+        if [ "true" = "$(git config githooks.useCoreHooksPath)" ]; then
+            echo "! WARNING" >&2
+            echo "  Githooks is configured to consider \`git config core.hooksPath\`," >&2
+            echo "  but that git setting is not currently set," >&2
+            echo "  which could mean the hooks in this repository are not run by Githooks" >&2
+        fi
+    fi
+}
+
+#####################################################
 # Lists the hook files in the current
 #   repository along with their current state.
 #
@@ -552,6 +575,8 @@ git hooks list [type]
         echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
         exit 1
     fi
+
+    check_git_hooks_setup_is_correct
 
     if [ -n "$*" ]; then
         LIST_TYPES="$*"
@@ -683,7 +708,7 @@ get_hook_state() {
 is_repository_disabled() {
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
     if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
-        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
         [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     else
@@ -1310,7 +1335,7 @@ git hooks shared pull
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" || # its a URL `<scheme>://...``
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a URL `<scheme>://...``
         echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
