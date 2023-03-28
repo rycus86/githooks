@@ -102,12 +102,12 @@ fi
 
 # Make sure we delete the previous run results
 docker run --user root --rm --security-opt seccomp=unconfined \
-    -v "${RUN_DIR}/cover":/cover \
+    -v "${RUN_DIR}/coverage":/cover \
     githooks:coverage \
     sh -c 'rm -rf /cover/*'
 
 # Collect the coverage info
 docker run --user root --rm --security-opt seccomp=unconfined \
-    -v "${RUN_DIR}/cover":/cover \
+    -v "${RUN_DIR}/coverage":/cover \
     githooks:coverage \
     sh -c 'cp -r /home/coverage/cover /cover/'

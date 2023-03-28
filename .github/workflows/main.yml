@@ -35,4 +35,6 @@ jobs:
       - name: Run tests and collect coverage
         run: |
           sh "tests/coverage.sh"
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
     # will need to work out how to get KCov uploaded to Coveralls from GitHub Actions
