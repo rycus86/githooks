@@ -331,7 +331,8 @@ is_file_ignored() {
             continue
         fi
 
-        if [ -z "${HOOK_FILENAME##"$IGNORED"}" ]; then
+        # shellcheck disable=SC2295
+        if [ -z "${HOOK_FILENAME##$IGNORED}" ]; then
             IS_IGNORED="y"
             break
         fi
@@ -930,7 +931,7 @@ show_prompt() {
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS" >&2
 
     # shellcheck disable=SC2217
-    if [ -e /dev/tty ] && true </dev/tty 2>/dev/null; then
+    if true </dev/tty 2>/dev/null; then
         # shellcheck disable=SC2229
         read -r "$VARIABLE" </dev/tty
     fi

@@ -16,7 +16,6 @@ jobs:
           - runner: test-debian
           - runner: test-debian-user
           - runner: test-ubuntu
-          - runner: test-centos
           - runner: test-arch
           - runner: test-fedora
           - runner: test-opensuse

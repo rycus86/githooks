@@ -822,7 +822,8 @@ is_file_ignored() {
             continue
         fi
 
-        if [ -z "${HOOK_NAME##"$IGNORED"}" ]; then
+        # shellcheck disable=SC2295
+        if [ -z "${HOOK_NAME##$IGNORED}" ]; then
             IS_IGNORED="y"
             break
         fi
