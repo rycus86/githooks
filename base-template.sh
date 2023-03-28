@@ -413,9 +413,12 @@ execute_opt_in_checks() {
 
     # check against the previous hash
     if echo "$CURRENT_HASHES" | grep -q "disabled> $HOOK_PATH" >/dev/null 2>&1; then
-        echo "* Skipping disabled $HOOK_PATH" >&2
-        echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again" >&2
-        echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again" >&2
+        if should_output_skipping_disabled_hook "$HOOK_PATH"; then
+            echo "* Skipping disabled $HOOK_PATH" >&2
+            echo "  Use \`git hooks enable $HOOK_NAME $(basename "$HOOK_PATH")\` to enable it again" >&2
+            echo "  Alternatively, edit or delete the $(pwd)/$CURRENT_GIT_DIR/.githooks.checksum file to enable it again" >&2
+            record_skipping_disabled_hook_time "$HOOK_PATH"
+        fi
         return 1
 
     elif ! echo "$CURRENT_HASHES" | grep -q "$SHA_HASH $HOOK_PATH" >/dev/null 2>&1; then
@@ -450,6 +453,52 @@ execute_opt_in_checks() {
         # save the new accepted checksum
         echo "$SHA_HASH $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.checksum"
     fi
+}
+
+#####################################################
+# Returns whether the fact that a disabled hook is
+#   being skipped should be written to the output
+#   (once a day) or not.
+#
+# Returns:
+#   0 when the output should be written
+#   1 if the output should not be written
+#####################################################
+should_output_skipping_disabled_hook() {
+    HOOK_PATH="$1"
+    LAST_UPDATE=$(grep "$HOOK_PATH" "$CURRENT_GIT_DIR/.githooks.skip.output.dates" | sed -E "s/([^ ]+) .*/\1/")
+    CURRENT_TIME=$(date +%s)
+    ELAPSED_TIME=$((CURRENT_TIME - LAST_UPDATE))
+    ONE_DAY=86400
+
+    if [ $ELAPSED_TIME -lt $ONE_DAY ]; then
+        return 1 # it is not time to write it again yet
+    fi
+}
+
+#####################################################
+# Saves the last output date of the fact a given
+#   disabled hook was skipped.
+#####################################################
+record_skipping_disabled_hook_time() {
+    HOOK_PATH="$1"
+    OUTPUT_DATES=$(cat "$CURRENT_GIT_DIR/.githooks.skip.output.dates")
+
+    # reset the file
+    echo "# Last output date disabled hooks being skipped was printed" >"$CURRENT_GIT_DIR/.githooks.skip.output.dates"
+
+    IFS="$IFS_NEWLINE"
+    for LINE in ${OUTPUT_DATES}; do
+        unset IFS
+
+        if echo "$LINE" | grep -qv "$HOOK_PATH"; then
+            echo "$LINE" >>"$CURRENT_GIT_DIR/.githooks.skip.output.dates"
+        fi
+
+        IFS="$IFS_NEWLINE"
+    done
+
+    echo "$(date +%s) $HOOK_PATH" >>"$CURRENT_GIT_DIR/.githooks.skip.output.dates"
 }
 
 #####################################################
