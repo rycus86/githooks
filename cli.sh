@@ -284,20 +284,17 @@ find_hook_path_to_execute() {
         fi
 
     else
-        TRIGGER_TYPES="
-        applypatch-msg pre-applypatch post-applypatch
-        pre-commit prepare-commit-msg commit-msg post-commit
-        pre-rebase post-checkout post-merge pre-push
-        pre-receive update post-receive post-update
-        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+        TRIGGER_TYPES="(applypatch-msg|pre-applypatch|post-applypatch|pre-commit|prepare-commit-msg|commit-msg|post-commit"
+        TRIGGER_TYPES="${TRIGGER_TYPES}|pre-rebase|post-checkout|post-merge|pre-push|pre-receive|update|post-receive"
+        TRIGGER_TYPES="${TRIGGER_TYPES}|post-update|push-to-checkout|pre-auto-gc|post-rewrite|sendemail-validate)"
 
-        if echo "$TRIGGER_TYPES" | grep -qE "\b$1\b"; then
+        if echo "$1" | grep -qE "^${TRIGGER_TYPES}$"; then
             SEARCH_PATTERN="$1/.*"
         else
             if [ -n "$EXACT_MATCH" ]; then
-                SEARCH_PATTERN=".*/$1\$"
+                SEARCH_PATTERN="${TRIGGER_TYPES}/$1\$"
             else
-                SEARCH_PATTERN=".*/.*$1.*"
+                SEARCH_PATTERN="${TRIGGER_TYPES}/.*$1.*"
             fi
         fi
     fi

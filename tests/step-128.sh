@@ -47,3 +47,8 @@ if ! git hooks exec --exact pre-commit second | grep -q "Shared second"; then
     echo "! Expected output not found (3)"
     exit 8
 fi
+
+if [ "$(git hooks exec pre-commit | grep -c "Shared")" -ne "2" ]; then
+    echo "! Expected output not found (4)"
+    exit 1
+fi

@@ -35,3 +35,8 @@ if ! git hooks exec --exact pre-commit second | grep -q "Hello second"; then
     echo "! Expected output not found (3)"
     exit 1
 fi
+
+if [ "$(git hooks exec pre-commit | grep -c "Hello")" -ne "2" ]; then
+    echo "! Expected output not found (4)"
+    exit 1
+fi
