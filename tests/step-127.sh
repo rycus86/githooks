@@ -5,7 +5,7 @@
 sh /var/lib/githooks/install.sh || exit 1
 
 mkdir -p /tmp/test127/.githooks/pre-commit &&
-    echo 'echo "Hello first"' >/tmp/test127/.githooks/pre-commit/first &&
+    echo 'echo "Hello first"' >/tmp/test127/.githooks/pre-commit/first.hook &&
     echo 'echo "Hello second"' >/tmp/test127/.githooks/pre-commit/second &&
     cd /tmp/test127 &&
     git init ||
@@ -28,5 +28,10 @@ fi
 
 if ! git hooks exec pre-commit second | grep -q "Hello second"; then
     echo "! Expected output not found (2)"
+    exit 1
+fi
+
+if ! git hooks exec --exact pre-commit second | grep -q "Hello second"; then
+    echo "! Expected output not found (3)"
     exit 1
 fi

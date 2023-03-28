@@ -126,7 +126,8 @@ echo_if_non_bare_repo() {
 #####################################################
 # Finds a hook file path based on trigger name,
 #   file name, relative or absolute path, or
-#   some combination of these.
+#   some combination of these, intended to
+#   enable or disable exactly one hook found.
 #
 # Sets the ${HOOK_PATH} environment variable.
 #
@@ -256,6 +257,110 @@ find_hook_path_to_enable_or_disable() {
             return 1
         fi
     fi
+}
+
+#####################################################
+# Finds a hook file path based on trigger name,
+#   file name, relative or absolute path, or
+#   some combination of these, intended to
+#   loosely match for executing the ones found.
+#
+# Sets the ${HOOK_PATHS} environment variable,
+#   with the list of matching hook paths.
+#
+# Returns:
+#   0 on success, 1 when no hooks found
+#####################################################
+find_hook_path_to_execute() {
+    if [ -z "$1" ]; then
+        echo "! Either the trigger type, the hook name or both needs to be given" >&2
+        return 1
+
+    elif [ -n "$1" ] && [ -n "$2" ]; then
+        if [ -n "$EXACT_MATCH" ]; then
+            SEARCH_PATTERN="$1/$2\$"
+        else
+            SEARCH_PATTERN="$1/.*$2.*"
+        fi
+
+    else
+        TRIGGER_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+        if echo "$TRIGGER_TYPES" | grep -qE "\b$1\b"; then
+            SEARCH_PATTERN="$1/.*"
+        else
+            if [ -n "$EXACT_MATCH" ]; then
+                SEARCH_PATTERN=".*/$1\$"
+            else
+                SEARCH_PATTERN=".*/.*$1.*"
+            fi
+        fi
+    fi
+
+    HOOK_PATHS=""
+    IFS="$IFS_NEWLINE"
+    for TARGET_HOOK in $(find "$(pwd)/.githooks" -type f | grep -E "/\.githooks/$SEARCH_PATTERN" | sort); do
+        if [ -z "$HOOK_PATHS" ]; then
+            HOOK_PATHS="$TARGET_HOOK"
+        else
+            HOOK_PATHS="$HOOK_PATHS
+$TARGET_HOOK"
+        fi
+    done
+    unset IFS
+
+    if [ ! -d "$INSTALL_DIR/shared" ]; then
+        # No shared repositories found
+        return
+    fi
+
+    IFS="$IFS_NEWLINE"
+    for SHARED_ROOT in "$INSTALL_DIR/shared/"*; do
+        unset IFS
+
+        if [ ! -d "$SHARED_ROOT" ]; then
+            continue
+        fi
+
+        REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
+
+        if [ -f "$(pwd)/.githooks/.shared" ]; then
+            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
+            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
+        else
+            ACTIVE_LOCAL_REPO=""
+        fi
+
+        ACTIVE_GLOBAL_REPO=$(git config --global --get-all githooks.shared | grep -o "$REMOTE_URL")
+
+        if [ "$ACTIVE_LOCAL_REPO" != "$REMOTE_URL" ] && [ "$ACTIVE_GLOBAL_REPO" != "$REMOTE_URL" ]; then
+            continue
+        fi
+
+        if [ -d "$SHARED_ROOT/.githooks" ]; then
+            SHARED_ROOT_SEARCH_START="$SHARED_ROOT/.githooks"
+        else
+            SHARED_ROOT_SEARCH_START="$SHARED_ROOT"
+        fi
+
+        IFS="$IFS_NEWLINE"
+        for TARGET_HOOK in $(find "$SHARED_ROOT_SEARCH_START" -type f | grep -E "${SHARED_ROOT_SEARCH_START}/${SEARCH_PATTERN}" | sort); do
+            if [ -z "$HOOK_PATHS" ]; then
+                HOOK_PATHS="$TARGET_HOOK"
+            else
+                HOOK_PATHS="$HOOK_PATHS
+$TARGET_HOOK"
+            fi
+        done
+        unset IFS
+
+        IFS="$IFS_NEWLINE"
+    done
 }
 
 #####################################################
@@ -451,15 +556,18 @@ execute_hook() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks exec [trigger] [hook-script]
-git hooks exec [hook-script]
+git hooks exec [--exact] [trigger] [hook-script]
+git hooks exec [--exact] [hook-script]
+git hooks exec [--exact] [trigger]
 
     Executes a hook script on demand.
     During these executions, the \`GITHOOKS_ON_DEMAND_EXEC\` environment
     variable will be set, hook scripts can use that for conditional logic.
     The \`trigger\` parameter should be the name of the Git event if given.
-    The \`hook-script\` can be the name of the file to enable, or its
+    The \`hook-script\` can be the name of the file to execute, or its
     relative path, or an absolute path, we will try to find it.
+    If the \`--exact\` flag is given, only hook scripts matching exactly
+    will be returned, otherwise all hook scripts matching the substring.
 "
         return
     fi
@@ -469,7 +577,16 @@ git hooks exec [hook-script]
         exit 1
     fi
 
-    if [ -n "$2" ]; then
+    if [ "$1" = "--exact" ]; then
+        EXACT_MATCH=1
+        shift
+    fi
+
+    if [ -z "$1" ]; then
+        echo "! Missing [hook-script] or [trigger] argument, see git hooks exec help" >&2
+        exit 1
+
+    elif [ -n "$2" ]; then
         REQUESTED_HOOK_TYPE="$1"
         ACCEPTED_HOOK_TYPES="
         applypatch-msg pre-applypatch post-applypatch
@@ -478,37 +595,53 @@ git hooks exec [hook-script]
         pre-receive update post-receive post-update
         push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
 
-        if ! echo "$ACCEPTED_HOOK_TYPES" | grep -q "$REQUESTED_HOOK_TYPE"; then
+        if ! echo "$ACCEPTED_HOOK_TYPES" | grep -qE "\b$REQUESTED_HOOK_TYPE\b"; then
             echo "! Unknown trigger type: $REQUESTED_HOOK_TYPE" >&2
             echo "  See git hooks exec help for usage" >&2
             exit 1
         fi
+
     elif [ -n "$3" ]; then
         echo "! Unexpected argument: $3" >&2
         echo "  See git hooks exec help for usage" >&2
         exit 1
     fi
 
-    find_hook_path_to_enable_or_disable "$@" 2>/dev/null ||
-        find_hook_path_to_enable_or_disable --shared "$@" 2>/dev/null ||
-        exit 1
+    find_hook_path_to_execute "$@" || exit 1
 
-    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
+    if [ -z "$HOOK_PATHS" ]; then
+        echo "! Sorry, cannot find any hooks that would match that" >&2
+        exit 1
+    fi
+
+    AGGREGATE_RESULT="0"
+
+    IFS="$IFS_NEWLINE"
+    for HOOK_FILE in ${HOOK_PATHS}; do
+        unset IFS
+
         if [ -x "$HOOK_FILE" ]; then
             # Run as an executable file
-            GITHOOKS_ON_DEMAND_EXEC=1 "$HOOK_FILE" "$@"
-            exit $?
+            GITHOOKS_ON_DEMAND_EXEC=1 "$HOOK_FILE"
+            RUN_RESULT="$?"
 
         elif [ -f "$HOOK_FILE" ]; then
             # Run as a Shell script
-            GITHOOKS_ON_DEMAND_EXEC=1 sh "$HOOK_FILE" "$@"
-            exit $?
+            GITHOOKS_ON_DEMAND_EXEC=1 sh "$HOOK_FILE"
+            RUN_RESULT="$?"
 
         else
             echo "! Unable to run hook file: $HOOK_FILE}" >&2
-            exit 1
+            RUN_RESULT="1"
         fi
+
+        [ "$RUN_RESULT" -gt "$AGGREGATE_RESULT" ] && AGGREGATE_RESULT="$RUN_RESULT"
+
+        IFS="$IFS_NEWLINE"
     done
+    unset IFS
+
+    exit "$AGGREGATE_RESULT"
 }
 
 #####################################################

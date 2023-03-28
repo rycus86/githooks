@@ -12,7 +12,7 @@ fi
 mkdir -p /tmp/test128.shared/shared-repo.git/.githooks/pre-commit &&
     cd /tmp/test128.shared/shared-repo.git &&
     git init &&
-    echo 'echo "Shared first"' >.githooks/pre-commit/first &&
+    echo 'echo "Shared first"' >.githooks/pre-commit/first.hook &&
     echo 'echo "Shared second"' >.githooks/pre-commit/second &&
     git add .githooks &&
     git commit -m 'Initial commit' ||
@@ -41,4 +41,9 @@ fi
 if ! git hooks exec pre-commit second | grep -q "Shared second"; then
     echo "! Expected output not found (2)"
     exit 7
+fi
+
+if ! git hooks exec --exact pre-commit second | grep -q "Shared second"; then
+    echo "! Expected output not found (3)"
+    exit 8
 fi

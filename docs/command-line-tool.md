@@ -64,11 +64,12 @@ Accepts a new hook or changes to an existing hook. The `trigger` parameter shoul
 Executes a hook script on demand.
 
 ```shell
-$ git hooks exec [trigger] [hook-script]
-$ git hooks exec [hook-script]
+git hooks exec [--exact] [trigger] [hook-script]
+git hooks exec [--exact] [hook-script]
+git hooks exec [--exact] [trigger]
 ```
     
-During these executions, the `GITHOOKS_ON_DEMAND_EXEC` environment variable will be set, hook scripts can use that for conditional logic. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it.
+During these executions, the `GITHOOKS_ON_DEMAND_EXEC` environment variable will be set, hook scripts can use that for conditional logic. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to execute, or its relative path, or an absolute path, we will try to find it. If the `--exact` flag is given, only hook scripts matching exactly will be returned, otherwise all hook scripts matching the substring.
 
 ## git hooks trust
 
