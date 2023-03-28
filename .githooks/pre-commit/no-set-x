@@ -15,6 +15,10 @@ checkSetX() {
     fi
 }
 
+if [ -n "$GITHOOKS_ON_DEMAND_EXEC" ]; then
+    STAGED_FILES=$(find . -name '*.sh')
+fi
+
 for FILE in $STAGED_FILES; do
     echo "$FILE" | grep -qE '\.sh$' && checkSetX "$FILE"
 done

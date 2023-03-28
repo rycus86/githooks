@@ -27,6 +27,7 @@ Available commands:
     disable     Disables a hook in the current repository
     enable      Enables a previously disabled hook in the current repository
     accept      Accepts the pending changes of a new or modified hook
+    exec        Executes a hook script on demand
     trust       Manages settings related to trusted repositories
     list        Lists the active hooks in the current repository
     shared      Manages the shared hook repositories
@@ -157,8 +158,12 @@ find_hook_path_to_enable_or_disable() {
 
             REMOTE_URL=$(git -C "$SHARED_ROOT" config --get remote.origin.url)
 
-            SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
-            ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
+            if [ -f "$(pwd)/.githooks/.shared" ]; then
+                SHARED_LOCAL_REPOS_LIST=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
+                ACTIVE_LOCAL_REPO=$(echo "$SHARED_LOCAL_REPOS_LIST" | grep -F -o "$REMOTE_URL")
+            else
+                ACTIVE_LOCAL_REPO=""
+            fi
 
             ACTIVE_GLOBAL_REPO=$(git config --global --get-all githooks.shared | grep -o "$REMOTE_URL")
 
@@ -432,6 +437,77 @@ git hooks accept [--shared] [trigger]
 
         echo "$CHECKSUM $HOOK_FILE" >>"${CURRENT_GIT_DIR}/.githooks.checksum" &&
             echo "Changes accepted for $HOOK_FILE"
+    done
+}
+
+#####################################################
+# Execute a specific hook on demand.
+#
+# Returns:
+#   1 if the current directory is not a Git repo,
+#   0 otherwise
+#####################################################
+execute_hook() {
+    if [ "$1" = "help" ]; then
+        print_help_header
+        echo "
+git hooks exec [trigger] [hook-script]
+git hooks exec [hook-script]
+
+    Executes a hook script on demand.
+    During these executions, the \`GITHOOKS_ON_DEMAND_EXEC\` environment
+    variable will be set, hook scripts can use that for conditional logic.
+    The \`trigger\` parameter should be the name of the Git event if given.
+    The \`hook-script\` can be the name of the file to enable, or its
+    relative path, or an absolute path, we will try to find it.
+"
+        return
+    fi
+
+    if ! is_running_in_git_repo_root; then
+        echo "! The current directory \`$(pwd)\` does not seem to be the root of a Git repository!" >&2
+        exit 1
+    fi
+
+    if [ -n "$2" ]; then
+        REQUESTED_HOOK_TYPE="$1"
+        ACCEPTED_HOOK_TYPES="
+        applypatch-msg pre-applypatch post-applypatch
+        pre-commit prepare-commit-msg commit-msg post-commit
+        pre-rebase post-checkout post-merge pre-push
+        pre-receive update post-receive post-update
+        push-to-checkout pre-auto-gc post-rewrite sendemail-validate"
+
+        if ! echo "$ACCEPTED_HOOK_TYPES" | grep -q "$REQUESTED_HOOK_TYPE"; then
+            echo "! Unknown trigger type: $REQUESTED_HOOK_TYPE" >&2
+            echo "  See git hooks exec help for usage" >&2
+            exit 1
+        fi
+    elif [ -n "$3" ]; then
+        echo "! Unexpected argument: $3" >&2
+        echo "  See git hooks exec help for usage" >&2
+        exit 1
+    fi
+
+    find_hook_path_to_enable_or_disable "$@" 2>/dev/null ||
+        find_hook_path_to_enable_or_disable --shared "$@" 2>/dev/null ||
+        exit 1
+
+    find "$HOOK_PATH" -type f -path "*/.githooks/*" | while IFS= read -r HOOK_FILE; do
+        if [ -x "$HOOK_FILE" ]; then
+            # Run as an executable file
+            GITHOOKS_ON_DEMAND_EXEC=1 "$HOOK_FILE" "$@"
+            exit $?
+
+        elif [ -f "$HOOK_FILE" ]; then
+            # Run as a Shell script
+            GITHOOKS_ON_DEMAND_EXEC=1 sh "$HOOK_FILE" "$@"
+            exit $?
+
+        else
+            echo "! Unable to run hook file: $HOOK_FILE}" >&2
+            exit 1
+        fi
     done
 }
 
@@ -746,7 +822,7 @@ is_file_ignored() {
             continue
         fi
 
-        if [ -z "${HOOK_NAME##$IGNORED}" ]; then
+        if [ -z "${HOOK_NAME##"$IGNORED"}" ]; then
             IS_IGNORED="y"
             break
         fi
@@ -2789,6 +2865,9 @@ choose_command() {
         ;;
     "accept")
         accept_changes "$@"
+        ;;
+    "exec")
+        execute_hook "$@"
         ;;
     "trust")
         manage_trusted_repo "$@"

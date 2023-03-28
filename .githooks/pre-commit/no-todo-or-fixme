@@ -10,10 +10,15 @@ checkTodo() {
     LINES=$(grep -rnHE "(TODO|FIXME)" "$1")
 
     if [ -n "$LINES" ]; then
-        echo "! TODO or FIXME found in: $LINES"
+        echo "! TODO or FIXME found in:"
+        echo "$LINES"
         SUCCESS=1
     fi
 }
+
+if [ -n "$GITHOOKS_ON_DEMAND_EXEC" ]; then
+    STAGED_FILES=$(find . -type f)
+fi
 
 for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qvE '(/cover/|/pre-commit/no-todo-or-fixme|\.go|\.md)'; then

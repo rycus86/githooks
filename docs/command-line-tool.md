@@ -3,6 +3,7 @@
 - [disable](#git-hooks-disable)
 - [enable](#git-hooks-enable)
 - [accept](#git-hooks-accept)
+- [exec](#git-hooks-exec)
 - [trust](#git-hooks-trust)
 - [list](#git-hooks-list)
 - [shared](#git-hooks-shared)
@@ -57,6 +58,17 @@ $ git hooks accept [--shared] [trigger]
 ```
 
 Accepts a new hook or changes to an existing hook. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it. This command needs to be run at the root of a repository. If the `--shared` parameter is given as the first argument, hooks in the shared repositories will be accepted, otherwise they are looked up in the current local repository.
+
+## git hooks exec
+
+Executes a hook script on demand.
+
+```shell
+$ git hooks exec [trigger] [hook-script]
+$ git hooks exec [hook-script]
+```
+    
+During these executions, the `GITHOOKS_ON_DEMAND_EXEC` environment variable will be set, hook scripts can use that for conditional logic. The `trigger` parameter should be the name of the Git event if given. The `hook-script` can be the name of the file to enable, or its relative path, or an absolute path, we will try to find it.
 
 ## git hooks trust
 

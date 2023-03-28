@@ -5,6 +5,10 @@ DIR=$(cd "$(dirname "$0")" && pwd)
 assertStaged
 
 SUCCESS=0
+if [ -n "$GITHOOKS_ON_DEMAND_EXEC" ]; then
+    STAGED_FILES=$(find . -name '*.sh')
+fi
+
 for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qE '\.sh$' &&
         echo "$FILE" | grep -qv '/cover/' &&

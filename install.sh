@@ -495,7 +495,7 @@ legacy_transform_update_shared_hooks() {
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" || # it is a <scheme>://
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # it is a <scheme>://
         echo "$1" | grep -Eq "^.+@.+:.+"; then # or it is a short scp syntax
         return 1
     fi

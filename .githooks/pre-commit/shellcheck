@@ -10,6 +10,10 @@ if ! shellcheck --version >/dev/null 2>&1; then
 fi
 
 SUCCESS=0
+if [ -n "$GITHOOKS_ON_DEMAND_EXEC" ]; then
+    STAGED_FILES=$(find . -name '*.sh')
+fi
+
 for FILE in $STAGED_FILES; do
     if echo "$FILE" | grep -qE '\.sh$' &&
         ! shellcheck "$FILE"; then

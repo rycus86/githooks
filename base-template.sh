@@ -49,7 +49,7 @@ are_githooks_disabled() {
 
     GITHOOKS_CONFIG_DISABLE=$(git config --get githooks.disable)
     if [ "$GITHOOKS_CONFIG_DISABLE" = "true" ] ||
-        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] || # Legacy
+        [ "$GITHOOKS_CONFIG_DISABLE" = "y" ] ||    # Legacy
         [ "$GITHOOKS_CONFIG_DISABLE" = "Y" ]; then # Legacy
         return 0
     fi
@@ -331,7 +331,7 @@ is_file_ignored() {
             continue
         fi
 
-        if [ -z "${HOOK_FILENAME##$IGNORED}" ]; then
+        if [ -z "${HOOK_FILENAME##"$IGNORED"}" ]; then
             IS_IGNORED="y"
             break
         fi
@@ -497,7 +497,7 @@ process_shared_hooks() {
 # Returns: 0 if it is a local path, 1 otherwise
 #####################################################
 is_local_path() {
-    if echo "$1" | grep -Eq "^[^:/?#]+://" || # its a <scheme>://
+    if echo "$1" | grep -Eq "^[^:/?#]+://" ||  # its a <scheme>://
         echo "$1" | grep -Eq "^.+@.+:.+"; then # or its a short scp syntax
         return 1
     fi
@@ -930,7 +930,7 @@ show_prompt() {
     printf "%s %s [%s]:" "$TEXT" "$HINT_TEXT" "$SHORT_OPTIONS" >&2
 
     # shellcheck disable=SC2217
-    if true </dev/tty 2>/dev/null; then
+    if [ -e /dev/tty ] && true </dev/tty 2>/dev/null; then
         # shellcheck disable=SC2229
         read -r "$VARIABLE" </dev/tty
     fi
