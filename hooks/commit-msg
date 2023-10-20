@@ -7,7 +7,7 @@
 # This file is auto-generated, do not edit!
 
 # Read the runner script from the local/global or system config
-GITHOOKS_RUNNER="$(cd "$(dirname "$0")/../" && pwd)/base-template.sh"
+GITHOOKS_RUNNER="$(CDPATH='' cd "$(dirname "$0")/../" && pwd)/base-template.sh"
 
 if [ ! -x "$GITHOOKS_RUNNER" ]; then
     echo "! Githooks runner points to a non existing location" >&2

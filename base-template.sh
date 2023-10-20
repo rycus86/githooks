@@ -109,6 +109,9 @@ set_main_variables() {
     IFS_NEWLINE="
 "
 
+    # Ensure user-customized CDPATHs do not change behavior
+    unset -v CDPATH
+
     # Fail if the shared root is not available (if enabled)
     FAIL_ON_NOT_EXISTING_SHARED_HOOK=$(git config --get githooks.failOnNonExistingSharedHooks)
 

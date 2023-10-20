@@ -32,6 +32,10 @@ execute_installation() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
+
+    # Ensure user-customized CDPATHs do not change behavior
+    unset -v CDPATH
+
     parse_command_line_arguments "$@" || return 1
 
     load_install_dir || return 1
