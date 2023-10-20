@@ -1,5 +1,5 @@
 #!/bin/sh
-DIR=$(cd "$(dirname "$0")" && pwd)
+DIR=$(CDPATH='' cd "$(dirname "$0")" && pwd)
 . "$DIR/.export-staged"
 
 assertStaged

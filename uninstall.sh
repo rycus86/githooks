@@ -511,9 +511,13 @@ parse_command_line_args() {
 # Returns: None
 #####################################################
 set_main_variables() {
-
+    # Global IFS for loops
     IFS_NEWLINE="
 "
+
+    # Ensure user-customized CDPATHs do not change behavior
+    unset -v CDPATH
+
     load_install_dir || return 1
 
     # do we have Git LFS installed

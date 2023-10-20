@@ -96,6 +96,9 @@ set_main_variables() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
+
+    # Ensure user-customized CDPATHs do not change behavior
+    unset -v CDPATH
 }
 
 #####################################################
