@@ -428,9 +428,9 @@ execute_opt_in_checks() {
             MESSAGE="Hook file changed"
         fi
 
-        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
+        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ] || [ $(git config --global --get githooks.shared.autoapply) == "true" ]; then
             echo "? $MESSAGE: $HOOK_PATH" >&2
-            echo "  Already accepted" >&2
+            echo " Already accepted" >&2
         else
             MESSAGE="$(printf "%s\n%s" "$MESSAGE: $HOOK_PATH" "  Do you accept the changes?")"
             show_prompt ACCEPT_CHANGES "? $MESSAGE" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
@@ -684,7 +684,7 @@ update_shared_hooks_if_appropriate() {
 
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
-                    echo "! Update failed, git pull output:" >&2
+                    echo "WARNING: Update failed, git pull output:" >&2
                     echo "$PULL_OUTPUT" >&2
                 fi
             else
