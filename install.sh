@@ -1253,7 +1253,7 @@ enable_shared_auto_apply(){
         DO_SHARED_AUTO_APPLY="Y"
 
     else
-        printf "Would you like to re-enable it ? [Y/n] "
+        printf "Would you like to enable it ? [Y/n] "
 
     fi
 
