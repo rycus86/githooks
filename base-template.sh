@@ -428,7 +428,7 @@ execute_opt_in_checks() {
             MESSAGE="Hook file changed"
         fi
 
-        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ] || [ $(git config --global --get githooks.shared.autoapply) == "true" ]; then
+        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ] || [ "$(git config --global --get githooks.sharedautoapply)" == "true" ]; then
             echo "? $MESSAGE: $HOOK_PATH" >&2
             echo " Already accepted" >&2
         else
