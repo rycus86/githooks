@@ -1235,8 +1235,8 @@ setup_automatic_update_checks() {
 #   1 when already enabled, 0 otherwise
 ############################################################
 enable_shared_auto_apply(){
-    if CURRENT_SETTING=$(git config --get githooks.shared.autoapply); then
-        if [ "$CURRENT_SETTING" = "true" ] || [ "$CURRENT_SETTING" = "Y" ]; then
+    if CURRENT_AUTO_SETTING=$(git config --get githooks.sharedautoapply); then
+        if [ "$CURRENT_AUTO_SETTING" = "true" ] || [ "$CURRENT_AUTO_SETTING" = "Y" ]; then
             # OK, it's already enabled
             return 1
         else
@@ -1245,7 +1245,7 @@ enable_shared_auto_apply(){
             if is_non_interactive; then
                 return 1
             else
-                printf "Would you like to re-enable it ? [Y/n] "
+                printf "Would you like to enable it ? [Y/n] "
             fi
         fi
 
@@ -1264,14 +1264,14 @@ enable_shared_auto_apply(){
     if [ -z "$DO_SHARED_AUTO_APPLY" ] || [ "$DO_SHARED_AUTO_APPLY" = "y" ] || [ "$DO_SHARED_AUTO_APPLY" = "Y" ]; then
         if is_dry_run; then
             echo "[Dry run] Automatic apply of shared hooks would have been enabled"
-        elif git config --global githooks.shared.autoapply true; then
+        elif git config --global githooks.sharedautoapply true; then
             echo "Automatic update checks are now enabled"
         else
             echo "! Failed to enable automatic update checks" >&2
         fi
     else
         echo "If you change your mind in the future, you can enable it by running:"
-        echo "  \$ git config --global githooks.shared.autoapply true"
+        echo "  \$ git config --global githooks.sharedautoapply true"
     fi
 }
 
