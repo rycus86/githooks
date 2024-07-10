@@ -1708,8 +1708,6 @@ setup_shared_hook_repositories() {
         echo "Git config variable."
         echo "Note: you can also list the shared hook repos per"
         echo "project within the .githooks/.shared file"
-        echo "Enable shared hook auto apply"
-        
 
     else
         echo "! Failed to set up the shared hook repositories" >&2
@@ -2046,7 +2044,9 @@ thank_you() {
 
 ############################################################
 # Prompt whether to enable automatic apply of shared git hook.
-#   This is skipped if it is already enabled.
+# This is skipped if it is already enabled.
+# Automatic apply of shared hook is set by default when running 
+# in non interactive mode.
 #
 # Returns:
 #   1 when already enabled, 0 otherwise
