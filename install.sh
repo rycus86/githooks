@@ -8,6 +8,7 @@
 # Version: 9912.310000-000000
 
 # The list of hooks we can manage with this script
+
 MANAGED_HOOK_NAMES="
     applypatch-msg pre-applypatch post-applypatch
     pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
@@ -16,6 +17,7 @@ MANAGED_HOOK_NAMES="
     push-to-checkout pre-auto-gc post-rewrite sendemail-validate
     post-index-change
 "
+
 
 MANAGED_SERVER_HOOK_NAMES="
     pre-push pre-receive update post-receive post-update
@@ -67,11 +69,6 @@ execute_installation() {
         disable_tty_input
     fi
 
-    # Check if auto apply is enabled
-    if is_shared_auto_apply; then
-        enable_shared_auto_apply
-    fi
-
     # Find the directory to install to
     if is_single_repo_install; then
         get_cwd_git_dir || return 1
@@ -111,6 +108,7 @@ execute_installation() {
     # Set up shared hook repositories if needed
     if ! is_autoupdate && ! is_non_interactive && ! is_single_repo_install; then
         setup_shared_hook_repositories
+        enable_shared_auto_apply
         echo # For visual separation
     fi
 
@@ -595,8 +593,6 @@ parse_command_line_arguments() {
             INTERNAL_UPDATED_FROM_COMMIT="$p"
         elif [ "$p" = "--dry-run" ]; then
             DRY_RUN="true"
-        elif [ "$p" = "--auto-apply" ]; then
-            AUTO_APPLY="true"
         elif [ "$p" = "--non-interactive" ]; then
             NON_INTERACTIVE="true"
         elif [ "$p" = "--single" ]; then
@@ -769,16 +765,6 @@ use_core_hookspath() {
 ############################################################
 is_autoupdate() {
     [ "$INTERNAL_AUTOUPDATE" = "true" ] || return 1
-}
-
-############################################################
-# Check if hook have to be activated by default on repository.
-#
-# Returns:
-#   0 if its auto, 1 otherwise
-############################################################
-is_shared_auto_apply() {
-    [ "$AUTO_APPLY" = "true" ] || return 1
 }
 
 ############################################################
@@ -1227,53 +1213,7 @@ setup_automatic_update_checks() {
     fi
 }
 
-############################################################
-# Prompt whether to enable automatic apply of shared git hook.
-#   This is skipped if it is already enabled.
-#
-# Returns:
-#   1 when already enabled, 0 otherwise
-############################################################
-enable_shared_auto_apply(){
-    if CURRENT_AUTO_SETTING=$(git config --get githooks.sharedautoapply); then
-        if [ "$CURRENT_AUTO_SETTING" = "true" ] || [ "$CURRENT_AUTO_SETTING" = "Y" ]; then
-            # OK, it's already enabled
-            return 1
-        else
-            echo "Automatic apply of shared hook is currently disabled."
 
-            if is_non_interactive; then
-                return 1
-            else
-                printf "Would you like to enable it ? [Y/n] "
-            fi
-        fi
-
-    elif is_non_interactive; then
-        DO_SHARED_AUTO_APPLY="Y"
-
-    else
-        printf "Would you like to enable it ? [Y/n] "
-
-    fi
-
-    if ! is_non_interactive; then
-        read -r DO_SHARED_AUTO_APPLY </dev/tty
-    fi
-
-    if [ -z "$DO_SHARED_AUTO_APPLY" ] || [ "$DO_SHARED_AUTO_APPLY" = "y" ] || [ "$DO_SHARED_AUTO_APPLY" = "Y" ]; then
-        if is_dry_run; then
-            echo "[Dry run] Automatic apply of shared hooks would have been enabled"
-        elif git config --global githooks.sharedautoapply true; then
-            echo "Automatic update checks are now enabled"
-        else
-            echo "! Failed to enable automatic update checks" >&2
-        fi
-    else
-        echo "If you change your mind in the future, you can enable it by running:"
-        echo "  \$ git config --global githooks.sharedautoapply true"
-    fi
-}
 
 ############################################################
 # Find existing repositories from a start directory `$1`.
@@ -1711,7 +1651,7 @@ register_repo() {
 #   None
 ############################################################
 setup_shared_hook_repositories() {
-    if [ -n "$(git config --global --get-all githooks.shared)" ]; then
+    if git config --global --get-all githooks.shared ; then
         echo "Looks like you already have shared hook"
         printf "repositories setup, do you want to change them now? [y/N] "
     else
@@ -1751,11 +1691,14 @@ setup_shared_hook_repositories() {
         fi
     done
 
+   
+
     if [ "$PROVIDED" = "false" ] &&
         git config --global --unset githooks.shared; then
         echo "Shared hook repositories are now unset. If you want to set them up again in the future, run this script again, or change the 'githooks.shared' Git config variable manually."
         echo "Note: shared hook repos listed in the .githooks/.shared file will still be executed"
     elif [ "$PROVIDED" = "true" ]; then
+        
         # Trigger the shared hook repository checkout manually
         sh "$GITHOOKS_CLONE_DIR/cli.sh" shared update --global
 
@@ -1765,6 +1708,9 @@ setup_shared_hook_repositories() {
         echo "Git config variable."
         echo "Note: you can also list the shared hook repos per"
         echo "project within the .githooks/.shared file"
+        echo "Enable shared hook auto apply"
+        
+
     else
         echo "! Failed to set up the shared hook repositories" >&2
         git config --global --unset-all githooks.shared >/dev/null 2>&1
@@ -2098,5 +2044,45 @@ thank_you() {
     echo "Thanks!"
 }
 
+############################################################
+# Prompt whether to enable automatic apply of shared git hook.
+#   This is skipped if it is already enabled.
+#
+# Returns:
+#   1 when already enabled, 0 otherwise
+############################################################
+enable_shared_auto_apply() {
+     CURRENT_AUTO_SETTING=$(git config --global --get githooks.sharedautoapply)
+
+    if [ $CURRENT_AUTO_SETTING ] ; then
+        return 1
+    else
+        echo "Automatic apply of shared hook was previously disabled."
+        if ! is_non_interactive; then
+            printf "Would you like to enable automatic apply of shared hook in git repository? [Y/n] "
+            read -r DO_SHARED_AUTO_APPLY </dev/tty
+
+        else
+            # If non interactive, enable by default auto apply of shared shook
+            DO_SHARED_AUTO_APPLY="Y"
+        fi
+    fi
+
+    if [ -z "$DO_SHARED_AUTO_APPLY" ] || [ "$DO_SHARED_AUTO_APPLY" = "y" ] || [ "$DO_SHARED_AUTO_APPLY" = "Y" ]; then
+        if is_dry_run; then
+            echo "[Dry run] Automatic apply of shared hooks would have been enabled"
+        elif git config --global githooks.sharedautoapply true; then
+            echo "Automatic update checks are now enabled"
+        else
+            echo "! Failed to enable automatic update checks" >&2
+        fi
+    else
+        echo "If you change your mind in the future, you can enable it by running:"
+        echo "  \$ git config --global githooks.sharedautoapply true"
+    fi
+    return
+}
 # Start the installation process
 execute_installation "$@" || exit 1
+
+
