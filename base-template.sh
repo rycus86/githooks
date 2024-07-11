@@ -684,7 +684,7 @@ update_shared_hooks_if_appropriate() {
 
                 # shellcheck disable=SC2181
                 if [ $? -ne 0 ]; then
-                    echo "WARNING: Update failed, git pull output:" >&2
+                    echo "WARNING: Shared hook update failed, git pull output:" >&2
                     echo "$PULL_OUTPUT" >&2
                 fi
             else

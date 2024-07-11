@@ -2057,6 +2057,7 @@ enable_shared_auto_apply() {
     if [ $CURRENT_AUTO_SETTING ] ; then
         return 1
     else
+        echo
         echo "Automatic apply of shared hook was previously disabled."
         if ! is_non_interactive; then
             printf "Would you like to enable automatic apply of shared hook in git repository? [Y/n] "
@@ -2067,9 +2068,10 @@ enable_shared_auto_apply() {
             DO_SHARED_AUTO_APPLY="Y"
         fi
     fi
-
+    echo
     if [ -z "$DO_SHARED_AUTO_APPLY" ] || [ "$DO_SHARED_AUTO_APPLY" = "y" ] || [ "$DO_SHARED_AUTO_APPLY" = "Y" ]; then
         if is_dry_run; then
+
             echo "[Dry run] Automatic apply of shared hooks would have been enabled"
         elif git config --global githooks.sharedautoapply true; then
             echo "Automatic update checks are now enabled"
