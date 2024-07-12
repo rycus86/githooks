@@ -1708,7 +1708,7 @@ setup_shared_hook_repositories() {
         echo "Note: you can also list the shared hook repos per"
         echo "project within the .githooks/.shared file"
         echo
-        enable_shared_auto_apply
+        # enable_shared_auto_apply
     else
         echo "! Failed to set up the shared hook repositories" >&2
         git config --global --unset-all githooks.shared >/dev/null 2>&1

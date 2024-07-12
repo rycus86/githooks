@@ -395,9 +395,14 @@ is_trusted_repo() {
             return 0
         fi
     fi
+    if [ -f "${SHARED_ROOT}/.githooks/trust-all" ]; then
+        return 0
+    fi
 
     return 1
 }
+
+
 
 #####################################################
 # Performs checks for new and changed hooks,
