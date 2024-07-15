@@ -1094,6 +1094,9 @@ git hooks shared clear [--shared|--local|--global|--all]
 git hooks shared purge
 git hooks shared list [--shared|--local|--global|--all]
 git hooks shared [update|pull]
+git hooks shared trust
+git hooks shared trust [--revoke|--list]
+
 
     Manages the shared hook repositories set either in the \`.githooks.shared\` file locally in the repository or
     in the local or global Git configuration \`githooks.shared\`.
@@ -1107,6 +1110,8 @@ git hooks shared [update|pull]
     The \`list\` subcommand list the shared, local, global or all (default) shared hooks repositories.
     The \`update\` or \`pull\` subcommands update all the shared repositories, either by
     running \`git pull\` on existing ones or \`git clone\` on new ones.
+    The \`trust\` subcommand enable the trust of shared hook repositories containing a `.githooks/trust-all` file. You can disable this by running the \`trust\` subcommand with --revoke option. List all trusted shared hook with the --list option.
+
 "
         return
     fi
@@ -1150,6 +1155,38 @@ git hooks shared [update|pull]
         return
     fi
 
+    if [ "$1" = "trust" ]; then
+        shift
+        if [ -z "$1" ]; then 
+            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+                git config --global githooks.trust.all Y
+                echo "Shared hook are now trusted when they contains a `.githooks/trust-all` file"
+                return
+            elif [ "${SHARED_TRUST}" == "Y" ]; then
+                echo "Shared hook are already trusted"
+                return
+            fi
+        elif [ "$1" == "list" ]; then
+            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+                echo "Shared hook are not trusted"
+                return
+            elif [ "${SHARED_TRUST}" == "Y" ]; then
+                echo "Shared hook are trusted"
+                return
+            fi
+        elif [ "$1" == "revoke" ]; then
+            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+                echo "Shared hook are already not trusted"
+                return
+            elif [ "${SHARED_TRUST}" == "Y" ]; then
+                git config --global --unset githooks.trust.all
+                echo "Shared hook are from now not trusted"
+                return
+            fi
+    fi
     echo "! Unknown subcommand: \`$1\`" >&2
     exit 1
 }

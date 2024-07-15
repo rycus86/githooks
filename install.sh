@@ -1700,6 +1700,17 @@ setup_shared_hook_repositories() {
         echo "Git config variable."
         echo "Note: you can also list the shared hook repos per"
         echo "project within the .githooks/.shared file"
+
+        printf "Do you want to trust all shared hook repositories containing a trust-all file ?[y/N]"
+        read -r TRUST_SHARED_REPO </dev/tty
+        if [ "$TRUST_SHARED_REPO" != "y" ] && [ "$TRUST_SHARED_REPO" != "Y" ]; then 
+            git config --global githooks.trust.all Y
+            echo "Shared hook are now always trusted if they contain `.githooks/trust-all` file. If you want to disable this in the future, run git config --global githooks.trust.all N , or change the 'githooks.trust.all' Git config variable manually"
+        elif [ "$TRUST_SHARED_REPO" != "n" ] && [ "$TRUST_SHARED_REPO" != "N" ]
+            git config --global githooks.trust.all N
+            echo "You decided to not trust shared hook containing a `.githooks/trust-all` file. If you want to enable this in the future, run git config --global githooks.trust.all Y , or change the 'githooks.trust.all' Git config variable manually"
+        fi
+
     else
         echo "! Failed to set up the shared hook repositories" >&2
         git config --global --unset-all githooks.shared >/dev/null 2>&1
