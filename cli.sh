@@ -1161,13 +1161,13 @@ git hooks shared trust [--revoke|--list]
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
             if [ "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 git config --global githooks.trust.all Y
-                echo "Shared hook are now trusted when they contains a `.githooks/trust-all` file"
+                echo "Shared hook are now trusted when they contains a .githooks/trust-all file"
                 return
             elif [ "${SHARED_TRUST}" = "Y" ]; then
                 echo "Shared hook are already trusted"
                 return
             fi
-        elif [ "$1" = "list" ]; then
+        elif [ "$1" = "--list" ]; then
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
             if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 echo "Shared hook are not trusted"
@@ -1177,7 +1177,7 @@ git hooks shared trust [--revoke|--list]
                 return
             fi
         
-        elif [ "$1" = "revoke" ]; then
+        elif [ "$1" = "--revoke" ]; then
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
             if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 echo "Shared hook are already not trusted"
