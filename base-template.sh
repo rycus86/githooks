@@ -379,7 +379,7 @@ is_trusted_repo() {
 
         if [ ! -z $SHARED_HOOKS_TYPE ]; then
             TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.all)
-            if [ "$TRUST_ALL_SHARED_CONFIG" = "Y"]; then
+            if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
                 return 0
             else
                 return 1

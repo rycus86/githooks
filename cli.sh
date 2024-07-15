@@ -1154,12 +1154,12 @@ git hooks shared trust [--revoke|--list]
         remove_shared_hook_repo "$@"
         return
     fi
-
+# shellcheck disable=SC3014
     if [ "$1" = "trust" ]; then
         shift
         if [ -z "$1" ]; then 
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
-            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+            if [ "${SHARED_TRUST}" == "" ] || [ "${SHARED_TRUST}" == "N" ]; then
                 git config --global githooks.trust.all Y
                 echo "Shared hook are now trusted when they contains a `.githooks/trust-all` file"
                 return
@@ -1169,16 +1169,17 @@ git hooks shared trust [--revoke|--list]
             fi
         elif [ "$1" == "list" ]; then
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
-            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+            if [  "${SHARED_TRUST}" == "" ] || [ "${SHARED_TRUST}" == "N" ]; then
                 echo "Shared hook are not trusted"
                 return
             elif [ "${SHARED_TRUST}" == "Y" ]; then
                 echo "Shared hook are trusted"
                 return
             fi
+        
         elif [ "$1" == "revoke" ]; then
             SHARED_TRUST=$(git config --global --get githooks.trust.all)
-            if [  "${SHARED_TRUST}" == "" | "${SHARED_TRUST}" == "N" ]; then
+            if [  "${SHARED_TRUST}" == "" ] || [ "${SHARED_TRUST}" == "N" ]; then
                 echo "Shared hook are already not trusted"
                 return
             elif [ "${SHARED_TRUST}" == "Y" ]; then
@@ -1186,6 +1187,7 @@ git hooks shared trust [--revoke|--list]
                 echo "Shared hook are from now not trusted"
                 return
             fi
+        fi
     fi
     echo "! Unknown subcommand: \`$1\`" >&2
     exit 1
