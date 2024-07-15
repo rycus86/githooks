@@ -14,6 +14,7 @@
 # Returns:
 #   0 when successfully finished, 1 otherwise
 #####################################################
+
 process_git_hook() {
 
     set_main_variables "$1" || return 1
@@ -374,31 +375,34 @@ check_and_execute_hook() {
 #   0 when it is a trusted repository, 1 otherwise
 #####################################################
 is_trusted_repo() {
-    if [ -f ".githooks/trust-all" ]; then
-        TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
-        TRUST_ALL_RESULT=$?
+    if [ -f "${PARENT}/trust-all" ]; then
 
-        # shellcheck disable=SC2181
-        if [ $TRUST_ALL_RESULT -ne 0 ]; then
-            MESSAGE="$(printf "%s\n%s" "! This repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
-
-            show_prompt TRUST_ALL_HOOKS "$MESSAGE" "(yes, No)" "y/N" "Yes" "No"
-
-            if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
-                git config githooks.trust.all Y
-                return 0
-            else
-                git config githooks.trust.all N
-                return 1
-            fi
-        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+        if [ ! -z $SHARED_HOOKS_TYPE ]; then
+            echo "${PARENT} is trusted" 
             return 0
+        else
+            TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
+            TRUST_ALL_RESULT=$?
+
+            # shellcheck disable=SC2181
+            if [ $TRUST_ALL_RESULT -ne 0 ]; then
+                MESSAGE="$(printf "%s\n%s" "! This repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
+
+                show_prompt TRUST_ALL_HOOKS "$MESSAGE" "(yes, No)" "y/N" "Yes" "No"
+
+                if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
+                    git config githooks.trust.all Y
+                    return 0
+                else
+                    git config githooks.trust.all N
+                    return 1
+                fi
+            elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+                return 0
+            fi
         fi
     fi
-    if [ -f "${SHARED_ROOT}/.githooks/trust-all" ]; then
-        return 0
-    fi
-
+ 
     return 1
 }
 
@@ -433,7 +437,7 @@ execute_opt_in_checks() {
             MESSAGE="Hook file changed"
         fi
 
-        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ] || [ $(git config --global --get githooks.sharedautoapply) ]; then
+        if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
             echo "? $MESSAGE: $HOOK_PATH" >&2
             echo " Already accepted" >&2
         else
