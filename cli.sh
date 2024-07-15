@@ -1264,8 +1264,8 @@ add_trusted_repo(){
     GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
     if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
 
-        printf "printf This shared repository wants you to trust all current and future hooks without prompting. Do you want to allow running every current and future hooks? [y/N]"
-
+        printf "This shared repository wants you to trust all current and future hooks without prompting. Do you want to allow running every current and future hooks? [y/N]"
+        read -r TRUST_ALL_HOOKS </dev/tty
         if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
             git config --global githooks.trust.all Y
         else
