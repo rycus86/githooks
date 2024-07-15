@@ -678,7 +678,7 @@ git hooks trust [forget] [--local|--global]
     
     
     # shellcheck disable=SC1009
-    if [ "$1" = "local" ] ; then
+    if [ "$1" = "--local" ] ; then
         if ! is_running_in_git_repo_root; then
             echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
             exit 1
@@ -692,7 +692,7 @@ git hooks trust [forget] [--local|--global]
 
         echo "! Failed to mark the current repository as trusted" >&2
         exit 1
-    elif [ "$1" = "global" ]; then
+    elif [ "$1" = "--global" ]; then
         GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
         if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
             git config --global githooks.trust.all Y
@@ -705,7 +705,7 @@ git hooks trust [forget] [--local|--global]
     fi
 
     if [ "$1" = "forget" ]; then
-        if [ "$2" = "local" ]; then
+        if [ "$2" = "--local" ]; then
             if [ -z "$(git config --local --get githooks.trust.all)" ]; then
                 echo "The current repository does not have trust settings."
                 return
@@ -716,7 +716,7 @@ git hooks trust [forget] [--local|--global]
                 echo "! Failed to revoke the trusted setting" >&2
                 exit 1
             fi
-        elif [ "$2" = "global" ]; then
+        elif [ "$2" = "--global" ]; then
             git config --global --unset githooks.trust.all
             echo "Global repository are no longer trusted."
             return
