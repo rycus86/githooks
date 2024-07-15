@@ -1217,30 +1217,16 @@ add_shared_hook_repo() {
             echo "! The current directory \`$(pwd)\` does not" >&2
             echo "  seem to be the root of a Git repository!" >&2
             exit 1
-        elif [ "$SET_SHARED_TYPE" = "--global" ]; then
-            GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
-            if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
-                MESSAGE="$(printf "%s\n%s" "! This shared repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
-
-                show_prompt TRUST_ALL_HOOKS "$MESSAGE" "[y/N]"
-
-                if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
-                    git config --global githooks.trust.all Y
-                else
-                    git config githooks.trust.all N
-                fi
-            fi
         fi
-
 
         git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_URL" &&
             echo "The new shared hook repository is successfully added" &&
-            return
-        
-
+            if [ "$SET_SHARED_TYPE" = "--global" ]; then add_trusted_repo "$@"; fi &&
+        return
+    
         echo "! Failed to add the new shared hook repository" >&2
         exit 1
-
+      
     else
         if ! is_running_in_git_repo_root; then
             echo "! The current directory \`$(pwd)\` does not" >&2
@@ -1265,6 +1251,7 @@ add_shared_hook_repo() {
             echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
             echo "The new shared hook repository is successfully added" &&
             echo_if_non_bare_repo "  Do not forget to commit the change!" &&
+            add_trusted_repo "$@" &&
             return
 
         echo "! Failed to add the new shared hook repository" >&2
@@ -1273,6 +1260,20 @@ add_shared_hook_repo() {
     fi
 }
 
+add_trusted_repo(){
+    GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
+    if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
+        MESSAGE="$(printf "%s\n%s" "! This shared repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
+
+        show_prompt TRUST_ALL_HOOKS "$MESSAGE" "[y/N]"
+
+        if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
+            git config --global githooks.trust.all Y
+        else
+            git config githooks.trust.all N
+        fi
+    fi
+}
 #####################################################
 # Removes the URL of a new shared hook repository to
 #   the global or local list.
