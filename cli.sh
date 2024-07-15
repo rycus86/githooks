@@ -1263,14 +1263,13 @@ add_shared_hook_repo() {
 add_trusted_repo(){
     GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
     if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
-        MESSAGE="$(printf "%s\n%s" "! This shared repository wants you to trust all current and future hooks without prompting" "  Do you want to allow running every current and future hooks?")"
 
-        show_prompt TRUST_ALL_HOOKS "$MESSAGE" "[y/N]"
+        printf "printf This shared repository wants you to trust all current and future hooks without prompting. Do you want to allow running every current and future hooks? [y/N]"
 
         if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
             git config --global githooks.trust.all Y
         else
-            git config githooks.trust.all N
+            git config --global githooks.trust.all N
         fi
     fi
 }
