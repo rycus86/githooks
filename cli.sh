@@ -661,10 +661,10 @@ manage_trusted_repo() {
     if [ "$1" = "help" ]; then
         print_help_header
         echo "
-git hooks trust
-git hooks trust [revoke]
-git hooks trust [delete]
-git hooks trust [forget]
+git hooks trust [--local|--global]
+git hooks trust [revoke] 
+git hooks trust [delete] 
+git hooks trust [forget] [--local|--global]
 
     Sets up, or reverts the trusted setting for the local repository.
     When called without arguments, it marks the local repository as trusted.
@@ -675,13 +675,14 @@ git hooks trust [forget]
 "
         return
     fi
-
-    if ! is_running_in_git_repo_root; then
-        echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
-        exit 1
-    fi
-
-    if [ -z "$1" ]; then
+    
+    
+    # shellcheck disable=SC1009
+    if [ "$1" = "local" ] ; then
+        if ! is_running_in_git_repo_root; then
+            echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
+            exit 1
+        fi
         mkdir -p .githooks &&
             touch .githooks/trust-all &&
             git config githooks.trust.all Y &&
@@ -691,17 +692,36 @@ git hooks trust [forget]
 
         echo "! Failed to mark the current repository as trusted" >&2
         exit 1
+    elif [ "$1" = "global" ]; then
+        GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
+        if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
+            git config --global githooks.trust.all Y
+            echo "Global hook are now trusted when they contains a .githooks/trust-all file"
+            return
+        elif [ "${GLOBAL_TRUST}" = "Y" ]; then
+            echo "Global hook are already trusted"
+            return
+        fi
     fi
 
     if [ "$1" = "forget" ]; then
-        if [ -z "$(git config --local --get githooks.trust.all)" ]; then
-            echo "The current repository does not have trust settings."
-            return
-        elif git config --unset githooks.trust.all; then
-            echo "The current repository is no longer trusted."
+        if [ "$2" = "local" ]; then
+            if [ -z "$(git config --local --get githooks.trust.all)" ]; then
+                echo "The current repository does not have trust settings."
+                return
+            elif git config --unset githooks.trust.all; then
+                echo "The current repository is no longer trusted."
+                return
+            else
+                echo "! Failed to revoke the trusted setting" >&2
+                exit 1
+            fi
+        elif [ "$2" = "global" ]; then
+            git config --global --unset githooks.trust.all
+            echo "Global repository are no longer trusted."
             return
         else
-            echo "! Failed to revoke the trusted setting" >&2
+            echo "! Usage: \`git hooks trust forget [--local|--global] \`" >&2
             exit 1
         fi
 
@@ -732,6 +752,8 @@ git hooks trust [forget]
     echo "  Run \`git hooks trust help\` to see the available options." >&2
     exit 1
 }
+
+
 
 #####################################################
 # Checks if Githhoks is set up correctly,
@@ -812,17 +834,18 @@ git hooks list [type]
         SHARED_REPOS_LIST=$(git config --global --get-all githooks.shared)
         IFS="$IFS_NEWLINE"
         for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
+            GLOBAL="true"
             unset IFS
             if [ -d "$SHARED_ITEM" ]; then
                 for LIST_ITEM in "$SHARED_ITEM"/*; do
                     ITEM_NAME=$(basename "$LIST_ITEM")
-                    ITEM_STATE=$(get_hook_state "$LIST_ITEM" shared:global)
+                    ITEM_STATE=$(get_hook_state "$LIST_ITEM" "$@" )
                     LIST_OUTPUT="$LIST_OUTPUT
   - $ITEM_NAME (${ITEM_STATE} / shared:global)"
                 done
 
             elif [ -f "$SHARED_ITEM" ]; then
-                ITEM_STATE=$(get_hook_state "$SHARED_ITEM" shared:global)
+                ITEM_STATE=$(get_hook_state "$SHARED_ITEM" )
                 LIST_OUTPUT="$LIST_OUTPUT
   - $LIST_TYPE (file / ${ITEM_STATE} / shared:global)"
             fi
@@ -899,7 +922,7 @@ get_hook_state() {
         echo "disabled"
     elif is_file_ignored "$1"; then
         echo "ignored"
-    elif is_trusted_repo "$2"; then
+    elif is_trusted_repo; then
         echo "active / trusted"
     else
         get_hook_enabled_or_disabled_state "$1"
@@ -978,9 +1001,9 @@ is_file_ignored() {
 #####################################################
 is_trusted_repo() {
 
-    # Check if global shared hook are trusted
-    if [ "$2" = "shared:global" ]; then
-        TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.shared.all)
+    # Check if global hooks are trusted
+    if [ "$GLOBAL" ]; then
+        TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.all)
         if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
             return 0
         else
@@ -1106,9 +1129,6 @@ git hooks shared clear [--shared|--local|--global|--all]
 git hooks shared purge
 git hooks shared list [--shared|--local|--global|--all]
 git hooks shared [update|pull]
-git hooks shared trust
-git hooks shared trust [--revoke|--list]
-
 
     Manages the shared hook repositories set either in the \`.githooks.shared\` file locally in the repository or
     in the local or global Git configuration \`githooks.shared\`.
@@ -1122,7 +1142,6 @@ git hooks shared trust [--revoke|--list]
     The \`list\` subcommand list the shared, local, global or all (default) shared hooks repositories.
     The \`update\` or \`pull\` subcommands update all the shared repositories, either by
     running \`git pull\` on existing ones or \`git clone\` on new ones.
-    The \`trust\` subcommand enable the trust of shared hook repositories containing a `.githooks/trust-all` file. You can disable this by running the \`trust\` subcommand with --revoke option. List all trusted shared hook with the --list option.
 
 "
         return
@@ -1166,57 +1185,12 @@ git hooks shared trust [--revoke|--list]
         remove_shared_hook_repo "$@"
         return
     fi
-# shellcheck disable=SC3014
-    if [ "$1" = "trust" ]; then
-        shift
-        manage_shared_trust_repo "$@"
-        return
-    fi
+
     echo "! Unknown subcommand: \`$1\`" >&2
     exit 1
 }
 
-#####################################################
-# Enable trust of shared hook repo
-# List shared hook repo and if they are trusted or not
-# Revoke trusted shared repo
-#####################################################
-manage_shared_trust_repo(){
-    # Enable trust of shared repo when a .githooks/trust-all file exists
-    if [ -z "$1" ]; then 
-            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
-            if [ "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
-                git config --global githooks.trust.all Y
-                echo "Shared hook are now trusted when they contains a .githooks/trust-all file"
-                return
-            elif [ "${SHARED_TRUST}" = "Y" ]; then
-                echo "Shared hook are already trusted"
-                return
-            fi
 
-        elif [ "$1" = "--list" ]; then
-            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
-            list_shared_hook_repos --global
-            if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
-                echo "Shared hook are not trusted"
-                return
-            elif [ "${SHARED_TRUST}" = "Y" ]; then
-                echo "Shared hook are trusted"
-                return
-            fi
-        
-        elif [ "$1" = "--revoke" ]; then
-            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
-            if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
-                echo "Shared hook are already not trusted"
-                return
-            elif [ "${SHARED_TRUST}" = "Y" ]; then
-                git config --global --unset githooks.trust.shared.all
-                echo "Shared hook are from now not trusted"
-                return
-            fi
-    fi
-}
 #####################################################
 # Adds the URL of a new shared hook repository to
 #   the global or local list.
