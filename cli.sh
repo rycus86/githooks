@@ -816,13 +816,13 @@ git hooks list [type]
             if [ -d "$SHARED_ITEM" ]; then
                 for LIST_ITEM in "$SHARED_ITEM"/*; do
                     ITEM_NAME=$(basename "$LIST_ITEM")
-                    ITEM_STATE=$(get_hook_state "$LIST_ITEM")
+                    ITEM_STATE=$(get_hook_state "$LIST_ITEM" shared:global)
                     LIST_OUTPUT="$LIST_OUTPUT
   - $ITEM_NAME (${ITEM_STATE} / shared:global)"
                 done
 
             elif [ -f "$SHARED_ITEM" ]; then
-                ITEM_STATE=$(get_hook_state "$SHARED_ITEM")
+                ITEM_STATE=$(get_hook_state "$SHARED_ITEM" shared:global)
                 LIST_OUTPUT="$LIST_OUTPUT
   - $LIST_TYPE (file / ${ITEM_STATE} / shared:global)"
             fi
@@ -899,7 +899,7 @@ get_hook_state() {
         echo "disabled"
     elif is_file_ignored "$1"; then
         echo "ignored"
-    elif is_trusted_repo; then
+    elif is_trusted_repo "$2"; then
         echo "active / trusted"
     else
         get_hook_enabled_or_disabled_state "$1"
@@ -978,25 +978,26 @@ is_file_ignored() {
 #####################################################
 is_trusted_repo() {
 
-    if [ -f "${PARENT}/trust-all" ]; then
-        
-        if [ -n "$SHARED_HOOKS_TYPE" ]; then
-            TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.shared.all)
-            if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
-                return 0
-            else
-                return 1
-            fi
-            else
-            TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
-            TRUST_ALL_RESULT=$?
+    # Check if global shared hook are trusted
+    if [ "$2" = "shared:global" ]; then
+        TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.shared.all)
+        if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+    
+    # Check local shared hook are trusted
+    if [ -f ".githooks/trust-all" ]; then
+        TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
+        TRUST_ALL_RESULT=$?
 
-            # shellcheck disable=SC2181
-            if [ $TRUST_ALL_RESULT -ne 0 ]; then
-                return 1
-            elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
-                return 0
-            fi
+        # shellcheck disable=SC2181
+        if [ $TRUST_ALL_RESULT -ne 0 ]; then
+            return 1
+        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+            return 0
         fi
     fi
 
