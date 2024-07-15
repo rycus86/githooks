@@ -977,15 +977,26 @@ is_file_ignored() {
 #   0 if the repo is trusted, 1 otherwise
 #####################################################
 is_trusted_repo() {
-    if [ -f ".githooks/trust-all" ]; then
-        TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
-        TRUST_ALL_RESULT=$?
 
-        # shellcheck disable=SC2181
-        if [ $TRUST_ALL_RESULT -ne 0 ]; then
-            return 1
-        elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
-            return 0
+    if [ -f "${PARENT}/trust-all" ]; then
+        
+        if [ -n "$SHARED_HOOKS_TYPE" ]; then
+            TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.shared.all)
+            if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
+                return 0
+            else
+                return 1
+            fi
+            else
+            TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
+            TRUST_ALL_RESULT=$?
+
+            # shellcheck disable=SC2181
+            if [ $TRUST_ALL_RESULT -ne 0 ]; then
+                return 1
+            elif [ $TRUST_ALL_RESULT -eq 0 ] && [ "$TRUST_ALL_CONFIG" = "Y" ]; then
+                return 0
+            fi
         fi
     fi
 
@@ -1157,8 +1168,22 @@ git hooks shared trust [--revoke|--list]
 # shellcheck disable=SC3014
     if [ "$1" = "trust" ]; then
         shift
-        if [ -z "$1" ]; then 
-            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+        manage_shared_trust_repo "$@"
+        return
+    fi
+    echo "! Unknown subcommand: \`$1\`" >&2
+    exit 1
+}
+
+#####################################################
+# Enable trust of shared hook repo
+# List shared hook repo and if they are trusted or not
+# Revoke trusted shared repo
+#####################################################
+manage_shared_trust_repo(){
+    # Enable trust of shared repo when a .githooks/trust-all file exists
+    if [ -z "$1" ]; then 
+            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
             if [ "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 git config --global githooks.trust.all Y
                 echo "Shared hook are now trusted when they contains a .githooks/trust-all file"
@@ -1167,8 +1192,10 @@ git hooks shared trust [--revoke|--list]
                 echo "Shared hook are already trusted"
                 return
             fi
+
         elif [ "$1" = "--list" ]; then
-            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
+            list_shared_hook_repos --global
             if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 echo "Shared hook are not trusted"
                 return
@@ -1178,21 +1205,17 @@ git hooks shared trust [--revoke|--list]
             fi
         
         elif [ "$1" = "--revoke" ]; then
-            SHARED_TRUST=$(git config --global --get githooks.trust.all)
+            SHARED_TRUST=$(git config --global --get githooks.trust.shared.all)
             if [  "${SHARED_TRUST}" = "" ] || [ "${SHARED_TRUST}" = "N" ]; then
                 echo "Shared hook are already not trusted"
                 return
             elif [ "${SHARED_TRUST}" = "Y" ]; then
-                git config --global --unset githooks.trust.all
+                git config --global --unset githooks.trust.shared.all
                 echo "Shared hook are from now not trusted"
                 return
             fi
-        fi
     fi
-    echo "! Unknown subcommand: \`$1\`" >&2
-    exit 1
 }
-
 #####################################################
 # Adds the URL of a new shared hook repository to
 #   the global or local list.

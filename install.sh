@@ -1705,11 +1705,11 @@ setup_shared_hook_repositories() {
         read -r TRUST_SHARED_REPO </dev/tty
         # shellcheck disable=SC3014
         if [ "$TRUST_SHARED_REPO" = "y" ] || [ "$TRUST_SHARED_REPO" = "Y" ]; then 
-            git config --global githooks.trust.all Y
-            echo "Shared hook are now always trusted if they contain .githooks/trust-all file. If you want to disable this in the future, run git config --global githooks.trust.all N , or change the 'githooks.trust.all' Git config variable manually"
+            git config --global githooks.trust.shared.all Y
+            echo "Shared hook are now always trusted if they contain .githooks/trust-all file. If you want to disable this in the future, run git config --global githooks.trust.shared.all N , or change the 'githooks.trust.shared.all' Git config variable manually"
         elif [ "$TRUST_SHARED_REPO" = "n" ] || [ "$TRUST_SHARED_REPO" = "N" ]; then
-            git config --global githooks.trust.all N
-            echo "You decided to not trust shared hook containing a .githooks/trust-all file. If you want to enable this in the future, run git config --global githooks.trust.all Y , or change the 'githooks.trust.all' Git config variable manually"
+            git config --global githooks.trust.shared.all N
+            echo "You decided to not trust shared hook containing a .githooks/trust-all file. If you want to enable this in the future, run git config --global githooks.trust.shared.all Y , or git hooks shared trust revoke"
         fi
 
     else

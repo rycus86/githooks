@@ -377,8 +377,8 @@ check_and_execute_hook() {
 is_trusted_repo() {
     if [ -f "${PARENT}/trust-all" ]; then
 
-        if [ ! -z $SHARED_HOOKS_TYPE ]; then
-            TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.all)
+        if [ -n "$SHARED_HOOKS_TYPE" ]; then
+            TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.shared.all)
             if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
                 return 0
             else
