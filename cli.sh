@@ -1251,7 +1251,6 @@ add_shared_hook_repo() {
             echo "$SHARED_REPO_URL" >>"$(pwd)/.githooks/.shared" &&
             echo "The new shared hook repository is successfully added" &&
             echo_if_non_bare_repo "  Do not forget to commit the change!" &&
-            add_trusted_repo "$@" &&
             return
 
         echo "! Failed to add the new shared hook repository" >&2
@@ -1264,7 +1263,7 @@ add_trusted_repo(){
     GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
     if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
 
-        printf "This shared repository wants you to trust all current and future hooks without prompting. Do you want to allow running every current and future hooks? [y/N]"
+        printf "If a trust marker is found in this repository, do you want to trust and accept future hooks without prompting ? [y/N]"
         read -r TRUST_ALL_HOOKS </dev/tty
         if [ "$TRUST_ALL_HOOKS" = "y" ] || [ "$TRUST_ALL_HOOKS" = "Y" ]; then
             git config --global githooks.trust.all Y
