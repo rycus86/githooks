@@ -18,6 +18,7 @@
 # Prints the command line help for usage and
 #   available commands.
 #####################################################
+set -x
 print_help() {
     print_help_header
 
@@ -847,7 +848,6 @@ git hooks list [type]
         SHARED_REPOS_LIST=$(git config --global --get-all githooks.shared)
         IFS="$IFS_NEWLINE"
         for SHARED_ITEM in $(list_hooks_in_shared_repos "$LIST_TYPE"); do
-            GLOBAL="true"
             unset IFS
             if [ -d "$SHARED_ITEM" ]; then
                 for LIST_ITEM in "$SHARED_ITEM"/*; do
@@ -855,6 +855,7 @@ git hooks list [type]
                     ITEM_STATE=$(get_hook_state "$LIST_ITEM" "$@" )
                     LIST_OUTPUT="$LIST_OUTPUT
   - $ITEM_NAME (${ITEM_STATE} / shared:global)"
+                    LIST_OUTPUT="$LIST_OUTPUT is from $LIST_ITEM"
                 done
 
             elif [ -f "$SHARED_ITEM" ]; then
@@ -935,7 +936,7 @@ get_hook_state() {
         echo "disabled"
     elif is_file_ignored "$1"; then
         echo "ignored"
-    elif is_trusted_repo; then
+    elif is_trusted_repo "$@"; then
         echo "active / trusted"
     else
         get_hook_enabled_or_disabled_state "$1"
@@ -1015,13 +1016,12 @@ is_file_ignored() {
 is_trusted_repo() {
 
     # Check if global hooks are trusted
-    if [ "$GLOBAL" ]; then
-        TRUST_ALL_SHARED_CONFIG=$(git config --global --get githooks.trust.all)
-        if [ "$TRUST_ALL_SHARED_CONFIG" = "Y" ]; then
+    if [ -f "$SHARED_ITEM/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
             return 0
-        else
+    elif [ -f "$LIST_ITEM/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
+        return 0
+    else
             return 1
-        fi
     fi
     
     # Check local shared hook are trusted
