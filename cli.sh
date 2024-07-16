@@ -750,7 +750,7 @@ git hooks trust [forget] [--local|--global]
     
     fi
 
-    if [ "$1" = "delete" ] && [ -f .githooks/trust-all ]; then
+    if [ "$1" = "delete" ] || [ -f .githooks/trust-all ]; then
         rm -rf .githooks/trust-all &&
             echo "The trust marker is removed from the repository." &&
             echo_if_non_bare_repo "  Do not forget to commit and push the change!" &&
