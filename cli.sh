@@ -678,11 +678,14 @@ git hooks trust [forget] [--local|--global]
     
     
     # shellcheck disable=SC1009
-    if [ "$1" = "--local" ] ; then
+    if [ "$1" = "--local" ] || { [  "$2" = "forget" ] && [ "$2" = "--local"  ]; } ||  [ "$1" = "revoke" ] || [ "$1" = "delete" ]; then
         if ! is_running_in_git_repo_root; then
             echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
             exit 1
         fi
+    fi
+
+    if [  "$1" = "--local" ]; then
         mkdir -p .githooks &&
             touch .githooks/trust-all &&
             git config githooks.trust.all Y &&
@@ -692,6 +695,7 @@ git hooks trust [forget] [--local|--global]
 
         echo "! Failed to mark the current repository as trusted" >&2
         exit 1
+    
     elif [ "$1" = "--global" ]; then
         GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
         if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
@@ -702,9 +706,9 @@ git hooks trust [forget] [--local|--global]
             echo "Global hook are already trusted"
             return
         fi
-    fi
+    
 
-    if [ "$1" = "forget" ]; then
+    elif [ "$1" = "forget" ]; then
         if [ "$2" = "--local" ]; then
             if [ -z "$(git config --local --get githooks.trust.all)" ]; then
                 echo "The current repository does not have trust settings."
@@ -717,9 +721,16 @@ git hooks trust [forget] [--local|--global]
                 exit 1
             fi
         elif [ "$2" = "--global" ]; then
-            git config --global --unset githooks.trust.all
-            echo "Global repository are no longer trusted."
-            return
+            if [ -z "$(git config --global --get githooks.trust.all)" ]; then
+                echo "Global hooks do not have trust settings."
+                return
+            elif git config --global --unset githooks.trust.all; then
+                echo "Global hooks are no longer trusted."
+                return
+            else
+                echo "! Failed to revoke the trusted setting for global hooks" >&2
+                exit 1
+            fi
         else
             echo "! Usage: \`git hooks trust forget [--local|--global] \`" >&2
             exit 1
