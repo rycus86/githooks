@@ -18,7 +18,7 @@
 # Prints the command line help for usage and
 #   available commands.
 #####################################################
-set -x
+
 print_help() {
     print_help_header
 
