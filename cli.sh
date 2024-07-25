@@ -1008,7 +1008,6 @@ is_file_ignored() {
     fi
 }
 
-set -x
 #####################################################
 # Checks whether the current repository
 #   is trusted, and that this is accepted.
@@ -1017,21 +1016,15 @@ set -x
 #   0 if the repo is trusted, 1 otherwise
 #####################################################
 is_trusted_repo() {
-    echo "$1"
+
     # Check if global hooks are trusted
     if [ -f "$1/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
         return 0
     elif [ -f "$1/../../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
         return 0
-    elif [ -f "$1/../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
-        return 0
-    elif [ -f "$1/../../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
-        return 0
-    else
-            return 1
     fi
     
-    # Check local shared hook are trusted
+    # Check local hook are trusted
     if [ -f ".githooks/trust-all" ]; then
         TRUST_ALL_CONFIG=$(git config --local --get githooks.trust.all)
         TRUST_ALL_RESULT=$?
