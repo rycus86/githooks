@@ -1023,7 +1023,7 @@ is_trusted_repo() {
         return 0
     elif [ -f "$1/../../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
         return 0
-    if [ -f "$1/../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
+    elif [ -f "$1/../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
         return 0
     elif [ -f "$1/../../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
         return 0
