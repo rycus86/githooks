@@ -932,13 +932,15 @@ git hooks list [type]
 #   on the standard output.
 #####################################################
 get_hook_state() {
+    ITEM="$1"
+    shift
     if is_repository_disabled; then
         echo "disabled"
-    elif is_file_ignored "$1"; then
+    elif is_file_ignored "$ITEM"; then
         echo "ignored"
-    elif is_trusted_repo "$@"; then
+    elif is_trusted_repo "$ITEM" "$@"; then
         echo "active / trusted"
-    else
+    else 
         get_hook_enabled_or_disabled_state "$1"
     fi
 }
@@ -1006,6 +1008,7 @@ is_file_ignored() {
     fi
 }
 
+set -x
 #####################################################
 # Checks whether the current repository
 #   is trusted, and that this is accepted.
@@ -1014,11 +1017,15 @@ is_file_ignored() {
 #   0 if the repo is trusted, 1 otherwise
 #####################################################
 is_trusted_repo() {
-
+    echo "$1"
     # Check if global hooks are trusted
-    if [ -f "$SHARED_ITEM/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
-            return 0
-    elif [ -f "$LIST_ITEM/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
+    if [ -f "$1/../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
+        return 0
+    elif [ -f "$1/../../trust-all" ] && [ "$(git config --global --get githooks.trust.all)" = "Y" ]; then
+        return 0
+    if [ -f "$1/../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
+        return 0
+    elif [ -f "$1/../../trust-all" ] && [ "$(git config --local --get githooks.trust.all)" = "Y" ]; then
         return 0
     else
             return 1

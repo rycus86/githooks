@@ -9,7 +9,7 @@ fi
 
 mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
-git hooks trust &&
+git hooks trust --local &&
     [ -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
     exit 1
@@ -24,9 +24,9 @@ git hooks trust delete &&
     [ "$(git config --local --get githooks.trust.all)" = "N" ] ||
     exit 3
 
-git hooks trust forget &&
+git hooks trust forget --local &&
     [ -z "$(git config --local --get githooks.trust.all)" ] &&
-    git hooks trust forget ||
+    git hooks trust forget --local||
     exit 4
 
 git hooks trust invalid && exit 5
