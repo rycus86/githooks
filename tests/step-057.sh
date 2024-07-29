@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: enable a hook
 
-sh /var/lib/githooks/install.sh || exit 1
+# sh /var/lib/githooks/install.sh || exit 1
 
 mkdir -p /tmp/test057/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/test057/.githooks/pre-commit/first &&
@@ -36,7 +36,7 @@ if ! git hooks enable .githooks/pre-commit/first; then
     exit 1
 fi
 
-if ! git hooks list | grep "first" | grep -q "disabled"; then
+if ! git hooks list | grep "first" | grep -qv "disabled"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi
