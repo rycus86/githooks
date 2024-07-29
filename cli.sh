@@ -1234,7 +1234,7 @@ add_shared_hook_repo() {
 
         git config "$SET_SHARED_TYPE" --add githooks.shared "$SHARED_REPO_URL" &&
             echo "The new shared hook repository is successfully added" &&
-            if [ "$SET_SHARED_TYPE" = "--global" ]; then add_trusted_repo "$@"; fi &&
+            if [ "$SET_SHARED_TYPE" = "--global" ] && [ "$CI" != true ]; then add_trusted_repo "$@"; fi &&
         return
     
         echo "! Failed to add the new shared hook repository" >&2
@@ -1272,6 +1272,11 @@ add_shared_hook_repo() {
     fi
 }
 
+#####################################################
+# Function is called when a shared hook has been added
+#   ask the user whether he want to trust hook if
+#   trust marker exists
+#####################################################
 add_trusted_repo(){
     GLOBAL_TRUST=$(git config --global --get githooks.trust.all)
     if [ "${GLOBAL_TRUST}" = "" ] || [ "${GLOBAL_TRUST}" = "N" ]; then
@@ -1285,6 +1290,7 @@ add_trusted_repo(){
         fi
     fi
 }
+
 #####################################################
 # Removes the URL of a new shared hook repository to
 #   the global or local list.

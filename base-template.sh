@@ -14,7 +14,6 @@
 # Returns:
 #   0 when successfully finished, 1 otherwise
 #####################################################
-
 process_git_hook() {
 
     set_main_variables "$1" || return 1
@@ -108,7 +107,7 @@ set_main_variables() {
 
     # Global IFS for loops
     IFS_NEWLINE="
-"
+    "
 
     # Fail if the shared root is not available (if enabled)
     FAIL_ON_NOT_EXISTING_SHARED_HOOK=$(git config --get githooks.failOnNonExistingSharedHooks)
