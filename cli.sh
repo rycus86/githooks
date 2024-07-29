@@ -941,7 +941,7 @@ get_hook_state() {
     elif is_trusted_repo "$ITEM" "$@"; then
         echo "active / trusted"
     else 
-        get_hook_enabled_or_disabled_state "$1"
+        get_hook_enabled_or_disabled_state "$ITEM"
     fi
 }
 

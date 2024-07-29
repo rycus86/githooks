@@ -36,7 +36,7 @@ if ! git hooks enable .githooks/pre-commit/first; then
     exit 1
 fi
 
-if ! git hooks list | grep "first" | grep -qv "disabled"; then
+if ! git hooks list | grep "first" | grep -q "disabled"; then
     echo "! Unexpected cli list output (3)"
     exit 1
 fi

@@ -26,7 +26,7 @@ if ! git hooks list | grep "first" | grep -q "disabled"; then
     exit 1
 fi
 
-if ! git hooks list | grep "second" | grep -qv "disabled"; then
+if ! git hooks list | grep "second" | grep -q "disabled"; then
     echo "! Unexpected cli list output (2)"
     exit 1
 fi
