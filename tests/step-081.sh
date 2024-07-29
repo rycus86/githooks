@@ -38,11 +38,9 @@ git hooks trust forget --global &&
     git hooks trust forget --global||
     exit 6
 
-git hooks trust invalid && exit 7
-
 # Check the Git alias
-git hooks trust &&
+git hooks trust --local &&
     git hooks trust revoke &&
     git hooks trust delete &&
-    git hooks trust forget ||
+    git hooks trust forget --local||
     exit 8

@@ -2,7 +2,7 @@
 # Test:
 #   Cli tool: disable a hook
 
-# sh /var/lib/githooks/install.sh || exit 1
+sh /var/lib/githooks/install.sh || exit 1
 
 mkdir -p /tmp/test056/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/test056/.githooks/pre-commit/first &&
