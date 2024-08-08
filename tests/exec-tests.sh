@@ -1,6 +1,8 @@
 #!/bin/sh
 IMAGE_TYPE="$1"
 TEST_STEP="$2"
+# This parameter prevent the trust of the repo if a marker is found, user shall run git hooks trust...
+export CI=true
 
 # Test only sepcific tests
 if [ -n "$TEST_STEP" ]; then

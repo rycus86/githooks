@@ -10,7 +10,7 @@ fi
 # Make repo
 mkdir -p /tmp/test117 && cd /tmp/test117 || exit 1
 git init &&
-    mkdir ".githooks" &&
+    mkdir -p ".githooks" &&
     touch ".githooks/trust-all" &&
     git add . &&
     git commit -a -m 'Initial commit' ||
@@ -50,7 +50,7 @@ if ! echo "$OUT" | grep -q "to the local shared hooks is forbidden"; then
     exit 1
 fi
 
-OUT=$(git hooks shared add --shared file:///tmp/shared/shared-clone.git 2>&1)
+OUT=$(git hooks shared add --shared /tmp/shared/shared-clone.git 2>&1)
 # shellcheck disable=SC2181
 if ! echo "$OUT" | grep -q "to the local shared hooks is forbidden"; then
     echo "! Expected adding local url to local shared hooks to fail: $OUT" >&2

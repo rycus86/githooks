@@ -1,7 +1,6 @@
 #!/bin/sh
 # Test:
 #   Cli tool: manage global shared hook repositories
-export CI=true
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1
@@ -12,7 +11,10 @@ mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
     mkdir -p /tmp/shared/third-shared.git/.githooks/pre-commit &&
     echo 'echo "Hello"' >/tmp/shared/first-shared.git/.githooks/pre-commit/sample-one &&
     echo 'echo "Hello"' >/tmp/shared/second-shared.git/.githooks/pre-commit/sample-two &&
-    echo 'echo "Hello"' >/tmp/shared/third-shared.git/.githooks/pre-commit/sample-three ||
+    echo 'echo "Hello"' >/tmp/shared/third-shared.git/.githooks/pre-commit/sample-three &&
+    (cd /tmp/shared/first-shared.git && git init && git add . && git commit -m 'Testing') &&
+    (cd /tmp/shared/second-shared.git && git init && git add . && git commit -m 'Testing') &&
+    (cd /tmp/shared/third-shared.git && git init && git add . && git commit -m 'Testing') ||
     exit 1
 
 mkdir -p /tmp/test082 && cd /tmp/test082 && git init || exit 1

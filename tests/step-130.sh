@@ -2,14 +2,17 @@
 # Test:
 #   Cli tool: install githooks with global shared hook repositories and accept trusted repo
 
-mkdir -p /tmp/shared/trusted-shared.git/.githooks/pre-commit &&
-    touch /tmp/shared/trusted-shared.git/.githooks/trust-all
-    echo 'echo "Hello"' >/tmp/shared/trusted-shared.git/.githooks/pre-commit/sample-trusted &&
+mkdir -p /tmp/shared130/trusted-shared.git/.githooks/pre-commit &&
+    touch /tmp/shared130/trusted-shared.git/.githooks/trust-all &&
+    echo 'echo "Hello"' >/tmp/shared130/trusted-shared.git/.githooks/pre-commit/sample-trusted &&
+    git init &&
+    git add . &&
+    git commit -a -m 'Initial commit' ||
     exit 1
 
 echo 'n
 y
-/tmp/shared/trusted-shared.git
+/tmp/shared130/trusted-shared.git
 y
 ' | sh /var/lib/githooks/install.sh || exit 2
 
