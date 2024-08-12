@@ -666,7 +666,7 @@ git hooks trust [revoke]
 git hooks trust [delete] 
 git hooks trust [forget] [--local|--global]
 
-    Sets up, or reverts the trusted setting for the local repository.
+    Sets up, or reverts the trusted setting for the local/global repository.
     When called without arguments, it marks the local repository as trusted.
     The \`revoke\` argument resets the already accepted trust setting,
     and the \`delete\` argument also deletes the trusted marker.
@@ -678,14 +678,14 @@ git hooks trust [forget] [--local|--global]
     
     
     # shellcheck disable=SC1009
-    if [ "$1" = "--local" ] || { [  "$2" = "forget" ] && [ "$2" = "--local"  ]; } ||  [ "$1" = "revoke" ] || [ "$1" = "delete" ]; then
+    if [ "$1" = "--local" ] || { [  "$2" = "forget" ] && [ "$2" = "--local"  ]; } ||  [ "$1" = "revoke" ] || [ "$1" = "delete" ] || [ "$1" = "" ]; then
         if ! is_running_in_git_repo_root; then
             echo "The current directory \`$(pwd)\` does not seem to be the root of a Git repository!"
             exit 1
         fi
     fi
 
-    if [  "$1" = "--local" ]; then
+    if [  "$1" = "--local" ] || [ "$1" = "" ]; then
         mkdir -p .githooks &&
             touch .githooks/trust-all &&
             git config githooks.trust.all Y &&
