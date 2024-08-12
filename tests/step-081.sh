@@ -9,6 +9,7 @@ fi
 
 mkdir -p /tmp/test081 && cd /tmp/test081 && git init || exit 1
 
+# Run with --local option
 git hooks trust --local &&
     [ -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
@@ -37,7 +38,11 @@ git hooks trust forget --global &&
     [ -z "$(git config --global --get githooks.trust.all)" ] &&
     git hooks trust forget --global||
     exit 6
-
+# Run with no option, default should be local
+git hooks trust  &&
+    [ -f .githooks/trust-all ] &&
+    [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
+    exit 7
 # Check the Git alias
 git hooks trust --local &&
     git hooks trust revoke &&
