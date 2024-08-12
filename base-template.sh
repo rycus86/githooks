@@ -107,7 +107,7 @@ set_main_variables() {
 
     # Global IFS for loops
     IFS_NEWLINE="
-    "
+"
 
     # Fail if the shared root is not available (if enabled)
     FAIL_ON_NOT_EXISTING_SHARED_HOOK=$(git config --get githooks.failOnNonExistingSharedHooks)
