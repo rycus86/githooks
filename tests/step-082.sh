@@ -6,6 +6,8 @@ if ! sh /var/lib/githooks/install.sh; then
     exit 1
 fi
 
+git config --global githooks.trust.all N
+
 mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
     mkdir -p /tmp/shared/second-shared.git/.githooks/pre-commit &&
     mkdir -p /tmp/shared/third-shared.git/.githooks/pre-commit &&

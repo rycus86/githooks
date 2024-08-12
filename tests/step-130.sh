@@ -5,14 +5,17 @@
 mkdir -p /tmp/shared130/trusted-shared.git/.githooks/pre-commit &&
     touch /tmp/shared130/trusted-shared.git/.githooks/trust-all &&
     echo 'echo "Hello"' >/tmp/shared130/trusted-shared.git/.githooks/pre-commit/sample-trusted &&
+    cd /tmp/shared130/trusted-shared.git &&
     git init &&
     git add . &&
     git commit -a -m 'Initial commit' ||
     exit 1
 
 echo 'n
+n
 y
 /tmp/shared130/trusted-shared.git
+
 y
 ' | sh /var/lib/githooks/install.sh || exit 2
 
@@ -25,9 +28,9 @@ if ! git hooks list | grep "sample-trusted" | grep -q "trusted"; then
 fi
 
 # verify that the shared hook is automatically executed
-touch test && git add . && git commit -m '' 2>/dev/null
+touch test && git add . 2>/dev/null
 
-if ! grep 'Hello' /tmp/test130.out; then
+if !  git commit -m '' | grep 'Hello' ; then
     echo "! The shared hooks don't seem to be working"
     exit 1
 fi
