@@ -28,15 +28,14 @@ if ! git hooks list | grep "sample-trusted" | grep -q "trusted"; then
 fi
 
 # verify that the shared hook is automatically executed
-touch test && git add . 2>/dev/null
+touch test && git add . 
 
-if !  git commit -m 'testing' | grep 'Hello' ; then
+OUTPUT=$(git commit -m 'testing'  2>&1)
+if ! echo "$OUTPUT" | grep -qE 'Hello'; then
     echo "! The shared hooks don't seem to be working"
-    exit 1
+    exit 5
 fi
 
-git hooks shared clear --all &&
-    git hooks shared purge ||
-    exit 5
+git hooks shared clear --all ||    exit 6
 
 
