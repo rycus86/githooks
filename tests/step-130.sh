@@ -11,13 +11,23 @@ mkdir -p /tmp/shared130/trusted-shared.git/.githooks/pre-commit &&
     git commit -a -m 'Initial commit' ||
     exit 1
 
-echo 'n
+if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
+    echo 'n
+y
+/tmp/shared130/trusted-shared.git
+y
+' | sh /var/lib/githooks/install.sh || exit 2
+else
+    echo 'n
 n
 y
 /tmp/shared130/trusted-shared.git
 
 y
 ' | sh /var/lib/githooks/install.sh || exit 2
+
+fi
+
 
 mkdir -p /tmp/test130 && cd /tmp/test130 && git init || exit 3
 
