@@ -21,7 +21,6 @@ MANAGED_SERVER_HOOK_NAMES="
     pre-push pre-receive update post-receive post-update
     reference-transaction push-to-checkout pre-auto-gc
 "
-
 ############################################################
 # Execute the full installation process.
 #

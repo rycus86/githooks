@@ -30,7 +30,7 @@ fi
 # verify that the shared hook is automatically executed
 touch test && git add . 2>/dev/null
 
-if !  git commit -m '' | grep 'Hello' ; then
+if !  git commit -m 'testing' | grep 'Hello' ; then
     echo "! The shared hooks don't seem to be working"
     exit 1
 fi
