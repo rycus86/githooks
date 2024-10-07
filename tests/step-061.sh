@@ -15,9 +15,9 @@ mkdir -p /tmp/shared/first-shared.git/.githooks/pre-commit &&
 git config --global githooks.shared 'file:///tmp/shared/first-shared.git' || exit 1
 
 mkdir -p /tmp/test061/.githooks &&
-    echo '/tmp/shared/second-shared.git' >/tmp/test061/.githooks/.shared &&
     cd /tmp/test061 &&
-    git init ||
+    git init &&
+    echo '/tmp/shared/second-shared.git' >/tmp/test061/.githooks/.shared ||
     exit 1
 
 if git hooks list | grep -q "sample-one"; then

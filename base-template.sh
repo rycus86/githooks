@@ -98,6 +98,10 @@ set_main_variables() {
     ACCEPT_CHANGES=
 
     CURRENT_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+    if [ -z "${CURRENT_GIT_DIR}" ] && [ -n "${GIT_DIR}" ]; then
+        # Patch up the current git dir when the above did not find it yet, perhaps during git init
+        CURRENT_GIT_DIR="${GIT_DIR}"
+    fi
     if [ ! -d "${CURRENT_GIT_DIR}" ]; then
         echo "! Hook not run inside a git repository" >&2
         return 1
@@ -405,11 +409,9 @@ is_trusted_repo() {
             fi
         fi
     fi
- 
+
     return 1
 }
-
-
 
 #####################################################
 # Performs checks for new and changed hooks,
