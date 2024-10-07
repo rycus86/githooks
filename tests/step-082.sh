@@ -1,6 +1,7 @@
 #!/bin/sh
 # Test:
 #   Cli tool: manage global shared hook repositories
+
 if ! sh /var/lib/githooks/install.sh; then
     echo "! Failed to execute the install script"
     exit 1

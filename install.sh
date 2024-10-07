@@ -21,6 +21,7 @@ MANAGED_SERVER_HOOK_NAMES="
     pre-push pre-receive update post-receive post-update
     reference-transaction push-to-checkout pre-auto-gc
 "
+
 ############################################################
 # Execute the full installation process.
 #
@@ -1700,15 +1701,19 @@ setup_shared_hook_repositories() {
         echo "Note: you can also list the shared hook repos per"
         echo "project within the .githooks/.shared file"
 
-        printf "Do you want to trust all shared hook repositories containing a trust-all file ?[y/N]"
+        printf "Do you want to trust all shared hook repositories containing a trust-all file, both now and in the future? [y/N]"
         read -r TRUST_SHARED_REPO </dev/tty
-        # shellcheck disable=SC3014
-        if [ "$TRUST_SHARED_REPO" = "y" ] || [ "$TRUST_SHARED_REPO" = "Y" ]; then 
+
+        if [ "$TRUST_SHARED_REPO" = "y" ] || [ "$TRUST_SHARED_REPO" = "Y" ]; then
             git config --global githooks.trust.all Y
-            echo "Shared hook are now always trusted if they contain .githooks/trust-all file. If you want to disable this in the future, run git config --global githooks.trust.all N , or change the 'githooks.trust.all' Git config variable manually"
+            echo "Shared hook repositories are now always trusted if they contain a '.githooks/trust-all' file."
+            echo "If you want to disable this in the future, run 'git config --global githooks.trust.all N',"
+            echo "or change the 'githooks.trust.all' git configuration variable manually."
         elif [ "$TRUST_SHARED_REPO" = "n" ] || [ "$TRUST_SHARED_REPO" = "N" ]; then
             git config --global githooks.trust.all N
-            echo "You decided to not trust shared hook containing a .githooks/trust-all file. If you want to enable this in the future, run git config --global githooks.trust.all Y , or git hooks shared trust revoke"
+            echo "You decided not to trust shared hook repositories containing a '.githooks/trust-all' file automatically."
+            echo "If you want to enable this in the future, run 'git config --global githooks.trust.all Y',"
+            echo "or execute 'git hooks shared trust revoke'."
         fi
 
     else

@@ -31,21 +31,23 @@ git hooks trust delete &&
 
 git hooks trust forget --local &&
     [ -z "$(git config --local --get githooks.trust.all)" ] &&
-    git hooks trust forget --local||
+    git hooks trust forget --local ||
     exit 5
 
 git hooks trust forget --global &&
     [ -z "$(git config --global --get githooks.trust.all)" ] &&
-    git hooks trust forget --global||
+    git hooks trust forget --global ||
     exit 6
+
 # Run with no option, default should be local
-git hooks trust  &&
+git hooks trust &&
     [ -f .githooks/trust-all ] &&
     [ "$(git config --local --get githooks.trust.all)" = "Y" ] ||
     exit 7
+
 # Check the Git alias
 git hooks trust --local &&
     git hooks trust revoke &&
     git hooks trust delete &&
-    git hooks trust forget --local||
+    git hooks trust forget --local ||
     exit 8

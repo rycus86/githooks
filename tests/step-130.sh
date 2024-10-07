@@ -2,10 +2,10 @@
 # Test:
 #   Cli tool: install githooks with global shared hook repositories and accept trusted repo
 
-mkdir -p /tmp/shared130/trusted-shared.git/.githooks/pre-commit &&
-    touch /tmp/shared130/trusted-shared.git/.githooks/trust-all &&
-    echo 'echo "Hello"' >/tmp/shared130/trusted-shared.git/.githooks/pre-commit/sample-trusted &&
-    cd /tmp/shared130/trusted-shared.git &&
+mkdir -p /tmp/shared130/trusted-shared-repo/.githooks/pre-commit &&
+    touch /tmp/shared130/trusted-shared-repo/.githooks/trust-all &&
+    echo 'echo "Hello"' >/tmp/shared130/trusted-shared-repo/.githooks/pre-commit/sample-trusted &&
+    cd /tmp/shared130/trusted-shared-repo &&
     git init &&
     git add . &&
     git commit -a -m 'Initial commit' ||
@@ -14,20 +14,19 @@ mkdir -p /tmp/shared130/trusted-shared.git/.githooks/pre-commit &&
 if echo "$EXTRA_INSTALL_ARGS" | grep -q "use-core-hookspath"; then
     echo 'n
 y
-/tmp/shared130/trusted-shared.git
+/tmp/shared130/trusted-shared-repo
 y
 ' | sh /var/lib/githooks/install.sh || exit 2
 else
     echo 'n
 n
 y
-/tmp/shared130/trusted-shared.git
+/tmp/shared130/trusted-shared-repo
 
 y
 ' | sh /var/lib/githooks/install.sh || exit 2
 
 fi
-
 
 mkdir -p /tmp/test130 && cd /tmp/test130 && git init || exit 3
 
@@ -38,14 +37,12 @@ if ! git hooks list | grep "sample-trusted" | grep -q "trusted"; then
 fi
 
 # verify that the shared hook is automatically executed
-touch test && git add . 
+touch test && git add .
 
-OUTPUT=$(git commit -m 'testing'  2>&1)
+OUTPUT=$(git commit -m 'testing' 2>&1)
 if ! echo "$OUTPUT" | grep -qE 'Hello'; then
     echo "! The shared hooks don't seem to be working"
     exit 5
 fi
 
-git hooks shared clear --all ||    exit 6
-
-
+git hooks shared clear --all || exit 6

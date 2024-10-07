@@ -10,7 +10,7 @@ fi
 # Make repo
 mkdir -p /tmp/test117 && cd /tmp/test117 || exit 1
 git init &&
-    mkdir -p ".githooks" &&
+    mkdir ".githooks" &&
     touch ".githooks/trust-all" &&
     git add . &&
     git commit -a -m 'Initial commit' ||

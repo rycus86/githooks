@@ -444,7 +444,7 @@ execute_opt_in_checks() {
 
         if [ "$ACCEPT_CHANGES" = "a" ] || [ "$ACCEPT_CHANGES" = "A" ]; then
             echo "? $MESSAGE: $HOOK_PATH" >&2
-            echo " Already accepted" >&2
+            echo "  Already accepted" >&2
         else
             MESSAGE="$(printf "%s\n%s" "$MESSAGE: $HOOK_PATH" "  Do you accept the changes?")"
             show_prompt ACCEPT_CHANGES "? $MESSAGE" "(Yes, all, no, disable)" "Y/a/n/d" "Yes" "All" "No" "Disable"
