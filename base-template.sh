@@ -480,6 +480,11 @@ execute_opt_in_checks() {
 #####################################################
 should_output_skipping_disabled_hook() {
     HOOK_PATH="$1"
+
+    if [ ! -f "$CURRENT_GIT_DIR/.githooks.skip.output.dates" ]; then
+        return 0 # we have not printed the message yet
+    fi
+
     LAST_UPDATE=$(grep "$HOOK_PATH" "$CURRENT_GIT_DIR/.githooks.skip.output.dates" | sed -E "s/([^ ]+) .*/\1/")
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - LAST_UPDATE))
@@ -496,7 +501,11 @@ should_output_skipping_disabled_hook() {
 #####################################################
 record_skipping_disabled_hook_time() {
     HOOK_PATH="$1"
-    OUTPUT_DATES=$(cat "$CURRENT_GIT_DIR/.githooks.skip.output.dates")
+    if [ -f "$CURRENT_GIT_DIR/.githooks.skip.output.dates" ]; then
+        OUTPUT_DATES=$(cat "$CURRENT_GIT_DIR/.githooks.skip.output.dates")
+    else
+        OUTPUT_DATES=""
+    fi
 
     # reset the file
     echo "# Last output date disabled hooks being skipped was printed" >"$CURRENT_GIT_DIR/.githooks.skip.output.dates"
