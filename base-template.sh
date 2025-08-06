@@ -33,6 +33,7 @@ process_git_hook() {
     execute_old_hook_if_available "$@" || return 1
     execute_all_shared_hooks "$@" || return 1
     execute_all_hooks_in "$(pwd)/.githooks" "$@" || return 1
+    cleanup_staged_files_reference_if_exists
 }
 
 #####################################################
@@ -167,7 +168,8 @@ register_repo() {
 #   when available, so hooks can use it if
 #   they want to.
 #
-# Sets the ${STAGED_FILES} variable
+# Sets the ${STAGED_FILES} or the
+#   ${STAGED_FILES_REFERENCE} variable.
 #
 # Returns:
 #   None
@@ -181,7 +183,28 @@ export_staged_files() {
 
     # shellcheck disable=SC2181
     if [ $? -eq 0 ]; then
-        export STAGED_FILES="$CHANGED_FILES"
+        # if the changed files list is over 100k then write it into a temporary file instead
+        # to avoid "Argument list too long" errors
+        if [ "${#CHANGED_FILES}" -gt 100000 ]; then
+            STAGED_FILES_TMP=$(mktemp)
+            echo "$CHANGED_FILES" >"$STAGED_FILES_TMP"
+            export STAGED_FILES_REFERENCE="$STAGED_FILES_TMP"
+        else
+            export STAGED_FILES="$CHANGED_FILES"
+        fi
+    fi
+}
+
+#####################################################
+# Deletes the temporary file that references
+#   the staged files list when it was too big.
+#
+# Returns:
+#   None
+#####################################################
+cleanup_staged_files_reference_if_exists() {
+    if [ -n "$STAGED_FILES_REFERENCE" ] && [ -f "$STAGED_FILES_REFERENCE" ]; then
+        rm "$STAGED_FILES_REFERENCE"
     fi
 }
 
