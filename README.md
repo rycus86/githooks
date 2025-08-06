@@ -58,6 +58,18 @@ done
 
 The `ACMR` filter in the `git diff` will include staged files that are added, copied, modified or renamed.
 
+__Note__: if the list of changes is over 100k characters, then instead of `${STAGED_FILES}` you will get the `${STAGED_FILES_REFERENCE}` variable set instead which will point to a temporary file containing this list. This is to avoid `Argument list too long` errors when executing hooks and other parts of the framework. If you have a large enough repository where this is a concern, you should probably start your hook files by examining if this reference is set, like shown below.
+
+```shell
+if [ -n "${STAGED_FILES_REFERENCE}" ]; then
+    STAGED_FILES="$(cat "${STAGED_FILES_REFERENCE}")"
+fi
+
+for STAGED in ${STAGED_FILES}; do
+    ...
+done
+```
+
 ## Supported hooks
 
 The supported hooks are listed below. Refer to the [Git documentation](https://git-scm.com/docs/githooks) for information on what they do and what parameters they receive.
