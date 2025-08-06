@@ -112,6 +112,9 @@ set_main_variables() {
     # Global IFS for loops
     IFS_NEWLINE="
 "
+    # Set IFS to newline, to handle filenames with spaces correctly
+    # and to prevent argument list too long errors in for loops over STAGED_FILES.
+    IFS="$IFS_NEWLINE"
 
     # Fail if the shared root is not available (if enabled)
     FAIL_ON_NOT_EXISTING_SHARED_HOOK=$(git config --get githooks.failOnNonExistingSharedHooks)
