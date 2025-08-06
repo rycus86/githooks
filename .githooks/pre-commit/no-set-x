@@ -17,6 +17,8 @@ checkSetX() {
 
 if [ -n "$GITHOOKS_ON_DEMAND_EXEC" ]; then
     STAGED_FILES=$(find . -name '*.sh')
+elif [ -n "${STAGED_FILES_REFERENCE}" ]; then
+    STAGED_FILES="$(cat "${STAGED_FILES_REFERENCE}")"
 fi
 
 for FILE in $STAGED_FILES; do

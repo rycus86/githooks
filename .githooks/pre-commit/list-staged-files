@@ -1,4 +1,9 @@
 #!/bin/sh
+
+if [ -n "${STAGED_FILES_REFERENCE}" ]; then
+    STAGED_FILES="$(cat "${STAGED_FILES_REFERENCE}")"
+fi
+
 # shellcheck disable=SC2153
 if [ -n "${STAGED_FILES}" ]; then
     echo "* Staged files:"
