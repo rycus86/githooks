@@ -268,6 +268,8 @@ execute_lfs_hook_if_appropriate() {
 execute_all_shared_hooks() {
     # track all executed hooks, to reject double execution
     EXECUTED_SHARED_HOOKS=""
+    # track updates
+    UPDATED_ANY_SHARED_HOOKS="false"
 
     if [ -f "$(pwd)/.githooks/.shared" ]; then
         SHARED_HOOKS=$(grep -E "^[^#\n\r ].*$" <"$(pwd)/.githooks/.shared")
@@ -282,6 +284,11 @@ execute_all_shared_hooks() {
     SHARED_HOOKS=$(git config --global --get-all githooks.shared)
     if [ -n "$SHARED_HOOKS" ]; then
         process_shared_hooks --global "$SHARED_HOOKS" "$@" || return 1
+    fi
+
+    if [ "$UPDATED_ANY_SHARED_HOOKS" = "true" ]; then
+        # mark this event as the most recent update time
+        git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
     fi
 }
 
@@ -697,7 +704,6 @@ update_shared_hooks_if_appropriate() {
 
     if [ "$RUN_UPDATE" = "true" ]; then
 
-        WAS_UPDATED="false"
         IFS="$IFS_NEWLINE"
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
@@ -725,7 +731,7 @@ update_shared_hooks_if_appropriate() {
 
             if [ -d "$SHARED_ROOT/.git" ]; then
                 if should_update_shared_hooks; then
-                    WAS_UPDATED="true"
+                    UPDATED_ANY_SHARED_HOOKS="true"
                 else
                     continue
                 fi
@@ -781,11 +787,6 @@ update_shared_hooks_if_appropriate() {
         done
 
         unset IFS
-
-        if [ "$WAS_UPDATED" = "true" ]; then
-            # mark this event as the most recent update time
-            git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
-        fi
     fi
 }
 
