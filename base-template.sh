@@ -697,6 +697,7 @@ update_shared_hooks_if_appropriate() {
 
     if [ "$RUN_UPDATE" = "true" ]; then
 
+        WAS_UPDATED="false"
         IFS="$IFS_NEWLINE"
         for SHARED_REPO in $SHARED_REPOS_LIST; do
             unset IFS
@@ -723,7 +724,9 @@ update_shared_hooks_if_appropriate() {
             fi
 
             if [ -d "$SHARED_ROOT/.git" ]; then
-                if ! should_update_shared_hooks; then
+                if should_update_shared_hooks; then
+                    WAS_UPDATED="true"
+                else
                     continue
                 fi
 
@@ -779,8 +782,10 @@ update_shared_hooks_if_appropriate() {
 
         unset IFS
 
-        # mark this event as the most recent update time
-        git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
+        if [ "$WAS_UPDATED" = "true" ]; then
+            # mark this event as the most recent update time
+            git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
+        fi
     fi
 }
 
