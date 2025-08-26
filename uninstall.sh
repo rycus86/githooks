@@ -604,6 +604,7 @@ uninstall() {
     git config --global --unset githooks.maintainOnlyServerHooks
     git config --global --unset githooks.autoupdate.enabled
     git config --global --unset githooks.autoupdate.lastrun
+    git config --global --unset githooks.sharedHooksUpdate.lastrun
     git config --global --unset githooks.noReadme
     git config --global --unset githooks.cloneUrl
     git config --global --unset githooks.cloneBranch

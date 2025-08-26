@@ -723,6 +723,10 @@ update_shared_hooks_if_appropriate() {
             fi
 
             if [ -d "$SHARED_ROOT/.git" ]; then
+                if ! should_update_shared_hooks; then
+                    continue
+                fi
+
                 echo "* Updating shared hooks from: $SHARED_REPO" >&2
 
                 # shellcheck disable=SC2086
@@ -732,6 +736,9 @@ update_shared_hooks_if_appropriate() {
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
                     echo "$PULL_OUTPUT" >&2
+                else
+                    # mark this event as the most recent update time
+                    git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
                 fi
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL" >&2
@@ -774,6 +781,28 @@ update_shared_hooks_if_appropriate() {
         done
 
         unset IFS
+    fi
+}
+
+#####################################################
+# Checks whether it is time to update registered
+#   shared hook repositories yet.
+#
+# Returns:
+#   1 if updates should not run, 0 otherwise
+#####################################################
+should_update_shared_hooks() {
+    LAST_SHARED_HOOK_UPDATE=$(git config --global --get githooks.sharedHooksUpdate.lastrun)
+    if [ -z "$LAST_SHARED_HOOK_UPDATE" ]; then
+        LAST_SHARED_HOOK_UPDATE=0
+    fi
+
+    CURRENT_TIME=$(date +%s)
+    ELAPSED_TIME=$((CURRENT_TIME - LAST_SHARED_HOOK_UPDATE))
+    FOUR_HOURS=14400
+
+    if [ $ELAPSED_TIME -lt $FOUR_HOURS ]; then
+        return 1 # it is not time to update yet
     fi
 }
 

@@ -121,7 +121,7 @@ Hooks in individual repositories can be disabled as well, running `git hooks dis
 
 ## Shared hook repositories
 
-The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
+The hooks are primarily designed to execute programs or scripts in the `.githooks` folder of a single repository. However, there are use-cases for common hooks, shared between many repositories with similar requirements and functionality. For example, you could make sure Python dependencies are updated on projects that have a `requirements.txt` file, or an `mvn verify` is executed on `pre-commit` for Maven projects, etc.
 
 For this reason, you can place a `.shared` file inside the `.githooks` repository, which can hold a list of repositories, one per line, which hold common and shared hooks. Alternatively, you can have a shared repositories set by multiple `githooks.shared` local or global Git configuration variables, and the hooks in these repositories will execute for all local projects where Githooks is installed. Below are example values for these setting.
 
@@ -163,7 +163,7 @@ Supported entries for shared hooks are:
   These entries are forbidden for **shared hooks** configured by `.githooks/.shared` per repository
   because it makes little sense and is a security risk.
 
-Shared hooks repositories specified by *URLs* and *local paths to bare repository* will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. Any other local path will be used **directly and will not be updated or modified**.
+Shared hooks repositories specified by *URLs* and *local paths to bare repository* will be checked out into the `<install-prefix>/.githooks/shared` folder (`~/.githooks/shared` by default), and are updated automatically after a `post-merge` event (typically a `git pull`) on any local repositories. Any other local path will be used **directly and will not be updated or modified**. Updates run only once every 4 hours, but you can use `git hooks shared update` in a hurry.
 Additionally, the update can also be triggered on other hook names by setting a comma-separated list of additional hook names in the Git configuration parameter `githooks.sharedHooksUpdateTriggers` on any configuration level.
 
 The layout of these shared repositories is the same as above, with the exception that the hook folders (or files) can be at the project root as well, to avoid the redundant `.githooks` folder.
@@ -256,7 +256,7 @@ It's possible to specify which template directory should be used, by passing the
 $ sh -c "$(curl -fsSL https://r.viktoradam.net/githooks)" -- --template-dir /home/public/.githooks
 ```
 
-By default the script will install the hooks into the `~/.githooks/templates/` directory.
+By default, the script will install the hooks into the `~/.githooks/templates/` directory.
 
 Lastly, you have the option to install the templates to, and use them from a centralized location. You can read more about the difference between this option and default one [below](#Templates-or-global-hooks). For this, run the command below.
 
@@ -310,7 +310,7 @@ See also the [setup for bare repositories](#setup-for-bare-repositories).
 
 ### Setup for bare repositories
 
-Because bare repositories mostly live on a server, you should setup the following:
+Because bare repositories mostly live on a server, you should set up the following:
 ```shell
 cd bareRepo
 # Install Githooks into this bare repository

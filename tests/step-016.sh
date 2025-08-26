@@ -52,5 +52,25 @@ OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
     sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
 if ! echo "$OUT" | grep -q "Updating shared hooks from"; then
     echo "! Expected shared hooks update"
-    exit 1
+    exit 2
+fi
+
+# We should be skipping the shared hooks update the second time
+OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
+    sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
+if echo "$OUT" | grep -q "Updating shared hooks from"; then
+    echo "! Expected to skip shared hooks update"
+    exit 3
+fi
+
+# Fake an old update time for the shared hooks
+CURRENT_TIME=$(date +%s)
+git config --global githooks.sharedHooksUpdate.lastrun $((CURRENT_TIME - 99999))
+
+# Trigger the shared hooks update again and expect to work again
+OUT=$(HOOK_NAME=post-merge HOOK_FOLDER=$(pwd)/.git/hooks \
+    sh ~/.githooks/release/base-template-wrapper.sh unused 2>&1)
+if ! echo "$OUT" | grep -q "Updating shared hooks from"; then
+    echo "! Expected shared hooks update"
+    exit 4
 fi

@@ -1596,6 +1596,9 @@ git hooks shared pull
         update_shared_hooks_in --global "$SHARED_HOOKS"
     fi
 
+    # mark this execution as the most recent shared hooks update time
+    git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
+
     echo "Finished"
 }
 
