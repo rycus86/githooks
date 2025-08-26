@@ -736,9 +736,6 @@ update_shared_hooks_if_appropriate() {
                 if [ $? -ne 0 ]; then
                     echo "! Update failed, git pull output:" >&2
                     echo "$PULL_OUTPUT" >&2
-                else
-                    # mark this event as the most recent update time
-                    git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
                 fi
             else
                 echo "* Retrieving shared hooks from: $SHARED_REPO_CLONE_URL" >&2
@@ -781,6 +778,9 @@ update_shared_hooks_if_appropriate() {
         done
 
         unset IFS
+
+        # mark this event as the most recent update time
+        git config --global githooks.sharedHooksUpdate.lastrun "$(date +%s)"
     fi
 }
 
